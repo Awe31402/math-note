@@ -1,0 +1,1098 @@
+OK, welcome everybody.
+Sorry for the short delay.
+Let me turn the volume down a bit.
+So that should become better.
+Yeah.
+So we continue today with the second lecture
+dealing with hash function, what we did last Wednesday.
+Hello, Billigenplätze.
+Hello.
+Sehr gut.
+What we did last week, we introduced the requirements
+for hash function.
+There was this constructive approach.
+We first defined what we would like to have
+and what are possible attacks are,
+and we derived requirements from that.
+And then we spent quite a few minutes
+on dealing with collisions and the birth step paradox.
+What I want to do today is, first I
+want to kind of wrap that up, what we did last week.
+So I want to talk a little bit more
+on hash function, particularly on collision attacks
+and the birth step paradox.
+The main part of the lecture is devoted, in fact,
+by introducing a new algorithm, which
+might be the last time in this whole course where we actually
+learn about a new cipher, a new algorithm.
+And that's SHA-1, which is the most important hash function
+out there in the wild world.
+OK.
+But first, we start with here, more on hash functions.
+OK.
+So recall what we did last week.
+Collisions were defined such that, find x1 comma x2,
+such that h of x1 is equal to h of x2.
+And if you want to visualize that,
+it makes it a little bit more intuitive, what we have.
+We have a hash function here, which
+has some kind of compression-ish property.
+We get two outputs out, namely the hash value of x1.
+And then x2, of course, also gives us an output.
+And we call that a collision if these, let's say, 160 bits.
+That's a typical output size.
+If these 160 bits are identical, that's called a collision.
+And then we talked at great length on last Wednesday
+what is the complexity, how hard it is.
+And that was the birthday paradox.
+If we have n bits here, efforts or complexity
+for finding a collision, there was this formula,
+this famous formula.
+We have, this is kind of what we expect.
+You know, if you have an 80-bit output,
+we expect the complexity is roughly 2 to the 80
+or 2 to the 81.
+But this is not true.
+That was the big thing.
+The big thing of last week, the big conclusion
+of 90 minutes of boring lecturing
+was this is not 2 to the n plus 1,
+but this is 2 to the n plus 1.
+What's missing here in the exponent?
+Say.
+This 2, that's what we spent 90 minutes on.
+I'm exaggerating.
+That's what we spent 35 minutes on.
+Everybody with me here?
+This is square root, right?
+We compute the square root that came out of this derivation
+plus a little bit of constant factor
+plus natural logarithm of 1 minus lambda, OK?
+Where this lambda was likelihood of a collision.
+Recall, I mean, you can have really bad luck.
+You could try many, many, many, many, many different inputs,
+and you might not get a collision.
+So we talk about probabilities here.
+So are we ready?
+What I want to show you is just one table from the book.
+That's where we are.
+Just wait one more second here.
+Just reformatting that PDF.
+Just stay with me.
+4, 3, 2, 1.
+Yeah.
+OK.
+OK, so sorry for the delay.
+This is what I wanted to show you.
+This is kind of an, what's that, that's maybe the best.
+So I just want to have a little bit of an intelligence
+about this formula of this table here.
+So this is plugging in values in this formula.
+Yeah.
+N is the bit size, right?
+Output size and lambda is the likelihood.
+The big lesson learned, for instance,
+if you have a 160-bit hash function, which
+is a popular size, in order to find a collision with a likelihood
+50%, lambda equals 2.5, we need about 2 to the 81 messages
+and not 2 to the 160.
+OK, so you have the bit length.
+What is kind of interesting and maybe a little counterintuitive
+is that if you have a 16-bit hash function,
+what is kind of interesting and maybe a little counterintuitive
+is if you want to have a much higher likelihood,
+we don't need much more messages here.
+OK, so even a 90% likelihood of a collision,
+we get away with 2 to the 82.
+That means this lambda is not really all that important.
+Yeah, so that's a big thing.
+And what we want to have, for instance,
+if you want to have a very typical scenario nowadays,
+you have some kind of complex protocol,
+like in your web browser, and you use AES.
+And what is the minimum bit length for AES?
+128, right?
+So AES, we say, has a strength or a security level of 128.
+That's called a security level.
+Now, as part of the protocol, at some point,
+you also need a hash function.
+And you're using a hash function.
+And now, of course, it makes sense
+to have a hash function with the same security level,
+the same strength.
+What you see if you use a 160-bit hash function, which
+is very common nowadays, you get a hash function,
+which is easier to break than AES,
+which is not a nice situation.
+First, you hash, and then you do AES stuff.
+And now you see hash function becomes the weakest link here.
+So what kind of output do you need?
+What size hash functions do you need
+to get a 128-bit strength here?
+What do we need?
+What do we need?
+256, exactly.
+So if you want to have a hash function which is as strong
+as AES, you have to go in this column, in this spalte.
+And you see, with a 256 hash function output,
+you get about cryptographic strength of 128.
+Cryptographic strength means that's
+the effort to find a collision.
+So that's the essence of last week.
+What is left to do?
+What is left to do is, this was all not very concrete
+in engineering terms.
+In particular, what we do not know
+is how do we build a hash function, OK?
+OK.
+Again, this was only talking about requirements.
+And the only thing we discussed just now
+in a large part of last week's lecture
+was, what is the minimum output length?
+We haven't said anything how to build these babies, OK?
+And that's the main part of today.
+And I want to give you a little bit, a diagram,
+a classification, perhaps, how to build hash functions.
+There have been many, many, many, many, not that many,
+but many, many, many proposals out there for hash functions.
+Roughly speaking, they're two big families.
+So one thing you can do, you can take a block cipher
+and construct, you can take a block cipher
+and build a hash function with it.
+How?
+This is in the book.
+We're not doing that here.
+It's actually very, very easy.
+Look in the book, it takes you about 13 minutes
+to understand how it works.
+What is much more common in practice
+is the other big approach and a fancy term.
+Fancy Ausdruck is a so-called dedicated hash function.
+Again, it's very fancy, very chic, what this really means.
+This is a hash function that is constructed
+to be a hash function, unlike a block cipher.
+In a block cipher, you can do many things,
+in particular, encryption.
+You can also do hash functions with that.
+Very often in practice, people use very specific functions
+that were constructed, built to be a hash function.
+And there have been dozens of proposals over the years,
+over the last 20 years or so.
+The most important one is the so-called MD4 family.
+Of hash functions.
+And here we have MD5.
+There was actually an MD4, which was broken more or less
+directly and has not been used widely.
+MD5 has been used, SHA1 and SHA2.
+SHA2.
+Secondly, there is a new algorithm coming up,
+which is called SHA3.
+And here are many others.
+So I want to talk for one or two minutes about that.
+So this is what's being used.
+This is in your web browser, in virtually all internet
+type of application.
+MD5 is that, that was broken.
+Major, major work with Professor Dobartin,
+who was the first crypto professor here in Bochum.
+He started with me in 2001.
+And he was the first crypto professor here in Bochum.
+He was the first crypto professor here in Bochum.
+He started with me in 2001.
+He's world famous for breaking MD5.
+SHA1 is shaky.
+So there are attacks on the horizon.
+There are attacks out there.
+But it's still pretty hard to find a collision,
+but this is going to die soon.
+We have the problem there are hundreds
+of millions of implementations running with SHA1.
+Again, all web browsers in the world use SHA1.
+That's where I'm going to talk about that.
+SHA2 is a continuation of that.
+It's out there, and this seems very secure.
+On table 11.2, I think maybe on the next page.
+Let's see where we have that.
+Boop, boop, boop.
+Yeah.
+So you see an overview about the MD4 family.
+The most important parameter for now is this column here,
+the output bit column here.
+That's what I mean.
+Yeah.
+OK.
+You say MD5.
+You say MD5.
+You say MD5.
+You say MD5.
+You say MD5.
+You say MD5.
+You say MD5.
+Yeah.
+OK.
+You say MD5 was 128-bit function.
+And as you can see here, collision found, yes.
+Collision found, yes means it's there.
+Don't use it.
+OK.
+SHA1 has 160 bits.
+So normally, you would think it has a collision resistance of 2
+to the 80.
+The problem is, and this is pretty new stuff,
+about three years ago, people find mathematical ways
+of finding a collision more efficiently, which
+about 2 to the 63.
+And people have been trying to find such a collision.
+There's a worldwide effort going on, coordinated
+by people at TU Graz in Austria.
+They haven't found it yet.
+OK.
+If you want to contribute, you can log in and download
+some software and help them with collision search.
+It's a big thing.
+So this is probably going to happen in the next two years
+or something like that.
+Then we have SHA2.
+And you see, SHA2 is a whole bunch
+of algorithms with different output lengths.
+224 bits, 256, 384, 512.
+OK.
+And they're standardized.
+And of course, now many new products
+replace SHA1 with SHA2.
+This is good.
+SHA3, I'm going to talk about that later.
+OK.
+So what we are going to do here is,
+which is a little bit funny that we discuss
+an algorithm that's half dead.
+Why do we do that?
+Because it's super widely used, which is maybe not
+a great argument.
+But what is a really good argument
+is SHA2 looks pretty similar to SHA1.
+So once you understood SHA1, which you're
+going to do next Tuesday night when you do your homework,
+then it's pretty easy to understand SHA2.
+OK.
+It's just a slight generalization.
+There's a difference in hands that take.
+So we're already done with the first chapter of today.
+Now the last two chapters are devoted to the SHA1 function.
+And we talk within, I call that introductions to SHA1,
+and then we look into bloody details.
+Maybe I'll call it overview of SHA1.
+So if you look on SHA1 from a satellite picture on SHA1,
+you can't see the details.
+What you see is this here.
+You see an algorithm with an arbitrary input x.
+x can be one sentence, can be a credit card number, the input.
+It can be that PDF file, which is, I don't know,
+3 megabytes or so.
+It can be a hard disk.
+So arbitrary long input, like all hash functions,
+160-bit output, that's the key parameter.
+So the question is, how do we do the internals of this?
+OK.
+So the next picture, I need almost half a page for that.
+If you want to copy that, and if you do it
+at the end of the page, you may flip the page over.
+But it's completely up to you.
+There's no requirement.
+And you don't have to copy anything,
+because almost everything is in the books that I'm doing here.
+So the internals, do you remember
+with block ciphers, with block ciphers,
+there are all kinds of different ways of building block cipher.
+But one possible construction is a Feistel network.
+And that's similar to hash functions.
+One possible construction is very specific and very popular.
+And this is being used.
+One uses what is called a Merkle.
+Ralph Merkle, he's one of the, you know,
+we always say there's Diffie and Hellman.
+Which was Diffie and Martin Hellman.
+They invented public key cryptography.
+This is not really true.
+There was Diffie, Hellman, and Ralph Merkle.
+And this is also the guy who did important work
+with hash functions.
+So this is the Merkle-Damgard construction.
+How is your Danish?
+Danish, you know, Germans have the strange letters
+with the dots, right?
+You've seen them, right?
+So Danish do the same, but we are just,
+so there's a little circle on the A.
+Will not be on the exam, don't worry.
+So what is the Merkle-Damgard construction?
+It's very easy.
+What you do is you take your x.
+And of course, this is the whole idea.
+This is the whole problem.
+We're typically not hashing only credit card number
+consisting of 32 characters or something like that,
+but something pretty long, consisting of n blocks.
+What you do, first you do some kind of padding.
+And then you have this main part of the algorithm,
+which is called the compression function.
+That's the compression function.
+In 15 seconds, you have to watch what I'm doing here
+on the board.
+13, 14, 15 times up, so you have to look.
+So what happens, you feed x1 in here, the compression function.
+You get some kind of output.
+Now it takes this.
+Here's the switch.
+It takes this output, and you feed that back
+into the compression function together with x2.
+So you take x2 and the previous output.
+You compress it again.
+You get the second output.
+Second output is fed back.
+Together with x3, it's going in again.
+It's not that complicated.
+This is the output.
+This is then h of x.
+By the way, the book and the lecture notes,
+I'm not terribly consistent with that, and I'm sorry for that.
+We use uppercase h, gross h, for the output today.
+So in the Merkel-Darmgut construction
+is what I'm putting in dots here.
+This box, this is Merkel-Darmgut construction.
+We're not talking about padding.
+This is kind of a very practical detail,
+and I'm not going to do that.
+It's not very complicated.
+Read it in the book.
+It's probably instructive to you.
+In the book, it's probably instructive
+to read how padding works in the real world.
+What is important for SHA-1 are now the bit length.
+One bit length, what is the bit length?
+I'm talking about these lines here.
+They represent buses, computer buses.
+Which bit lengths do we know already from this here?
+Which bit lengths do I know?
+Any ideas?
+There are one, two, three, four bit lengths.
+Which one do I know definitely?
+The output, very good here.
+This is 160.
+It means also this is 160 here.
+And in particular, this 160.
+What you do not know is that the block size, x1, x2, up to xn,
+has 512 bits.
+That means you feed rather large chunks of messages
+in your hash function.
+So you feed 512 bits, which is 64 characters.
+So 64 bytes you feed into your hash function, they're processed.
+The question is, again, so this is a very kind of stupid,
+laughingly easy view, was this here.
+It's just a block with input, output.
+Now, one level, one more detail, one detail grad.
+A little bit more detail.
+One level down in terms of detail,
+more fine grain.
+We have this view, which has this really nice name.
+Now, the Damgard construction, which
+is what you see here, this iterated thing.
+And the big thing left, what do you think?
+What is the big thing we're spending the next 55 minutes
+on?
+Compression function.
+So if you implement that stuff, if you look at the security,
+the construction is, I mean, there's
+a lot of intelligence when you're
+coming up with this construction.
+You can prove certain properties in order
+to actually build that or actually implement that
+from an engineering point is, how does the compression
+function work?
+And it could give you, and it looks really complicated.
+I'll scare you.
+I'm already scaring you.
+Is that OK?
+Yeah.
+OK.
+Are you scared?
+I hope, right?
+So this is really, in order to take you this anxiety, OK,
+don't look on this anymore.
+Take that away.
+I wonder, what should I show you?
+Let's stay here.
+OK.
+This is the same what you have.
+I want to give you kind of guide you how to understand it
+so that this construction makes a little sense.
+I'm going to show you the picture again.
+Don't you worry.
+But I want to, you know, by the hand name
+and kind of develop how, in particular,
+how this really wild picture that I just showed you,
+you know, which should scare you, how this is based on stuff
+we did in the past, OK?
+So we have an internet.
+So what I did, you may want to skip one page ahead,
+because this is, I want to draw stuff here next to it, OK?
+You know, what I really want to do
+is I want to give you, you know, zoom in with the magnifier
+glass, with the loop.
+I want to look into that.
+Before I do that, I want to relate to something
+we did earlier, we did six months ago.
+I want to talk about block ciphers a little bit again.
+OK.
+OK.
+Recall.
+So block ciphers.
+Block ciphers shared a major property
+with this Merkel-Damgard construction.
+They were also iterative.
+You know, they consisted of rounds,
+and this is what we're doing here.
+And we're not talking about AES or DES or anything
+in particular, but on a very high level,
+block ciphers work as follow.
+You have round, let's say, 0.
+Then you have round 1, and so forth,
+up to round, I don't know, s minus 1.
+It doesn't matter which variable name you're using here.
+This is one thing, and then what you also had,
+and here, your message m or x was going in.
+Don't call that x.
+Call that m for now.
+Yeah, it's not pretty here what I'm doing.
+OK.
+So this is a round function.
+So the input to every round function of AES and DES
+and triple DES and blah, blah, blah, blah, blah,
+all the block ciphers that are out there,
+was always the message or the input from the previous round.
+And what is the other input?
+What was coming from the side?
+The key, right?
+And what really happens, you know,
+we started with a key, which is, let's say, 128 bits
+in the case of AES.
+But you didn't feed in the key directly.
+You fed in, we're feeding in what's
+called a subkey, right, Unterschluss.
+And this was derived by this box,
+which is called the key schedule, Schlüsselfahrplan
+in German, which is not a very nice word.
+You wouldn't, well, it's a nice word,
+but it doesn't make that much sense.
+You wouldn't call it a Fahrplan in German,
+but this is a poor translation.
+So what you get out is subkeys, right?
+You get k0 out.
+You get k1 out, and so forth.
+And the last round gets, you know, in our notation,
+gets subkey k sub s minus 1.
+Again, this is what we did in November, which is almost
+exactly six months ago, seven months ago.
+Now, SHA-1 looks somewhat similar on an abstract level
+like this, namely, if we introduce names,
+if we feed in, you know, at a given iteration,
+that means we're feeding in block number xi.
+Does anyone, we're feeding in at this point,
+the previous output, which has which index?
+What do you think?
+Hi, or hi minus 1.
+What would I hear?
+Minus 1, right?
+A minus 1.
+OK.
+So that's what I'm looking at.
+So that's what I'm looking at.
+Leave some space, you know, go all the way
+to the right-hand edge of your paper, of your page.
+So here we have round 0, round 1, up to, and now
+comes the first new information, piece of information.
+Compression function is how many rounds?
+Does anyone recall how many rounds do we have in AES?
+If you have the standard AES with 128 bits,
+how many rounds do we have?
+10, very good.
+Here you have 80 rounds.
+So if you start counting with round 0, that would be round 79.
+Your input is this year's h sub i minus 1.
+And now comes this big, big difference in thinking,
+kind of a new switching of roles or something.
+Remember, a major part that we have to do,
+we go in with 512 bytes with, did I say, 64 characters,
+64 bytes here, and we only get 20 characters out.
+So this is, you know, some kind of compression takes place.
+That means we, if the normal thing, the normal analogy
+would be, you know, we feed in x here,
+but the problem is if you go in with 512 bits here,
+you end up with 512 bits.
+You want to have a compression.
+So what we do, we treat the message,
+the long message, the 512 bits.
+We consider this somewhat like a key schedule here.
+That means the message is being fed in here,
+and something else is being fed in here.
+So the message is not being put in here.
+This is block cipher.
+The message is fed in at this point,
+which we call not the key schedule,
+but the message schedule.
+So here you feed in your xi, your 512 bits.
+So what you do, you know, here we took the original key
+and derived sub-keys, and this is what we're doing here.
+We take the original message and derive something
+like sub-messages.
+We use the variable name w cross v.
+So we start with w0.
+In round two becomes the variable w1, and so forth.
+In the last round, surprise, surprise, w index 79.
+So we're almost done.
+What is also now very different from block cipher,
+and block cipher is essentially done here.
+What this does is we, oh yeah, what we have to do here
+with the block cipher, you were done here.
+You know, this was the output.
+What we want to do here, we want to have some kind of feedback.
+So what you do at the end, you do some kind of addition,
+and I'm going to talk about that in a minute,
+what kind of addition this is.
+This is this funny symbol here.
+It's essentially an integer addition without carry.
+And you do, I forget what I said about this feedback knob.
+This is something different.
+It's just for security reasons.
+You take your original input.
+You do a feed forward to the output,
+and you add the input.
+You do a feed forward to the output,
+and you add again this 160 bits.
+You add on those 160 bits, and I'm going to show you
+all the details on how to do that.
+Maybe one little piece of detail.
+Those w's here are only 32-bit wide.
+OK.
+And here is how it really looks, OK?
+Oop.
+So this is the same one.
+This is the same with more details.
+OK.
+So the message schedule.
+So look.
+Details.
+Figure 11.11.
+OK.
+So this is kind of one level down, actually considerably
+level down.
+There are much more details in.
+Now, if you look on this figure, which is a more correct one
+here, what you see the left-hand side is pretty much exact.
+This is what I showed you.
+What you do see here, for strange reasons,
+we talk about stage one, stage two, stage three, stage four.
+That means somehow always instead of 80 rounds,
+what you do is you pack 20 rounds together.
+The first 20 rounds are called stage one.
+The next 20 rounds, stage two.
+Next 20 rounds, stage three.
+And the last 20 rounds are stage four.
+Four times 20 is 80, right?
+Is everybody with me?
+You can check that with your calculator.
+So this is correct.
+What I didn't show on the hand figure
+that we just drew by hand is this 160 bit is internally
+split into four words.
+Can anyone do that mentally?
+Kopfrechnen.
+160 divided by four.
+What is the bit length of A here?
+This line here, how many bits do we have?
+32.
+OK.
+So these all lines you see are 32-bit lines.
+They are words.
+That's actually where the name W probably stems from.
+This is a word.
+So this is word A, word B, word C, word D, and word E.
+The other thing that you don't see on the blackboard
+is how does this addition work.
+What you have at this point, you have this addition block.
+So the addition is not all.
+This is not really we add 160 bit with 160 bit.
+You add word-wise.
+You add 32-bit.
+And what this means here, this block, it's an adder.
+You have two operands, A and B.
+32-bit, 32-bit.
+You add.
+And normally, you do an integer addition.
+But normally, you get a carry.
+You get an übertrag, right?
+In general, you get a number with 33 bits.
+You drop the last bit, right?
+The MSB, the leading bit.
+So this is an addition modulo 2 to the 32.
+This is a mathematical expression for this operation.
+What happens practically is you drop the last bit, the MSB bit.
+Bit number 33 is ignored.
+Fallengelassen.
+So now we're going to discuss this.
+OK.
+Schawan has colon, double point, 4 times 20 equal to 80 rounds.
+Again, that's what we see over there.
+That means the 80 rounds, they're grouped in blocks of 20.
+There are four stages.
+Stage.
+And they're called T in the literature.
+So the first stage is a number T equals 1.
+And this consists of round.
+There's a round counter later on.
+We'll need that in a few minutes.
+We need to talk about 0, 1, 2, 3, up to 79.
+This is a round counter is indicated by the letter J.
+Round J equals 0 up to round 19.
+So this is the first block up there.
+And this is not very complicated.
+The next stage, stage number 2, the stage counter variable T
+has a value 2.
+So these are the rounds where J has a value 20 to 39.
+You get the picture, right?
+Next stage, third stage, we're talking about rounds 40 to 59.
+And the fourth and last stage consists of the rounds 60 to 79.
+OK.
+OK.
+OK.
+So each round has 5 times 32 bit input
+plus 32 input ABCDE uppercase, which each round says ABCDE
+as input.
+And every round has one of these W words as input
+plus input WJ, OK?
+So if you want to have here a side diagram,
+you want to hear a side diagram.
+You can also put that underneath here,
+whatever you think helps you with understanding that here.
+So if this is round J, you have 5 inputs, A, B, C, D, and E.
+WJ.
+Each of these individual inputs are words, words meaning 32 bit
+words.
+So again, this here is each of these 80 babies.
+OK.
+So one remark calling this a stage, this grouping of 20 rounds.
+You see these four stages, stage 1, 2, 3, and 4.
+This is something I invented.
+They're not called stages.
+I mean, this grouping in 20 rounds, this is real.
+This is not an invention of mine.
+I don't know what people call them,
+but when I was writing the book, I was looking for a good terminology,
+and I called it a stage, a stufe, phase, whatever you want to call it.
+Are people roughly with me, or was it too complicated?
+What are the big things we need to know now?
+What is the next chapter number 3 of the lecture?
+There are actually two last things we need to know.
+If you want to implement that in Java, what do you need to know?
+OK.
+C. C++.
+Visual basics.
+So what do you need to know?
+No, that's an insult.
+So what do you need to know?
+Which very important piece of information is missing still?
+Yeah?
+What happens inside the route?
+What happens inside the route?
+I mean, this is still, I mean, we're getting closer and closer,
+but this is still somewhat high level.
+So we need to know inside the route.
+Let's write that down.
+Remaining questions.
+Questions.
+Question number 1 is insights of rounds, question mark.
+What is the other piece of information we do not have
+that you need to know before you implement it in visual basic?
+Round is absolutely right.
+What other thing we don't know yet?
+It's on the blackboard.
+Yeah?
+Very good.
+What is the message schedule?
+The message schedule.
+How does this work internally?
+The insights of the message schedule we would like to know.
+Which is chapter number 3 of today, the details of Chauvin.
+This is the drilling deeper inside, boring, going deeper.
+What really happens inside the round?
+What really happens inside the message schedule?
+It turns out this is pretty easy.
+Turns out this is not that easy.
+But we still have a little bit time.
+Chapter number 3, details of Chauvin.
+And we split that in answering question number 1,
+answering question number 2, which I rarely do,
+but I do it today.
+We call that 3A maybe.
+3A is the round function, 20 kestchen.
+You need 20 little squares, 10 centimeters, 4 inches,
+roughly for drawing that.
+The more the better.
+If you have more space, the better.
+So I'm going to show you now what happens inside.
+The input of five words, A, B, C, D, E.
+The output is five words again, A, B, C, D.
+So what we want to derive at the end of this whole thing.
+Oh, and by the way, you don't have to copy this.
+You can copy that.
+I was going back and forth.
+Should I copy that, or should I just use the board?
+This is what you're going to see.
+I'm just copying this picture.
+So if you think it's stupid copying stuff that's in the book,
+which is perfectly fine for you to think,
+you don't have to do that.
+You might have noticed I'm not a big fan of using
+PowerPoint or PDFs, right?
+I usually use a blackboard.
+I don't know whether you noticed that in the last year
+of your life.
+So I don't want to just explain that along these lines.
+I like drawing stuff.
+So what I'm trying to say, if you hate drawing, stop drawing.
+It's in the book.
+But for explaining that, I think it is helpful.
+So you go in with five words.
+You leave the function with five words.
+Here's what's happening.
+The basic idea is, anybody with me?
+Feistel networks.
+Hello?
+Hello?
+Which cipher is which algorithm is based on Feistel networks?
+It was exactly one cipher that we introduced.
+Yes, very good.
+How does this look internally?
+Here, we split in five blocks.
+In Feistel networks, you split in only two blocks,
+left and right.
+Then the basic idea is that you take the right-hand side,
+put the right-hand side in some kind of function f here,
+and you use the output for encrypting that.
+That's what we did in November, mid-November.
+We were talking about that stuff.
+Similar idea here.
+You take part of the input.
+You feed that in a function, and you
+use it for encrypting the other one by doing an XOR here.
+It's somewhat similar here.
+That's the problem.
+Don't look up there.
+We're taking a, b, c, d in this case,
+and we use it for encrypting e, very roughly speaking.
+How do we encrypt?
+We have instead of an xOR, we use this modulo 2 to the 32
+addition, this funny addition.
+Again, you don't have to copy.
+You can just look up.
+I take that away from you.
+So you're forced to look, which I'm
+sorry for being so brutal.
+I want to get this analogy.
+I think that helps.
+It helps me with understanding, so maybe it helps you.
+Here we took the right hand side and the right half
+and fed that into the f function.
+We also have an f function here.
+And now we're taking almost all the other parts.
+We use c, we use d, and we use v as input.
+This is added.
+This is added to e.
+This is what's called, by the way, this is not.
+It is not, but it resembles what's
+called an unbalanced phisotron network.
+This is called a balanced phisotron network
+because it's split in the middle.
+It's unbalanced because this is only 20%.
+This is only 1 fifth.
+And here, 4 fifths, 80% are not being encrypted
+or barely being encrypted.
+So as you see, a is not being used for encryption.
+As input of the f function, what you do with this
+is you take a and you rotate that by five positions.
+How many bits are a?
+How many bits long?
+I'm not continuing.
+It's really hard.
+I want to hear a number, an integer.
+How long?
+32.
+32, very good.
+So we rotate that to the left hand side, right?
+Left hand side by five positions.
+So you take 32 and you shift 1, 2, 3, 4, 5.
+Five bits are dropping and you put them here, right?
+Rotation, bit rotation.
+So you rotate that.
+And the output of the rotation is also used for encrypting e.
+What else do we do?
+What we did in Feistl networks.
+Does anyone know what the input here was, the Feistl network?
+What was the other input to the f function?
+The key, the subkey, exactly, ki or kj.
+We're not using that for the f function.
+We do that more directly, kind of in a simpler way,
+if you wish.
+We add our key.
+It's not really the key, but the message schedule.
+So we use this message word, w index j.
+Is that right?
+Wj at this point.
+And the final thing we do for encrypting e,
+we have what's called a round constant.
+That means there are four constants in the algorithm.
+There's a constant for stage one.
+This is what's called k1.
+There's a k2, k3, and k4.
+And you add that at this point here.
+So the 32-bit value kt.
+And I'm going to show you all how that works.
+So this output does not become the new e.
+Don't copy.
+I'm doing something wrong now for pedagogical purposes.
+Why is that a stupid idea?
+What is the problem with that continuing at this point?
+Any ideas?
+What will happen in the next round?
+You know, this will go up here again.
+You see, it just continues.
+So this looks like a really good encryption of e, right?
+I'm adding all this junk to e, right?
+And this is hopefully very well encrypted.
+So what would happen in the next round?
+I would encrypt e very well again, and very well,
+and again, and again, and again.
+And not much is happening to a, b, c, and d.
+So what I do here in Feisler networks, do I do this here?
+No, right?
+I swap them.
+And we do essentially the same.
+So this becomes word number a.
+And the other ones are essentially
+shifted by one position.
+So d actually becomes word number e.
+But it's not quite as systematic.
+There's some weird things happening.
+c is still systematic.
+So I take c and I connect it to position d.
+Right?
+This is just shifted to the right.
+But then the a is also systematic.
+It means systematic.
+I mean a is shifted by one position to the right.
+So input a becomes output b.
+And the only thing that's a little,
+the only input variable that's irregular is b.
+What I do with b, I take b and I do a rotation this times
+by 32 bits to the left.
+30 bits to the left, or two bits to the right, by the way.
+And this becomes then my variable c.
+So one thing which I omitted, and now I'll
+give you the much nicer drawing back here.
+I can even enlarge it a little bit.
+Now recall, there's t equals 1, 2, 3, and 4,
+which I have summed up there.
+So this is, these are the different stages,
+the different phases of the algorithm.
+What is a little, and we've already
+talked about this round constant.
+I'm going to talk more about that in a minute.
+What is also kind of specific is this f function,
+which is obviously very, very important for, not obviously,
+but which is very, very important for SHA-1.
+It's not always the same, but there
+are four different functions, depending on the stage.
+So what we have, f index t, these
+are really four different functions.
+There's really functions f1, f2, f3, and f4.
+So in the case of block cipher, that would, for instance,
+mean, and block cipher is not being done typically,
+at least not in AES and DES.
+It would mean, for instance, that we use,
+let's say, in the first, I don't know, four rounds of DES,
+we use one f function in rounds one, two, three, four,
+and then five, six, seven, eight,
+we use a different f function.
+We do not do that, right?
+But this is what's happening here.
+There are some block ciphers do that.
+The one that comes to mind is Serpent.
+There's a Serpent block cipher, which we haven't done here.
+But what they do in, I think, the first eight round,
+don't quote me, but I think the first eight round,
+you use a certain S-box, set of S-boxes.
+Then in the next eight rounds, you use a different S-box,
+and then a different S-box, and then a different S-box.
+So there are four different S-boxes.
+This is somewhat different, similar here.
+So in every stage, going back to the previous slide,
+you know, this big picture slide here, in each stage,
+in each of the first 20 rounds, uses one f function.
+The next 20 rounds uses another f function.
+This is one thing that's specific to SHA.
+And similarly, similar KTs are what's
+called the round constants.
+And again, we have four round constants.
+We have K1, K2, K3, and constant K4.
+We're making progress.
+You know, before, there was this question
+about what is the input here?
+Let me close the door.
+The door is closed here.
+So we're making progress.
+You know, we're still discussing this round.
+And we're still making progress.
+So in this case, we're still making progress.
+And the point here, this is why we're
+So we're making progress, you know.
+We're still discussing this round function here.
+Showed you here, which looks pretty wild.
+What do we still have to know here?
+What prevents you from implementing that in Java?
+What does it do?
+The two details are missing.
+What are they?
+Well, see this and the constants, right?
+And this actually too.
+But they are given in table 11.3.
+OK, here the first are the constants.
+So here are the four round constants, k1, k2, k3, and k4.
+These are 32-bit values, OK?
+So this is one hex symbol, 4 bits, 4 bits, 4 bits, 4 bits,
+4 bits, 4 bits, 4 bits.
+So these are 32 bits here.
+They are written in stone.
+You cannot choose them, OK?
+What is a little bit more interesting
+are the f functions.
+F function f1, of course, has inputs b, c, d, b, c, and d.
+Here's what you do.
+These are all very simple.
+They're much simpler than the f function in death
+or the one layer in AES.
+What you do, are you familiar with these symbols here?
+Does anyone know what this symbol means here
+that I highlighted?
+It's this wouldn't, right?
+This is and.
+So this is 32-bit and.
+This is bitwise and.
+This is bitwise or.
+This is a, can you see this little bar there?
+Can you see this there?
+You know what I'm talking about?
+There's a little, there's a strich over the b, right?
+Can you see that?
+Can you see that?
+I can see that.
+Can you see this bar here that I'm circling?
+This means b0.
+This is inverted symbol, bit flipping, OK?
+This symbol, we know very well that's an x or.
+In the second function, the third function
+is again only Boolean and and or.
+And the third function, function number four
+is again bitwise x or.
+So what's here really happening is from an implementation
+efficiency point of view, 80 rounds doesn't look good
+in terms of throughput.
+These are many, many rounds, right?
+AES has 10 rounds.
+This is 80 rounds.
+What you do in one round is very simple.
+This is one, two, three, four additions.
+Shift is not that complicated.
+And now the big question was happening inside the f function.
+This is here, one assembly instruction,
+two assembly instruction, three assembly instruction,
+plus inversion.
+So it's like three or four instructions.
+That means you can do an entire round with something
+like 10 machine cycles, very, very fast.
+And there's no coincidence, this wasn't
+a cipher that was heavily motivated by fast software.
+So what is now left is the question.
+And luckily, this is fairly easy to explain.
+So we're done.
+We're done with Q1, the insights of round of the rounds.
+Now what is left?
+So we finally know what's happening inside here.
+What is still open, how do we do the message schedule here,
+meaning input 512 bits.
+How do we arrive 32 bits, 32 bits, 32 bits, 32 bits,
+32 bits, 80 times?
+This is chapter 3b, message schedule.
+This is what I just said.
+So we go in with 512 bits.
+We want to derive W0, W1, up to W79.
+How do we do that?
+You start with Xi, our input word, which is 512 bits.
+And you split that into, if you're copying,
+you need space here.
+You don't have your page ending here.
+Have it ending here.
+So these are your 512 bits.
+You split them into words.
+So this is Xi here, where I use this somewhat
+complicated notation.
+This is input block Xi and block word number 0.
+32 bits, 32 bits.
+So who's really good with Kopfration,
+with mental arithmetic?
+How many words, how many 32 bits words can I fit in here?
+15, right?
+This is 16.
+This is 16 times 32.
+So this would be block number 16 with index 15,
+because I start counting with 0.
+Now I want to derive this W, this message block here.
+You don't have to do it that long here.
+Actually, up to here is fine.
+The first ones are really easy.
+This is W0, you just copy down.
+W1 is just the next 32 bits.
+That means the first 16 Ws are easy to compute.
+You don't even compute them.
+You just copy them over.
+They're easy to generate.
+That means W0, 1, 2, 3, up to 15 are the original message
+bits here.
+That means going back here, the first 0, 1, 2, 3, up to 15,
+they're easy to get.
+The question is, what do we do with 16, 17, 18, 19, up to 79?
+And there's quite a simple formula,
+namely Wj, where j between 16 and 79.
+What you do is, it means we're talking about this here,
+for instance.
+For computing this, you go back 16 locations.
+So you go back 1, 2, 3, 4, up to here.
+So for W16, you take W0.
+You x-or this with going back by 14 positions, 1, 2, 3, 4,
+up to 14.
+That means j minus 14.
+W16, you x-or this with going back 8 positions, Wj minus 8,
+plus you go back 3 positions.
+So here, you would do, you take this, x-or, somewhere else,
+you take an x-or, and somewhere else, you take an x-or.
+So you take this, x-or, somewhere else, you take an x-or,
+and somewhere else, you take an x-or.
+And then this shifts, right?
+For W17, you move all these steps, one position
+to the right.
+So this is also very fast.
+For generating one new W word, you only need,
+you have your old W store, so the only thing what you do,
+you need 1, 2, 3 x-ors, you have your new W word,
+which is this input, which comes into the round function.
+That's it for today.
+Thank you very much.

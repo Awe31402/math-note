@@ -1,0 +1,1111 @@
+.
+Okay, so welcome everybody to another exciting lecture introduction to cryptography.
+What are we going to do today? We're going to continue talking about hash functions.
+What we did last week, we did this very high-level discussion about hash function,
+in particular with respect to security requirements, which we typically don't do in the lecture.
+We often jump into the actual function, but we did only requirements, which was very, very interesting.
+We mainly talked about the security, and the main result was if you have a hash function
+with n-bit outputs, n equals 156, for instance, or n equals 160, what we have to prevent,
+meaning what an attacker wants to do, you know, successful attack against hash function means
+an attacker can find x1, x2, such that the hashed version of that identical.
+You know, the example that we used, if this is an electronic transfer, say, transfer 10 euros into Oscar's account,
+Oscar has a high incentive to turn that into a message which says transfer not 10, but 10,000 euros into Oscar's account.
+And then it turns out that what we did last week, in order to protect that, protect in quotation marks,
+we have to digitally sign that, and what we have to do, we're not signing the message itself,
+but the hashed version of that, meaning this message and this message has the same output,
+and this is the 10-euro transfer, and this is the 10,000-euro transfer, and we have to prevent that.
+And then the question is how hard is it for Oscar to find this collision, and the main result,
+you know, a lot of talking last week, the main result that I presented, that we presented in 90 minutes,
+was the likelihood to find a collision if you have a cryptographically strong hash function is roughly 2 to the n over 2,
+so the square root of 2 to the n, meaning if you're 160-bit output,
+an attacker needs roughly 2 to the 80 steps to construct this, right, to find x1, x2, such that this is happening, okay.
+What we're going to do today is kind of how the lecture, the course regularly runs, we talk about algorithms, right, about functions,
+and today it's a very modern part of the lecture.
+We talk about SHA-3, which is a very recently standardized algorithm, as in last year or so, right, so it's brand new.
+The oldest one we probably did in this two semesters is DES, which is about 40 years old.
+SHA-3 is a year old or so, so this is brand new stuff we're going to do.
+So, we start.
+Chapter number one is introduction to the SHA-3 hash algorithm.
+SHA originally stands for secure hash algorithm, that's where the name is from, okay.
+A little bit of history.
+Most popular hash functions
+in practice, colon, doppelpunkt, and now in Gensufusian quotation marks, is the MD4 family.
+I should say similar to block ciphers, you know, there are many, many, many block ciphers have been proposed,
+the same holds for hash functions, you know, there's a whole zoo of hash functions out there,
+what people use in practice, again, similar to block ciphers, you know, block ciphers,
+most people use now as triple DES or AES, similar to here, the vast majority of people use an algorithm from the MD4 family.
+So, it started with the actual algorithm MD4, which was published in the 1980s, in the 80s, I don't have the exact date.
+When that got broken, okay, that died, meaning people found collision.
+It got updated, a newer version was MD5, which was widely used, actually, and that was proposed in 1991,
+and surprise, surprise, that got broken too, so these were cryptographically weak functions, broken, meaning people found collision,
+and that's actually close to you and me, because it was broken by Professor Dobartin,
+who was the first crypto professor here together with me, he studied here in 2001,
+he was the main person behind this attack, I think in 95, around that time, so that was broken.
+And then, now it's getting really interesting with respect to practice, because in 1995,
+what's known as SHA-1 was proposed by NIST, by the National Institute of Science and Technology,
+and this is super widely used, as in every web browser on planet Earth, pretty much, right, so a lot of people use that,
+and that was a real shock, because it was theoretically broken.
+The principle of the attack was proposed in 2004, but people, at least outside the intelligence community, weren't able to do the attack,
+so this was theoretical, but then the actual attack happened, where they could demonstrate this earlier this year,
+so this is brand new, I think that happened five months ago or so, people actually broke again, what did they do?
+They constructed a collision with a PDF file, kind of similar to the goofy example, with the 10 euro transfer and the 10,000 euro transfer,
+they were able to come up with two PDF files with different semantics, different meanings,
+and you could completely choose the meaning of the files with this output here, with the collision, right, so this is pretty dramatic.
+But luckily, things are not as dire as it seems, as verzweifled as it seems, and SHA-2 was proposed in 2001,
+so quite a few years before that happened, but the world is inert, slow, people don't like changes,
+and a lot of systems didn't go updated, lots of web browsers still used SHA-1, and that seems, so this is bad, and this is a check mark,
+okay, so this is still secure, nevertheless, people were not totally happy with this attack here,
+so parallel to, and SHA-2 is closely linked to SHA-1, this is kind of a SHA-1 on steroids, it's an updated,
+SHA-2 is a turbo version of SHA-1, and it seems totally fine and secure right now, nevertheless,
+people felt a little bit uncomfortable because there's an attack against SHA-1, and now we come to the actual topic of today,
+they started, you know, after 2004, they started worrying, will SHA-2 really stay secure, and kind of to keep things secure,
+and to really make sure we have a good hash function, they started, after this attack was pronounced, announced the process of finding another hash function,
+okay, and this hash function is now, was the SHA-3 competition by NIST, National Institute of Standards and Technology,
+so somewhat comparable to the Deutsche Dean, but very, very active in Kryptostan, that they do an excellent job, generally speaking,
+here's a brief history, so in November 2007, you see, about three years after the theory of the SHA-1 attack was proposed,
+there was a call for algorithms, and that was an open call, so, you know, every IT security student, people like you,
+could sit down and invent your own hash function, and submit it to NIST, and, you know, hope that you will be successful,
+and that your algorithm will become a world standard, then the submission deadline was October 2008, they got 64 submissions,
+and I'm not totally sure about this number, whether this was actually 64, because I think a few were excluded, but it was around that number,
+does anybody remember how many submissions there were for the AES process, how many algorithms were submitted initially,
+it's one of these multiple choice questions we sometimes like to have on the exam, any guesses, guess, Deutsch oder Englisch, seven, no, more than seven,
+any other guesses here, 16, pretty close, was 15, so what I found interesting, so that was 10 years earlier, there were only 15 submissions for block ciphers,
+so that really shows you how many more people work in the crypto community in these 10 years, and then there was this multiple stage process,
+and in December 2010, so about two years later, they reduced the number of algorithms that survived, there were five algorithms left,
+and they were called the round three algorithms, why, because there were two rounds before where algorithms were eliminated,
+either for security reasons, but also often for efficiency reasons, so these were the five algorithms left,
+and on October 2nd, which is funny, because October 2nd is also the day that NIST, October 2nd, October 2, 2000, NIST also announced on the same day of the year the AES candidates at Rheindel won,
+and it's the birthday of our son, so that's how I remember that, on October 2nd, 2012, out of these five algorithms, one algorithm was selected with this, and that's the name of the algorithm, this is Katchuk,
+Katchuk is selected as SHA-3, so very briefly, this was some kind of selection process, right, who saw the Hunger Games, the movie Hunger Games,
+yeah, excellent, who hasn't done that for next week, it's homework, right, this was Hunger Games, right, 64 submissions, they tried to kill each other, right, and one person won, so that's...
+So, I mean, this is a really fascinating slash boring history of SHA-3, let's look a little bit like in the technical details, right, but super high level, what were the requirements?
+So, the SHA-3 requirements by NIST were as follows, this is a hash function, arbitrary, this is of course arbitrary, right,
+we talked about it in great length last week, you know, you can put in 64 bits or 64 gigabytes, this is SHA-3,
+what is crucial is the output length, which we call N up there, right, and they, NIST said we want to have four different output lengths, you know, depending on the application, namely the length, possible lengths are 224, 256, 384, and 512 bits.
+And this number seems weird, in particular both 224 and 384, yeah, why don't I talk about it, so what is the attacker resistance for 224, that means how many steps does an attacker need to find a collision if you have 224?
+I'm listening, it's not 224, that would be really huge, how many computations does an attacker have to perform to break that, yeah, yeah, exactly, why is that up there, right, you roughly have the bit length because of the birthday paradox, right, that was the homework assignment for today,
+so, meaning the attacker resistance that you get from this output length is 2 to the 1, 12, where did we hear that number, 112, before, which other crypto algorithm has an attacker resistance of 112, yeah, triple death, exactly, triple death, you know, our assumption is three keys,
+so there would be three times 56 bits, this would be 168, but there's this meet in the middle attack, exactly, so, and that's why they dictated that, meaning if you have a system which runs triple death and there are many systems left, you can choose an hash function which has the same cryptographic strength.
+If you look at 256, you have an attack resistance of 128, which is of course, which is the bit length of which most popular algorithm on planet Earth of, which algorithm has 28 bit key, AS, that's difficult, 384 divided by 2 is 192, which is also an AS key length, right,
+which is not that widely used in practice and then probably more importantly is if you divide 512 bits, you get an attack resistance of 2 to the 256, which is the longest AS key length, so what we have here, we have four cryptographic strengths, security levels are sometimes called security levels,
+which is a nice match for the widely used algorithms, which are also standardized by NIST. Okay, so that was the end of the first little chapter of today and now we get into the brutal details of Ketschack.
+Okay, so chapter number two is the high level, and I think I switched boards.
+Okay, high level description
+Ketschack, so the internal construction is very new, very innovative design, meaning it's totally different from MD4, MD5, SHA1, SHA2, and this is one reason Ketschack was chosen because it's so different.
+That's based on what's called the sponge construction, sponge, which is a beautiful German word of Schwamm, Schwammkonstruktion, right, and it has, you will see in a minute, it has to do with this absorbing, you know, Schwamm sucks up water, and then you can squeeze a Schwamm, a sponge, and it releases water, right,
+and that has to do with it. Just bear with me, you're going to see that in a few minutes.
+Sponge construction is maybe, let's write that down, so the absorbing phase, okay, input
+XI is read in and processed, so again, the input is, you know, wird verarbeitet, eingelesen, verarbeitet, that's the absorbing phase, you know, it's like if you release, if you open up a sponge, it sucks up water,
+and this sucks up the input bits. This is the absorbing phase, and then the, once this is done, the squeezing, quetschen, squeezing phase happens.
+Output is produced.
+So what, now we talk about the Ketschack parameters.
+One very important parameter is the state, Zustand, it's like the bus width, the busweite, the internal bus width, which is similar to, if you remember AES, the state was 128 bits, you know, internally in the algorithm you always operated on one big word of 128,
+so in Ketschack you can configure, okay, you have different bus widths, if you wish, so the state is lowercase b, which follows the formula 25 times 2 to the L, which is weird, but you're going to get a better idea of that in a little while,
+and L can take the values 1, 2, up to 6, meaning the possible internal bus widths of Ketschack can take the values 25, 50, you always double, right?
+All right, 100, 200, 400, 800, and 1600, 1600, depending how you choose L.
+And now you need a red pen, red pencil.
+This is Ketschack here, okay, Ketschack is quite universal, you can do a lot of things with that.
+When you talk about SHA-3, Ketschack and SHA-3 are not identical, meaning Ketschack can do many more things.
+If you want to use Ketschack as the standardized SHA-3 algorithm, only this is SHA-3.
+You can run the algorithm and it's probably highly secure as well, well not with a very short one, let's say with 800, but this is not part of the SHA-3 standard, okay, 1600.
+So the number of rounds, internal rounds, you know, it's an iterative algorithm, we know that from DES, we know that from AES, this crypto algorithm, this block-cypher-ish type of constructions,
+they tend to be iterative, that means you don't do this hashing once or this encryption once, but you do it multiple number of times.
+Oh yeah, how many rounds does AES have? That's a good question here.
+Exactly 10, 12 and 14, depending on the key length, and it's similar to here, as you play around with the state, with the number of rounds, it has to increase,
+and the number of rounds is N equals R, number of rounds, follows the formula 12 plus 2 times L.
+And again, in this very important case for SHA-3, you have the longest length here, for L equals 6, you have to punch in L equals 6, and NR becomes 12 plus 2 times 6, which is equal to 24.
+It means probably for all practical purposes, it means probably for the rest of your life, the next 40 years that you're going to be a successful cyber security professional,
+you're probably only going to deal with NR equal being to 24, it means that the SHA-3 implementation you write or you're dealing with probably only runs with 24 rounds,
+and you don't have to worry about this formula anymore. What's important for you is what's here in red.
+So there's another parameter which is very important, and we're going to produce a little table, as we saw here, right?
+SHA-3 has its different possible outputs, and let's look at, and this is all SHA-3, you know what I said before, here that you have, you can vary the states, the bus widths,
+this is kind of, in practical terms, it's always the longest one, because that's the only SHA-3 one, right?
+You're never going to use Ketchak with an 800-bit bus, probably, because you always want to stay with SHA-3, but these are different.
+I mean, the standardized SHA-3 allows three possible output lengths, right, and that depends on the application, which you need a hash function with 256 or 512 bits,
+that depends on the application, and there's a good chance that you're going to deal with various output lengths, right, in practice here.
+So now let's look at the different output lengths that are supported, meaning 224, 256, 384, and 512.
+As we saw before, the state, the bus width, is always 1600 here, and now it's getting interesting.
+There is the R, which this is the block size, okay, meaning in particular the input or output block size.
+You know what, it's like an AS block size is always 128, right, but here it does vary depending on your output length.
+Namely, this is the longest one is 1152, 1152, and the next block width is 1088, so these are kind of odd numbers.
+Then 832 and 576, and then you have a third parameter, which is called the capacity.
+This is the capacity, and you're going to see in a minute when I start drawing this big block diagram, you know,
+we like big block diagrams in this lecture about the algorithm, this is always the difference between the block size and B,
+so you have to subtract, so this is 488, yeah.
+I don't know how good you are with Kopfrechnung, with mental arithmetic, right, 1152 plus 448 is equal to 1600, right, and that holds always.
+So on the next one you get 512 bits of capacity, you get 768, and you get 1024, okay.
+Why is that important? We're going to see that in a minute.
+So now comes the most important part of the lecture, so in case you're doing YouTube right now, start to wake up, okay.
+Oh yeah, and you may want to, if you're taking notes, you may want to start a new page and turn it landscape, right.
+Normally we write like this, right, turn your page, right, so this is, you probably cannot see, so I used to hold Dina Fierzai to densely written and the kipped, okay.
+So let's look at Ketchak.
+So, and start on the top of your page, we're going to use, we're going to need every square millimeter of your page here, so.
+Here we have what's called a pre-processing, pre-processing stage, this is our, and we call as an exception, normally we, one second, normally we call our input X, right,
+but X is used at a different point in the algorithm, so we call our input M for message, yeah.
+Wo?
+Ach doch, ja genau, ja, ja, ja.
+This is of, thank you, so this is not 833, thank you so much, this is 832, of course, I'm sorry.
+Excellent catch, gut aufgepasst, okay.
+So first we do some pre-processing, I'm going to comment on that in a minute, and then the actual algorithm that we're interested in happens here, right.
+And this actual algorithm is sometimes called the inner Ketchak, so this is really what Ketchak is about.
+And this whole thing, we, we make a dotted line, gestrichelte Linie, so that's the, together that's the Ketchak algorithm, or SHA-3 algorithm,
+and now comes kind of a little bit weird thing, so what happens here is, so that's the output, and if you, what we expect here is n-bit fixed output,
+and actually we talked about the great length last week where we said, well we want to have one fixed output, right,
+256 bits for instance, what you can do with Ketchak, remember there is the, what is that here, no, there's the absorbing and the scoring,
+there's the squeezing phase, what you can do, first of all you can of course compute one output,
+y, which is, let's just call it y for now, which is the hashed version of m.
+And that is what we expect, right, we get, let's say, a 512-bit output here, okay,
+and this is the hashed version of m, right, and that is what we expect, right, we get, let's say, a 512-bit output here, okay,
+but you can, and this is, this is SHA-3 again, Rote Kreide, right, SHA-3 here, you get one output,
+but this, this was the absorbing phase, you know, you open up your sponge and you suck in all the messages here, right,
+10 gigabyte illegally downloaded movie, which you want to hash for whatever reason, right,
+many, many bits of the hashed version, right, and this is the hashed version,
+10 gigabyte illegally downloaded movie, which you want to hash for whatever reason, right, many, many bits are being processed here,
+and then when you squeeze, for SHA-3 you just squeeze your sponge, your Schwamm a tiny bit and you get, let's say, 512-bit out and you stop,
+but you can also continue squeezing many, many more bits out, you don't need that for hash function, but you need that for instance,
+if you need pseudo-random numbers, you can squeeze your sponge and you get many, many more bits out and then you get Y0, Y1, Y2, okay,
+so this catch-up allows that and this essentially has nothing to do with what we want to do in this lecture today if you want to do a hash function, right,
+so for a hash function, and my guess is in the majority of application, you just compute Y0 and it only takes the bits that you need from here,
+but if you want to do other things with catch-up such as generating RAM numbers or using catch-up as a stream cipher,
+you can also use it as a stream cipher, as a key stream generator, you can generate many, many, many more bits here if you want, right, okay,
+for hash functions this is not needed, for hash functions you stop here, okay,
+and there's some confusion I think in the literature, I don't think this is always terribly well explained,
+so what you do in preprocessing, so just that you, and we're not going to talk about that, in preprocessing the main thing you do,
+you do padding, and we had that with RSA padding before, the easiest thing to remember is here,
+you know, the inner catch-up needs this, you see this column R,
+so you need, for instance, if you want to have 224-bit outputs, you need 11,152 input bits, or multiple of that, right, this is the block size,
+very often your PDF file has some other length, right, and padding deals, there are kind of weird rules how to extend the input so that your input becomes a multiple of 1152, right,
+multiple of 1152, and there's some kind of weird rule how to do that, we're not going to talk about it, you know, it's in the lecture notes, which are on the internet,
+okay, so what we are, again, what we're interested in is this inner catch-up, this is some kind of, this is not so important, this is relatively unimportant, right, cryptographically speaking,
+now we start about the important stuff, so we're going to look at the inner catch-up, so the inner catch-up, here starts sponge construction,
+so you have the absorbing phase, you know, you open up the sponge, you suck in the water, you suck in your input bits, right, these are the bits of your illegally downloaded movie, right, 10 gigabits,
+this is the absorbing phase, followed by the squeezing,
+oh yeah, I should have said earlier, so what happens after the preprocessing, now we talk exactly about the stuff that we're used to, namely what we have here, now we get the input bits, input words X0, X1, X2, and so forth, okay,
+so after the preprocessing, the actual input has, again, the notation we're used to, the XI, so the input, the actual algorithm that we're dealing with today,
+okay, so what we have to talk about is the absorbing phase and the squeezing phase, now it's getting complicated, so we start all the way to the left, so what we have,
+we come in with our B bits, maybe I get that board down here,
+so our, not our input, but our state is B bits here, right, and that is split into something like that,
+so here you have your R bits, and let's say for the smallest output lengths you want to generate, your block size is 1152, and then the rest is this capacity number of bits, this would be in this example, 448, okay,
+and of course the total number is B, which is again in the case chart three, which is pretty much the only case we're interested in, which is 1600 bits here, right,
+so it's a big state by the way, right, it's way bigger than what we're used to for block ciphers, I guess it's not way bigger than compared to what we use for public key algorithm, right,
+Diffie-Hellman, you know, we run standard, the standard Diffie-Hellman is, our standard RSA is 2048 bits, so it's, I guess, if you compare it with public key algorithm, it's not even that massive, okay,
+so what you do initially is you have an XOR, oh no, the whole thing goes into this function F, which is kind of the real, that's where the real crypto happens, right, where this whole scrambling of data happens,
+you go in with, you know, the R bits and the C bits here, and right now we haven't talked about where's the input coming from, the input comes into play now, namely here at this point you simply do an XOR with the first input block X0,
+then you do the F function and that is, where is it, you know, that's the third chapter of today, how do we massage, you know, what do we do to the bits, how does the actual crypto work, this is the F function, we're going to talk about that in 10 minutes or so, 15 minutes, okay,
+so the output of the F function is the next state, you still, again, you draw this, this is, these are just registers, right, register, right, this is just bits zustand, right, this is not, there's no math happening inside, right,
+so what you do here in order, and here, you know, surprise, surprise, you have the next round, how many rounds do we have, you know, for the SHA-3 case we have 24 rounds, so for SHA-3 we run the F function not once, not twice, not three times, but 24 times, so this continues 24 times,
+don't worry, I'm not going to draw 24 F function boxes here, right, so we have to do that 24 times, so I'm drawing the second round here, but now we have to mix in, no, I'm sorry, I'm sorry, I was totally wrong, ignore what I said,
+inside the F function you have 24 rounds, I was totally wrong, inside the F function you have 24 rounds, we're going to look at that in a minute, no, what happens if you have more than one input block, which is, you know, again, if this is a huge PDF file or movie,
+this is not enough because here you have, of course, only R bits, so here you feed in, you know, your input message, the file you're going to hash in chunks of, in blocks of 1152 bits, so typically you have more than 1152 bits,
+you know, again, if this is a huge PDF file or movie, this is not enough because here you have, of course, only R bits so here you feed in, you know, your input message, the file you're going to hash in chunks of, in blocks of 1152 bits,
+So typically, you have more than 1,152 bits,
+which is 100 something, 120 bytes or so, right?
+So what you have to do, you have to run the f function again.
+And what you're going to do here,
+you x or the next block, right?
+Means if you have a huge PDF file,
+you do this over and over and over and over again,
+up to x 10 million or whatever, right?
+So whatever your number of inputs is, you have to process.
+Good, so you continue with that until...
+...punction, punction, punction.
+And at the end, you have...
+...the last block we call x t minus 1.
+We assume t blocks.
+You get another state, again 1,600 bits of of Zustand here.
+Is everybody with me?
+What we're doing here with this funny block diagram, right?
+So this is a similar, and I can't compare that to AES.
+So the first 1,152 bits are read in and processed.
+The next one, the next one, next one.
+And this is end of file, so to speak, right?
+If you do a PDF file, these are the last bits of your PDF file
+you're processing here.
+And this thing up to here is the absorbing phase, right?
+This is, you know, the sounds that we all love.
+You know, you open up your sponge, right?
+The sponge sucks in the water.
+The ketchup function sucks in the bits and processes the bits.
+And now the squeezing phase, releasing the bits,
+happens starting here.
+And in the most common case, you're done.
+The bits that you get out here, and how many bits
+do you get out here?
+All of that, just to stretch that, stress this.
+This is our bits, right?
+This is, depending on which parameter you choose,
+this is our bits.
+Meaning at that point also, you get our bits out.
+And these are bits.
+These are bits are your output here, OK?
+How much bits do you get out?
+Again, depending on which parameter you choose,
+you get at least 576 bits out here, or maybe 1,088.
+But what you want to have for shaft 3, again, for shaft 3,
+you want to have a different number of bits, right?
+You want to have...
+You want to have a different number of bits, right?
+You want to have these number of bits.
+You know what I'm saying?
+So the H of x, you know, shaft 3 of m,
+should be one of these bit lengths here,
+depending on your SSL implementation.
+How many bits do we need?
+Well, maybe you need 256 bits, which is probably quite common,
+quite common output length.
+Here, you're guaranteed at least 576 bits, maybe more bits.
+So you always end up with too many bits.
+Do you have any idea how to deal with the situation?
+Let's say we get 1,088 bits out here.
+How do we reduce that to 256?
+What is an easy way of doing that?
+That's the simplest, most stupid way of doing that.
+You end up with too many bits.
+What should we do?
+Yeah?
+Yeah, you just use the first bits, right?
+So you get, you know, this might give you,
+if you have chosen this value here, you might get out 1,088.
+You only want to have 256.
+You're just using the LSB, the MSB, the most significant bit.
+You drop the other bits.
+If this sounds kind of weird, everything you do here,
+this is somewhat like a random number generator.
+You do a lot of kind of good scrambling.
+So you generate a pretty big block of random bits, right,
+which represent your message.
+Like the message type, the fingerprint of the finger
+up books of the message.
+If this is too long, no problem.
+Just only use the first few bits, right,
+and drop the other ones, OK?
+But what happens if you want, if you're not using SHA-3,
+kind of the not so common, the more exotic way
+of using cat shark, what happens if you
+want to have Y1, Y2, Y3?
+If you want to have, let's say, 1 million random bits, what
+you do then, you essentially run the same construction
+that we've done here, means you run again,
+you run your function f again, and again, and again,
+and again, and again.
+And every time you run your function f,
+these are bits you get out here, can be considered good,
+fresh, cryptographically strong random bit,
+pseudo random bits here, OK?
+So you just keep, use the same f function as before,
+and if this is kind of a weird concept,
+you get new bits out, OK?
+And again, normally, if your web browser,
+you do a function call to SHA-3, you stop here, right?
+You get Y0 out, and you only take the leading bits of Y0.
+That's it.
+For whatever reason, if you write your own crypto library
+or your first job in industry, and they ask you
+on some kind of embedded device, we
+need 1 million random bits, you can use the same algorithm
+and keep running that.
+And every time you call that, you get r fresh bits out, OK?
+Good.
+So now, let's switch colors.
+Let's switch to light blue.
+And just to stress it, so this is what we've seen here.
+So this is the squeezing phase, OK?
+OK.
+Good.
+Sind wir fertig?
+Are we done?
+No.
+This is kind of the equivalent of looking at death
+at the firestore construction, right?
+Just how the buses are connected,
+or AES, just look at the different layers of AES.
+What we're now interested in is, what about the details?
+I mean, this is kind of interesting,
+but if your task is to implement that on your laptop
+or on your smartphone, implement a crypto library that
+uses SHA-3, so this is kind of the outer description.
+You know how to process the input,
+how to generate the output.
+What is the big thing that is missing here now?
+What do you need before you start your C++ implementation
+here?
+What is the big, crucial detail that you don't know?
+The F function, right?
+Which is kind of the most important thing, right?
+What's happening inside here?
+Let's look at that.
+OK, so now we're going to drill further in here.
+So this is broken down.
+There was one mistake before.
+This is broken down in rounds.
+Within the F function, you have rounds.
+So you have round one, b bits in, b bits out, up to
+around nr, nr is the number of rounds.
+And again, I'm saying that now to the 500th time today.
+In practice, if you want to implement SHA-3,
+nr is equal to 24.
+So typically, normally, if you're going to deal with that,
+you probably, the round count or the variable n
+in your C++ implementation is probably set to 24.
+So you have to repeat that function 24 times.
+And this is not surprising, right?
+All of these block cipher-like constructions,
+they are iterative, meaning they have rounds, right?
+DES has 16 rounds, ES has 10 rounds.
+Serpent, which we didn't do, has 48 rounds.
+So they're all kind of block cipher rounds.
+And as we know, what's happening inside the rounds
+is kind of the important thing.
+So here we are.
+This is what we're talking about here.
+That was an important bracket, geschweifte Klammern an.
+So now we're interested what's happening inside the round
+function.
+And the round function is broken down
+into five elementary atomic operations, atomic functions.
+So we need five little blocks here.
+Eins, zwei, drei, vier.
+You don't even have to draw them that big.
+We're not writing much text into them.
+So these are five blocks, five sub-functions,
+each with b bits, right?
+And as I said before, in 4SHA3, b is equal to 1,600 here.
+And now the designers, designer team,
+which was actually a European team doing that, I think,
+Belgian, French, Italian team, they
+made this unfortunate choice to use weird Greek letters
+for giving names to the function.
+It would have been nice to call them ABCDE, but they didn't.
+So this is theta.
+And I don't know how good your Greek is.
+Theta, theta function.
+This is rho, lowercase rho.
+That's the rho function.
+That's pi, p function, pi function.
+And some of them make sense, actually.
+They're called pi because this turns out
+to be the permutation that's why they used p for that.
+There's the letter chi, which is not a letter we use often
+in math.
+And there's like a lowercase e, almost like a comma
+with a dot on it, with this yota.
+They just wanted to be fancy, OK?
+So there's no cryptographic relevance to that, OK?
+And it's confusing if you're not a Greek native speaker.
+And now the question is, how do the sub-functions theta
+up to yota look like, right?
+And now you know why I told you to take your notes in this way,
+right, in the landscape mode, because this is a pretty full
+board here.
+So what we're going to do now is going
+to answer this question to finalize char 3.
+And this is chapter number 3 of today, OK?
+So chapter number 3 for today is the f function of char 3.
+So the first and this, actually, I like teaching,
+and I like teaching char 3 up to here.
+The next chapter I don't like, it gets really messy.
+There's a lot of bite and bit shoveling,
+and it's not pretty, right?
+Let's just be warned, OK?
+In order to make it, that means what's happening here
+is kind of weird what they do here with the bits, right?
+We can't do a nice formula with modular arithmetic
+or something like that, right?
+In order to make a little sense of that, we, oh yeah,
+and everything operates on a pretty big bus namely,
+bus widths of 1,600, right?
+So this is a function that operates on a pretty big bus
+In order to make sense of that, the b equals to 1,600-bit state
+can be viewed as a three-dimensional array.
+So the 1,600 bits, you can imagine them to be three-dimensional.
+How?
+And now you have the big advantage,
+you have casting paper, right?
+You have a little graph paper.
+I don't have a graph tarffle here.
+So you draw mainly, you start with a 5 by 5 times casting,
+and leave a little bit space here, right?
+Go a little bit down.
+So these are 5 by 5 casting here in your drawing, OK?
+25 by 25 millimeters, right, if you have din papier.
+So this becomes, everybody with me?
+It's easier for you, right?
+You're using, you don't need casting paper, right?
+You, right?
+Yeah.
+Next time, OK?
+Use graph paper, bring casting paper.
+So how many bits do you fit in?
+By the way, each casting, each little square is one bit.
+So this is 25 bits, this is not enough.
+Where did we see the 25 before today?
+Oh, here.
+So this is 25 times something, right, 2 to the l.
+And in the shaft 3 thing, you run that 24 times 64,
+you go, and now you go three-dimensional,
+you go wild, right?
+You do something like this.
+You do this here, right?
+And then you get, this is not my strength here, drawing, right?
+You know what I'm trying to say here, right?
+So this is the first layer with 25 bits,
+and then you have many, many layers behind one another,
+right?
+For shaft 3, you have 64 of these layers here, right?
+So this is for shaft 3.
+Kind of the depth, you know, the depth in space,
+so 64.
+So you have 64 times 25, you know,
+if you punch that into your pocket calculator,
+you end up with 1,600 bits.
+And why do we do that?
+I mean, you know, I like more this computer hardware type
+of thing, where I would draw 1,600 bits in one long line,
+right?
+That's how we normally operate with AES, right?
+We have this one AES bus, 128 bits.
+So this is in the three-dimensional array.
+Why do we do that?
+Because it's now easier to explain these functions here,
+because they operate on parts of this three-dimensional array.
+You're going to see in a minute, you
+know what I'm talking about, hopefully.
+OK, so what do we have to do now?
+We have to talk about theta, rho, pi, chi, and yota, OK?
+So let's start with theta.
+So the theta, theta steps, so this is OK.
+And what you have to do now, I'm going
+to give you the formula, kind of the mathy type of description,
+but what you really want to do is
+you want to use in the lecture notes, right?
+These are the lecture notes.
+They're on the internet.
+Then extension chapter of my book,
+but you don't have to buy it.
+This is for free here.
+So this is the 15 here.
+So this is just show three in the hash function, extension
+chapter of understanding cryptography, blah, blah, blah,
+the book by Jan Pelzel and myself, OK?
+So this is free on the internet.
+And then you go to page number 14, and it's on model, right?
+You have that on, right?
+Stefan, it's on model, so you can download the PDF.
+And this is the set of functions.
+So I'm going to write the formula down,
+but let's talk a little bit about the drawing here.
+So essentially what you're doing, you
+see this dark square here, the dunklenwurfel here.
+So this, you're going to recompute
+each of this little squares, right?
+And how many do we have?
+We have 1,600 of these squares.
+Each of these squares get recomputed, gets updated.
+Maybe let's use that wording.
+Gets updated.
+And mainly what you do, you see there are two columns,
+the two columns, here you have this column, five bits,
+and this column, five bits.
+And they're in specific location.
+And what you do, you sum these five bits up of the one column,
+you sum the other five bits up, and you
+X-OR everything together, OK?
+But I'm going to give you the formula now,
+but first I want to show you that.
+So first of all, compare figure 1.5 in book extension, OK?
+So and the main thing that's happening here,
+each of the 1,600 bits or state bits,
+it's better state bits, or just for this thing,
+you know, kind of the contents of the algorithm,
+the data we're working on right now,
+this is called the state, the Zustand, right?
+Just to make it clear one more time.
+Each of the 600 state bits are replaced by the X-OR sum,
+X-OR sum of 11 bits.
+So we're replacing that by 11 bits.
+And the principle is easy, I already told you,
+namely, the original bit plus, you know,
+this is kind of an unscientific notation, right,
+X-OR the 5-bit column, not column,
+with dash, the 5-bit column to the left,
+and this to the left, you put in quotation marks,
+to the left of the bit.
+What is Professor Parr talking about?
+I'm talking, you know, this is the bit here,
+and you're placing that with this column here, OK?
+So plus the 5-bit column to the right,
+and one position to the front of the bit.
+And now I'm actually wondering whether that drawing is,
+yeah, can you see that?
+So this, yeah, I'll give you 15 more seconds to copy.
+Now I'm going to talk again.
+So here, you have this bit, right?
+The first column, the first column,
+is the one immediately to the left.
+What happens if this bit, what happens, let's say,
+if you pick bit here?
+You know, now what I just wrote down,
+go one position to the left, but there is no column here.
+Any ideas how do we deal with that in cryptography?
+Yep.
+Yep.
+You know, this is always modulo 5, so to speak, right?
+If this is 0 and we go to the left, we rotate,
+we take this column, right?
+This is the main reason why this is quotation mark, right?
+It's to the left, modulo 5.
+Everybody with me?
+We've seen it before, right?
+So this is this column, and then the other column
+to the right in one position to the front
+is you go to the right, you know,
+you move a little bit to the right,
+and then you also move in space, you move forward, right?
+And again, this is modulo 5 in this direction,
+meaning if you're here and you want
+to take your column to the right,
+you're really taking column number 0, so to speak,
+or the first column here.
+And if you're in this first shift, in this first layer
+here, and now you have to go to the front,
+how do we deal with that, yes?
+Yes, of course.
+If we go to the left now,
+that's our direction up,
+but if we go to the front,
+then I think we go to the back,
+one to the right, one to the back.
+With the, for the second column, or where?
+Yes, if I go to the left now,
+then I go to the left,
+and one to the right, one to the back,
+and then to the front.
+No, to the front, so maybe you can't see it.
+The second column, the second column,
+the right column, it went forward.
+Can't you see it?
+No, I'm in the middle.
+But it was an excellent question,
+so he had a question about
+which direction do we go.
+If you have one bit in this front layer,
+and now we have to go further to the front,
+but there is nothing here, what do we do?
+Again, you wrap around,
+modulo 64, you go to your last column.
+If you want to go to the front here,
+you're kind of,
+you're not dropping down to the ground,
+you go back and you take your last,
+the last layer.
+There you go.
+Of course, you know, this is a...
+One, two, three.
+Why do we do that?
+Because it's cryptographically strong, right,
+as the designers.
+This is how the algorithm is defined.
+Oh, yeah, and so,
+that looks like,
+really like a lot of ugly bit fiddling around.
+If you do that in software,
+it's easier than it seems,
+maybe, from this drawing,
+is this set of equations here.
+And we're not going to talk about it more,
+just to mention that.
+And it's particular, it's particular,
+you know, we have some masters,
+people in the class.
+If you have background in hardware design,
+this is very hardware-friendly.
+This is very easy to do in hardware,
+but also in software, it's reasonably fast.
+Okay, where are we?
+Which movie are we in?
+Just finished setter, okay.
+So let's look at the next functions.
+That was a particular,
+unpleasant one to explain.
+The other ones get a little bit better.
+So the next sub-chapter is the,
+we do,
+rho and pi, rho and pi, we do together.
+Okay, so the next sub,
+sub-sub-chapter is,
+rho,
+in parenthesis, rho,
+and p,
+in parenthesis,
+p,
+step, okay.
+And if this doesn't make any sense to you,
+think about, you know,
+six months ago or so,
+or eight months ago,
+when we introduced death,
+and we talked about the S-boxes, right?
+There was this weird table,
+ohne Sinn und Verstand, right,
+without any reasoning.
+This is similar here, this is cryptographic reason why
+the functions are chosen that way.
+So,
+if we,
+maybe let's look at,
+what we need now in order to describe
+that more accurately,
+we need a coordinate system.
+So,
+what we need now in order to describe
+that more accurately,
+we need a coordinate system,
+coordinate system,
+and we take, you know, the regular numbering,
+so,
+these bits in this direction are x,
+right,
+and 0, 1,
+2, 3, and 4,
+in this direction,
+surprise, surprise, are the y-coordinates,
+also from 0
+up to 4,
+and then, you know,
+going inside the blackboard,
+going inside your piece of paper,
+this is the z-direction
+running from 0
+up to 63 here,
+okay?
+So, we'll be operating on these coordinates now.
+Okay.
+So, they operate
+on
+on
+on
+words
+of length
+64,
+meaning how we
+store that baby,
+I should have said that before, I'm sorry,
+so, how do we store that?
+I don't have a ziger here,
+I don't have
+no, not zigers,
+I have to do some blackboard shoveling.
+How do you do that in software?
+Or hardware for that matter?
+In kind of the way I explained it, we maybe
+lend to think
+you store
+25 bits, which is a weird number,
+you know, in one register,
+and then have 25 bits, 25 bits,
+have 64 of these registers,
+this is weird.
+What we are going to do is,
+what you're going to do,
+you store
+one of these,
+you know, the first row here,
+this is one word, so this is one word
+with 64 bits,
+this is the next register,
+so the whole state
+are stored in 25 words,
+so each word is going this direction,
+each word is 64 bits long.
+You know, modern Intel CPUs
+have 64-bit registers,
+so this fits into one register.
+If you have an ARM CPU on your
+Android phone,
+you have to take two 32-bit
+registers to store that.
+Do you know what I'm talking about?
+You can see that these 64 bits
+you put in one register,
+the next 64 bit in one register.
+Which has the advantage
+that each of these registers
+has now a coordinate
+with an X coordinate
+between 0 and 4,
+and a Y coordinate between 0 and 4.
+You have 25 registers,
+25 variables,
+and each variable
+has 64 bits.
+So now we get kind of a software view,
+so our input
+is this array B
+with X and Y coordinates,
+and this is exactly what I just told you,
+so X, Y
+are running from 0, 1, 2,
+3, and 4.
+So this is an array, right,
+in software speaks. This is an array,
+and the output
+is another array, and I call that
+A, and I'm just following the notation
+that was in the Katchak
+document, I believe.
+So you have this
+25A word,
+and you want to compute the 25B words.
+How do we do that? And there's a
+simple formula to that, namely
+A of
+these A words
+are
+Oh, I'm wrong, I'm wrong,
+I'm wrong, I'm wrong, okay.
+I'm wrong.
+I'm wrong.
+I'm wrong here, so this is
+A, this is B, I wasn't
+on the wrong page of my notes, I'm sorry.
+Bad professor.
+Okay.
+So, yeah,
+so what you're doing now is
+you do things,
+and
+the whole step
+you rotate,
+and that's what the pick
+row here, you know, this RO
+connotation.
+Each word
+is rotated
+by a fixed number
+of positions,
+and I'm going to give you that
+fixed number in a second.
+Okay.
+This is this
+funny table there.
+Okay.
+Position
+CF compare is the comparison
+table
+1.3
+meaning in
+in pseudocode
+we can write
+temp, you know,
+temp is a temporary variable,
+temp of x, y
+is, this is
+the rotate
+function of
+a x, y
+and r
+is a table value.
+So this is table
+entry.
+I see
+a lot of
+confused faces.
+What does it mean?
+For instance,
+these are 64
+bits going into the table here,
+right? This is like this
+stick. They call it actually
+in the ketchup document
+a lane, you know,
+the street going into here.
+So this, for instance, would be
+a 0.0,
+right? This is one register
+64 bits
+with a coordinate 0, 0 because at this
+point here, right?
+This has to be rotated by how
+and these are 64 bits long
+so by how many positions do we rotate
+that? What do you guess?
+Well, we have to look in the table
+and it says 0,
+0 is
+here. Okay, that's a bad example.
+That has to be rotated by 0 positions.
+Okay, so
+let's look
+at this here. So this is
+a
+1.0,
+right? So by how many
+bit positions do we have to rotate those
+bits? So x is equal
+to 1, y is equal to
+this has to be rotated by one position.
+The next one,
+2, 0,
+which is here,
+right, has to be rotated by
+62
+positions.
+Why? Because it's cryptographically secure.
+Okay, we just do
+a functional description here.
+So that's the row step
+and then the
+pi step
+is
+permute
+the rotated
+words.
+It means after you
+permuted each of the
+lanes, each of the words,
+you exchange those words.
+Following the rule,
+uppercase B,
+the output of the algorithm
+is B
+with coordinates
+y comma 2x
+plus
+3y
+is the
+temporary
+lane at location x comma
+y.
+And here again you run from
+x comma y
+x comma y
+runs from 0
+up to 4.
+Example
+so input
+input word
+input lane, let's pick
+a
+3, 1
+means we're talking about
+coordinate 3, 1
+is we're talking about
+this lane, right,
+these 64 bits that go into the
+table that way, right? What's going to happen
+with those?
+The row step
+does a rotation
+so means we compute a temporary
+variable
+at the same coordinates, you know
+a temporary array temp
+it's a help
+array
+you rotate
+your original a
+word
+these are the original 64 bits here
+the original 64 bits
+you have to go into your rotation table
+and you look at the
+location
+3, 1
+and you see the 55 here, right? That means
+you rotate that
+by
+55
+positions
+you know a little node
+from table
+1.4 in the lecture notes
+right, this is here
+that's the row step
+and now the pi step
+permutationsschritt
+in order to
+compute the output
+b at the location
+1, yes
+y is equal to 1
+and now we have to
+evaluate this really complicated formula
+which is of course not really complicated
+which is 2 times 3
+plus 3 times
+1
+which is b of
+6 plus 9
+is that right? 9, yeah
+how do you deal with that?
+there is no coordinate 9
+it stops
+it stops at 4
+any suggestions? How should we deal with that?
+how do we deal with it?
+yeah
+and modular what?
+yeah
+because it's 5
+there's nothing bigger than 4, exactly
+let's do modular arithmetic
+so this is
+is that right?
+excellent answer
+so this is mod
+mod 5
+all coordinates are always taking mod 5
+so this is just
+and what is this equal to?
+so this is
+in this position
+output word 1.4
+gets assigned
+this value here
+so you're rotating
+the words
+you're permuting the words
+that was before at location 3.1
+you put this now
+at location 1.4
+o and p1
+and the last
+two ones
+g and jota are luckily relatively
+pain free
+this is not us here
+this is the
+g step
+chi step
+step
+so here again our
+input is now
+b of x comma y
+which is
+what we just computed
+from the previous step
+output
+output
+good to have Stefan in the class
+of course
+very good
+so the output
+we call now the output a
+which is not totally consistent
+but that's what I did in the lecture notes
+output is a
+how do we do that?
+this is what's happening
+and let's make
+a little bit sense of that
+so what you do
+you compute
+a of x comma y
+the word is
+the word is
+so the output bit
+right
+is the original
+input bit
+x or
+parentheses
+and
+b of x plus
+one comma y
+so you go like
+one bit to the
+right I guess
+yeah
+so you get one bit
+to the right
+but it takes the bit that was
+before you know you look at x comma y
+you look at the original bit
+one bit to the right
+this is negation
+this is invert
+invert the bit
+means one becomes a zero
+zero becomes a one bit flipping
+and a logical and
+so this is
+logical and
+and function
+and
+b of
+x plus two
+comma y
+example
+so we look at
+this bit here okay
+can be anywhere in that state
+anywhere in this sixteen hundred bits
+so what you do
+you take the original bits going in here
+and now you x or that
+with
+this bit here
+you see this
+is coming down here and this is
+an inverter this is a bit flipper
+here right so there you
+flip the bit this is this here
+and you have to end
+that this is an end symbol here
+with this bit here right
+so takes the negative of this
+and takes this bit and this is happening with this
+end gate and it's being extorted
+okay
+so what app and again you have to do
+that module five and so forth okay
+so that is
+the g step here so you can
+see this is
+compare figure one point six
+and then the last
+step and
+the last thing we do today which is the
+is the
+easiest step is the
+xi and
+jota
+step
+this is simply
+add constants
+from constant table
+so this is
+and
+add constant from constant
+table to
+word
+a zero zero
+so that prevents one specific
+hash function attack so you're only
+operating on a zero zero
+this one word to the left lower
+left corner and what you're going
+to do you take that a zero zero
+plus
+rc of i
+this is
+this is table
+one point four
+now this is one point five
+that's a
+in my lecture notes
+this is one point four and
+it's my mistake i'm just we
+should fix the latex right
+one point five
+and the i
+depends on the
+round in which we are
+right this is
+round number
+that runs from
+round number
+i equals zero
+to 23
+thank you very much excellent lecture
+everybody
