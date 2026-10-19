@@ -11,132 +11,305 @@ notes: 無直接對應（Gallian 第 4 章習題）
 
 ← 上一集：[[10-L7-循環群-下]] ｜ [總目錄](../README.md) ｜ 下一集：[[12-L8-置換與循環記號]] →
 
-## 本集概要
-
-- **無限階元素**：$\langle a^3\rangle$ 的生成元只有 $a^3$ 和 $a^{-3}$（類比 $3\mathbb{Z}$ 只有 $\pm3$）。
-- **恰有三個子群的循環群**：$\{e\}$、$G$、一個 7 階子群，則 $|G| = 49$。注意題目「恰好三個」要理解成「三個**不同**的」。
-- **$D_n$ 中 $d$ 階元素**（$d\neq 2$）恰有 $\varphi(d)$ 個；**2 階元素**：$n$ 奇數時 $n$ 個，偶數時 $n+1$ 個。用歸納法證明每個「旋轉 × 鏡射」都是 2 階。
-- 循環子群無所不在：任何群裡 $\langle g\rangle$ 都是循環子群，例如 $GL(2,\mathbb{R})$ 和 $(M_{2\times2}(\mathbb{R}),+)$ 裡。
-
-> ⚠️ 題號說明：課堂用的是 Gallian **第 5 版**。下面附上第 10 版對應的題號（找得到的話）。
+> **課程**：Abstract Algebra I（Liberty University，Fall 2016）— 第 11 集，習題課
+> **講者**：James S. Cook
+> **來源**：YouTube 錄影逐字稿（54:35，自動字幕）＋ Gallian《Contemporary Abstract Algebra》10th ed. 第 4 章習題。本集沒有對應講義。
+> **標記說明**：`【口頭】` 老師口頭補充；`【Q&A】` 學生提問；`【課堂討論】` 老師問、學生答（或學生提出解法）；`⚠️ 逐字稿缺字` 自動字幕聽錯或掉字；`[▶ mm:ss]` 點了跳到影片該時間點
+> **題號**：課堂用 Gallian **第 5 版**。下面附第 10 版題號（找得到的話）。
 
 ---
 
-## 筆記
+## 目錄
 
-### 題 1：$|a| = \infty$ 時 $\langle a^3\rangle$ 的所有生成元（Ch.4 #12）[▶ 00:30](https://youtu.be/mUv_cTprS9c?t=30)
+- [0. 這堂課怎麼進行](#0-這堂課怎麼進行)
+- [1. 題 1：無限階時 ⟨a³⟩ 的生成元](#1-題-1無限階時-a³-的生成元)
+- [2. 題 2：恰有三個子群的循環群](#2-題-2恰有三個子群的循環群)
+- [3. 題 3：Dn 中 d 階元素的個數](#3-題-3dn-中-d-階元素的個數)
+  - [3.1 旋轉裡的 2 階元素](#31-旋轉裡的-2-階元素)
+  - [3.2 「旋轉 × 鏡射」都是 2 階](#32-旋轉--鏡射都是-2-階)
+  - [3.3 2 階元素的個數](#33-2-階元素的個數)
+  - [3.4 d ≠ 2 的情況](#34-d--2-的情況)
+- [4. 循環子群無所不在](#4-循環子群無所不在)
+- [5. 一頁速查表](#5-一頁速查表)
+- [6. 與後續集數的連結](#6-與後續集數的連結)
 
-（第 10 版也是 Ch.4 #12，p.89；前半問 $\mathbb{Z}$ 中 $\langle 3\rangle$ 的生成元。）
+---
 
-**先想整數版** [▶ 03:00](https://youtu.be/mUv_cTprS9c?t=180)：在 $(\mathbb{Z},+)$ 裡，$a$ 對應 $1$，$\langle a^3\rangle$ 對應 $3\mathbb{Z} = \{\dots,-6,-3,0,3,6,\dots\}$。
-- $3$ 是生成元，$-3$ 也是（學生答出）[▶ 04:30](https://youtu.be/mUv_cTprS9c?t=270)。
-- $6$ 不是：$6\mathbb{Z} = \{\dots,-12,-6,0,6,12,\dots\}\neq 3\mathbb{Z}$ [▶ 05:00](https://youtu.be/mUv_cTprS9c?t=300)。
+## 0. 這堂課怎麼進行
 
-**注意**：循環群**可以**是無限的，例如 $(\mathbb{Z},+)$ [▶ 02:30](https://youtu.be/mUv_cTprS9c?t=150)。上一講的定理大多是講**有限**循環群，這題只能自己想 [▶ 05:30](https://youtu.be/mUv_cTprS9c?t=330)。
+[▶ 00:00](https://youtu.be/mUv_cTprS9c?t=0) 課前禱告。先做學生事先點的題。
 
-**$a^{-3}$ 是生成元** [▶ 06:30](https://youtu.be/mUv_cTprS9c?t=390)：$\langle a^{-3}\rangle = \{(a^{-3})^k\} = \{a^{-3k}\}$，只是把 $k$ 換成 $-k$ 重新編號，和 $\langle a^3\rangle$ 是同一個集合。
+【口頭】[▶ 00:30](https://youtu.be/mUv_cTprS9c?t=30)「這些點題可疑地圍繞著我叫你們做的作業題，這讓我有點擔心，但我放過你們。」
 
-**沒有別的生成元（反證法）** [▶ 07:30](https://youtu.be/mUv_cTprS9c?t=450)
-- 任何 $\langle a^3\rangle$ 的元素都是 $a^{3l}$。$l = 0$ 給單位元素，只生成 $\{e\}$，不行。
-- 設 $|l|>1$ 且 $\langle a^{3l}\rangle = \langle a^3\rangle$。$\langle a^{3l}\rangle = \{a^{3lj}\mid j\in\mathbb{Z}\}$。
-- 要讓 $a^3$ 在裡面，需要 $a^3 = a^{3lj}$。因為 $|a| = \infty$，不同次方是不同元素，所以 $3 = 3lj$，也就是 $lj = 1$ [▶ 09:30](https://youtu.be/mUv_cTprS9c?t=570)。
-- $|l|>1$ 時沒有整數 $j$ 滿足（例如 $l = 2$ 要 $j = 1/2$）[▶ 11:00](https://youtu.be/mUv_cTprS9c?t=660)。所以 $a^3\notin\langle a^{3l}\rangle$，矛盾。
+**規則**[▶ 23:00](https://youtu.be/mUv_cTprS9c?t=1380)：老師**不在習題課做指定作業題**，但推薦題可以。
 
-**答案**：$\langle a^3\rangle$ 的生成元只有 $a^3$ 和 $a^{-3}$。$\blacksquare$
+---
 
-> 💬 老師說：反證法得到的矛盾通常是旁邊某個怪東西，這次矛盾的「正好就是要證的事」，很難得 [▶ 10:30](https://youtu.be/mUv_cTprS9c?t=630)。
+## 1. 題 1：無限階時 ⟨a³⟩ 的生成元
 
-### 題 2：恰有三個子群的循環群（Ch.4 #14）[▶ 11:00](https://youtu.be/mUv_cTprS9c?t=660)
+[▶ 00:30](https://youtu.be/mUv_cTprS9c?t=30)（Ch.4 #12，第 10 版同題號，p.89）
 
-（第 10 版也是 Ch.4 #14，p.89。）
+> **題目**　$|a| = \infty$。找出 $\langle a^3\rangle$ 的所有生成元。
+
+$$\langle a^3\rangle = \{\dots,a^{-6},a^{-3},e,a^3,a^6,\dots\}.$$
+
+【Q&A】[▶ 02:30](https://youtu.be/mUv_cTprS9c?t=150) 學生問：循環群不就代表**沒有**無限階嗎？老師：「不。循環群可以是無限的，例如**整數加法**。還有其他無限循環群。」學生：「喔，因為它有一個元素生成它。」「對。」
+
+**先想整數版**[▶ 03:00](https://youtu.be/mUv_cTprS9c?t=180)：在 $(\mathbb{Z},+)$ 裡，$a$ 對應 1，$\langle a^3\rangle$ 對應
+$$3\mathbb{Z} = \{3k : k\in\mathbb{Z}\} = \{\dots,-6,-3,0,3,6,\dots\}.$$
+- 3 是生成元。【課堂討論】[▶ 04:30](https://youtu.be/mUv_cTprS9c?t=270) 學生：「$-3$！」老師：「很好，也對。」
+- 6 不行 [▶ 05:00](https://youtu.be/mUv_cTprS9c?t=300)：$6\mathbb{Z} = \{\dots,-12,-6,0,6,12,\dots\}$ 少了東西，$\neq3\mathbb{Z}$。
+
+**沒有現成定理**[▶ 05:30](https://youtu.be/mUv_cTprS9c?t=330)：老師想找定理（「也許 Theorem 4.1？」），然後承認：「我寫講義、證定理，但它們有時候不會黏在腦裡。這些定理大多是關於**有限**群的。我們可能得硬想。」
+
+**$a^{-3}$ 是生成元**[▶ 06:30](https://youtu.be/mUv_cTprS9c?t=390)：
+$$\langle a^{-3}\rangle = \{(a^{-3})^k : k\in\mathbb{Z}\} = \{a^{-3k} : k\in\mathbb{Z}\}.$$
+這只是把 $k$ 換成 $-k$ **重新編號**（reindexing），跟 $\langle a^3\rangle$ 是同一個集合。
+
+**沒有別的生成元（反證法）**[▶ 07:30](https://youtu.be/mUv_cTprS9c?t=450)
+
+$\langle a^3\rangle$ 的元素都是 $a^{3l}$，$l\in\mathbb{Z}$。
+- $l = 0$：$a^0 = e$，階是 1，只生成 $\{e\}$。「不危險。」
+- $l = \pm1$：就是 $a^{\pm3}$。
+- 設 $|l|>1$，而且 $\langle a^{3l}\rangle = \langle a^3\rangle$。
+
+$\langle a^{3l}\rangle = \{a^{3lj} : j\in\mathbb{Z}\}$ [▶ 08:30](https://youtu.be/mUv_cTprS9c?t=510)。要讓 $a^3$ 在裡面，需要某個 $j$ 使 $a^3 = a^{3lj}$。
+
+$|a| = \infty$，**不同的次方是不同的元素**（L6 定理），所以需要
+$$3 = 3lj\quad\Longleftrightarrow\quad lj = 1.$$
+
+老師一開始想「6 不在裡面」，然後 [▶ 09:30](https://youtu.be/mUv_cTprS9c?t=570)：「不是 6 的問題，6 在剛才擦掉的例子裡。我是白痴。問題是**我們沒有 3**。」
+
+$|l|>1$ 時 $lj = 1$ 沒有整數解。所以 $a^3\notin\langle a^{3l}\rangle$，兩者不相等，**矛盾**。
+
+【課堂討論】[▶ 11:00](https://youtu.be/mUv_cTprS9c?t=660) 學生問：如果 $l = 2$ 呢？老師：「你需要 $j = \tfrac12$（或 $-\tfrac12$）才能回到 3。我們沒有那個。所以我們運氣不好——其實是好運。」
+
+**答案**：$\langle a^3\rangle$ 的生成元**只有 $a^3$ 和 $a^{-3}$**。$\blacksquare$
+
+【口頭】[▶ 10:30](https://youtu.be/mUv_cTprS9c?t=630)「反證法得到的矛盾**正好就是要證的事**，這很難得、很珍貴。通常矛盾是旁邊某個怪東西。」
+
+---
+
+## 2. 題 2：恰有三個子群的循環群
+
+[▶ 11:30](https://youtu.be/mUv_cTprS9c?t=690)（Ch.4 #14，第 10 版同題號，p.89）
 
 > **題目**　循環群 $G$ 恰有三個子群：$G$ 本身、$\{e\}$、一個 7 階子群。$|G|$ 是多少？
 
-**第一次嘗試** [▶ 13:00](https://youtu.be/mUv_cTprS9c?t=780)
-- 由循環群基本定理，$7\mid |G|$，所以 $|G| = 7k$。
-- 若 $k>1$，$k$ 也是 $|G|$ 的因數，就會有一個 $k$ 階子群 [▶ 14:30](https://youtu.be/mUv_cTprS9c?t=870)。
-- 老師一開始得出 $|G| = 7$。
+「這題看起來簡單多了。」
 
-**學生質疑** [▶ 16:30](https://youtu.be/mUv_cTprS9c?t=990)：如果 $|G| = 7$，那「7 階子群」就是 $G$ 本身，三個子群其實只有兩個。
+**第一次嘗試**[▶ 13:00](https://youtu.be/mUv_cTprS9c?t=780)
 
-**修正：三個子群要互不相同** [▶ 17:30](https://youtu.be/mUv_cTprS9c?t=1050)
-- $|G| = 7k$，$k>1$。$k$ 階子群必須就是那三個之一。
-- 唯一不會多出新子群的辦法是 $k = 7$，所以 $|G| = 49$ [▶ 18:30](https://youtu.be/mUv_cTprS9c?t=1110)。
-- 49 的正因數只有 $1,7,49$，正好對應三個子群：$\{e\}$、$\langle a^7\rangle$、$\langle a\rangle$（$a^{49} = e$）。
-- 換成 $\mathbb{Z}_{49}$ 更好看：7 階子群是 $\langle 7\rangle = \{0,7,14,21,28,35,42\}$ [▶ 20:30](https://youtu.be/mUv_cTprS9c?t=1230)。
+【課堂討論】學生：「$|G|$ 必須是 7 的倍數。」
+- 由**循環群基本定理**，7 整除 $|G|$，所以 $|G| = 7k$ [▶ 14:00](https://youtu.be/mUv_cTprS9c?t=840)。
+- 若 $k>1$，$k$ 也是 $|G|$ 的正因數，就會有一個 **$k$ 階子群** [▶ 14:30](https://youtu.be/mUv_cTprS9c?t=870)。
+- 學生（和老師）一開始得出 $|G| = 7$。
 
-**答案**：$|G| = 49$。（第 10 版還問：7 換成質數 $p$ 呢？同理 $|G| = p^2$。）
+**學生質疑**[▶ 16:30](https://youtu.be/mUv_cTprS9c?t=990)：如果 $|G| = 7$，那「7 階子群」**就是** $G$ 本身。三個子群其實只有兩個。
 
-**白話**：只要 $k$ 不是 7，就會多出一個不是 7 階的子群，和題目矛盾 [▶ 21:00](https://youtu.be/mUv_cTprS9c?t=1260)。
+老師重讀題目：「好問題……所以你不確定我的解。如果『$G$』和『7 階子群』可以相同，答案是 7。如果要求它們**不同**——我們加上『**相異**』這個詞。」
 
-> 💬 老師：如果作業題目有這種歧義，請寄信問他 [▶ 22:00](https://youtu.be/mUv_cTprS9c?t=1320)。Gallian 說「exactly three subgroups」而且一個一個列出來，應該是指三個不同的。
+**修正：三個子群互不相同**[▶ 17:30](https://youtu.be/mUv_cTprS9c?t=1050)
+- $|G| = 7k$，$k>1$。
+- $k$ 階子群必須是那三個之一，否則會多出第四個子群。
+- 【課堂討論】$k = 2$ 不行（$|G| = 14$ 會有 2 階子群）[▶ 18:00](https://youtu.be/mUv_cTprS9c?t=1080)。「唯一不會加進**新**子群的辦法是 $k = 7$。」
+- 所以 **$|G| = 7^2 = 49$**。
 
-### 題 3：$D_n$ 中 $d$ 階元素的個數（Ch.4 #25）[▶ 23:00](https://youtu.be/mUv_cTprS9c?t=1380)
+**驗證**[▶ 18:30](https://youtu.be/mUv_cTprS9c?t=1110)：49 的正因數只有 1、7、49，正好對應三個子群：
 
-（第 10 版為 Ch.4 #33，p.91。這題不是指定作業，只是推薦題；老師不想在習題課上做指定作業題。）
+| 階 | 子群（$G = \langle a\rangle$，$a^{49} = e$） | 在 $\mathbb{Z}_{49}$ 裡 |
+|---|---|---|
+| 1 | $\{e\}$ | $\{0\}$ |
+| 7 | $\langle a^7\rangle$ | $\langle7\rangle = \{0,7,14,21,28,35,42\}$ |
+| 49 | $\langle a\rangle$ | $\mathbb{Z}_{49}$ |
 
-> **題目**　$d$ 是正整數，$d\neq 2$，$d\mid n$。證明 $D_n$ 中 $d$ 階元素恰有 $\varphi(d)$ 個。$D_n$ 有幾個 2 階元素？
+（老師在 $\mathbb{Z}_{49}$ 例子中一度跳到想生成元：「我的頭爆炸了。抱歉，有時候我被困在兩個世界之間。」[▶ 20:00](https://youtu.be/mUv_cTprS9c?t=1200)）
 
-**用作業的記號** [▶ 29:30](https://youtu.be/mUv_cTprS9c?t=1770)：$x$ 是旋轉、$y$ 是鏡射，
-$$x^n = 1,\quad y^2 = 1,\quad (xy)^2 = 1.$$
-（就是課堂的 $R$、$f$。）以 $D_5$ 為例：$\{1,x,x^2,x^3,x^4,\ y,xy,x^2y,x^3y,x^4y\}$。
+**答案**：$|G| = 49$。（第 10 版還問：7 換成質數 $p$？同理 $|G| = p^2$。）
 
-#### 2 階元素有哪些？
+**白話**[▶ 21:00](https://youtu.be/mUv_cTprS9c?t=1260)：只要 $k\neq7$，就會多出一個階不是 7 的子群，跟題目矛盾。
 
-**旋轉裡的 2 階元素** [▶ 27:30](https://youtu.be/mUv_cTprS9c?t=1650)
-- $n$ **偶數**：$x^{n/2}$ 是轉 $180°$，$(x^{n/2})^2 = x^n = 1$，所以是 2 階。例如 $D_4$ 的 $R^2$。
-- $n$ **奇數**：$n/2$ 不是整數，旋轉裡沒有 2 階元素 [▶ 30:00](https://youtu.be/mUv_cTprS9c?t=1800)。
+【Q&A】[▶ 21:30](https://youtu.be/mUv_cTprS9c?t=1290) 學生問：如果階是 14 呢？老師：「那就有 2 階子群，你被它困住了。」
 
-**「旋轉 × 鏡射」都是 2 階** [▶ 32:30](https://youtu.be/mUv_cTprS9c?t=1950)
-
-先試 $x^2y$：由 $(xy)^2 = 1$，得 $xy = (xy)^{-1} = y^{-1}x^{-1} = yx^{-1}$（**襪子鞋子 (socks-shoes)** 規則，且 $y^{-1} = y$）。用它算出 $(x^2y)^2 = 1$ [▶ 35:00](https://youtu.be/mUv_cTprS9c?t=2100)。
-
-幾何直覺（學生說的）：轉、轉、翻，再轉、轉、翻，就回到原位 [▶ 35:30](https://youtu.be/mUv_cTprS9c?t=2130)。
-
-**歸納法證明**（學生提議）[▶ 40:00](https://youtu.be/mUv_cTprS9c?t=2400)
-- **主張**：$(x^ky)^2 = 1$ 對所有 $k\in\mathbb{N}$。
-- **$k=1$**：就是關係式 $(xy)^2 = 1$ [▶ 40:30](https://youtu.be/mUv_cTprS9c?t=2430)。
-- **歸納步驟** [▶ 42:00](https://youtu.be/mUv_cTprS9c?t=2520)：設 $(x^ky)^2 = 1$。用 $xy = yx^{-1}$：
-$$(x^{k+1}y)^2 = x^k(xy)x^{k+1}y = x^k(yx^{-1})x^{k+1}y = x^ky\,x^ky = (x^ky)^2 = 1.$$
-
-> 💬 更短的寫法：由 $yxy = x^{-1}$ 得 $yx^ky = x^{-k}$，所以 $(x^ky)^2 = x^k(yx^ky) = x^kx^{-k} = 1$。
-
-老師說：先多算幾個，產生「相信它是對的」的種子，才有勇氣試歸納法 [▶ 44:00](https://youtu.be/mUv_cTprS9c?t=2640)。
-
-**2 階元素個數** [▶ 44:30](https://youtu.be/mUv_cTprS9c?t=2670)
-- $n$ 奇數：$n$ 個（所有 $x^ky$）。
-- $n$ 偶數：$n+1$ 個（所有 $x^ky$，加上 $x^{n/2}$）。
-- 順帶一提：$|D_n| = 2n$，所以**沒有奇數階的二面體群** [▶ 45:00](https://youtu.be/mUv_cTprS9c?t=2700)。
-
-#### $d\neq 2$ 的情形 [▶ 46:00](https://youtu.be/mUv_cTprS9c?t=2760)
-
-- 所有 $x^ky$（「旋轉 × 鏡射」）都是 2 階，所以 $d\neq 2$ 的元素**只能在旋轉裡**。
-- 旋轉子群 $\{1,x,\dots,x^{n-1}\} = \langle x\rangle$ 是 $n$ 階**循環群** [▶ 48:30](https://youtu.be/mUv_cTprS9c?t=2910)。
-- 上一講證過：$n$ 階循環群中 $d$ 階元素恰有 $\varphi(d)$ 個（$d\mid n$）。
-- 所以 $D_n$ 中 $d$ 階元素恰有 $\varphi(d)$ 個。$\blacksquare$
-
-**$D_n$ 不是循環群** [▶ 49:30](https://youtu.be/mUv_cTprS9c?t=2970)：它有不只一個 2 階元素。循環群最多只有一個 2 階元素，否則會有兩個不同的 2 階子群，違反循環群基本定理。但 $D_n$ **裡面**有循環子群，而且循環子群必須遵守循環群的規則。
-
-### 補充：循環子群無所不在 [▶ 50:00](https://youtu.be/mUv_cTprS9c?t=3000)
-
-任何群的任何元素 $g$ 都生成循環子群 $\langle g\rangle$（L3 證過）。
-- $GL(2,\mathbb{R})$：例如 $\left\langle\begin{pmatrix}1&2\\3&4\end{pmatrix}\right\rangle$，就是這個矩陣和它反矩陣的所有次方 [▶ 51:00](https://youtu.be/mUv_cTprS9c?t=3060)。
-- $(M_{2\times2}(\mathbb{R}),+)$（所有 $2\times2$ 實矩陣，加法）：$\left\langle\begin{pmatrix}a&b\\c&d\end{pmatrix}\right\rangle = \left\{n\begin{pmatrix}a&b\\c&d\end{pmatrix}\mid n\in\mathbb{Z}\right\}$，是無限循環子群 [▶ 53:00](https://youtu.be/mUv_cTprS9c?t=3180)。
-
-**來自未來的評論** [▶ 53:30](https://youtu.be/mUv_cTprS9c?t=3210)：之後會學到，這些無限循環群其實「就是」整數，只是寫法很笨。
+【口頭】[▶ 22:00](https://youtu.be/mUv_cTprS9c?t=1320)「如果我不小心出了 Gallian 裡這種有歧義的題，**寄信問我**，讓我幫你們釘清楚。群論學家大概會說：只有『相異』才有趣。而且他說『恰好三個子群』還一個一個列出來，看來是數過了，應該是指相異的。」
 
 ---
 
-## 本集新出現的術語
+## 3. 題 3：Dn 中 d 階元素的個數
 
-| 中文 | English | 首次出現 |
+[▶ 23:00](https://youtu.be/mUv_cTprS9c?t=1380)（第 5 版 Ch.4 #25；第 10 版 Ch.4 #33，p.91。推薦題，不是指定作業。）
+
+> **題目**　$d$ 是正整數，$d\neq2$，$d\mid n$。證明 $D_n$ 中 $d$ 階元素恰有 $\varphi(d)$ 個。$D_n$ 有幾個 2 階元素？
+
+【口頭】[▶ 25:00](https://youtu.be/mUv_cTprS9c?t=1500)（學生想說自己的理解）「先別毒害我！讓我先找到我自己的誤解。我很容易被騙，會很快抓住錯的想法。」老師看了書後的提示：$n$ 奇數時有 $n$ 個 2 階元素，偶數時 $n+1$ 個。「嗯，真的嗎？」
+
+### 3.1 旋轉裡的 2 階元素
+
+[▶ 26:30](https://youtu.be/mUv_cTprS9c?t=1590)「先想 $D_4$。」
+
+**由關係式**[▶ 27:00](https://youtu.be/mUv_cTprS9c?t=1620)：$fRf = R^{-1}$ ⇒ $fRfR = 1$ ⇒ $(fR)^2 = 1$。所以 $fR$ 是 **2 階**。
+
+**旋轉裡也藏著一個**[▶ 27:30](https://youtu.be/mUv_cTprS9c?t=1650)：轉 $180°$ 兩次回到原位。
+- $D_4$：$R^2$ 是轉 $180°$，$(R^2)^2 = R^4 = 1$。
+- 一般 **$n$ 偶數**：$R^{n/2}$ 是整數次方，$(R^{n/2})^2 = R^n = e$。「偶數的旋轉裡有一個 2 階的。」
+- **$n$ 奇數**：$n/2$ 不是整數，旋轉裡**沒有** 2 階元素 [▶ 30:00](https://youtu.be/mUv_cTprS9c?t=1800)。
+
+### 3.2 「旋轉 × 鏡射」都是 2 階
+
+[▶ 29:30](https://youtu.be/mUv_cTprS9c?t=1770) 改用作業的記號：$x$ 是旋轉、$y$ 是鏡射（「我不寫 $R$ 了，寫 $x$」）。以 $D_5$ 為例：
+$$D_5 = \{1,x,x^2,x^3,x^4,\ y,xy,x^2y,x^3y,x^4y\}.$$
+**生成元與關係式**[▶ 30:30](https://youtu.be/mUv_cTprS9c?t=1830)：
+$$x^n = 1,\qquad y^2 = 1,\qquad(xy)^2 = 1.$$
+「這就是全部的資料。」
+
+（老師先想 $D_{11}$，因為書上提示用它，「為什麼是 11？我做 5 就好」。作業 B 部分用的是 $n = 294$，偶數。）
+
+**試 $x^2y$**[▶ 32:30](https://youtu.be/mUv_cTprS9c?t=1950)：「缺乏靈感時，只好硬算。」
+
+先準備一個好用的關係 [▶ 33:30](https://youtu.be/mUv_cTprS9c?t=2010)：$(xy)^2 = 1$ 表示 $xy$ 是自己的反元素，所以
+$$xy = (xy)^{-1} = y^{-1}x^{-1} = yx^{-1}$$
+（**襪子-鞋子**，以及 $y^{-1} = y$）。
+
+計算 [▶ 34:00](https://youtu.be/mUv_cTprS9c?t=2040)：
+$$(x^2y)^2 = x\,(xy)\,x\,(xy)\cdots$$
+用 $xy = yx^{-1}$ 化簡，得到 $(x^2y)^2 = 1$ [▶ 35:00](https://youtu.be/mUv_cTprS9c?t=2100)。「看！又一個 2 階元素。我開始覺得**全部**都是 2 階。這太貪心了嗎？」
+
+【課堂討論】[▶ 35:30](https://youtu.be/mUv_cTprS9c?t=2130) 學生的幾何直覺：「轉、轉、翻，再轉、轉、翻，就回去了。」老師：「太棒了。我不是這樣想的，但對我來說，能把幾何轉成代數是很棒的事。我不太反過來想，也許我該試試。」
+
+老師又問：「是因為 5 是質數嗎？」然後想找一般論證（試著用「$R = fR^{-1}f$ 對任意旋轉成立」，但不確定當初推導的條件 [▶ 39:00](https://youtu.be/mUv_cTprS9c?t=2340)）。
+
+**歸納法證明**（學生提議）[▶ 40:00](https://youtu.be/mUv_cTprS9c?t=2400)
+
+> **主張**　$(x^ky)^2 = 1$ 對所有 $k\in\mathbb{N}$。
+
+【口頭】「我有強烈的預感，等你們走了我會打給 Bill，問到真正的答案，然後對我的人生感到難過。但我會活下來。」
+
+（老師提醒：歸納變數不該也叫 $n$，因為 $n$ 已經是 $D_n$ 的 $n$。下面用 $k$。）
+
+- **$k = 1$**[▶ 40:30](https://youtu.be/mUv_cTprS9c?t=2430)：$(xy)^2 = 1$ 就是 $D_n$ 的定義關係。
+- **歸納步驟**[▶ 42:00](https://youtu.be/mUv_cTprS9c?t=2520)：設 $(x^ky)^2 = 1$。
+$$
+\begin{aligned}
+(x^{k+1}y)^2 &= x^k(xy)\,x^{k+1}y\\
+&= x^k(yx^{-1})\,x^{k+1}y &&(xy = yx^{-1})\\
+&= x^ky\,x^ky &&(\text{指數律})\\
+&= (x^ky)^2 = 1. &&(\text{歸納假設})
+\end{aligned}
+$$
+  【課堂討論】這一串是學生口述、老師寫的 [▶ 43:30](https://youtu.be/mUv_cTprS9c?t=2610)。
+
+由數學歸納法得證。$\blacksquare$
+
+> 💬 更短的寫法：由 $yxy = x^{-1}$，得 $yx^ky = (yxy)^k = x^{-k}$，所以 $(x^ky)^2 = x^k(yx^ky) = x^kx^{-k} = 1$。
+
+【口頭】[▶ 44:00](https://youtu.be/mUv_cTprS9c?t=2640)「我們只要做足夠的計算，**開始相信它**；找到那顆信念的種子，就有勇氣試歸納法。」「跟 5 是不是質數無關。」
+
+### 3.3 2 階元素的個數
+
+[▶ 44:30](https://youtu.be/mUv_cTprS9c?t=2670)
+
+| $n$ | 2 階元素 | 個數 |
 |---|---|---|
-| 無限循環群 | infinite cyclic group | [02:30](https://youtu.be/mUv_cTprS9c?t=150) |
-| 重新編號 | reindexing | [06:30](https://youtu.be/mUv_cTprS9c?t=390) |
-| 生成元與關係 | generators and relations | [30:30](https://youtu.be/mUv_cTprS9c?t=1830) |
-| 襪子鞋子規則 | socks-shoes (property) | [33:30](https://youtu.be/mUv_cTprS9c?t=2010) |
-| 數學歸納法 | mathematical induction | [38:00](https://youtu.be/mUv_cTprS9c?t=2280) |
+| 奇數 | 所有 $x^ky$（$k = 0,\dots,n-1$） | $n$ |
+| 偶數 | 所有 $x^ky$，加上 $x^{n/2}$（轉 $180°$） | $n+1$ |
+
+【口頭】[▶ 45:00](https://youtu.be/mUv_cTprS9c?t=2700)「順帶一提，**沒有奇數階的二面體群**：$|D_n| = 2n$，永遠是旋轉加上旋轉-鏡射。」
+
+### 3.4 d ≠ 2 的情況
+
+[▶ 46:00](https://youtu.be/mUv_cTprS9c?t=2760)「最後那句問 2 階元素其實是**善意的提示**。」
+
+$$D_n = \{1,r,\dots,r^{n-1}\}\cup\{f,rf,\dots,r^{n-1}f\}.$$
+
+1. 所有「旋轉 × 鏡射」都是 **2 階**（3.2），所以 $d\neq2$ 階的元素**只能在旋轉裡**[▶ 47:00](https://youtu.be/mUv_cTprS9c?t=2820)。（老師：「這不明顯，應該在作業裡證明。」）
+2. 旋轉 $\{1,r,\dots,r^{n-1}\} = \langle r\rangle$ 是 $n$ 階**循環**子群 [▶ 48:30](https://youtu.be/mUv_cTprS9c?t=2910)。
+3. 昨天證過：$n$ 階循環群裡 $d$ 階元素恰有 $\varphi(d)$ 個（$d\mid n$）。
+4. 所以 $D_n$ 中 $d$ 階元素恰有 $\varphi(d)$ 個。$\blacksquare$
+
+「你會擔心有 $d$ 階元素藏在鏡射那一半，但那些都出局了——它們都是 2 階。」[▶ 49:30](https://youtu.be/mUv_cTprS9c?t=2970)
+
+（老師對提出歸納法的學生說：「這是你的點子，全班應該謝謝你。我該把他們的分數分一些給你——前提是這段影片及時上傳到能幫到他們，大概不太可能。」）
+
+**$D_n$ 不是循環群**[▶ 49:30](https://youtu.be/mUv_cTprS9c?t=2970)：最明顯的理由——它有不只一個 2 階元素。**循環群最多只有一個 2 階元素**，否則會有兩個不同的 2 階子群，違反基本定理。
+
+【Q&A】學生：「但它**有**循環子群。」老師：「對。任何循環子群都**必須遵守**循環群的規則，即使它在一個不循環的大群裡。」
+
+---
+
+## 4. 循環子群無所不在
+
+[▶ 50:00](https://youtu.be/mUv_cTprS9c?t=3000)「任何群裡**一定**有循環子群，因為 $\langle g\rangle$ 永遠是循環子群（L3 證過）。」
+
+**例 1：$GL(2,\mathbb{R})$**[▶ 50:30](https://youtu.be/mUv_cTprS9c?t=3030)（無限群，$\det\neq0$）
+$$\left\langle\begin{pmatrix}1&2\\3&4\end{pmatrix}\right\rangle$$
+是 $GL(2,\mathbb{R})$ 的循環子群：這個矩陣和它反矩陣的所有次方 [▶ 52:00](https://youtu.be/mUv_cTprS9c?t=3120)。
+
+【口頭】[▶ 51:30](https://youtu.be/mUv_cTprS9c?t=3090)「我們在 L3 證過，但你們當時大概沒體會我在說什麼。」（學生：「那時候對矩陣有點不屑。」老師：「我會忽略那句貶低矩陣的話。」）
+
+**例 2：$(M_{2\times2}(\mathbb{R}),+)$**[▶ 52:30](https://youtu.be/mUv_cTprS9c?t=3150)（所有 $2\times2$ 實矩陣，**加法**，零矩陣是單位元素）
+$$\left\langle\begin{pmatrix}a&b\\c&d\end{pmatrix}\right\rangle = \left\{n\begin{pmatrix}a&b\\c&d\end{pmatrix} : n\in\mathbb{Z}\right\}.$$
+兩個這種矩陣相加還是同一種；加法反元素在裡面；零在裡面。這是一個**無限循環子群**。
+
+**來自未來的評論**[▶ 53:30](https://youtu.be/mUv_cTprS9c?t=3210)：「之後會學到，這只是一種**很蠢的整數寫法**。這兩個例子作為群，其實就是整數。」（無限循環群都同構於 $\mathbb{Z}$。）
+
+（「我應該 5:30 停的？喔不，你們抓到我了。」）
+
+---
+
+## 5. 一頁速查表
+
+### 5.1 本集結果
+
+| 結果 | 關鍵一步 |
+|---|---|
+| $\lvert a\rvert = \infty$ ⇒ $\langle a^3\rangle$ 的生成元只有 $a^{\pm3}$ | $a^3 = a^{3lj}$ ⇒ $lj = 1$（無限階：次方相異），$\lvert l\rvert>1$ 無整數解 |
+| 恰有 3 個相異子群（含 7 階）的循環群 ⇒ $\lvert G\rvert = 49$ | $\lvert G\rvert = 7k$；$k$ 階子群必須是那三個之一 ⇒ $k = 7$ |
+| $D_n$ 中所有 $r^kf$ 都是 2 階 | $yx^ky = x^{-k}$；或用 $xy = yx^{-1}$ 歸納 |
+| $D_n$ 的 2 階元素：$n$ 奇 → $n$ 個；$n$ 偶 → $n+1$ 個 | 偶數多一個 $r^{n/2}$ |
+| $d\neq2$、$d\mid n$ ⇒ $D_n$ 中 $d$ 階元素恰 $\varphi(d)$ 個 | 都在 $n$ 階循環群 $\langle r\rangle$ 裡 |
+| $D_n$（$n\ge3$）不是循環群 | 不只一個 2 階元素 |
+
+### 5.2 技巧
+
+- 無限循環群：先想 $\mathbb{Z}$ 的版本（$\langle a^3\rangle\leftrightarrow3\mathbb{Z}$）。
+- 題目有歧義（例如「三個」是否相異）→ 問老師；一般取「有趣」的那個解讀。
+- 缺乏靈感時硬算幾個 → 產生信念 → 用歸納法證明。
+- $(xy)^2 = 1$ ⇒ $xy = (xy)^{-1} = yx^{-1}$。
+- 任何群裡 $\langle g\rangle$ 都是循環子群，必須遵守循環群的規則。
+
+### 5.3 術語
+
+| 中文 | English |
+|---|---|
+| 無限循環群 | infinite cyclic group |
+| 重新編號 | reindexing |
+| 生成元與關係式 | generators and relations |
+| 襪子-鞋子規則 | socks–shoes property |
+| 數學歸納法 | mathematical induction |
+
+---
+
+## 6. 與後續集數的連結
+
+| 本集觀念 | 後面在哪裡用到 |
+|---|---|
+| **無限循環群「就是」整數** | [[15-L10-同態與同構]]、[[16-L11-同構的性質]]：每個無限循環群同構於 $\mathbb{Z}$ |
+| **$D_n$ 的 2 階元素** | [[13-習題課-Gallian第5章]]；[[20-答疑課]]：$D_4$ 的中心 $\{e,R^2\}$ |
+| **循環群最多一個 2 階元素** | [[25-L16-外直積與內直積]]：判斷直積是否循環 |
+| **$\lvert G\rvert = p^2$ 的循環群** | [[22-L14-邁向第一同構定理]]：小階群分類 |
+
+---
+
+## 附：本集一句話總結
+
+> **無限階時 $\langle a^3\rangle$ 只有 $a^{\pm3}$ 兩個生成元（類比 $3\mathbb{Z}$）；恰有三個相異子群（含一個 7 階）的循環群必是 49 階；在 $D_n$ 裡所有「旋轉×鏡射」都是 2 階（學生提出的歸納法），所以 $d\neq2$ 階的元素都在循環的旋轉子群裡、恰有 $\varphi(d)$ 個，而 2 階元素有 $n$（奇）或 $n+1$（偶）個。**
+
+---
 
 ## ⚠️ 待確認清單
 
 （本集無）
+
+---
+
+*筆記依據 James S. Cook「Abstract Algebra I」(Fall 2016) 2016-09-13 習題課錄影逐字稿（YouTube 自動字幕，54:35）與 Gallian《Contemporary Abstract Algebra》10th ed. 習題整理。*
