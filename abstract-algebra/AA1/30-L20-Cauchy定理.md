@@ -4,158 +4,332 @@ episode: 30
 lecture: L20
 date: 2016-10-19
 video: https://www.youtube.com/watch?v=FhfqXJeQwEw
-notes: AlgebraInotes_2018.pdf §3.7 Lecture 17（p.116–118）；Sylow 定理講義（Beachy & Blair、Nicholson 影印）
+notes: AlgebraInotes_2018.pdf §3.7 Lecture 17（p.116–119）；Sylow 定理講義（Beachy & Blair、Nicholson 影印）
 ---
 
-# 第 30 集 · L20：共軛類、類方程、Cauchy 定理、Sylow 定理簡介 [▶ 影片](https://www.youtube.com/watch?v=FhfqXJeQwEw&list=PLBY4G2o7DhF0JCgapYKrqibGaJuvV4Gkb)
+# 第 30 集 · L20：共軛保持循環型、類方程、Cauchy 定理、Sylow 簡介 [▶ 影片](https://www.youtube.com/watch?v=FhfqXJeQwEw&list=PLBY4G2o7DhF0JCgapYKrqibGaJuvV4Gkb)
 
 ← 上一集：[[29-答疑課-L10-12習題解答]] ｜ [總目錄](../README.md) ｜ 下一集：[[31-答疑課]] →
 
-## 本集概要
-
-- **共軛保持循環型**（更正上一堂的錯誤想法）；$S_n$ 的共軛類就是循環型。
-- 共軛類記號 $x^G$；$|x^G| = [G:C(x)]$。推論：每種循環型的置換個數整除 $n!$。$S_4$：$1+6+8+6+3$；$S_5$：$1+10+20+30+24+20+15 = 120$（作業提示）。
-- **類方程** $|G| = |Z(G)| + \sum[G:C(x_i)]$。
-- **Cauchy 定理**：質數 $p$ 整除 $|G|$，則 $G$ 有 $p$ 階元素。用強歸納法和類方程證明（交換群的情形是作業）。
-- **Sylow 定理**（只介紹，不考）：Sylow 本人是高中老師；三個定理的陳述；應用：100 階群有正規的 25 階子群。
-
-> 📘 講義對應：2018 講義 §3.7 Lecture 17「conjugacy and the class equation」（p.116–118）。Sylow 部分是課堂發的影印講義（Beachy & Blair、Nicholson《Introduction to Abstract Algebra》3rd ed.）。老師明說**不期望大家會陳述或應用 Sylow 定理**。
+> **課程**：Abstract Algebra I（Liberty University，Fall 2016）— 第 30 集，Lecture 20
+> **講者**：James S. Cook
+> **來源**：YouTube 錄影逐字稿（45:22，自動字幕）＋ 講義 `AlgebraInotes_2018.pdf` §3.7「conjugacy and the class equation」（p.116–119）＋ 課堂發的 Sylow 定理影印講義（Beachy & Blair；Nicholson《Introduction to Abstract Algebra》3rd ed.）。
+> **標記說明**：`【口頭】` 老師口頭補充、講義沒有；`【Q&A】` 學生提問；`【課堂討論】` 老師問、學生答；`【講義補充】` 講義有、課堂沒講；`⚠️ 逐字稿缺字` 自動字幕聽錯或掉字，依講義補；`[▶ mm:ss]` 點了跳到影片該時間點
+> **說明**：老師明說**不期望大家會陳述或應用 Sylow 定理**，那部分只是讓大家欣賞。
 
 ---
 
-## 筆記
+## 目錄
 
-### 1. 共軛保持循環型 [▶ 01:30](https://youtu.be/FhfqXJeQwEw?t=90)
+- [0. 這堂課要做什麼](#0-這堂課要做什麼)
+- [1. 共軛保持循環型](#1-共軛保持循環型)
+- [2. 共軛類的大小與記號 xᴳ](#2-共軛類的大小與記號-xᴳ)
+- [3. 推論：每種循環型的個數整除 n!](#3-推論每種循環型的個數整除-n)
+- [4. Cauchy 定理](#4-cauchy-定理)
+  - [4.1 陳述](#41-陳述)
+  - [4.2 證明：對 |G| 強歸納](#42-證明對-g-強歸納)
+  - [4.3 類方程](#43-類方程)
+  - [4.4 Cauchy 定理給了 Lagrange 沒給的](#44-cauchy-定理給了-lagrange-沒給的)
+- [5. Sylow 定理（只介紹）](#5-sylow-定理只介紹)
+- [6. 一頁速查表](#6-一頁速查表)
+- [7. 與後續集數的連結](#7-與後續集數的連結)
 
-**複習**：$\langle\sigma\rangle$ 作用在數字上，軌道就是互斥循環。例：$\sigma = (1234)(56)(78)$，1 的軌道 $\{1,2,3,4\}$、5 的軌道 $\{5,6\}$、7 的軌道 $\{7,8\}$，9、10 不動。
+---
 
-**更正** [▶ 02:30](https://youtu.be/FhfqXJeQwEw?t=150)：老師昨天在答疑課發現自己一直以為「用置換共軛，循環不變」。**不對。**
+## 0. 這堂課要做什麼
 
-**例：$\alpha = (12)(34)\in S_4$**
+[▶ 00:00](https://youtu.be/FhfqXJeQwEw?t=0) 課前禱告：「求祢讓學生在困難中保持士氣、堅持下去。」
 
-| 用誰共軛 | 結果 |
+上次：群作用。今天：
+1. **共軛**對置換做了什麼（「接下來 5–10 分鐘」）。
+2. 類方程和 **Cauchy 定理**。
+3. **Sylow 定理**的介紹（發講義）。
+
+回顧 [▶ 00:30](https://youtu.be/FhfqXJeQwEw?t=30)：$\langle\sigma\rangle$ 作用在 $\{1,\dots,n\}$ 上，軌道就是 $\sigma$ 的互斥循環裡的數字。例：$\sigma = (1\,2\,3\,4)(5\,6)(7\,8)$ 作用在 $\{1,\dots,10\}$：$\mathcal O(1) = \{1,2,3,4\}$、$\mathcal O(5) = \{5,6\}$、$\mathcal O(7) = \{7,8\}$、9 和 10 不動。
+
+---
+
+## 1. 共軛保持循環型
+
+[▶ 01:30](https://youtu.be/FhfqXJeQwEw?t=90)「我想多談一點共軛對置換群的故事：把一個置換共軛，會發生什麼？我不給一個概括性的技術定理，給一個『**舉例證明**』——那當然不是證明，但我想你們比較容易懂，也許你們會相信。」
+
+【口頭】[▶ 02:30](https://youtu.be/FhfqXJeQwEw?t=150)「讓我想到這個的原因是：昨天習題課我回頭看以前的作業，發現我腦中有個**錯的想法**——我以為用某個置換共軛，循環會保持不變。**那不對。**」
+
+**例：$\alpha = (1\,2)(3\,4)$ 在 $S_4$ 裡**[▶ 03:00](https://youtu.be/FhfqXJeQwEw?t=180)：
+
+| 共軛用 | 結果 |
 |---|---|
-| $(123)$ | $(14)(23)$ |
-| $(124)$ | $(13)(24)$ |
-| $(23)$ | $(13)(24)$ |
-| $(1234)$ | $(14)(23)$ |
-| $(12)$ | $(12)(34)$（不變） |
+| $(1\,2\,3)$ | $(1\,4)(2\,3)$ |
+| $(1\,2\,4)$ | $(1\,3)(2\,4)$ |
+| $(2\,3)$ | $(1\,3)(2\,4)$ |
+| $(1\,2\,3\,4)$ | $(1\,4)(2\,3)$ |
+| $(1\,2)$ | $(1\,2)(3\,4) = \alpha$ |
 
-共同點：都是**兩個互斥換位的乘積**——**循環型 (cycle type)** 相同 [▶ 04:00](https://youtu.be/FhfqXJeQwEw?t=240)。用 $\alpha$ 自己的循環 $(12)$ 或 $(34)$ 共軛，$\alpha$ 不變。
+（$(1\,2\,3)^{-1} = (3\,2\,1)$；「都是一般的循環計算，你們可以輕易檢查」。）
 
-- 4-循環共軛還是 4-循環：$(12)(1234)(12) = (1342)$ [▶ 05:00](https://youtu.be/FhfqXJeQwEw?t=300)。
-- 3-循環共軛還是 3-循環：$(124)(123)(124)^{-1} = (243)$ [▶ 05:30](https://youtu.be/FhfqXJeQwEw?t=330)。
+【課堂討論】[▶ 03:30](https://youtu.be/FhfqXJeQwEw?t=210)「這些有什麼共同點？」學生：「形式一樣。」老師：「技術名詞叫**循環型（cycle type）**：全部都是兩個互斥換位的乘積。」
 
-> **定理（不證）**　若 $\alpha = \beta_1\cdots\beta_t$ 是互斥循環分解，則任何共軛 $\sigma\alpha\sigma^{-1} = \gamma_1\cdots\gamma_t$ 也是互斥循環分解，而且可以排成 $|\gamma_i| = |\beta_i|$ [▶ 07:00](https://youtu.be/FhfqXJeQwEw?t=420)。
+**觀察**[▶ 04:00](https://youtu.be/FhfqXJeQwEw?t=240)：用 $\alpha$ **自己的**循環（$(1\,2)$ 或 $(3\,4)$）共軛，$\alpha$ 不動。
 
-（具體地：$\sigma(a_1\cdots a_k)\sigma^{-1} = (\sigma(a_1)\cdots\sigma(a_k))$。）
+**其他循環型**[▶ 05:00](https://youtu.be/FhfqXJeQwEw?t=300)：
+- $\beta = (1\,2\,3\,4)$：$(1\,2)\beta(1\,2) = (1\,3\,4\,2)$——還是 4-循環。
+- $\gamma = (1\,2\,3)$：$(1\,2\,4)\gamma(1\,2\,4)^{-1} = (2\,4\,3)$——還是 3-循環。
 
-**所以**：$S_n$ 中互相共軛的置換，循環型相同。
+（老師對游標發脾氣：「詛咒你，游標。不，我不恨你。cursor 這個字從哪來的？」學生：「cursory？」）
 
-### 2. 共軛類的大小 [▶ 08:00](https://youtu.be/FhfqXJeQwEw?t=480)
+> **事實（共軛保持循環型）**[▶ 07:00](https://youtu.be/FhfqXJeQwEw?t=420)（講義 Ex 3.7.5，不證）　若 $\alpha = \beta_1\beta_2\cdots\beta_t$ 是互斥循環分解，則任何 $\sigma\alpha\sigma^{-1} = \gamma_1\gamma_2\cdots\gamma_t$ 也是互斥循環分解，而且可以排成 $|\gamma_i| = |\beta_i|$。
 
-> **推論（軌道穩定子定理）**　$G$ 有限，$x\in G$。
-> $$|\{gxg^{-1}\mid g\in G\}| = [G:C(x)].$$
+**所以：$S_n$ 裡互相共軛的置換恰好是循環型相同的置換。**
 
-共軛作用：軌道 = 共軛類，穩定子 = $\{g\mid gxg^{-1} = x\} = C(x)$ [▶ 09:00](https://youtu.be/FhfqXJeQwEw?t=540)。
-
-**記號** [▶ 10:00](https://youtu.be/FhfqXJeQwEw?t=600)：群論學家常把 $x$ 的共軛類寫成 $x^G$。所以 $|x^G| = [G:C(x)]$。
-
-> **推論的推論**　$S_n$ 中具有某種循環型的置換個數整除 $n!$ [▶ 11:00](https://youtu.be/FhfqXJeQwEw?t=660)。
-
-$S_n$ 的共軛類就是循環型，$|x^G| = [S_n:C(x)]$，而 $[S_n:C(x)]\cdot|C(x)| = n!$。
-
-**$S_4$** [▶ 12:30](https://youtu.be/FhfqXJeQwEw?t=750)：$1,6,8,6,3$ 都整除 24；加起來也是 24（循環型分割 $S_4$）。（6 個換位：$(12),(13),(14),(23),(24),(34)$。）
-
-老師想到一個「三階推論」：$n!$ 可以寫成若干個 $n!$ 的因數之和——「我不確定這有沒有特別有趣」[▶ 14:00](https://youtu.be/FhfqXJeQwEw?t=840)。
-
-**$S_5$（作業提示）** [▶ 15:30](https://youtu.be/FhfqXJeQwEw?t=930)
-$$120 = 1+10+20+30+24+20+15.$$
-（依序是恆等、換位、3-循環、4-循環、5-循環、3-循環×換位、兩個換位。）
-
-### 3. Cauchy 定理 [▶ 16:00](https://youtu.be/FhfqXJeQwEw?t=960)
-
-> **定理（Cauchy 定理）**　$G$ 是有限群，質數 $p$ 整除 $|G|$。則 $G$ 有 $p$ 階元素。
-
-**沒有**假設 $G$ 是循環群或交換群。**作業**：證明 $G$ 是**交換群**的情形（「不像上一題那麼簡單，但會給提示」）[▶ 16:30](https://youtu.be/FhfqXJeQwEw?t=990)。
-
-**證明（對 $|G|$ 強歸納）** [▶ 17:30](https://youtu.be/FhfqXJeQwEw?t=1050)
-
-老師覺得「對群的階做歸納」很有想像力，他自己從方程式的角度大概想不到。
-
-- **$|G| = 1$**：沒有質因數，不用檢查。
-- **歸納假設**：定理對所有階 $<n$ 的群成立；設 $|G| = n$，$p\mid n$。
-- $G$ 交換的情形是作業，以下設 $G$ **不交換**，所以有 $x\notin Z(G)$ [▶ 22:00](https://youtu.be/FhfqXJeQwEw?t=1320)。
-
-**觀察** [▶ 19:00](https://youtu.be/FhfqXJeQwEw?t=1140)：$x\in Z(G)\iff gxg^{-1} = x$ 對所有 $g\iff x^G = \{x\}$。所以 $x\notin Z(G)$ 時共軛類多於一個元素，$[G:C(x)]>1$，$C(x)$ 是**真子群**，$|C(x)|<n$。
-
-**情形 1：$p\mid|C(x)|$（某個非中心的 $x$）** [▶ 22:00](https://youtu.be/FhfqXJeQwEw?t=1320)：由歸納假設，$C(x)$ 有 $p$ 階元素，它也在 $G$ 裡。
-
-**情形 2：對所有非中心的 $x$，$p\nmid|C(x)|$** [▶ 22:30](https://youtu.be/FhfqXJeQwEw?t=1350)
-- $|G| = [G:C(x)]\cdot|C(x)|$，$p\mid|G|$。
-- **Euclid 引理**：質數整除乘積，就整除其中一個因數（質數不能拆成兩半）[▶ 23:30](https://youtu.be/FhfqXJeQwEw?t=1410)。所以 $p\mid[G:C(x)]$。
-- **類方程 (class equation)** [▶ 24:00](https://youtu.be/FhfqXJeQwEw?t=1440)：共軛類分割 $G$；單點的共軛類正好是中心的元素。所以
-$$|G| = |Z(G)| + \sum_i[G:C(x_i)],$$
-  每個非單點共軛類取一個代表 $x_i$。
-- $p$ 整除 $|G|$，也整除每個 $[G:C(x_i)]$，所以 $p\mid|Z(G)|$ [▶ 25:00](https://youtu.be/FhfqXJeQwEw?t=1500)。
-- $Z(G)$ 是**交換群**，由作業，它有 $p$ 階元素；而 $Z(G)\le G$。$\blacksquare$
-
-**推論**：有 $p$ 階元素，就有 $p$ 階（循環）子群 [▶ 26:00](https://youtu.be/FhfqXJeQwEw?t=1560)。
-
-**例**：$|G| = 11\cdot13\cdot53$，則 $G$ 有 11 階、13 階、53 階子群 [▶ 27:30](https://youtu.be/FhfqXJeQwEw?t=1650)。
-
-> 💬 老師提到 Grothendieck 被要求舉一個具體質數的故事（「改變了數學，但你們大概現在才聽到他的名字」）。他記不清是 51 還是 53。眾所周知的版本是 **57**（所謂「Grothendieck 質數」，其實 $57 = 3\times19$ 不是質數）[▶ 27:00](https://youtu.be/FhfqXJeQwEw?t=1620)。
-
-**和 Lagrange 的對比** [▶ 28:00](https://youtu.be/FhfqXJeQwEw?t=1680)：Lagrange 說子群的階**必須**整除群的階，但不保證那些子群**存在**。就像微積分的 Fermat 定理：極值處導數為 0 或不存在，但臨界點不一定是極值。Cauchy 定理說：**質因數階的子群一定存在**。
-
-### 4. Sylow 定理（介紹）[▶ 29:00](https://youtu.be/FhfqXJeQwEw?t=1740)
-
-老師發了影印講義。**不期望會陳述，甚至寧願你們不要去用**；只希望大家欣賞這些定理。想看證明可以看 Harvard 的 Gross 教授的 YouTube 課程 [▶ 30:00](https://youtu.be/FhfqXJeQwEw?t=1800)。
-
-**Sylow 小傳**（Nicholson）[▶ 31:00](https://youtu.be/FhfqXJeQwEw?t=1860)：Peter Ludwig Mejdell Sylow（1832–1918），挪威人，大半輩子在 Halden 當**高中老師**。教學負擔很重，還是研讀 Abel，1862–63 年在 Christiania 大學（奧斯陸）講 Galois 理論和置換群。Sylow 定理 1872 年發表（針對置換群），1887 年 Frobenius 推廣到抽象群。他用這些定理證明：Galois 群是質數冪階的方程可以用根式解。他還花了 8 年編輯 Abel 的全集；從高中退休後才被聘為 Christiania 的講座教授。
-
-> 💬 老師說他也希望教自己的孩子高中數學；「去高中教書然後當上 UVA 的系主任？現在好像不會發生了。」[▶ 33:00](https://youtu.be/FhfqXJeQwEw?t=1980)
-
-> **Sylow 第一定理**　若 $p^\alpha$ 整除 $|G|$（$\alpha\ge1$），則 $G$ 有 $p^\alpha$ 階子群 [▶ 34:30](https://youtu.be/FhfqXJeQwEw?t=2070)。
-
-是 Cauchy 定理的加強版；證明同樣是用共軛作用。
-
-> **定義（Sylow $p$-子群）**　$P\le G$，$|P| = p^\alpha$，且 $p^\alpha\mid|G|$ 但 $p^{\alpha+1}\nmid|G|$。也就是 $G$ 中「最大的 $p$ 冪階」子群 [▶ 35:30](https://youtu.be/FhfqXJeQwEw?t=2130)。
-
-**例**：$|G| = 250 = 2\cdot5^3$。125 階子群是 Sylow 5-子群，2 階子群是 Sylow 2-子群。25 階子群存在，但不是 Sylow 5-子群 [▶ 36:30](https://youtu.be/FhfqXJeQwEw?t=2190)。
-
-**引理**（講義）：$|G| = mp^\alpha$，$p\nmid m$。若 Sylow $p$-子群 $P$ 是**正規**的，則它包含 $G$ 的每個 $p$-子群 [▶ 37:30](https://youtu.be/FhfqXJeQwEw?t=2250)。（上例中 125 階子群指數為 2，一定正規。）
-
-> **Sylow 第二、三定理**　[▶ 38:30](https://youtu.be/FhfqXJeQwEw?t=2310)
-> - 所有 Sylow $p$-子群彼此**共軛**；每個 $p$-子群都包含在某個 Sylow $p$-子群裡。
-> - 設 $|G| = mp^\alpha$，$\gcd(m,p) = 1$，Sylow $p$-子群有 $k$ 個，則 $k\mid m$ 且 $k\equiv1\pmod p$。
-
-**為什麼不多講** [▶ 39:00](https://youtu.be/FhfqXJeQwEw?t=2340)：與其花一週證 Sylow，不如講基本的**環論**；有些人不會修 Math 422，離開第一門課前應該對代數的整體結構有個概念。
-
-**應用例** [▶ 39:30](https://youtu.be/FhfqXJeQwEw?t=2370)
-- **100 階群有正規的 25 階子群**：$100 = 4\cdot25$，Sylow 5-子群個數 $k\mid4$ 且 $k\equiv1\pmod5$，只能 $k = 1$。唯一的 Sylow 5-子群和它所有共軛都相等，所以正規。
-- **$pq$ 階的群不是單群**（講義 Example 5）[▶ 40:30](https://youtu.be/FhfqXJeQwEw?t=2430)。$p = q$ 的情形用到「有限 $p$-群的中心非平凡」（講義 Thm 7；**$p$-群**：每個元素的階都是 $p$ 的冪）。$|G| = p^2$ 時：若 $Z(G)\neq G$，$Z(G)$ 是非平凡真正規子群；若 $Z(G) = G$，$G$ 交換而 $p^2$ 不是質數，也不是單群。
-
-這些例子用目前的工具很難證；Sylow 定理讓你能解另一類更難的問題 [▶ 43:30](https://youtu.be/FhfqXJeQwEw?t=2610)。
-
-**下次預告** [▶ 44:00](https://youtu.be/FhfqXJeQwEw?t=2640)：週五講**格定理**，完成同構定理的故事（第二、三、四同構定理），也會談一點有限單群（資訊性質）。下週三考試；明天答疑課講更多作業解答。
+> 📘 筆記補充（標準事實）：$\sigma(a_1\,a_2\,\cdots\,a_k)\sigma^{-1} = (\sigma(a_1)\,\sigma(a_2)\,\cdots\,\sigma(a_k))$——把循環裡每個數字換成它在 $\sigma$ 下的像。所以長度不變。
 
 ---
 
-## 本集新出現的術語
+## 2. 共軛類的大小與記號 xᴳ
 
-| 中文 | English | 首次出現 |
-|---|---|---|
-| 循環型 | cycle type | [04:00](https://youtu.be/FhfqXJeQwEw?t=240) |
-| 共軛類記號 | $x^G$ | [10:00](https://youtu.be/FhfqXJeQwEw?t=600) |
-| Cauchy 定理 | Cauchy's Theorem | [16:00](https://youtu.be/FhfqXJeQwEw?t=960) |
-| 強歸納法 | strong induction | [18:30](https://youtu.be/FhfqXJeQwEw?t=1110) |
-| 非中心元素 | non-central element | [22:00](https://youtu.be/FhfqXJeQwEw?t=1320) |
-| Euclid 引理 | Euclid's lemma | [23:30](https://youtu.be/FhfqXJeQwEw?t=1410) |
-| 類方程 | class equation | [24:00](https://youtu.be/FhfqXJeQwEw?t=1440) |
-| Sylow $p$-子群 | Sylow $p$-subgroup | [35:30](https://youtu.be/FhfqXJeQwEw?t=2130) |
-| $p$-群 | $p$-group | [42:00](https://youtu.be/FhfqXJeQwEw?t=2520) |
+[▶ 08:00](https://youtu.be/FhfqXJeQwEw?t=480)（上次講過，「很重要，再講一次」）
+
+> **推論**（軌道穩定子定理）　$G$ 有限，$x\in G$。$x$ 的共軛元素個數 = 中心化子的指數：
+> $$|\{gxg^{-1} : g\in G\}| = [G:C(x)].$$
+
+證明：共軛作用下，軌道是共軛類，穩定子是中心化子（$gxg^{-1} = x\iff gx = xg$）。軌道穩定子定理：軌道大小 = 穩定子的左陪集個數。$\blacksquare$
+
+**記號**[▶ 10:00](https://youtu.be/FhfqXJeQwEw?t=600)：「一直寫 $\{gxg^{-1}\}$ 很快就煩了。**群論學家**（我不是群論學家，我只是教你們一點群論）常用：」
+$$x^G = \{gxg^{-1} : g\in G\}\quad(x\text{ 的共軛類}).$$
+所以
+$$|x^G| = [G:C(x)].$$
+
+---
+
+## 3. 推論：每種循環型的個數整除 n!
+
+[▶ 11:00](https://youtu.be/FhfqXJeQwEw?t=660)「推論的推論——花裡的花。」
+
+> **推論**（講義 Cor 3.7.8）　$S_n$ 裡某個循環型的置換個數必須整除 $n!$。
+
+**證明**：$S_n$ 用共軛作用在自己身上。共軛類就是同循環型的置換。所以 $|\sigma^{S_n}| = [S_n:C(\sigma)]$，而 $[S_n:C(\sigma)]\cdot|C(\sigma)| = n!$（基本上是 Lagrange）。$\blacksquare$
+
+**$S_4$**[▶ 12:30](https://youtu.be/FhfqXJeQwEw?t=750)：
+
+| 循環型 | 個數 |
+|---|---|
+| $(1)$ | 1 |
+| $(1\,2)$ | 6（$(12),(13),(14),(23),(24),(34)$） |
+| $(1\,2\,3)$ | 8 |
+| $(1\,2\,3\,4)$ | 6 |
+| $(1\,2)(3\,4)$ | 3 |
+
+- 1、6、8、6、3 **都整除 24**——「不是巧合，正是這個推論」。
+- **而且**加起來 $= 24$：循環型分割了所有置換。
+
+【口頭】[▶ 13:30](https://youtu.be/FhfqXJeQwEw?t=810)「這裡好像有個可愛的數論說法：$n!$ 可以寫成它的某些因數的和……我不知道那有沒有特別有意思。也許沒有。我想我可以用 $n!$ 做些蠢事更容易得到它。」
+
+**作業**[▶ 15:30](https://youtu.be/FhfqXJeQwEw?t=930)：對 $S_5$ 做同樣的事。「這份作業的截止日是提問日，所以我盡量不那麼刻薄。**提示**：」
+$$120 = 1+10+20+30+24+20+15.$$
+「很有趣的數字。」
+
+---
+
+## 4. Cauchy 定理
+
+### 4.1 陳述
+
+[▶ 16:30](https://youtu.be/FhfqXJeQwEw?t=990)
+
+> **定理（Cauchy 定理）**（講義 Thm 3.7.10）　$G$ 是有限群，質數 $p$ 整除 $|G|$。則 $G$ 有一個 **$p$ 階元素**。
+
+「我**沒有**假設 $G$ 循環，甚至沒假設交換。」
+
+**作業**[▶ 17:00](https://youtu.be/FhfqXJeQwEw?t=1020)：證明 **$G$ 交換**的情況。「那不像剛才那題那麼簡單，還是有點複雜，但沒這個複雜。而這個其實也不複雜，你們應該跟得上。這是個很美的證明——當然，我會把它講得很笨拙。」
+
+### 4.2 證明：對 |G| 強歸納
+
+[▶ 17:30](https://youtu.be/FhfqXJeQwEw?t=1050)「我們對**群的階**做歸納法。我不知道之前有沒有做過這種證明。任何附著一個 $n$ 的東西都能歸納，但『對群的階歸納』是有意義的論證——我覺得這很迷人、很有想像力。從只處理方程的角度，我大概永遠想不到要這樣做。」
+
+**基底**：$|G| = 1$，1 沒有質因數，沒什麼要檢查。
+
+**強歸納假設**[▶ 18:00](https://youtu.be/FhfqXJeQwEw?t=1080)：設 $|G| = n$，並假設定理對所有**階小於 $n$** 的群成立。
+
+**交換的情況**：作業（上面）。以下設 $G$ 不交換。
+
+**Step 1：非中心元素的中心化子是真子群**[▶ 18:30](https://youtu.be/FhfqXJeQwEw?t=1110)
+
+【課堂討論】「如果 $x\in Z(G)$，代表什麼？」$xg = gx$ 對所有 $g$ ⇒ $gxg^{-1} = x$ ⇒
+$$x^G = \{x\}\quad(\text{單點共軛類}).$$
+
+反過來，若 $x\notin Z(G)$（**非中心的 non-central**），$x^G$ 有不只一個元素，$[G:C(x)] = |x^G|>1$，所以
+$$|C(x)|<|G|.$$
+
+**Step 2：分情況**[▶ 22:00](https://youtu.be/FhfqXJeQwEw?t=1320)
+
+**情況 A**：存在某個非中心的 $x$，使 $p\mid|C(x)|$。
+- $C(x)$ 是子群，階小於 $n$，而且 $p$ 整除它的階。
+- 由歸納假設，$C(x)$ 有 $p$ 階元素——那也是 $G$ 的 $p$ 階元素。✓
+
+**情況 B**：對**所有**非中心的 $x$，$p\nmid|C(x)|$。
+- $p\mid|G|$，而 $|G| = [G:C(x)]\cdot|C(x)|$（Lagrange）[▶ 23:00](https://youtu.be/FhfqXJeQwEw?t=1380)。
+- 由 **Euclid 引理**（質數整除乘積 ⇒ 整除其中一個因數）：$p\nmid|C(x)|$，所以 **$p\mid[G:C(x)]$**。
+- 【口頭】「質數是**不可摧毀的**：如果它整除整個乘積，它必須完整地在某一個因數裡。你不能把一個質數拆一點到 $a$、一點到 $b$。」
+
+### 4.3 類方程
+
+[▶ 24:00](https://youtu.be/FhfqXJeQwEw?t=1440) 共軛類分割 $G$。單點共軛類恰好是中心的元素；其他的共軛類，每個挑一個代表 $x_i$：
+
+> **類方程（class equation）**（講義 Def 3.7.11）
+> $$|G| = |Z(G)|+\sum_i[G:C(x_i)],$$
+> 其中 $x_i$ 從每個**含不只一個元素**的共軛類各挑一個。
+
+「這甚至不是軌道穩定子定理——是更早的那個：**群作用在集合上時，軌道分割集合**。群用共軛作用在自己身上，就得到這個。」
+
+**完成情況 B**[▶ 25:00](https://youtu.be/FhfqXJeQwEw?t=1500)：
+- $p\mid|G|$；
+- $p\mid[G:C(x_i)]$ 對每個 $i$；
+- 所以 $p\mid|Z(G)| = |G|-\sum[G:C(x_i)]$。
+
+$Z(G)$ 是**交換群**，$p$ 整除它的階。由**作業（交換的情況）**，$Z(G)$ 有 $p$ 階元素——它也在 $G$ 裡。✓ $\blacksquare$
+
+### 4.4 Cauchy 定理給了 Lagrange 沒給的
+
+[▶ 26:00](https://youtu.be/FhfqXJeQwEw?t=1560)「有 $p$ 階元素，當然就有 **$p$ 階子群**——取它生成的循環子群。」
+
+**例**[▶ 26:30](https://youtu.be/FhfqXJeQwEw?t=1590)：若 $|G| = 11\cdot13\cdot53$，由 Cauchy，**一定**有 11 階、13 階、53 階的子群。
+
+【口頭】[▶ 27:00](https://youtu.be/FhfqXJeQwEw?t=1620)（講到 53）「有個蠻有名的故事：**Grothendieck** 被問能不能舉一個具體的質數例子……如果你不知道 Grothendieck 是誰——他改變數學的層次，比你們目前看過的還高。他做的事很驚人、令人清醒，會完全改變我們思考一切的方式，只是還沒過濾到這個層級。」（老師記不清他說的是哪個數。）
+
+> 💬 這個故事通常講的是 **57**——Grothendieck 被要求舉一個具體質數時說了 57（其實 $57 = 3\cdot19$ 不是質數），後來被戲稱「Grothendieck 質數」。字幕裡老師提到 41、51、53，記不清楚。
+
+**對比 Lagrange**[▶ 28:00](https://youtu.be/FhfqXJeQwEw?t=1680)：
+- Lagrange：子群的階**必須**整除群的階——但**不保證**那些子群真的存在。
+- 【口頭】「就像微積分一的 **Fermat 定理**：如果有極值，那裡導數是 0 或不存在；但臨界點**不一定**是極值。同樣地，Lagrange 告訴你子群可能是哪些階，**不告訴你真的找得到**。」
+- **Cauchy**：如果質數整除群的階，那個階的子群**一定在那裡**。「無可逃避。」
+
+（Lagrange 的逆命題一般不成立，例如 12 階的 $A_4$ 沒有 6 階子群。）
+
+---
+
+## 5. Sylow 定理（只介紹）
+
+[▶ 29:00](https://youtu.be/FhfqXJeQwEw?t=1740)「完美世界裡我會再多投影一些東西。但世界不完美，所以我發講義。下一步就是 **Sylow 定理**。」
+
+【口頭】[▶ 29:30](https://youtu.be/FhfqXJeQwEw?t=1770)「**我不期望你們知道 Sylow 定理的陳述，甚至不期望你們會應用——事實上我寧願你們不要。**我要的是你們聽這段討論、試著**欣賞**這些定理。想看證明和更多討論，Harvard **Gross 教授**的 YouTube 講課有更多 Sylow 的內容。」
+
+**Sylow 其人**[▶ 30:30](https://youtu.be/FhfqXJeQwEw?t=1830)（Nicholson 的小傳）：
+- **Peter Ludwig Mejdell Sylow**（1832–1918），挪威人，大半職業生涯是 **Halden 的高中老師**。
+- 教學負擔沉重，仍抽時間研讀 **Abel** 的著作；1862–63 年在 Christiania 大學（奧斯陸）講授 Galois 理論和置換群。
+- Sylow 定理 **1872** 年首次發表（針對置換群——「19 世紀群論大多就是置換」）；1887 年 **Frobenius** 推廣到抽象群。
+- Sylow 用它證明：Galois 群是**質數冪階**的方程可以用根式解。
+- 花了 8 年編輯 Abel 的全集。從高中退休後，被聘為 Christiania 的講座教授，終身擔任。
+
+【口頭】[▶ 31:30](https://youtu.be/FhfqXJeQwEw?t=1890)「Frobenius——如果你們修我的微分方程，我會說：微分方程的 Frobenius 定理，就是同一個 Frobenius。他是一頭野獸。可能是他第一個寫出真正的線性代數書：在 $n$ 維做事，而不只是二、三維。」
+
+【口頭】[▶ 32:30](https://youtu.be/FhfqXJeQwEw?t=1950)「『誰是 UVA 新的數學系主任？——喔，他剛從當地高中退休，要去那裡當系主任。』現在不太聽到這種事了吧？」學生：「你該這樣做！」老師：「我要退休去高中教書——那不是很好笑嗎？……我確實希望教我的孩子高中數學。」（接著開玩笑說沒有休假年：「我得去問系主任找人代我一年的課——我們都在超量教學……」）
+
+**Sylow 定理**（講義影印，不要求）：
+
+> **Sylow 第一定理**[▶ 34:00](https://youtu.be/FhfqXJeQwEw?t=2040)　$G$ 有限，$p$ 質數，$p^\alpha$ 整除 $|G|$（$\alpha>0$）。則 $G$ 有 $p^\alpha$ 階子群。
+
+「這是**加強版的 Cauchy 定理**：不只質數，質數的冪也行。」「如果瞄一下證明，它用的是**群作用——共軛作用**，跟我們剛才的論證一樣。我不壓到你們身上，因為你們快到極限了。但**進一步的學習，下一步就是 Sylow 定理——你們已經有理解它所需的所有工具**。」
+
+> **定義（Sylow $p$-子群）**[▶ 35:30](https://youtu.be/FhfqXJeQwEw?t=2130)　$P\le G$，$|P| = p^\alpha$，其中 $p^\alpha$ 整除 $|G|$ 但 $p^{\alpha+1}$ 不整除。也就是**最大的**整除 $|G|$ 的 $p$ 的冪。
+
+例 [▶ 36:00](https://youtu.be/FhfqXJeQwEw?t=2160)：$|G| = 250 = 2\cdot5^3$。125 階子群是 Sylow 5-子群；2 階子群是 Sylow 2-子群。（【Q&A】學生問 25 階的算不算——不算，Sylow $p$-子群是「最大的那個」。）
+
+**引理**（講義背面）：$|G| = mp^\alpha$，$p\nmid m$。若 Sylow $p$-子群 $P$ **正規**，則 $P$ 包含 $G$ 的每個 $p$-子群。（例子裡 125 階的指數是 2，所以一定正規 [▶ 37:30](https://youtu.be/FhfqXJeQwEw?t=2250)。）
+
+> **Sylow 第二、三定理**[▶ 38:30](https://youtu.be/FhfqXJeQwEw?t=2310)
+> - 所有 Sylow $p$-子群互相**共軛**；任何 $p$-子群包含在某個 Sylow $p$-子群裡。
+> - $|G| = mp^\alpha$，$\gcd(m,p) = 1$。Sylow $p$-子群的個數 $k$ 滿足：$k\mid m$ 且 $k\equiv1\pmod p$。
+
+【口頭】[▶ 39:00](https://youtu.be/FhfqXJeQwEw?t=2340)「如果要你們會，就得走過證明，我不想花一週上課做證明。**花那時間在初等環論上有趣得多**——有些人不會修 Math 422，我覺得在離開第一門課前，讓你們對代數的整體結構有更好的感覺很重要。」
+
+**應用例**[▶ 39:30](https://youtu.be/FhfqXJeQwEw?t=2370)：**任何 100 階群都有 25 階的正規子群。**
+- $100 = 4\cdot25$。Sylow 5-子群的個數 $k$：$k\mid4$ 且 $k\equiv1\pmod5$。
+- 4 的因數 1、2、4 中，只有 1 滿足 $\equiv1\pmod5$。
+- 所以只有**一個** Sylow 5-子群；它和它的所有共軛都是同一個，所以**正規**。
+
+**另一例**[▶ 40:30](https://youtu.be/FhfqXJeQwEw?t=2430)（講義 Example 5）：$p,q$ 質數，**$pq$ 階的群都不是單群**。$p = q$ 的情況：$|G| = p^2$ 是 **$p$-群**，由（講義的）定理 7，$Z(G)\neq\{1\}$；若 $Z(G)\neq G$，它是非平凡真正規子群；若 $Z(G) = G$，$G$ 交換、$p^2$ 不是質數，也不是單群。（老師一度找不到「定理 7」：「那會永遠是個謎——我沒影印定理 7 給你們。」然後找到了。）
+
+> **定義（$p$-群）**[▶ 41:30](https://youtu.be/FhfqXJeQwEw?t=2490)　每個元素的階都是 $p$ 的冪。（例：$|G| = p^2$ 時，任何元素的 $p^2$ 次方是單位，所以是 $p$-群。）
+
+【口頭】[▶ 43:00](https://youtu.be/FhfqXJeQwEw?t=2580)「我的能量在減弱。重點是：這些例子**強大而深刻**，用我們現有的技術會相當難證。Sylow 定理讓你能解另一類比我們目前難得多的題目。我給你們做的大多只是定義、或定理之後再一兩步；這些在計算上複雜得多。」
+
+**預告**[▶ 43:30](https://youtu.be/FhfqXJeQwEw?t=2610)：星期五證明**格定理（lattice theorem）**，「把同構定理的故事講完」——第二、三、四同構定理。也會講幾句有限單群，「但那就像這最後一段：是給你們的資訊，不是給你們考的」。下週三考試；明天習題課講更多舊作業解答。
+
+---
+
+## 6. 一頁速查表
+
+### 6.1 共軛與循環型
+
+| 事實 | 內容 |
+|---|---|
+| 共軛保持循環型 | $\sigma(a_1\cdots a_k)\sigma^{-1} = (\sigma(a_1)\cdots\sigma(a_k))$ |
+| $S_n$ 的共軛類 | 恰好是各循環型 |
+| $\lvert x^G\rvert = [G:C(x)]$ | 軌道穩定子定理（共軛作用） |
+| 循環型的個數整除 $n!$ | $S_4$：$1,6,8,6,3$；$S_5$：$1,10,20,30,24,20,15$ |
+
+### 6.2 類方程與 Cauchy
+
+$$|G| = |Z(G)|+\sum_i[G:C(x_i)]\quad(x_i\text{ 取自非單點共軛類}).$$
+
+| Cauchy 定理證明 | 關鍵一步 |
+|---|---|
+| 對 $\lvert G\rvert$ 強歸納 | 交換情況是作業 |
+| 非中心 $x$ ⇒ $C(x)$ 是真子群 | $\lvert x^G\rvert>1$ |
+| 若某 $p\mid\lvert C(x)\rvert$ | 歸納假設用在 $C(x)$ |
+| 否則每個 $p\mid[G:C(x_i)]$ | Euclid 引理 |
+| ⇒ $p\mid\lvert Z(G)\rvert$ | 類方程 |
+| $Z(G)$ 交換 ⇒ 有 $p$ 階元素 | 交換情況 |
+
+**Lagrange vs. Cauchy**：Lagrange 只說子群的階整除 $|G|$；Cauchy 保證質數因數的子群**存在**。
+
+### 6.3 Sylow（不要求）
+
+- 第一：$p^\alpha\mid|G|$ ⇒ 有 $p^\alpha$ 階子群。
+- Sylow $p$-子群：最大的 $p$ 的冪。
+- 第二：Sylow $p$-子群互相共軛。
+- 第三：個數 $k\mid m$、$k\equiv1\pmod p$。
+- 例：100 階群有唯一（所以正規）的 25 階子群。
+
+### 6.4 術語
+
+| 中文 | English |
+|---|---|
+| 循環型 | cycle type |
+| 共軛類 | conjugacy class $x^G$ |
+| 非中心的 | non-central |
+| 類方程 | class equation |
+| Cauchy 定理 | Cauchy's Theorem |
+| 強歸納法 | strong induction |
+| Sylow $p$-子群 | Sylow $p$-subgroup |
+| $p$-群 | $p$-group |
+| 格定理 | lattice theorem |
+
+---
+
+## 7. 與後續集數的連結
+
+| 本集觀念 | 後面在哪裡用到 |
+|---|---|
+| **Cauchy 定理（交換情況）** | [[31-答疑課]]、[[34-答疑課]]：作業解答 |
+| **6 階群分類（用 Cauchy）** | [[31-答疑課]]：6 階群只有 $\mathbb{Z}_6$、$S_3$ |
+| **格定理、第二～四同構定理** | [[32-L21-同構定理與有限單群]] |
+| **Sylow 定理** | AA2 [[04-L3-同構定理與中階群論概覽]]：Sylow 定理的證明與應用 |
+| **$p$-群的中心非平凡** | AA2：可解群、Galois 理論 |
+| **共軛保持循環型** | [[32-L21-同構定理與有限單群]]：$A_5$ 是單群 |
+
+---
+
+## 附：本集一句話總結
+
+> **共軛把置換換成同循環型的置換，所以 $S_n$ 的共軛類就是循環型，各類的個數 $[S_n:C(\sigma)]$ 都整除 $n!$；把共軛作用的軌道分割寫成類方程 $|G| = |Z(G)|+\sum[G:C(x_i)]$，再對群的階做強歸納，就證明了 Cauchy 定理——質數 $p$ 整除 $|G|$ 就一定有 $p$ 階元素（這是 Lagrange 給不了的存在性）；Sylow 定理把它推廣到質數冪，但這門課只是讓大家欣賞。**
+
+---
 
 ## ⚠️ 待確認清單
 
 （本集無）
+
+---
+
+*筆記依據 James S. Cook「Abstract Algebra I」(Fall 2016) Lecture 20 錄影逐字稿（YouTube 自動字幕，45:22）、講義 `AlgebraInotes_2018.pdf` §3.7（p.116–119）與課堂 Sylow 定理影印講義整理。*
