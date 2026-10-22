@@ -151,9 +151,9 @@ DL on EC        ECDH    EC-Elgamal ECDSA              ← 今天開始
 【口頭】「我直接給你定義。它看起來很嚇人，你會覺得『Paar 教授在幹嘛』。接下來 60 分鐘再解釋。有時候我喜歡慢慢推導，這次反過來，先跳進去。」
 
 > **定義（橢圓曲線，課本 9.1.1）**：$\mathbb{Z}_p$（$p > 3$）上的橢圓曲線，是所有滿足
-> $$\boxed{y^2 \equiv x^3 + a \cdot x + b \pmod p}$$
+> $$\boxed{y^2 \equiv x^3 + a \cdot x + b \ (\mathrm{mod}\ p)}$$
 > 的點 $(x, y) \in \mathbb{Z}_p \times \mathbb{Z}_p$ 的集合，**再加上一個虛擬的無窮遠點 $\mathcal{O}$**，其中 $a, b \in \mathbb{Z}_p$，且滿足條件
-> $$4a^3 + 27b^2 \not\equiv 0 \pmod p$$
+> $$4a^3 + 27b^2 \not\equiv 0 \ (\mathrm{mod}\ p)$$
 
 【口頭】
 - `[00:23]`「這個方程式**非常重要**。想過這門課，**你得記得它**。」
@@ -377,7 +377,7 @@ $$\boxed{-P = (x, -y)}$$
 
 **只要把 $P$ 對 $x$ 軸鏡射，就得到反元素。**
 
-【課本補充】在 $GF(p)$ 上：$-y \equiv p - y \pmod p$，所以
+【課本補充】在 $GF(p)$ 上：$-y \equiv p - y \ (\mathrm{mod}\ p)$，所以
 
 $$-P = (x_p, \; p - y_p)$$
 
@@ -409,7 +409,7 @@ $$-P = (x, \; -y)$$
 
 `[01:11]`（課本 Example 9.4，教授在投影片上帶過）
 
-**曲線**：$E: y^2 \equiv x^3 + 2x + 2 \pmod{17}$（$a = 2$、$b = 2$）
+**曲線**：$E: y^2 \equiv x^3 + 2x + 2 \ (\mathrm{mod}\ 17)$（$a = 2$、$b = 2$）
 **點**：$P = (5, 1)$
 **要算**：$2P = P + P$
 
@@ -426,11 +426,11 @@ $$s = \frac{3x_1^2 + a}{2y_1} = (2 \cdot 1)^{-1}(3 \cdot 5^2 + 2) = 2^{-1} \cdot
 
 - $77 \bmod 17 = 77 - 68 = 9$
 - $2^{-1} \bmod 17 = 9$（因為 $2 \times 9 = 18 \equiv 1$）
-- $s = 9 \times 9 = 81 \equiv 81 - 68 = \mathbf{13} \pmod{17}$
+- $s = 9 \times 9 = 81 \equiv 81 - 68 = \mathbf{13} \ (\mathrm{mod}\ 17)$
 
-$$x_3 = s^2 - x_1 - x_2 = 13^2 - 5 - 5 = 169 - 10 = 159 \equiv 159 - 153 = \mathbf{6} \pmod{17}$$
+$$x_3 = s^2 - x_1 - x_2 = 13^2 - 5 - 5 = 169 - 10 = 159 \equiv 159 - 153 = \mathbf{6} \ (\mathrm{mod}\ 17)$$
 
-$$y_3 = s(x_1 - x_3) - y_1 = 13(5 - 6) - 1 = -14 \equiv \mathbf{3} \pmod{17}$$
+$$y_3 = s(x_1 - x_3) - y_1 = 13(5 - 6) - 1 = -14 \equiv \mathbf{3} \ (\mathrm{mod}\ 17)$$
 
 $$\boxed{2P = (5, 1) + (5, 1) = (6, 3)}$$
 
@@ -442,7 +442,7 @@ $$\boxed{2P = (5, 1) + (5, 1) = (6, 3)}$$
 
 【課堂討論】怎麼檢查？→ **代回方程式**：
 
-$$y^2 = 3^2 = 9 \qquad x^3 + 2x + 2 = 216 + 12 + 2 = 230 = 13 \times 17 + 9 \equiv 9 \pmod{17} \;✔$$
+$$y^2 = 3^2 = 9 \qquad x^3 + 2x + 2 = 216 + 12 + 2 = 230 = 13 \times 17 + 9 \equiv 9 \ (\mathrm{mod}\ 17) \;✔$$
 
 【口頭】「課本當然沒算錯，所以成立。**從現在開始每次作業都要做這些公式。你會恨它。**」
 
@@ -459,7 +459,7 @@ $$y^2 = 3^2 = 9 \qquad x^3 + 2x + 2 = 216 + 12 + 2 = 230 = 13 \times 17 + 9 \equ
 【口頭】「證明大概要學一年數論。所以就只是一個定理。『子群』我們還沒介紹。」
 
 **例**（`[01:18]`，課本 p.246，「下週會重講，但作業恐怕需要」）：
-同一條曲線 $y^2 \equiv x^3 + 2x + 2 \pmod{17}$，$P = (5, 1)$：
+同一條曲線 $y^2 \equiv x^3 + 2x + 2 \ (\mathrm{mod}\ 17)$，$P = (5, 1)$：
 
 $$P,\; 2P,\; 3P,\; 4P,\; \ldots,\; 18P,\; 19P = \mathcal{O}$$
 
@@ -477,7 +477,7 @@ $$P,\; 2P,\; 3P,\; 4P,\; \ldots,\; 18P,\; 19P = \mathcal{O}$$
 
 ### 8.1 定義
 
-$$E: \; y^2 \equiv x^3 + ax + b \pmod p, \qquad 4a^3 + 27b^2 \not\equiv 0, \qquad \text{加上 } \mathcal{O}$$
+$$E: \; y^2 \equiv x^3 + ax + b \ (\mathrm{mod}\ p), \qquad 4a^3 + 27b^2 \not\equiv 0, \qquad \text{加上 } \mathcal{O}$$
 
 | 項目 | 內容 |
 |---|---|
@@ -489,7 +489,7 @@ $$E: \; y^2 \equiv x^3 + ax + b \pmod p, \qquad 4a^3 + 27b^2 \not\equiv 0, \qqua
 
 ### 8.2 群運算公式
 
-$$x_3 = s^2 - x_1 - x_2, \qquad y_3 = s(x_1 - x_3) - y_1 \pmod p$$
+$$x_3 = s^2 - x_1 - x_2, \qquad y_3 = s(x_1 - x_3) - y_1 \ (\mathrm{mod}\ p)$$
 
 | 情況 | 幾何 | 斜率 $s$ |
 |---|---|---|
@@ -500,7 +500,7 @@ $$x_3 = s^2 - x_1 - x_2, \qquad y_3 = s(x_1 - x_3) - y_1 \pmod p$$
 
 ### 8.3 例子
 
-$y^2 \equiv x^3 + 2x + 2 \pmod{17}$，$P = (5, 1)$：
+$y^2 \equiv x^3 + 2x + 2 \ (\mathrm{mod}\ 17)$，$P = (5, 1)$：
 - $s = 13$，$2P = (6, 3)$ ✔（不是 $(10, 2)$！）
 - 群大小 19，$19P = \mathcal{O}$
 

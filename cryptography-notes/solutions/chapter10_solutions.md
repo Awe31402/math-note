@@ -208,7 +208,7 @@ mod 97 就對不上了 → **無效** ✘
 $x = 2^{131} \bmod 9797$（用 CRT 手算）：
 - mod 97：$2^{35}$；$2^{10} \equiv 54$，$2^{20} \equiv 6$，$2^{35} = 2^{20} \cdot 2^{10} \cdot 2^5 \equiv 6 \cdot 54 \cdot 32 \equiv 86$
 - mod 101：$2^{31}$；$2^{10} \equiv 14$，$2^{20} \equiv -6$，$2^{30} \equiv -84 \equiv 17$，$2^{31} \equiv 34$
-- 組合：$x = 34 + 101k \equiv 86 \pmod{97}$ → $4k \equiv 52$ → $k = 13$ → $x = 34 + 1313 = 1347$
+- 組合：$x = 34 + 101k \equiv 86 \ (\mathrm{mod}\ 97)$ → $4k \equiv 52$ → $k = 13$ → $x = 34 + 1313 = 1347$
 
 > **偽造的簽章對：$(x, s) = (1347, 2)$**，Alice 驗證 $2^{131} \bmod 9797 = 1347$ ✔
 
@@ -467,12 +467,12 @@ $$\varphi(30) = \varphi(2)\varphi(3)\varphi(5) = 1 \cdot 2 \cdot 4 = \mathbf{8}$
 $$s_1 k = x_1 - d\,r_1, \qquad s_2 (k + 1) = x_2 - d\,r_2$$
 
 整理成兩個未知數 $k, d$ 的**線性**方程組：
-$$\begin{cases} s_1\,k + r_1\,d = x_1 \\ s_2\,k + r_2\,d = x_2 - s_2 \end{cases} \pmod{p - 1}$$
+$$\begin{cases} s_1\,k + r_1\,d = x_1 \\ s_2\,k + r_2\,d = x_2 - s_2 \end{cases} \ (\mathrm{mod}\ p - 1)$$
 
 消去 $k$（第一式乘 $s_2$、第二式乘 $s_1$，相減）：
 $$d\,(r_1 s_2 - r_2 s_1) \equiv x_1 s_2 - s_1 (x_2 - s_2)$$
 
-$$\boxed{d \equiv (x_1 s_2 - x_2 s_1 + s_1 s_2)\,(r_1 s_2 - r_2 s_1)^{-1} \pmod{p - 1}}$$
+$$\boxed{d \equiv (x_1 s_2 - x_2 s_1 + s_1 s_2)\,(r_1 s_2 - r_2 s_1)^{-1} \ (\mathrm{mod}\ p - 1)}$$
 
 （如果 $r_1 s_2 - r_2 s_1$ 跟 $p - 1$ 不互質，會有幾個候選解，用 $\beta \stackrel{?}{=} \alpha^d$ 檢查哪個對。）
 
@@ -557,13 +557,13 @@ $$\boxed{d \equiv (x_1 s_2 - x_2 s_1 + s_1 s_2)\,(r_1 s_2 - r_2 s_1)^{-1} \pmod{
 
 同一個 $k_E$ → 同一個 $r = (\alpha^{k_E} \bmod p) \bmod q$。Oscar 看到兩個簽章的 $r$ 一樣，就知道 $k_E$ 重複了。
 
-$$s_1 \equiv (h(x_1) + d\,r)\,k_E^{-1}, \qquad s_2 \equiv (h(x_2) + d\,r)\,k_E^{-1} \pmod q$$
+$$s_1 \equiv (h(x_1) + d\,r)\,k_E^{-1}, \qquad s_2 \equiv (h(x_2) + d\,r)\,k_E^{-1} \ (\mathrm{mod}\ q)$$
 
 **步驟 1**：兩式相減，$d\,r$ 消掉
-$$s_1 - s_2 \equiv (h(x_1) - h(x_2))\,k_E^{-1} \;\Rightarrow\; k_E \equiv \frac{h(x_1) - h(x_2)}{s_1 - s_2} \pmod q$$
+$$s_1 - s_2 \equiv (h(x_1) - h(x_2))\,k_E^{-1} \;\Rightarrow\; k_E \equiv \frac{h(x_1) - h(x_2)}{s_1 - s_2} \ (\mathrm{mod}\ q)$$
 
 **步驟 2**：代回任一式求 $d$
-$$d \equiv (s_1 k_E - h(x_1))\,r^{-1} \pmod q$$
+$$d \equiv (s_1 k_E - h(x_1))\,r^{-1} \ (\mathrm{mod}\ q)$$
 
 （$q$ 是質數，只要 $s_1 \ne s_2$、$r \ne 0$，反元素一定存在。）
 

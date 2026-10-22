@@ -128,8 +128,8 @@ Alice ──→ [ e_k ] ──→ 不安全通道 ──→ [ d_k ] ──→ Bo
 
 【課堂討論】有人大概知道為什麼 $B^a$ 和 $A^b$ 會是同一個數嗎？→ 學生答：**指數運算**。「很簡單，像**七年級數學**。」
 
-$$\text{Alice: } B^a = (\alpha^b)^a = \alpha^{ab} \pmod p$$
-$$\text{Bob: } A^b = (\alpha^a)^b = \alpha^{ab} \pmod p$$
+$$\text{Alice: } B^a = (\alpha^b)^a = \alpha^{ab} \ (\mathrm{mod}\ p)$$
+$$\text{Bob: } A^b = (\alpha^a)^b = \alpha^{ab} \ (\mathrm{mod}\ p)$$
 
 $$\boxed{k_{AB} = \alpha^{ab} \bmod p}$$
 
@@ -436,7 +436,7 @@ $$3 \to 9 \to 5 \to 4 \to 1 \to 3 \to 9 \to \cdots$$
 
 **在 $\mathbb{Z}_p^*$ 的特例下證明**：
 - 【口頭】「Dürmuth 博士講過 Fermat 定理嗎？……講過了，我就覺得有。」
-- **Fermat 小定理**：$a^p \equiv a \pmod p$。兩邊除以 $a$：$a^{p-1} \equiv 1$。
+- **Fermat 小定理**：$a^p \equiv a \ (\mathrm{mod}\ p)$。兩邊除以 $a$：$a^{p-1} \equiv 1$。
 - 【課堂討論】$|\mathbb{Z}_p^*|$ 是多少？→ 除了 0 的所有元素：$1, \ldots, p-1$ → **$p - 1$**。
 - 所以 $a^{|G|} = a^{p-1} \equiv 1$ ✔
 
@@ -491,7 +491,7 @@ $$3 \to 9 \to 5 \to 4 \to 1 \to 3 \to 9 \to \cdots$$
 
 **問題**：一定存在某個 $x$ 使
 
-$$5^x \equiv 41 \pmod{47}$$
+$$5^x \equiv 41 \ (\mathrm{mod}\ 47)$$
 
 【口頭】「大家同意嗎？**不同意的話，你錯過了這堂課，浪費了今天早上 90 分鐘。**這一定成立，因為 5 是生成元，會生成整個群。」
 
@@ -574,8 +574,8 @@ $3^i$：3, 9, 5, 4, 1 → $\text{ord}(3) = 5$
 
 ### 5.7 離散對數（預告）
 
-給 $\alpha$（生成元）和 $\beta$，求 $x$ 使 $\alpha^x \equiv \beta \pmod p$ → **很難**。
-例：$5^x \equiv 41 \pmod{47}$（答案 $x = 15$）
+給 $\alpha$（生成元）和 $\beta$，求 $x$ 使 $\alpha^x \equiv \beta \ (\mathrm{mod}\ p)$ → **很難**。
+例：$5^x \equiv 41 \ (\mathrm{mod}\ 47)$（答案 $x = 15$）
 
 ---
 

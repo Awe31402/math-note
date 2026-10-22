@@ -201,7 +201,7 @@ $$k_{pub} = (p, \alpha, \beta), \qquad k_{pr} = d$$
 > 1. 算輔助參數（德文 Hilfsparameter）：
 > $$t \equiv \beta^r \cdot r^s \bmod p$$
 > 2. 檢查：
-> $$t \equiv \alpha^x \pmod p \;\Rightarrow\; \text{有效}, \qquad t \not\equiv \alpha^x \;\Rightarrow\; \text{無效}$$
+> $$t \equiv \alpha^x \ (\mathrm{mod}\ p) \;\Rightarrow\; \text{有效}, \qquad t \not\equiv \alpha^x \;\Rightarrow\; \text{無效}$$
 
 【口頭】「看起來很怪，我知道。」
 
@@ -215,7 +215,7 @@ $$k_{pub} = (p, \alpha, \beta), \qquad k_{pr} = d$$
 - $\beta = \alpha^d$
 - $r = \alpha^{k_E}$
 
-$$\beta^r \cdot r^s = (\alpha^d)^r \cdot (\alpha^{k_E})^s = \alpha^{d \cdot r + k_E \cdot s} \pmod p$$
+$$\beta^r \cdot r^s = (\alpha^d)^r \cdot (\alpha^{k_E})^s = \alpha^{d \cdot r + k_E \cdot s} \ (\mathrm{mod}\ p)$$
 
 【口頭】「回到九年級，我兒子 Noah 現在在學指數。底數一樣都是 $\alpha$，所以指數可以合在一起。」
 
@@ -223,28 +223,28 @@ $$\beta^r \cdot r^s = (\alpha^d)^r \cdot (\alpha^{k_E})^s = \alpha^{d \cdot r + 
 
 `[00:40]`【口頭】需要很多週前講的 **Fermat 小定理**（教授叫它「小 Fermat」，「聽起來很可愛」）：
 
-$$a^{p-1} \equiv 1 \pmod p$$
+$$a^{p-1} \equiv 1 \ (\mathrm{mod}\ p)$$
 
 > ⚠️ 逐字稿中教授說 Fermat 在「1790 年左右、18 世紀末」觀察到這個；Fermat 是 17 世紀的人（第 11 講教授也說是 17 世紀），這裡應是口誤。
 
 **推論**：任何指數 $m$ 可以寫成 $m = q \cdot (p-1) + r$：
 
-$$a^m = a^{q(p-1) + r} = \left(a^{p-1}\right)^q \cdot a^r \equiv 1^q \cdot a^r = a^r \pmod p$$
+$$a^m = a^{q(p-1) + r} = \left(a^{p-1}\right)^q \cdot a^r \equiv 1^q \cdot a^r = a^r \ (\mathrm{mod}\ p)$$
 
 而 $r = m \bmod (p-1)$。所以：
 
-> $$\boxed{a^m \equiv a^{\,m \bmod (p-1)} \pmod p}$$
+> $$\boxed{a^m \equiv a^{\,m \bmod (p-1)} \ (\mathrm{mod}\ p)}$$
 > **在 mod $p$ 的運算裡，指數可以 mod $(p-1)$ 來算。**
 >
 > 【口頭】`[00:44]`「**這對你接下來兩年半很重要**，直到你拿到學位。」
 
-**回到證明**（`[00:45]`）：要讓 $\alpha^{dr + k_E s} \equiv \alpha^x \pmod p$，只要**指數 mod $(p-1)$ 相等**：
+**回到證明**（`[00:45]`）：要讓 $\alpha^{dr + k_E s} \equiv \alpha^x \ (\mathrm{mod}\ p)$，只要**指數 mod $(p-1)$ 相等**：
 
-$$x \equiv d \cdot r + k_E \cdot s \pmod{p-1}$$
+$$x \equiv d \cdot r + k_E \cdot s \ (\mathrm{mod}\ p-1)$$
 
 移項、解出 $s$：
 
-$$k_E \cdot s \equiv x - d \cdot r \quad\Rightarrow\quad s \equiv (x - d \cdot r) \cdot k_E^{-1} \pmod{p-1} \;✔$$
+$$k_E \cdot s \equiv x - d \cdot r \quad\Rightarrow\quad s \equiv (x - d \cdot r) \cdot k_E^{-1} \ (\mathrm{mod}\ p-1) \;✔$$
 
 【口頭】「這**正好**就是我們構造 $s$ 的方式。所以**驗證是正確的**。」
 
@@ -275,9 +275,9 @@ $$k_E \cdot s \equiv x - d \cdot r \quad\Rightarrow\quad s \equiv (x - d \cdot r
 | Bob | 參數 | $p = 29$，$\alpha = 2$，$d = 12$ |
 | Bob | 公鑰 | $\beta = 2^{12} \bmod 29 = 7$ → $(p, \alpha, \beta) = (29, 2, 7)$ |
 | Bob | 簽 $x = 26$ | 選 $k_E = 5$，$\gcd(5, 28) = 1$ ✔ |
-| Bob | $r$ | $r = 2^5 = 32 \equiv 3 \pmod{29}$ |
-| Bob | $k_E^{-1}$ | $5^{-1} \equiv 17 \pmod{28}$（$5 \times 17 = 85 = 3 \times 28 + 1$） |
-| Bob | $s$ | $s = (26 - 12 \times 3) \times 17 = (-10) \times 17 = -170 \equiv 26 \pmod{28}$ |
+| Bob | $r$ | $r = 2^5 = 32 \equiv 3 \ (\mathrm{mod}\ 29)$ |
+| Bob | $k_E^{-1}$ | $5^{-1} \equiv 17 \ (\mathrm{mod}\ 28)$（$5 \times 17 = 85 = 3 \times 28 + 1$） |
+| Bob | $s$ | $s = (26 - 12 \times 3) \times 17 = (-10) \times 17 = -170 \equiv 26 \ (\mathrm{mod}\ 28)$ |
 | 送出 | | $(x, (r, s)) = (26, (3, 26))$ |
 | Alice | $t$ | $t = 7^3 \cdot 3^{26} \bmod 29 = 22$ |
 | Alice | $\alpha^x$ | $2^{26} \bmod 29 = 22$ |
@@ -285,9 +285,9 @@ $$k_E \cdot s \equiv x - d \cdot r \quad\Rightarrow\quad s \equiv (x - d \cdot r
 
 **驗算**（用 §2.5 的技巧）：
 - $7^3 = 343 = 11 \times 29 + 24 \equiv 24$
-- $3^{26} = 3^{28 - 2} \equiv 3^{-2} = 9^{-1} \equiv 13 \pmod{29}$（$9 \times 13 = 117 = 4 \times 29 + 1$）
+- $3^{26} = 3^{28 - 2} \equiv 3^{-2} = 9^{-1} \equiv 13 \ (\mathrm{mod}\ 29)$（$9 \times 13 = 117 = 4 \times 29 + 1$）
 - $t = 24 \times 13 = 312 = 10 \times 29 + 22 \equiv 22$ ✔
-- $2^{26} \equiv 2^{-2} = 4^{-1} \equiv 22 \pmod{29}$（$4 \times 22 = 88 = 3 \times 29 + 1$）✔
+- $2^{26} \equiv 2^{-2} = 4^{-1} \equiv 22 \ (\mathrm{mod}\ 29)$（$4 \times 22 = 88 = 3 \times 29 + 1$）✔
 
 ---
 
@@ -326,18 +326,18 @@ $$(x_1, (r, s_1)), \qquad (x_2, (r, s_2))$$
 
 **兩條方程式**：
 
-$$s_1 \equiv (x_1 - d \cdot r) \cdot k_E^{-1} \pmod{p-1}$$
-$$s_2 \equiv (x_2 - d \cdot r) \cdot k_E^{-1} \pmod{p-1}$$
+$$s_1 \equiv (x_1 - d \cdot r) \cdot k_E^{-1} \ (\mathrm{mod}\ p-1)$$
+$$s_2 \equiv (x_2 - d \cdot r) \cdot k_E^{-1} \ (\mathrm{mod}\ p-1)$$
 
 未知數：$d$（Bob 的私鑰！）和 $k_E$。兩邊乘 $k_E$ 就是**線性方程組**，很好解。
 
 **步驟 1：兩式相減，消掉 $d$** → 求 $k_E$
 
-$$s_1 - s_2 \equiv (x_1 - x_2) \cdot k_E^{-1} \quad\Rightarrow\quad \boxed{k_E \equiv \frac{x_1 - x_2}{s_1 - s_2} \pmod{p-1}}$$
+$$s_1 - s_2 \equiv (x_1 - x_2) \cdot k_E^{-1} \quad\Rightarrow\quad \boxed{k_E \equiv \frac{x_1 - x_2}{s_1 - s_2} \ (\mathrm{mod}\ p-1)}$$
 
 **步驟 2：代回任一式** → 求 $d$
 
-$$\boxed{d \equiv \frac{x_1 - s_1 \cdot k_E}{r} \pmod{p-1}}$$
+$$\boxed{d \equiv \frac{x_1 - s_1 \cdot k_E}{r} \ (\mathrm{mod}\ p-1)}$$
 
 （這裡的「分數」都是乘以 mod $(p-1)$ 的反元素。）
 
@@ -366,13 +366,13 @@ Oscar 偷聽到兩則用同一個 $k_E$ 簽的訊息，Bob 的公鑰 $(p, \alpha
 
 **求 $k_E$**：
 
-$$k_E \equiv \frac{26 - 13}{26 - 1} = 13 \cdot 25^{-1} \equiv 13 \cdot 9 = 117 \equiv 5 \pmod{28}$$
+$$k_E \equiv \frac{26 - 13}{26 - 1} = 13 \cdot 25^{-1} \equiv 13 \cdot 9 = 117 \equiv 5 \ (\mathrm{mod}\ 28)$$
 
 （$25 \times 9 = 225 = 8 \times 28 + 1$，所以 $25^{-1} \equiv 9$）
 
 **求 $d$**：
 
-$$d \equiv \frac{26 - 26 \cdot 5}{3} = \frac{-104}{3} \equiv 8 \cdot 3^{-1} \equiv 8 \cdot 19 = 152 \equiv 12 \pmod{28}$$
+$$d \equiv \frac{26 - 26 \cdot 5}{3} = \frac{-104}{3} \equiv 8 \cdot 3^{-1} \equiv 8 \cdot 19 = 152 \equiv 12 \ (\mathrm{mod}\ 28)$$
 
 （$-104 + 4 \times 28 = 8$；$3 \times 19 = 57 = 2 \times 28 + 1$，所以 $3^{-1} \equiv 19$）
 
@@ -410,12 +410,12 @@ t &\equiv \beta^r \cdot r^s \\
 &\equiv \alpha^{dr} \cdot \alpha^{(i + dj) s} & &\text{（} \beta^j = \alpha^{dj}\text{）}\\
 &\equiv \alpha^{dr} \cdot \alpha^{(i + dj)(-r j^{-1})} & &\text{（代入 } s\text{）}\\
 &\equiv \alpha^{dr} \cdot \alpha^{-r i j^{-1}} \cdot \alpha^{-dr} & &\text{（} j \cdot j^{-1} \equiv 1 \bmod (p-1)\text{）}\\
-&\equiv \alpha^{-r i j^{-1}} = \alpha^{s \cdot i} \pmod p
+&\equiv \alpha^{-r i j^{-1}} = \alpha^{s \cdot i} \ (\mathrm{mod}\ p)
 \end{aligned}$$
 
 【口頭】「$-dr$ 和 $+dr$ **互相抵消**。」（又用到了「指數可以 mod $(p-1)$」的技巧。）
 
-而訊息是 $x \equiv s \cdot i \pmod{p-1}$，所以 $\alpha^x \equiv \alpha^{si} \equiv t$ → **Alice 判定有效**。
+而訊息是 $x \equiv s \cdot i \ (\mathrm{mod}\ p-1)$，所以 $\alpha^x \equiv \alpha^{si} \equiv t$ → **Alice 判定有效**。
 
 #### 限制
 
@@ -427,7 +427,7 @@ t &\equiv \beta^r \cdot r^s \\
 
 實務上**很常**不直接簽訊息，而是先對訊息做**雜湊**，這樣這個攻擊就**不可能**：
 
-$$s \equiv (h(x) - d \cdot r) \cdot k_E^{-1} \pmod{p-1}$$
+$$s \equiv (h(x) - d \cdot r) \cdot k_E^{-1} \ (\mathrm{mod}\ p-1)$$
 
 Oscar 算出的是 $h(x)$ 該是多少，但要找到一個 $x$ 讓 $h(x)$ 剛好等於它，是很難的（第 20 講）。
 
@@ -494,7 +494,7 @@ Oscar 算出的是 $h(x)$ 該是多少，但要找到一個 $x$ 讓 $h(x)$ 剛�
 1. $w \equiv s^{-1} \bmod q$
 2. $u_1 \equiv w \cdot \text{SHA}(x) \bmod q$，$u_2 \equiv w \cdot r \bmod q$
 3. $v \equiv (\alpha^{u_1} \cdot \beta^{u_2} \bmod p) \bmod q$
-4. $v \equiv r \pmod q$ → 有效
+4. $v \equiv r \ (\mathrm{mod}\ q)$ → 有效
 
 **重點**：
 - $r$ 和 $s$ 都是 **mod $q$**，所以各只有 **160 bit** → 簽章 320 bit。
@@ -530,7 +530,7 @@ Oscar 算出的是 $h(x)$ 該是多少，但要找到一個 $x$ 讓 $h(x)$ 剛�
 
 ### 5.3 最重要的技巧
 
-$$a^m \equiv a^{\,m \bmod (p-1)} \pmod p$$
+$$a^m \equiv a^{\,m \bmod (p-1)} \ (\mathrm{mod}\ p)$$
 
 **mod $p$ 的運算，指數可以 mod $(p-1)$。**（來自 Fermat 小定理）
 

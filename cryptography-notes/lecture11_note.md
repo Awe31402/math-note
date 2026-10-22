@@ -354,7 +354,7 @@ r_i &= (s_{i-2} r_0 + t_{i-2} r_1) - q_{i-1}(s_{i-1} r_0 + t_{i-1} r_1) \\
 **問題**：想知道 $a^{-1} \bmod n$。
 - 有兩個數：$a$ 和模數 $n$ —— 剛好 EEA 也吃兩個數，「也許行得通」。
 
-【課堂討論】反元素的定義？→ $a \cdot a^{-1} \equiv 1 \pmod n$。
+【課堂討論】反元素的定義？→ $a \cdot a^{-1} \equiv 1 \ (\mathrm{mod}\ n)$。
 
 **做法**：把 $n$ 和 $a$ 丟進 EEA（慣例大的寫左邊）：
 
@@ -369,12 +369,12 @@ $$1 = s \cdot n + t \cdot a$$
 - 【課堂討論】$s \cdot n \bmod n$ 是什麼？→「$s$？好猜測，但錯了。」→ **0**（$n$ 除以 $n$ 餘 0）
 - 剩下：
 
-$$1 \equiv t \cdot a \pmod n$$
+$$1 \equiv t \cdot a \ (\mathrm{mod}\ n)$$
 
 【口頭】「**現在你該看到光了。**把這個式子跟反元素的定義比一比，反元素是什麼？」→ **$t$**！「**很酷。**」
 
 > **EEA 的係數 $t$（小的那個數的係數），就是 $r_1$ mod $r_0$ 的反元素。**
-> $$\boxed{a^{-1} \equiv t \pmod n}$$
+> $$\boxed{a^{-1} \equiv t \ (\mathrm{mod}\ n)}$$
 
 #### 自己驗算的小例子（筆者補充）
 
@@ -386,7 +386,7 @@ $$1 \equiv t \cdot a \pmod n$$
 | 1 | $r_1 = 5$ | | 0 | 1 |
 | 2 | $26 = 5 \cdot 5 + 1$ → $r_2 = 1$ | 5 | $1 - 5 \cdot 0 = 1$ | $0 - 5 \cdot 1 = -5$ |
 
-$1 = 1 \cdot 26 + (-5) \cdot 5$ → $5^{-1} \equiv -5 \equiv 21 \pmod{26}$ ✔
+$1 = 1 \cdot 26 + (-5) \cdot 5$ → $5^{-1} \equiv -5 \equiv 21 \ (\mathrm{mod}\ 26)$ ✔
 
 ### 為什麼這很重要
 
@@ -491,18 +491,18 @@ $$\Phi(240) = (2^4 - 2^3)(3^1 - 3^0)(5^1 - 5^0) = (16 - 8)(3 - 1)(5 - 1) = 8 \cd
 ### 5.1 Fermat 小定理
 
 > **Fermat 小定理（der kleine Fermat）**：$a$ 是整數、$p$ 是質數，則
-> $$a^p \equiv a \pmod p$$
+> $$a^p \equiv a \ (\mathrm{mod}\ p)$$
 
 【口頭】
 - 「**不要跟 Fermat 最後定理搞混**，那個非常重要，但跟這個**無關**。」
 - 「這不是很深的結果。」「**很奇怪、很奇怪、很奇怪**。17 世紀的 Fermat。」
 
-【課本補充】等價寫法（$a$ 不是 $p$ 的倍數時）：$a^{p-1} \equiv 1 \pmod p$。所以 $a \cdot a^{p-2} \equiv 1$，也就是 **$a^{-1} \equiv a^{p-2} \pmod p$** —— 另一種求反元素的方法（第 15 講 Elgamal 解密就用了這個想法）。
+【課本補充】等價寫法（$a$ 不是 $p$ 的倍數時）：$a^{p-1} \equiv 1 \ (\mathrm{mod}\ p)$。所以 $a \cdot a^{p-2} \equiv 1$，也就是 **$a^{-1} \equiv a^{p-2} \ (\mathrm{mod}\ p)$** —— 另一種求反元素的方法（第 15 講 Elgamal 解密就用了這個想法）。
 
 ### 5.2 Euler 定理
 
 > **Euler 定理**：$a$、$m$ 是整數，且 $\gcd(a, m) = 1$，則
-> $$\boxed{a^{\Phi(m)} \equiv 1 \pmod m}$$
+> $$\boxed{a^{\Phi(m)} \equiv 1 \ (\mathrm{mod}\ m)}$$
 
 【口頭】
 - 「這是 Fermat 的**一般化**：不是 $a$ 的 $p$ 次方，而是 $a$ 的 **$\Phi(m)$ 次方**。」
@@ -513,7 +513,7 @@ $$\Phi(240) = (2^4 - 2^3)(3^1 - 3^0)(5^1 - 5^0) = (16 - 8)(3 - 1)(5 - 1) = 8 \cd
 
 - $\Phi(12) = 4$（$12 = 2^2 \cdot 3$ → $(4 - 2)(3 - 1) = 4$；或數星星：1、5、7、11）
 - $\gcd(5, 12) = 1$ ✔
-- $5^{\Phi(12)} = 5^4 = 25^2 = 625 = 52 \times 12 + 1 \equiv 1 \pmod{12}$ ✔
+- $5^{\Phi(12)} = 5^4 = 25^2 = 625 = 52 \times 12 + 1 \equiv 1 \ (\mathrm{mod}\ 12)$ ✔
 
 【口頭】「講得很快。**春假後（四月）我們會更常用到這些結果。**今天到此為止。」
 
@@ -549,7 +549,7 @@ $$\gcd(r_0, r_1) = s \cdot r_0 + t \cdot r_1$$
 |---|---|
 | 1 | EEA$(n, a)$ → $1 = s \cdot n + t \cdot a$ |
 | 2 | 兩邊 mod $n$：$s \cdot n$ 消失 |
-| 3 | $a^{-1} \equiv t \pmod n$ |
+| 3 | $a^{-1} \equiv t \ (\mathrm{mod}\ n)$ |
 | 條件 | $\gcd(a, n) = 1$ |
 
 ### 6.4 Euler phi 函數
@@ -567,8 +567,8 @@ $$\gcd(r_0, r_1) = s \cdot r_0 + t \cdot r_1$$
 
 | 定理 | 內容 | 條件 |
 |---|---|---|
-| Fermat 小定理 | $a^p \equiv a \pmod p$（或 $a^{p-1} \equiv 1$） | $p$ 質數 |
-| Euler 定理 | $a^{\Phi(m)} \equiv 1 \pmod m$ | $\gcd(a, m) = 1$ |
+| Fermat 小定理 | $a^p \equiv a \ (\mathrm{mod}\ p)$（或 $a^{p-1} \equiv 1$） | $p$ 質數 |
+| Euler 定理 | $a^{\Phi(m)} \equiv 1 \ (\mathrm{mod}\ m)$ | $\gcd(a, m) = 1$ |
 
 ---
 

@@ -97,13 +97,13 @@ $$\mathbb{Z}_{11}^* = \{1, 2, 3, \ldots, 10\} \qquad\text{（去掉 0，所以�
 
 **重要推論**（`[00:14]`）：任選群中一個元素 $\beta$，它**一定**能寫成 $\beta = \alpha^x$。
 
-**例**：$2^x \equiv 9 \pmod{11}$，$x = ?$ → 查表，$x = 6$。
+**例**：$2^x \equiv 9 \ (\mathrm{mod}\ 11)$，$x = ?$ → 查表，$x = 6$。
 
 > **定義（$\mathbb{Z}_p^*$ 中的 DLP）**：給定循環群 $\mathbb{Z}_p^*$、原根 $\alpha$、元素 $\beta$，找整數 $1 \le x \le p-1$ 使
-> $$\alpha^x \equiv \beta \pmod p$$
+> $$\alpha^x \equiv \beta \ (\mathrm{mod}\ p)$$
 > 這個 $x$ 叫 $\beta$ 以 $\alpha$ 為底的**離散對數**：$x = \log_\alpha \beta \bmod p$
 
-**稍微難一點的例子**（`[00:16]`）：$\mathbb{Z}_{47}^*$，$\alpha = 5$（原根），$5^x \equiv 41 \pmod{47}$，$x = ?$
+**稍微難一點的例子**（`[00:16]`）：$\mathbb{Z}_{47}^*$，$\alpha = 5$（原根），$5^x \equiv 41 \ (\mathrm{mod}\ 47)$，$x = ?$
 
 【課堂討論】有人猜 42 →「不是，好猜測」。答案是 **15**。
 【口頭】「光用看的不容易。**目前最好的方法就是暴力法**：試 $x = 1, 2, 3, \ldots$。更好的攻擊第 4 節講。」
@@ -261,11 +261,11 @@ $(G, \circ)$ 的 $\circ$（教授叫它「甜甜圈 donut」）可以是乘法�
 
 **例**：$(\mathbb{Z}_{11}, +)$，原根 $\alpha = 2$（$2, 4, 6, 8, 10, 1, 3, \ldots$ 能生成全部）。
 
-求 $x$ 使 $\underbrace{2 + 2 + \cdots + 2}_{x \text{ 次}} \equiv 3 \pmod{11}$。
+求 $x$ 使 $\underbrace{2 + 2 + \cdots + 2}_{x \text{ 次}} \equiv 3 \ (\mathrm{mod}\ 11)$。
 
 「攻擊」：把它寫成乘法 $x \cdot 2 \equiv 3$，然後**直接乘反元素**：
 
-$$x \equiv 2^{-1} \cdot 3 \equiv 6 \cdot 3 = 18 \equiv 7 \pmod{11}$$
+$$x \equiv 2^{-1} \cdot 3 \equiv 6 \cdot 3 = 18 \equiv 7 \ (\mathrm{mod}\ 11)$$
 
 驗證：$7 \times 2 = 14 \equiv 3$ ✔
 
@@ -358,7 +358,7 @@ $$\sqrt{2^{160}} = 2^{80}$$
 **Pollard's Rho**：
 - 時間一樣 $O(\sqrt{|G|})$，但**幾乎不需要記憶體**。
 - 機率性演算法，基於**生日悖論**（第 20 講）：偽隨機地產生 $\alpha^i \beta^j$ 形式的元素，直到**碰撞** $\alpha^{i_1}\beta^{j_1} = \alpha^{i_2}\beta^{j_2}$。
-- 由碰撞得到 $x \equiv (i_2 - i_1)/(j_1 - j_2) \pmod{|G|}$。
+- 由碰撞得到 $x \equiv (i_2 - i_1)/(j_1 - j_2) \ (\mathrm{mod}\ |G|)$。
 - 名字由來：隨機漫步的軌跡長得像希臘字母 ρ。
 - **目前是攻擊橢圓曲線 DLP 最好的演算法。**
 
@@ -460,10 +460,10 @@ $$\sqrt{2^{160}} = 2^{80}$$
 | $G$ | 全部 | 2、6、7、8 |
 
 **怎麼找某個大小的子群的生成元**：若 $\alpha$ 是 $G$ 的原根、$|G| = n$、$k \mid n$，則 $\alpha^{n/k}$ 生成大小為 $k$ 的子群。
-例：$\alpha = 8$，要大小 2 的子群 → $8^{10/2} = 8^5 \equiv 10 \pmod{11}$。
+例：$\alpha = 8$，要大小 2 的子群 → $8^{10/2} = 8^5 \equiv 10 \ (\mathrm{mod}\ 11)$。
 
 **實務**：為了擋 Pohlig-Hellman，常在 $\mathbb{Z}_p^*$ 的**質數階子群**裡做 DLP。
-例：$\mathbb{Z}_{47}^*$ 大小 46 = 2 × 23。$\alpha = 2$ 生成 23 個元素的子群（23 是質數）。$2^x \equiv 36 \pmod{47}$ → $x = 17$。
+例：$\mathbb{Z}_{47}^*$ 大小 46 = 2 × 23。$\alpha = 2$ 生成 23 個元素的子群（23 是質數）。$2^x \equiv 36 \ (\mathrm{mod}\ 47)$ → $x = 17$。
 
 ---
 
@@ -473,7 +473,7 @@ $$\sqrt{2^{160}} = 2^{80}$$
 
 | 項目 | 內容 |
 |---|---|
-| **DLP**（$\mathbb{Z}_p^*$） | 給 $\alpha, \beta$，求 $x$：$\alpha^x \equiv \beta \pmod p$ |
+| **DLP**（$\mathbb{Z}_p^*$） | 給 $\alpha, \beta$，求 $x$：$\alpha^x \equiv \beta \ (\mathrm{mod}\ p)$ |
 | **GDLP** | 任何循環群 $(G, \circ)$：$\beta = \alpha \circ \cdots \circ \alpha$（$x$ 次） |
 | **DHP** | 給 $\alpha, A = \alpha^a, B = \alpha^b$，求 $\alpha^{ab}$ |
 | DLP ⇒ DHP | ✔ 解得了 DLP 就解得了 DHP |

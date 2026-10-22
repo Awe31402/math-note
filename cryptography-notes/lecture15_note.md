@@ -102,11 +102,11 @@
 
 **加密**：用 $k_{AB}$ 當**乘法遮罩**
 
-$$y \equiv x \cdot k_{AB} \pmod p$$
+$$y \equiv x \cdot k_{AB} \ (\mathrm{mod}\ p)$$
 
 【課堂討論】`[00:15]` Bob 怎麼拿掉這個乘法？→ **乘反元素**（「除」，但其實是乘反元素）。
 
-$$x \equiv y \cdot k_{AB}^{-1} \pmod p$$
+$$x \equiv y \cdot k_{AB}^{-1} \ (\mathrm{mod}\ p)$$
 
 > 【口頭】`[00:16]`「**這很重要：Elgamal 基本上就是這樣。**做一個普通的 DH，得到 session key，發送方乘上它（一種**遮罩 masking**），接收方乘上反元素。」
 > 「如果你看課本或其他書，Elgamal 看起來**複雜得多、很不一樣**。其實不是。他們只做了兩件事：」
@@ -142,7 +142,7 @@ $$x \equiv y \cdot k_{AB}^{-1} \pmod p$$
 |---|---|
 | (a) | 選大質數 $p$，選原根 $\alpha \in \mathbb{Z}_p^*$（或 $\mathbb{Z}_p^*$ 的子群） |
 | (b) | 選**私鑰** $d \in \{2, \ldots, p-2\}$ |
-| (c) | 算**公鑰** $\beta \equiv \alpha^d \pmod p$ |
+| (c) | 算**公鑰** $\beta \equiv \alpha^d \ (\mathrm{mod}\ p)$ |
 | (d) | 送出（或公布）$k_{pub} = (p, \alpha, \beta)$ |
 
 【課堂討論】`[00:22]` 為什麼私鑰叫 $d$？→ 「他最後要拿它來**解密（decrypt）**。」跟 RSA 一樣：$d$ = decryption 指數。
@@ -161,9 +161,9 @@ $$x \equiv y \cdot k_{AB}^{-1} \pmod p$$
 | 步驟 | Alice 做的事 | DH 裡對應的 |
 |---|---|---|
 | (e) | 選 $i \in \{2, \ldots, p-2\}$ | Alice 的私鑰 $a$ |
-| (f) | 算**臨時金鑰（ephemeral key）** $k_E \equiv \alpha^i \pmod p$ | Alice 的公鑰 $A$ |
-| (g) | 算**遮罩金鑰（masking key）** $k_M \equiv \beta^i \pmod p$ | session key $k_{AB}$ |
-| (h) | **加密** $y \equiv x \cdot k_M \pmod p$ | |
+| (f) | 算**臨時金鑰（ephemeral key）** $k_E \equiv \alpha^i \ (\mathrm{mod}\ p)$ | Alice 的公鑰 $A$ |
+| (g) | 算**遮罩金鑰（masking key）** $k_M \equiv \beta^i \ (\mathrm{mod}\ p)$ | session key $k_{AB}$ |
+| (h) | **加密** $y \equiv x \cdot k_M \ (\mathrm{mod}\ p)$ | |
 | (i) | 送出 $(k_E, y)$ | |
 
 #### 什麼是「ephemeral」？
@@ -191,8 +191,8 @@ $$x \equiv y \cdot k_{AB}^{-1} \pmod p$$
 
 | 步驟 | Bob 做的事 | DH 裡對應的 |
 |---|---|---|
-| (j) | $k_M \equiv k_E^{\,d} \pmod p$ | $k_{AB} = A^b$ |
-| (k) | **解密** $x \equiv y \cdot k_M^{-1} \pmod p$ | |
+| (j) | $k_M \equiv k_E^{\,d} \ (\mathrm{mod}\ p)$ | $k_{AB} = A^b$ |
+| (k) | **解密** $x \equiv y \cdot k_M^{-1} \ (\mathrm{mod}\ p)$ | |
 
 ### 3.5 對照：Elgamal 就是重新排列的 DH
 
@@ -233,7 +233,7 @@ y \cdot k_M^{-1} &\equiv y \cdot (k_E^{\,d})^{-1} & &\text{（代入 Bob 算的 
 &\equiv x \cdot \beta^i \cdot (\alpha^{i})^{-d} & &\text{（代入 Alice 的 } k_M \text{ 和 } k_E\text{）} \\
 &\equiv x \cdot (\alpha^d)^i \cdot (\alpha^i)^{-d} & &\text{（代入 } \beta\text{）} \\
 &\equiv x \cdot \alpha^{di - di} \\
-&\equiv x \cdot 1 \equiv x \pmod p \;✔
+&\equiv x \cdot 1 \equiv x \ (\mathrm{mod}\ p) \;✔
 \end{aligned}$$
 
 【口頭】`[00:41]`「策略是：我們要證明它等於 $x$，所以那一堆其他東西**必須變成 1**。」「這基本上就是**證明 DH 有效**的同一個證明。」
@@ -250,10 +250,10 @@ Bob 產生金鑰，Alice 加密 $x = 26$：
 | Alice | 選 | $i = 5$ |
 | Alice | 臨時金鑰 | $k_E = 2^5 \bmod 29 = 3$ |
 | Alice | 遮罩金鑰 | $k_M = 7^5 \bmod 29 = 16$ |
-| Alice | 加密 | $y = 26 \times 16 = 416 \equiv 10 \pmod{29}$ |
+| Alice | 加密 | $y = 26 \times 16 = 416 \equiv 10 \ (\mathrm{mod}\ 29)$ |
 | Bob | 遮罩金鑰 | $k_M = 3^{12} \bmod 29 = 16$ ✔ |
-| Bob | 反元素 | $16^{-1} \equiv 20 \pmod{29}$（$16 \times 20 = 320 = 11 \times 29 + 1$） |
-| Bob | 解密 | $x = 10 \times 20 = 200 \equiv 26 \pmod{29}$ ✔ |
+| Bob | 反元素 | $16^{-1} \equiv 20 \ (\mathrm{mod}\ 29)$（$16 \times 20 = 320 = 11 \times 29 + 1$） |
+| Bob | 解密 | $x = 10 \times 20 = 200 \equiv 26 \ (\mathrm{mod}\ 29)$ ✔ |
 
 （自己驗算：$2^5 = 32 \equiv 3$；$2^{12} = 2^{10} \cdot 4 \equiv 9 \cdot 4 = 36 \equiv 7$；$7^2 = 49 \equiv 20$，$7^4 \equiv 400 \equiv 23$，$7^5 \equiv 23 \cdot 7 = 161 \equiv 16$ ✔）
 
@@ -345,17 +345,17 @@ Elgamal： x, k_pub(β), 隨機的 i      → y
 
 【課堂討論】「有人記得 Fermat 定理嗎？我從沒要你們背，但如果有記性很好的聰明學生記得，會**讓我很開心**。……沒有？好，你們不必讓我開心。」
 
-> **Fermat 小定理**：對所有 $k_E \in \mathbb{Z}_p^*$，$\quad k_E^{\,p-1} \equiv 1 \pmod p$
+> **Fermat 小定理**：對所有 $k_E \in \mathbb{Z}_p^*$，$\quad k_E^{\,p-1} \equiv 1 \ (\mathrm{mod}\ p)$
 
 **推導**（`[01:01]`）：
 
 $$\begin{aligned}
 k_M^{-1} &\equiv (k_E^{\,d})^{-1} \\
 &\equiv (k_E^{\,d})^{-1} \cdot \underbrace{k_E^{\,p-1}}_{=1} & &\text{（乘以 1）} \\
-&\equiv k_E^{\,p - 1 - d} \pmod p
+&\equiv k_E^{\,p - 1 - d} \ (\mathrm{mod}\ p)
 \end{aligned}$$
 
-$$\boxed{k_M^{-1} \equiv k_E^{\,p-d-1} \pmod p}$$
+$$\boxed{k_M^{-1} \equiv k_E^{\,p-d-1} \ (\mathrm{mod}\ p)}$$
 
 → **一次指數運算就同時算出 $k_M$ 並求逆**，省掉擴展歐幾里得。
 
@@ -423,10 +423,10 @@ $3^2 = 9$，$3^4 = 81 \equiv 23$，$3^8 \equiv 529 \equiv 7$，$3^{16} \equiv 49
 
 - $i$ 一樣 → **$k_M$ 也一樣**。
 - 從兩次加密：
-$$k_M \equiv y_1 \cdot x_1^{-1} \equiv y_2 \cdot x_2^{-1} \pmod p$$
+$$k_M \equiv y_1 \cdot x_1^{-1} \equiv y_2 \cdot x_2^{-1} \ (\mathrm{mod}\ p)$$
 - 只有 $x_2$ 未知，是一條**線性方程式**：
 
-$$\boxed{x_2 \equiv y_2 \cdot y_1^{-1} \cdot x_1 \pmod p}$$
+$$\boxed{x_2 \equiv y_2 \cdot y_1^{-1} \cdot x_1 \ (\mathrm{mod}\ p)}$$
 
 【口頭】`[01:16]`「當然不只 $x_2$，**$x_3$、$x_4$、$x_5$ 也一樣**。Alice 用她壞掉的亂數產生器加密的所有東西，只要 Oscar **知道一則明文**，就能算出其他所有明文。**這很糟。**」
 

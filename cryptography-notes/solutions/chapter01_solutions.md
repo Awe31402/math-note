@@ -533,16 +533,16 @@ $$x = 23(y - 1) \bmod 30$$
 ### 解法
 
 仿射密碼：$y = ax + b \bmod 26$。兩組資料給兩條方程式：
-$$y_1 \equiv a x_1 + b, \qquad y_2 \equiv a x_2 + b \pmod{26}$$
+$$y_1 \equiv a x_1 + b, \qquad y_2 \equiv a x_2 + b \ (\mathrm{mod}\ 26)$$
 
 **消去 $b$**（兩式相減）：
-$$y_1 - y_2 \equiv a(x_1 - x_2) \pmod{26}$$
+$$y_1 - y_2 \equiv a(x_1 - x_2) \ (\mathrm{mod}\ 26)$$
 
 **解出 $a$**：
-$$a \equiv (y_1 - y_2)\,(x_1 - x_2)^{-1} \pmod{26}$$
+$$a \equiv (y_1 - y_2)\,(x_1 - x_2)^{-1} \ (\mathrm{mod}\ 26)$$
 
 **再求 $b$**：
-$$b \equiv y_1 - a x_1 \pmod{26}$$
+$$b \equiv y_1 - a x_1 \ (\mathrm{mod}\ 26)$$
 
 ### 選擇 $x_1, x_2$ 的條件
 
@@ -568,7 +568,7 @@ $$\gcd(x_1 - x_2,\; 26) = 1$$
 
 ### (1) 證明
 
-$$e_{k_2}(e_{k_1}(x)) = a_2(a_1 x + b_1) + b_2 = \underbrace{(a_2 a_1)}_{a_3}\,x + \underbrace{(a_2 b_1 + b_2)}_{b_3} \pmod{26}$$
+$$e_{k_2}(e_{k_1}(x)) = a_2(a_1 x + b_1) + b_2 = \underbrace{(a_2 a_1)}_{a_3}\,x + \underbrace{(a_2 b_1 + b_2)}_{b_3} \ (\mathrm{mod}\ 26)$$
 
 所以 $a_3 = a_1 a_2$，$b_3 = a_2 b_1 + b_2$，形式完全一樣，**還是一個仿射密碼**。
 

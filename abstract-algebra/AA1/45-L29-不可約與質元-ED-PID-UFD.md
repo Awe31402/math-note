@@ -54,9 +54,9 @@ $$49 = N(7) = N(x)N(y).$$
 $x,y$ 都不是單位 ⇒ $N(x) = N(y) = 7$ [▶ 01:30](https://youtu.be/ry6f4PHRYMM?t=90) ⇒ 要 $|a^2-5b^2| = 7$，即 $a^2-5b^2 = \pm7$。
 
 **模 7**[▶ 02:30](https://youtu.be/ry6f4PHRYMM?t=150)：「這個整數方程想起來很煩，但**模 7 看**有成果得多。」整數解一定也是模 7 的解：
-$$a^2-5b^2\equiv0\pmod7.$$
+$$a^2-5b^2\equiv0\ (\mathrm{mod}\ 7).$$
 - 「我不給你們看逐一檢查。$a,b$ 各 7 種，原則上 49 種情況。但利用它們是**平方**可以再減——1 和 6 模 7 平方一樣（6 是 $-1$）。」
-- 結論：$a\equiv b\equiv0\pmod7$ [▶ 03:30](https://youtu.be/ry6f4PHRYMM?t=210)。
+- 結論：$a\equiv b\equiv0\ (\mathrm{mod}\ 7)$ [▶ 03:30](https://youtu.be/ry6f4PHRYMM?t=210)。
 
 > 💬 補充：模 7 的平方是 $\{0,1,2,4\}$；$5b^2$ 的值是 $\{0,5,3,6\}$。只有 0 相同，所以 $a\equiv b\equiv0$。
 
@@ -259,7 +259,7 @@ $$46 = 2\cdot23 = (1+3\sqrt{-5})(1-3\sqrt{-5}).$$
 
 | 例子 | 結論 | 關鍵一步 |
 |---|---|---|
-| $7\in\mathbb{Z}[\sqrt5]$ | 不可約 | $a^2-5b^2\equiv0\pmod7$ ⇒ $49\mid7$ |
+| $7\in\mathbb{Z}[\sqrt5]$ | 不可約 | $a^2-5b^2\equiv0\ (\mathrm{mod}\ 7)$ ⇒ $49\mid7$ |
 | $54 = 6\cdot8+6 = 7\cdot8-2$ | 除法算則不唯一 | — |
 | $11+3i$、$2+3i$ | 輾轉相除得單位 $-i$ | $q = 2-2i$、$3+i$ |
 | $46$ 在 $\mathbb{Z}[\sqrt{-5}]$ | 兩種不可約分解 | 不是 UFD；Lamé 的錯誤 |

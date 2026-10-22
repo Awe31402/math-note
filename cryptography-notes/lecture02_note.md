@@ -73,7 +73,7 @@
 
 > 現在 12 點，「20 小時後見」。不會有人說「32 點見」，大家都知道是**早上 8 點**。
 
-$$12 + 20 = 32 \equiv 8 \pmod{24}$$
+$$12 + 20 = 32 \equiv 8 \ (\mathrm{mod}\ 24)$$
 
 - 有限集合常常可以畫成**一個圓圈**。走到底就繞回開頭。
 - 【口頭】德國小孩一年級就學會「時鐘的算法」；麵包店的算法（32 個）和時鐘的算法（8 點）我們都很習慣，只是沒人告訴你這是兩種不同的運算。
@@ -88,7 +88,7 @@ $$12 + 20 = 32 \equiv 8 \pmod{24}$$
 > **定義（Modulo Operation）**：設 $a, r, m$ 都是整數，且 $m > 0$。如果
 > $$m \mid (a - r)$$
 > 我們就寫
-> $$a \equiv r \pmod m$$
+> $$a \equiv r \ (\mathrm{mod}\ m)$$
 
 | 符號 | 名稱 |
 |---|---|
@@ -116,7 +116,7 @@ $$a = q \cdot m + r, \qquad 0 \le r < m$$
 $q$ 叫**商（quotient）**。【口頭】現在先不管它，幾個月後講**歐幾里得演算法**時會再用到。
 
 **例**：$a = 42$，$m = 9$
-$$42 = 4 \cdot 9 + 6 \quad\Rightarrow\quad 42 \equiv 6 \pmod 9$$
+$$42 = 4 \cdot 9 + 6 \quad\Rightarrow\quad 42 \equiv 6 \ (\mathrm{mod}\ 9)$$
 檢查：$42 - 6 = 36$，9 整除 36 ✔。
 
 ### 2.4 餘數不唯一！
@@ -139,7 +139,7 @@ $$42 = 4 \cdot 9 + 6 \quad\Rightarrow\quad 42 \equiv 6 \pmod 9$$
 
 `[00:26]` 換一個例子：$a = 12$，$m = 5$。
 
-$$12 \equiv 2 \equiv 7 \equiv -3 \equiv 17 \equiv \cdots \pmod 5$$
+$$12 \equiv 2 \equiv 7 \equiv -3 \equiv 17 \equiv \cdots \ (\mathrm{mod}\ 5)$$
 
 這些數字彼此**都差 5 的倍數**。把它們放在一起，就是一個**等價類**：
 
@@ -165,7 +165,7 @@ $$\{\ldots, -8, -3, 2, 7, 12, 17, \ldots\}$$
 
 **關鍵觀念**：mod 5 的時候，無限多個整數其實**只剩 5 種東西**。從此你只是在跟 5 個「東西」做運算。
 
-【課本補充】課本用 mod 9 做例子：$12 \equiv 3 \equiv 21 \equiv -6 \pmod 9$，mod 9 一共有 9 個等價類。
+【課本補充】課本用 mod 9 做例子：$12 \equiv 3 \equiv 21 \equiv -6 \ (\mathrm{mod}\ 9)$，mod 9 一共有 9 個等價類。
 
 ### 2.6 同一類的成員，行為都一樣
 
@@ -187,10 +187,10 @@ $$\{\ldots, -8, -3, 2, 7, 12, 17, \ldots\}$$
 | 16 | B | **1** |
 | 8 | D | **3** |
 
-$$13 \cdot 16 - 8 \equiv 3 \cdot 1 - 3 = 0 \pmod 5 \;✔$$
+$$13 \cdot 16 - 8 \equiv 3 \cdot 1 - 3 = 0 \ (\mathrm{mod}\ 5) \;✔$$
 
 也可以用負數，例如把 8 換成同一類的 $-7$：
-$$3 \cdot 1 - (-7) = 10 \equiv 0 \pmod 5 \;✔$$
+$$3 \cdot 1 - (-7) = 10 \equiv 0 \ (\mathrm{mod}\ 5) \;✔$$
 
 > ⚠️ 逐字稿缺字：教授在黑板上寫的第三種寫法字幕不完整，上面用 $-7$ 的版本是依同樣的原理補上的。
 
@@ -209,7 +209,7 @@ $$3 \cdot 1 - (-7) = 10 \equiv 0 \pmod 5 \;✔$$
 
 **笨方法（the dumb way）**：
 
-$$3^8 = 6561, \qquad 6561 = 937 \cdot 7 + 2 \quad\Rightarrow\quad 3^8 \equiv 2 \pmod 7$$
+$$3^8 = 6561, \qquad 6561 = 937 \cdot 7 + 2 \quad\Rightarrow\quad 3^8 \equiv 2 \ (\mathrm{mod}\ 7)$$
 
 問題：中間結果 6561 很大，但**最後答案只可能是 0～6**。中間數字變很大、最後又要壓回去，很浪費。
 
@@ -217,7 +217,7 @@ $$3^8 = 6561, \qquad 6561 = 937 \cdot 7 + 2 \quad\Rightarrow\quad 3^8 \equiv 2 \
 
 1. 先拆開（七年級的指數規則）：$3^8 = 3^4 \cdot 3^4 = 81 \cdot 81$
 2. 把 81 換成**同一等價類（mod 7）**裡較小的數：$81 = 11 \cdot 7 + 4$，所以 $81 \equiv 4$
-3. $81 \cdot 81 \equiv 4 \cdot 4 = 16 \equiv 2 \pmod 7$ ✔
+3. $81 \cdot 81 \equiv 4 \cdot 4 = 16 \equiv 2 \ (\mathrm{mod}\ 7)$ ✔
 
 整個過程數字**從不超過 81**，不用計算機。
 
@@ -252,13 +252,13 @@ $$0 \le r \le m - 1$$
 > **整數環 $\mathbb{Z}_m$** 包含：
 > 1. 集合 $\mathbb{Z}_m = \{0, 1, 2, \ldots, m-1\}$
 > 2. 兩個運算 $+$ 和 $\times$，對所有 $a, b \in \mathbb{Z}_m$：
->    - $a + b \equiv c \pmod m$，且 $c \in \mathbb{Z}_m$
->    - $a \times b \equiv d \pmod m$，且 $d \in \mathbb{Z}_m$
+>    - $a + b \equiv c \ (\mathrm{mod}\ m)$，且 $c \in \mathbb{Z}_m$
+>    - $a \times b \equiv d \ (\mathrm{mod}\ m)$，且 $d \in \mathbb{Z}_m$
 
 【口頭】「這個集合會在這門課、還有你整個資安生涯裡**一再出現**。它是現代密碼學最常用的集合。」
 
 【課本補充】例：$\mathbb{Z}_9$
-$$6 + 8 = 14 \equiv 5 \pmod 9 \qquad 6 \times 8 = 48 \equiv 3 \pmod 9$$
+$$6 + 8 = 14 \equiv 5 \ (\mathrm{mod}\ 9) \qquad 6 \times 8 = 48 \equiv 3 \ (\mathrm{mod}\ 9)$$
 
 ### 3.2 環的性質
 
@@ -271,21 +271,21 @@ $$6 + 8 = 14 \equiv 5 \pmod 9 \qquad 6 \times 8 = 48 \equiv 3 \pmod 9$$
 | **加法單位元素** | $a + 0 \equiv a$ | 就是 0。【口頭】之後會遇到「很奇怪」的單位元素 |
 | **加法反元素** | 每個 $a$ 都有 $-a$，使 $a + (-a) \equiv 0$ | **一定存在** → 永遠可以做減法 |
 | **乘法單位元素** | $a \times 1 \equiv a$ | 就是 1 |
-| **乘法反元素** | $a \cdot a^{-1} \equiv 1 \pmod m$ | ⚠️ **只有某些元素有** |
+| **乘法反元素** | $a \cdot a^{-1} \equiv 1 \ (\mathrm{mod}\ m)$ | ⚠️ **只有某些元素有** |
 | **分配律** | $a(b + c) = ab + ac$ | 【課本補充】 |
 
 ### 3.3 乘法反元素：奇怪的地方
 
 #### 例 1：$\mathbb{Z}_9$ 裡，2 的反元素是多少？
 
-`[01:06]` 要找 $x$ 使 $2 \cdot x \equiv 1 \pmod 9$。
+`[01:06]` 要找 $x$ 使 $2 \cdot x \equiv 1 \ (\mathrm{mod}\ 9)$。
 
 【課堂討論】第一反應：「$2^{-1} = 0.5$」。
 **為什麼這完全錯？** 0.5 **不在集合裡**。集合只有 0, 1, 2, …, 8。
 
-只能一個一個試：$2 \times 5 = 10 \equiv 1 \pmod 9$ ✔
+只能一個一個試：$2 \times 5 = 10 \equiv 1 \ (\mathrm{mod}\ 9)$ ✔
 
-$$2^{-1} \equiv 5 \pmod 9$$
+$$2^{-1} \equiv 5 \ (\mathrm{mod}\ 9)$$
 
 > 【口頭】這個反元素**跟小學學的倒數完全沒有直接關係**，它是從這個奇怪的定義來的。
 
@@ -320,7 +320,7 @@ $$2^{-1} \equiv 5 \pmod 9$$
 - $\gcd(a, m) = 1$ 時，叫 $a$ 和 $m$ **互質（relatively prime / coprime）**。
 - 例：$\gcd(15, 26) = 1$ → 15 在 $\mathbb{Z}_{26}$ 有反元素；$\gcd(14, 26) = 2$ → 14 沒有。
 - 真正**算出**反元素的方法是**擴展歐幾里得演算法**（課本 §6.3 → 第 11 講）。
-- 有反元素時就能「除」：$b / a \equiv b \cdot a^{-1} \pmod m$。
+- 有反元素時就能「除」：$b / a \equiv b \cdot a^{-1} \ (\mathrm{mod}\ m)$。
 - 實務上，公鑰密碼用的整數長度約 **150～4096 bit**，所以有效率的模運算非常重要。
 
 ### 3.4 群、環、體
@@ -366,8 +366,8 @@ $$2^{-1} \equiv 5 \pmod 9$$
 ### 4.3 數學描述
 
 > **移位密碼**：$x, y, k \in \mathbb{Z}_{26}$
-> - 加密：$e_k(x) \equiv x + k \pmod{26}$
-> - 解密：$d_k(y) \equiv y - k \pmod{26}$
+> - 加密：$e_k(x) \equiv x + k \ (\mathrm{mod}\ 26)$
+> - 解密：$d_k(y) \equiv y - k \ (\mathrm{mod}\ 26)$
 
 【口頭】「凱撒當然不懂同餘運算，他只知道規則。但好處是我們可以**用數學描述它**。」
 
@@ -398,13 +398,13 @@ $$x = (0, 19, 19, 0, 2, 10) \;\xrightarrow{+17 \bmod 26}\; y = (17, 10, 10, 17, 
 ### 5.1 規則
 
 > **仿射密碼**：$x, y, a, b \in \mathbb{Z}_{26}$，金鑰 $k = (a, b)$
-> - 加密：$e_k(x) = y \equiv a \cdot x + b \pmod{26}$
-> - 解密：$d_k(y) = x \equiv a^{-1} \cdot (y - b) \pmod{26}$
+> - 加密：$e_k(x) = y \equiv a \cdot x + b \ (\mathrm{mod}\ 26)$
+> - 解密：$d_k(y) = x \equiv a^{-1} \cdot (y - b) \ (\mathrm{mod}\ 26)$
 > - 限制：$\gcd(a, 26) = 1$
 
 **解密怎麼推出來**：
 
-$$a \cdot x + b \equiv y \;\Rightarrow\; a \cdot x \equiv y - b \;\Rightarrow\; x \equiv a^{-1} \cdot (y - b) \pmod{26}$$
+$$a \cdot x + b \equiv y \;\Rightarrow\; a \cdot x \equiv y - b \;\Rightarrow\; x \equiv a^{-1} \cdot (y - b) \ (\mathrm{mod}\ 26)$$
 
 #### ⚠️【口頭】永遠不要用除號
 
@@ -474,19 +474,19 @@ $k = (a, b) = (9, 13)$，明文 `ATTACK` $= (0, 19, 19, 0, 2, 10)$，$a^{-1} = 3
 
 | 項目 | 內容 |
 |---|---|
-| **同餘** | $a \equiv r \pmod m \iff m \mid (a - r)$ |
+| **同餘** | $a \equiv r \ (\mathrm{mod}\ m) \iff m \mid (a - r)$ |
 | **求餘數** | $a = q \cdot m + r$，$0 \le r < m$ |
 | **等價類** | mod $m$ 有 $m$ 個等價類，每個整數恰屬於一類 |
 | **慣例** | 餘數取 $0 \le r \le m - 1$ |
 | **整數環** | $\mathbb{Z}_m = \{0, 1, \ldots, m-1\}$，運算 $+$、$\times$ 都 mod $m$ |
-| **乘法反元素** | $a \cdot a^{-1} \equiv 1 \pmod m$；存在 $\iff \gcd(a, m) = 1$ |
-| **除法** | $b / a \equiv b \cdot a^{-1} \pmod m$（不要寫分數線！） |
+| **乘法反元素** | $a \cdot a^{-1} \equiv 1 \ (\mathrm{mod}\ m)$；存在 $\iff \gcd(a, m) = 1$ |
+| **除法** | $b / a \equiv b \cdot a^{-1} \ (\mathrm{mod}\ m)$（不要寫分數線！） |
 
 ### 6.2 計算技巧
 
 > **盡早做 mod，讓數字保持很小。** 同一等價類的成員可以任意互換。
 
-$$3^8 = 81 \cdot 81 \equiv 4 \cdot 4 = 16 \equiv 2 \pmod 7$$
+$$3^8 = 81 \cdot 81 \equiv 4 \cdot 4 = 16 \equiv 2 \ (\mathrm{mod}\ 7)$$
 
 ### 6.3 群、環、體
 

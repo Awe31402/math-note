@@ -238,13 +238,13 @@ $Z(G)$ 是**交換群**，$p$ 整除它的階。由**作業（交換的情況）
 
 > **Sylow 第二、三定理**[▶ 38:30](https://youtu.be/FhfqXJeQwEw?t=2310)
 > - 所有 Sylow $p$-子群互相**共軛**；任何 $p$-子群包含在某個 Sylow $p$-子群裡。
-> - $|G| = mp^\alpha$，$\gcd(m,p) = 1$。Sylow $p$-子群的個數 $k$ 滿足：$k\mid m$ 且 $k\equiv1\pmod p$。
+> - $|G| = mp^\alpha$，$\gcd(m,p) = 1$。Sylow $p$-子群的個數 $k$ 滿足：$k\mid m$ 且 $k\equiv1\ (\mathrm{mod}\ p)$。
 
 【口頭】[▶ 39:00](https://youtu.be/FhfqXJeQwEw?t=2340)「如果要你們會，就得走過證明，我不想花一週上課做證明。**花那時間在初等環論上有趣得多**——有些人不會修 Math 422，我覺得在離開第一門課前，讓你們對代數的整體結構有更好的感覺很重要。」
 
 **應用例**[▶ 39:30](https://youtu.be/FhfqXJeQwEw?t=2370)：**任何 100 階群都有 25 階的正規子群。**
-- $100 = 4\cdot25$。Sylow 5-子群的個數 $k$：$k\mid4$ 且 $k\equiv1\pmod5$。
-- 4 的因數 1、2、4 中，只有 1 滿足 $\equiv1\pmod5$。
+- $100 = 4\cdot25$。Sylow 5-子群的個數 $k$：$k\mid4$ 且 $k\equiv1\ (\mathrm{mod}\ 5)$。
+- 4 的因數 1、2、4 中，只有 1 滿足 $\equiv1\ (\mathrm{mod}\ 5)$。
 - 所以只有**一個** Sylow 5-子群；它和它的所有共軛都是同一個，所以**正規**。
 
 **另一例**[▶ 40:30](https://youtu.be/FhfqXJeQwEw?t=2430)（講義 Example 5）：$p,q$ 質數，**$pq$ 階的群都不是單群**。$p = q$ 的情況：$|G| = p^2$ 是 **$p$-群**，由（講義的）定理 7，$Z(G)\neq\{1\}$；若 $Z(G)\neq G$，它是非平凡真正規子群；若 $Z(G) = G$，$G$ 交換、$p^2$ 不是質數，也不是單群。（老師一度找不到「定理 7」：「那會永遠是個謎——我沒影印定理 7 給你們。」然後找到了。）
@@ -288,7 +288,7 @@ $$|G| = |Z(G)|+\sum_i[G:C(x_i)]\quad(x_i\text{ 取自非單點共軛類}).$$
 - 第一：$p^\alpha\mid|G|$ ⇒ 有 $p^\alpha$ 階子群。
 - Sylow $p$-子群：最大的 $p$ 的冪。
 - 第二：Sylow $p$-子群互相共軛。
-- 第三：個數 $k\mid m$、$k\equiv1\pmod p$。
+- 第三：個數 $k\mid m$、$k\equiv1\ (\mathrm{mod}\ p)$。
 - 例：100 階群有唯一（所以正規）的 25 階子群。
 
 ### 6.4 術語

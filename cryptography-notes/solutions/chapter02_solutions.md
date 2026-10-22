@@ -378,10 +378,10 @@ s_{256} &\equiv p_{255} s_{255} + \cdots + p_1 s_1 + p_0 s_0 \\
 s_{257} &\equiv p_{255} s_{256} + \cdots + p_1 s_2 + p_0 s_1 \\
 &\;\;\vdots \\
 s_{511} &\equiv p_{255} s_{510} + \cdots + p_1 s_{256} + p_0 s_{255}
-\end{aligned} \pmod 2$$
+\end{aligned} \ (\mathrm{mod}\ 2)$$
 
 寫成矩陣：
-$$\begin{pmatrix} s_0 & s_1 & \cdots & s_{255} \\ s_1 & s_2 & \cdots & s_{256} \\ \vdots & & & \vdots \\ s_{255} & s_{256} & \cdots & s_{510} \end{pmatrix} \begin{pmatrix} p_0 \\ p_1 \\ \vdots \\ p_{255} \end{pmatrix} = \begin{pmatrix} s_{256} \\ s_{257} \\ \vdots \\ s_{511} \end{pmatrix} \pmod 2$$
+$$\begin{pmatrix} s_0 & s_1 & \cdots & s_{255} \\ s_1 & s_2 & \cdots & s_{256} \\ \vdots & & & \vdots \\ s_{255} & s_{256} & \cdots & s_{510} \end{pmatrix} \begin{pmatrix} p_0 \\ p_1 \\ \vdots \\ p_{255} \end{pmatrix} = \begin{pmatrix} s_{256} \\ s_{257} \\ \vdots \\ s_{511} \end{pmatrix} \ (\mathrm{mod}\ 2)$$
 
 **步驟 3：解這個 256 × 256 的線性方程組**（mod 2 的高斯消去法），得到所有 $p_j$。一般 PC 很快就能解完。
 

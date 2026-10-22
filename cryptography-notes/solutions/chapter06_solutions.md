@@ -380,10 +380,10 @@ $$6^{-1} \equiv 6^{11} \bmod 13$$
 
 1. $26 = 2 \cdot 13$ → $\varphi(26) = (2 - 1)(13 - 1) = 12$
 2. 仿射密碼的 $a$ 一定滿足 $\gcd(a, 26) = 1$ → Euler 定理成立：
-$$a^{12} \equiv 1 \pmod{26}$$
+$$a^{12} \equiv 1 \ (\mathrm{mod}\ 26)$$
 3. 拆開：$a \cdot a^{11} \equiv 1$
 4. 所以 $a^{11}$ 就是 $a$ 的反元素：
-$$a^{-1} \equiv a^{11} \pmod{26} \qquad \blacksquare$$
+$$a^{-1} \equiv a^{11} \ (\mathrm{mod}\ 26) \qquad \blacksquare$$
 
 **例**：$a = 7$：$7^2 = 49 \equiv 23 \equiv -3$；$7^4 \equiv 9$；$7^8 \equiv 81 \equiv 3$；$7^{11} = 7^8 \cdot 7^2 \cdot 7 \equiv 3 \cdot (-3) \cdot 7 = -63 \equiv -63 + 78 = 15$ ✔（跟 6.7 一樣）
 

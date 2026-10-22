@@ -395,8 +395,8 @@ $$\text{Cert}_C = [(b_C = 24,\; ID = 3),\; (464, 109)]$$
 
 ### (2) 驗證
 
-驗證條件：$\beta^r \cdot r^s \stackrel{?}{\equiv} 2^{x} \pmod{467}$。
-因為 $\beta = 2^{127}$、$r = 2^{k_E}$，左邊 $= 2^{127r + k_E s}$，等價於檢查指數 $127\,r + k_E\,s \stackrel{?}{\equiv} x \pmod{466}$：
+驗證條件：$\beta^r \cdot r^s \stackrel{?}{\equiv} 2^{x} \ (\mathrm{mod}\ 467)$。
+因為 $\beta = 2^{127}$、$r = 2^{k_E}$，左邊 $= 2^{127r + k_E s}$，等價於檢查指數 $127\,r + k_E\,s \stackrel{?}{\equiv} x \ (\mathrm{mod}\ 466)$：
 
 | | $127r + k_E s$ | mod 466 | $x$ | 結果 |
 |---|---|---|---|---|

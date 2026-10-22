@@ -97,8 +97,8 @@ Symmetric Ciphers（對稱式密碼）
 `[00:07]`
 
 > **串流密碼的加解密**：明文、密文、金鑰串流都是單獨的 bit，$x_i, y_i, s_i \in \{0, 1\}$
-> - 加密：$y_i = e_{s_i}(x_i) \equiv x_i + s_i \pmod 2$
-> - 解密：$x_i = d_{s_i}(y_i) \equiv y_i + s_i \pmod 2$
+> - 加密：$y_i = e_{s_i}(x_i) \equiv x_i + s_i \ (\mathrm{mod}\ 2)$
+> - 解密：$x_i = d_{s_i}(y_i) \equiv y_i + s_i \ (\mathrm{mod}\ 2)$
 
 - $s_i$ 叫**金鑰串流（key stream）** bit。
 - 【口頭】這裡用 $s$ 不用 $k$，原因課堂最後會揭曉：**$s_i$ 不是金鑰本身**，是從金鑰「產生」出來的（見 §5）。
@@ -117,7 +117,7 @@ d_{s_i}(y_i) &\equiv y_i + s_i \\
 &\equiv (x_i + s_i) + s_i \\
 &\equiv x_i + 2 s_i \\
 &\equiv x_i + 0 \\
-&\equiv x_i \pmod 2 \quad \text{Q.E.D.}
+&\equiv x_i \ (\mathrm{mod}\ 2) \quad \text{Q.E.D.}
 \end{aligned}$$
 
 關鍵：$2 \bmod 2 = 0$，所以 $2 s_i$ 永遠是 0（不管 $s_i$ 是 0 還是 1）。
@@ -266,7 +266,7 @@ $$s_0 = \text{seed（種子）}, \qquad s_{i+1} = f(s_i), \quad i = 0, 1, \ldots
 
 `[00:49]`【口頭】這是 ANSI C 國際標準的一部分：
 
-$$s_0 = 12345, \qquad s_{i+1} \equiv 1103515245 \cdot s_i + 12345 \pmod{2^{31}}$$
+$$s_0 = 12345, \qquad s_{i+1} \equiv 1103515245 \cdot s_i + 12345 \ (\mathrm{mod}\ 2^{31})$$
 
 > 【口頭】「拿 C 的 `rand()` 來產生 $s_i$，聽起來很誘人。**這是個爛主意，不要這樣做。**為什麼？半小時後告訴你。」（→ §5.4）
 
@@ -359,7 +359,7 @@ $$s_0 = 12345, \qquad s_{i+1} \equiv 1103515245 \cdot s_i + 12345 \pmod{2^{31}}$
 
 【課本補充】證明概要：每個密文 bit 都給出一條方程式：
 
-$$y_0 \equiv x_0 + s_0 \pmod 2, \qquad y_1 \equiv x_1 + s_1 \pmod 2, \qquad \ldots$$
+$$y_0 \equiv x_0 + s_0 \ (\mathrm{mod}\ 2), \qquad y_1 \equiv x_1 + s_1 \ (\mathrm{mod}\ 2), \qquad \ldots$$
 
 - 每一條都是**兩個未知數**（$x_i$、$s_i$）的線性方程式 → **解不出來**。
 - 攻擊者知道 $y_0$，但 $x_0 = 0$ 和 $x_0 = 1$ **機率剛好一樣**（因為 $s_0$ 是真亂數，各 50%）。
@@ -451,7 +451,7 @@ $$y_0 \equiv x_0 + s_0 \pmod 2, \qquad y_1 \equiv x_1 + s_1 \pmod 2, \qquad \ldo
 
 `[01:17]` **LCG（Linear Congruential Generator）**：C 的 `rand()` 就是一個 LCG。
 
-$$S_0 = \text{seed}, \qquad S_{i+1} \equiv A \cdot S_i + B \pmod m$$
+$$S_0 = \text{seed}, \qquad S_{i+1} \equiv A \cdot S_i + B \ (\mathrm{mod}\ m)$$
 
 - $A, B, S_i \in \mathbb{Z}_m$
 - **金鑰 = $(A, B)$**（以及可能的種子 $S_0$）
@@ -475,23 +475,23 @@ $$S_j = y_j \oplus x_j, \quad j = 1, 2, 3$$
 
 **步驟 2：寫方程式。** Oscar 知道 LCG 的公式（Kerckhoffs 原則！），所以：
 
-$$S_2 \equiv A \cdot S_1 + B \pmod m$$
+$$S_2 \equiv A \cdot S_1 + B \ (\mathrm{mod}\ m)$$
 
 【課堂討論】`[01:25]` 未知數有幾個？**2 個（$A$、$B$）**。是什麼方程式？**線性**的。一條方程式、兩個未知數 → **解不出來**。還需要什麼？**第二條方程式**。
 
 **步驟 3：第二條方程式。**
 
-$$S_3 \equiv A \cdot S_2 + B \pmod m$$
+$$S_3 \equiv A \cdot S_2 + B \ (\mathrm{mod}\ m)$$
 
 > 【口頭】「現在 **Oscar 贏了，Alice 和 Bob 輸了**。兩個未知數、兩條線性方程式 —— 我兒子 Noah **八年級**就會解了。不需要什麼數論、超級電腦，**紙筆就夠**。」
 
 **步驟 4：解聯立方程式。**（兩式相減消掉 $B$）
 
-$$S_2 - S_3 \equiv A \cdot (S_1 - S_2) \pmod m$$
+$$S_2 - S_3 \equiv A \cdot (S_1 - S_2) \ (\mathrm{mod}\ m)$$
 
-$$\boxed{A \equiv (S_2 - S_3) \cdot (S_1 - S_2)^{-1} \pmod m}$$
+$$\boxed{A \equiv (S_2 - S_3) \cdot (S_1 - S_2)^{-1} \ (\mathrm{mod}\ m)}$$
 
-$$\boxed{B \equiv S_2 - S_1 \cdot A \pmod m}$$
+$$\boxed{B \equiv S_2 - S_1 \cdot A \ (\mathrm{mod}\ m)}$$
 
 （注意：這裡用的是第 2 講的**乘以反元素**，不是除法。）
 
@@ -526,8 +526,8 @@ $$\boxed{B \equiv S_2 - S_1 \cdot A \pmod m}$$
 
 | 項目 | 內容 |
 |---|---|
-| 加密 | $y_i \equiv x_i + s_i \pmod 2$ |
-| 解密 | $x_i \equiv y_i + s_i \pmod 2$ |
+| 加密 | $y_i \equiv x_i + s_i \ (\mathrm{mod}\ 2)$ |
+| 解密 | $x_i \equiv y_i + s_i \ (\mathrm{mod}\ 2)$ |
 | 關鍵事實 | **加密 = 解密**；mod 2 時加法 = 減法 |
 | mod 2 加法 | = **XOR**（$\oplus$） |
 | XOR 的直觀 | $s_i = 0$ → 不變；$s_i = 1$ → 翻轉；翻兩次 = 原樣 |
@@ -566,11 +566,11 @@ $$\boxed{B \equiv S_2 - S_1 \cdot A \pmod m}$$
 
 ### 6.6 LCG 攻擊
 
-$$S_{i+1} \equiv A S_i + B \pmod m$$
+$$S_{i+1} \equiv A S_i + B \ (\mathrm{mod}\ m)$$
 
 知道 3 個輸出 $S_1, S_2, S_3$（= 3 段已知明文 XOR 密文）就能解出：
 
-$$A \equiv (S_2 - S_3)(S_1 - S_2)^{-1}, \qquad B \equiv S_2 - S_1 A \pmod m$$
+$$A \equiv (S_2 - S_3)(S_1 - S_2)^{-1}, \qquad B \equiv S_2 - S_1 A \ (\mathrm{mod}\ m)$$
 
 ---
 

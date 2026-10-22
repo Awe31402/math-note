@@ -153,11 +153,11 @@ $$\underbrace{0010111}\;\underbrace{0010111}\;\underbrace{0010111}\;\ldots$$
 - $s_0, s_1, s_2$ 是**初始值**，教授說它們「非常無聊（langweilig）」，只是被載進去而已，沒有數學。
 - 從 $s_3$ 開始才有趣：$s_3$ 是當初 FF1 和 FF0 的 XOR。
 
-$$s_3 \equiv s_1 + s_0, \qquad s_4 \equiv s_2 + s_1, \qquad s_5 \equiv s_3 + s_2 \pmod 2$$
+$$s_3 \equiv s_1 + s_0, \qquad s_4 \equiv s_2 + s_1, \qquad s_5 \equiv s_3 + s_2 \ (\mathrm{mod}\ 2)$$
 
 看出規律了：
 
-$$\boxed{s_{i+3} \equiv s_{i+1} + s_i \pmod 2}$$
+$$\boxed{s_{i+3} \equiv s_{i+1} + s_i \ (\mathrm{mod}\ 2)}$$
 
 `[00:33]`【口頭】問題：週期 7 太短了。手機每 7 個 bit 就重複一次？我們想要**幾十億、幾兆**的週期。→ 好消息：要變長**非常容易**。
 
@@ -204,15 +204,15 @@ $p_0, p_1, \ldots, p_{m-1}$ 叫**回授係數（feedback coefficients）**，德
 
 `[00:42]` 初始值 $s_0, \ldots, s_{m-1}$ 由外部給定（例如 GSM 協定）。第一個「有內容」的輸出是 $s_m$：
 
-$$s_m \equiv s_{m-1} p_{m-1} + \cdots + s_1 p_1 + s_0 p_0 \pmod 2$$
+$$s_m \equiv s_{m-1} p_{m-1} + \cdots + s_1 p_1 + s_0 p_0 \ (\mathrm{mod}\ 2)$$
 
 下一個，所有東西往右移一格：
 
-$$s_{m+1} \equiv s_m p_{m-1} + \cdots + s_2 p_1 + s_1 p_0 \pmod 2$$
+$$s_{m+1} \equiv s_m p_{m-1} + \cdots + s_2 p_1 + s_1 p_0 \ (\mathrm{mod}\ 2)$$
 
 規律：**$p$ 不動，$s$ 的下標每次加 1。** 所以：
 
-$$\boxed{s_{i+m} \equiv \sum_{j=0}^{m-1} p_j \cdot s_{i+j} \pmod 2, \qquad s_i, p_j \in \{0, 1\}, \quad i = 0, 1, 2, \ldots}$$
+$$\boxed{s_{i+m} \equiv \sum_{j=0}^{m-1} p_j \cdot s_{i+j} \ (\mathrm{mod}\ 2), \qquad s_i, p_j \in \{0, 1\}, \quad i = 0, 1, 2, \ldots}$$
 
 > 【口頭】「這可能是**今天最重要的一條式子**。」
 
@@ -334,13 +334,13 @@ $$P(x) = x^m + p_{m-1} x^{m-1} + \cdots + p_1 x + p_0$$
 
 **步驟 1：算出前 $2m$ 個金鑰串流 bit。**
 
-$$s_i \equiv x_i + y_i \pmod 2, \qquad i = 0, 1, \ldots, 2m - 1$$
+$$s_i \equiv x_i + y_i \ (\mathrm{mod}\ 2), \qquad i = 0, 1, \ldots, 2m - 1$$
 
 **步驟 2：用通用公式列方程式。**
 
 `[01:19]` 拿 §2.3 的公式，$i = 0$：
 
-$$s_m \equiv p_{m-1} s_{m-1} + \cdots + p_1 s_1 + p_0 s_0 \pmod 2$$
+$$s_m \equiv p_{m-1} s_{m-1} + \cdots + p_1 s_1 + p_0 s_0 \ (\mathrm{mod}\ 2)$$
 
 - **好消息**：所有 $s$ 都已知，**未知數只有 $p_0, \ldots, p_{m-1}$**，而且全部都在這條式子裡。
 - **壞消息**：一條線性方程式、$m$ 個未知數 → 不夠。需要 **$m$ 條**。
@@ -352,7 +352,7 @@ i = 0: \quad & s_m &\equiv\;& p_{m-1} s_{m-1} + \cdots + p_1 s_1 + p_0 s_0 \\
 i = 1: \quad & s_{m+1} &\equiv\;& p_{m-1} s_m + \cdots + p_1 s_2 + p_0 s_1 \\
 & \;\;\vdots & & \qquad\vdots \\
 i = m-1: \quad & s_{2m-1} &\equiv\;& p_{m-1} s_{2m-2} + \cdots + p_1 s_m + p_0 s_{m-1}
-\end{aligned} \pmod 2$$
+\end{aligned} \ (\mathrm{mod}\ 2)$$
 
 → **$m$ 條線性方程式、$m$ 個未知數。** 這正是為什麼需要 $2m$ 個 bit：最後一條用到 $s_{2m-1}$。
 
@@ -369,7 +369,7 @@ i = m-1: \quad & s_{2m-1} &\equiv\;& p_{m-1} s_{2m-2} + \cdots + p_1 s_m + p_0 s
 
 **步驟 5：解密全部。**
 
-$$x_i \equiv y_i + s_i \pmod 2, \qquad \text{對所有 } i$$
+$$x_i \equiv y_i + s_i \ (\mathrm{mod}\ 2), \qquad \text{對所有 } i$$
 
 ### 3.3 本節的教訓
 
@@ -465,7 +465,7 @@ $$x_i \equiv y_i + s_i \pmod 2, \qquad \text{對所有 } i$$
 | 組成 | $m$ 個正反器 + XOR 回授 |
 | 度數 | $m$（正反器個數） |
 | 金鑰（用作密碼時） | 回授係數 $(p_{m-1}, \ldots, p_0)$ |
-| 通用公式 | $s_{i+m} \equiv \sum_{j=0}^{m-1} p_j s_{i+j} \pmod 2$ |
+| 通用公式 | $s_{i+m} \equiv \sum_{j=0}^{m-1} p_j s_{i+j} \ (\mathrm{mod}\ 2)$ |
 | 開關 = 乘法器 | $p_j = 1$ 閉合；$p_j = 0$ 打開 |
 | 最大週期 | $2^m - 1$（排除全零狀態） |
 | 達到最大週期的條件 | 回授多項式是**原始多項式** |

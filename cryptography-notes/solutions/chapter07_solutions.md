@@ -461,7 +461,7 @@ $d = 191$。驗算：$2111 \times 191 = 403{,}201 = 160 \times 2520 + 1$ ✔
 | 計算 | $23^2 \equiv 13$、$23^4 \equiv -3$、$23^8 \equiv 9$、$23^{16} \equiv -5$；$23^{23} = 23^{16} \cdot 23^4 \cdot 23^2 \cdot 23 \equiv (-5)(-3)(13)(23) \equiv 13$ | $43 \equiv -18$；$(-18)^2 \equiv 19$、$^4 \equiv -5$、$^8 \equiv 25$；$^{11} \equiv 25 \cdot 19 \cdot (-18) \equiv 51$ |
 | 結果 | $x \equiv 13$ | $x \equiv 51$ |
 
-組合：$x = 13 + 43k$，要 $13 + 43k \equiv 51 \pmod{61}$ → $43k \equiv 38$。
+組合：$x = 13 + 43k$，要 $13 + 43k \equiv 51 \ (\mathrm{mod}\ 61)$ → $43k \equiv 38$。
 $43^{-1} \bmod 61 = 44$（$43 \cdot 44 = 1892 = 31 \cdot 61 + 1$）→ $k \equiv 38 \cdot 44 = 1672 \equiv 25$（$1672 - 1647$）
 $$x = 13 + 43 \cdot 25 = \mathbf{1088}$$
 
@@ -483,7 +483,7 @@ $$x = 13 + 43 \cdot 25 = \mathbf{1088}$$
 
 ### (1) 乘法性質
 
-$$y_1 \cdot y_2 = x_1^e \cdot x_2^e = (x_1 x_2)^e \equiv e_{k_{pub}}(x_1 x_2) \pmod n \qquad \blacksquare$$
+$$y_1 \cdot y_2 = x_1^e \cdot x_2^e = (x_1 x_2)^e \equiv e_{k_{pub}}(x_1 x_2) \ (\mathrm{mod}\ n) \qquad \blacksquare$$
 
 ### (2) 攻擊
 
@@ -491,7 +491,7 @@ $$y_1 \cdot y_2 = x_1^e \cdot x_2^e = (x_1 x_2)^e \equiv e_{k_{pub}}(x_1 x_2) \p
 $$y_2 = y_1 \cdot s^e \bmod n$$
    $y_2$ 看起來像一個隨機的密文，跟 $y_1$ 沒有明顯關係。
 2. Oscar 讓 Bob 解密 $y_2$，拿到
-$$x_2 = y_2^d = (y_1 s^e)^d = y_1^d \cdot s^{ed} \equiv x_1 \cdot s \pmod n$$
+$$x_2 = y_2^d = (y_1 s^e)^d = y_1^d \cdot s^{ed} \equiv x_1 \cdot s \ (\mathrm{mod}\ n)$$
 3. Oscar 自己算 $s^{-1} \bmod n$（用 EEA），得到
 $$x_1 = x_2 \cdot s^{-1} \bmod n$$
 
@@ -528,14 +528,14 @@ $$x_1 = x_2 \cdot s^{-1} \bmod n$$
 | 2929 | 14 → 26 | 18 → 8 | 79 | **O** |
 | 3368 | 29 → 25 | 31 → 7 | 78 | **N** |
 
-（每一列 $b - a = -18$，$-18 \cdot 67 \equiv 1 \pmod{71}$，所以 $x = a + 53$。
-例：$23^2 = 529 \equiv -1 \pmod{53}$，所以 $23^{19} = (23^2)^9 \cdot 23 \equiv -23 \equiv 30$。）
+（每一列 $b - a = -18$，$-18 \cdot 67 \equiv 1 \ (\mathrm{mod}\ 71)$，所以 $x = a + 53$。
+例：$23^2 = 529 \equiv -1 \ (\mathrm{mod}\ 53)$，所以 $23^{19} = (23^2)^9 \cdot 23 \equiv -23 \equiv 30$。）
 
 密文順序 2514, 1125, 333, 3696, 2514, 2929, 3368, 2514 →
 
 > **明文：SIMPSONS**
 
-（反過來驗證：$83^{11} \bmod 3763$ 的 CRT 分量 $30^{11} \bmod 53$ 和 $12^{11} \bmod 71$ 會回到 23 和 29，因為 $11 \cdot 19 \equiv 1 \pmod{52}$、$11 \cdot 51 \equiv 1 \pmod{70}$。⚠️ 建議用程式直接建 A–Z 的加密表核對。）
+（反過來驗證：$83^{11} \bmod 3763$ 的 CRT 分量 $30^{11} \bmod 53$ 和 $12^{11} \bmod 71$ 會回到 23 和 29，因為 $11 \cdot 19 \equiv 1 \ (\mathrm{mod}\ 52)$、$11 \cdot 51 \equiv 1 \ (\mathrm{mod}\ 70)$。⚠️ 建議用程式直接建 A–Z 的加密表核對。）
 
 ### (3) 用 OAEP 呢？
 
@@ -643,7 +643,7 @@ $5789 = 4096 + 1024 + 512 + 128 + 16 + 8 + 4 + 1 = (1\,0110\,1001\,1101)_2$（13
 
 > $d = (1011010011101)_2 = $ **5789**
 
-⚠️ **待補 / 不確定**：圖 7.5 的解析度在 PDF 中太低，我無法可靠地數出每一段的長短。上表是**由題目給的 $p, q, e$ 反推出的 $d$** 所對應的圖樣（12 段，S 和 SM 交錯），請對照課本原圖確認。第 (3) 小題的驗算本身是成立的：$e \cdot d \equiv 1 \pmod{\varphi(n)}$。
+⚠️ **待補 / 不確定**：圖 7.5 的解析度在 PDF 中太低，我無法可靠地數出每一段的長短。上表是**由題目給的 $p, q, e$ 反推出的 $d$** 所對應的圖樣（12 段，S 和 SM 交錯），請對照課本原圖確認。第 (3) 小題的驗算本身是成立的：$e \cdot d \equiv 1 \ (\mathrm{mod}\ \varphi(n))$。
 
 > **教訓**：沒有防護的 Square-and-Multiply，運算順序直接跟私鑰位元有關，從**一條**功耗曲線就能讀出私鑰（簡單功耗分析，SPA）。
 

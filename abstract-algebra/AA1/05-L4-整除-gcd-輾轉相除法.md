@@ -357,13 +357,13 @@ $$1 = 5\cdot240-109\cdot11.$$
 
 | 模數 | 哪一項變成 0 | 得到 |
 |---|---|---|
-| 模 11 | $109\cdot11\equiv0$ | $5\cdot240\equiv1$，所以 $240^{-1}\equiv5\pmod{11}$ |
-| 模 240 | $5\cdot240\equiv0$ | $-109\cdot11\equiv1$，所以 $11^{-1}\equiv-109\equiv131\pmod{240}$ |
-| 模 109 | $109\cdot11\equiv0$ | $5\cdot240\equiv1$，所以 $5^{-1}\equiv240\equiv22\pmod{109}$ |
+| 模 11 | $109\cdot11\equiv0$ | $5\cdot240\equiv1$，所以 $240^{-1}\equiv5\ (\mathrm{mod}\ 11)$ |
+| 模 240 | $5\cdot240\equiv0$ | $-109\cdot11\equiv1$，所以 $11^{-1}\equiv-109\equiv131\ (\mathrm{mod}\ 240)$ |
+| 模 109 | $109\cdot11\equiv0$ | $5\cdot240\equiv1$，所以 $5^{-1}\equiv240\equiv22\ (\mathrm{mod}\ 109)$ |
 
 > ⚠️ 逐字稿缺字：這段板書字幕很亂（念出「250」「mod 5」之類）。上表是依 $1 = 5\cdot240-109\cdot11$ 重新整理的正確讀法，邏輯跟老師說的一樣：在某個模數下，把等式裡變成 0 的那一項拿掉，剩下「兩數乘積 = 1」，它們就互為反元素 [▶ 51:25](https://youtu.be/PHqmS3JUpf4?t=3085)。
 >
-> 順帶一提：$240 = 21\cdot11+9\equiv9\pmod{11}$，所以第一行就是 $9^{-1} = 5$ in $U(11)$——正是 L2 的例子 $9\cdot5 = 45\equiv1$。
+> 順帶一提：$240 = 21\cdot11+9\equiv9\ (\mathrm{mod}\ 11)$，所以第一行就是 $9^{-1} = 5$ in $U(11)$——正是 L2 的例子 $9\cdot5 = 45\equiv1$。
 
 **重點**：**Bézout 等式給出有系統地算模反元素的方法。**
 
@@ -429,7 +429,7 @@ $$\gcd(240,11) = 1 = 5\cdot240-109\cdot11.$$
 
 ### 9.4 用 Bézout 算模反元素
 
-$ax+ny = 1$ ⇒ 模 $n$ 下 $ax\equiv1$ ⇒ $a^{-1}\equiv x\pmod n$。
+$ax+ny = 1$ ⇒ 模 $n$ 下 $ax\equiv1$ ⇒ $a^{-1}\equiv x\ (\mathrm{mod}\ n)$。
 
 ### 9.5 術語
 

@@ -404,9 +404,9 @@ $$\text{ver}_k(x, y) = \begin{cases} \text{true} & \text{若 } y \text{ 有效} 
 
 `[01:08]`
 
-$$s^e = (x^d)^e = x^{de} \equiv x \pmod n$$
+$$s^e = (x^d)^e = x^{de} \equiv x \ (\mathrm{mod}\ n)$$
 
-【課堂討論】$x^{de}$ 等於什麼？→ RSA 那時證明過（Euler phi 函數在指數裡……）：因為 $de \equiv 1 \pmod{\Phi(n)}$，所以得到 $x$。「**加密時成立的，這裡一樣成立。**」
+【課堂討論】$x^{de}$ 等於什麼？→ RSA 那時證明過（Euler phi 函數在指數裡……）：因為 $de \equiv 1 \ (\mathrm{mod}\ \Phi(n))$，所以得到 $x$。「**加密時成立的，這裡一樣成立。**」
 
 ### 3.3 達到哪些安全服務
 

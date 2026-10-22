@@ -176,7 +176,7 @@ Alice ──→ [ e_k ] ──→ 不安全通道 ──→ [ d_k ] ──→ Bo
 > 2. 計算 $n = p \cdot q$
 > 3. 計算 $\Phi(n) = (p - 1)(q - 1)$
 > 4. 選公開指數 $e \in \{1, 2, \ldots, \Phi(n) - 1\}$，使 $\gcd(e, \Phi(n)) = 1$
-> 5. 計算私鑰 $d$，使 $d \cdot e \equiv 1 \pmod{\Phi(n)}$
+> 5. 計算私鑰 $d$，使 $d \cdot e \equiv 1 \ (\mathrm{mod}\ \Phi(n))$
 >
 > **公鑰** $k_{pub} = (n, e)$　　**私鑰** $k_{pr} = d$
 
@@ -290,7 +290,7 @@ $$\gcd(\Phi(n), e) = s \cdot \Phi(n) + t \cdot e$$
 | 2 | $n = 3 \times 11 = 33$ |
 | 3 | $\Phi(n) = (3-1)(11-1) = 2 \times 10 = 20$（「不用超級電腦」） |
 | 4 | 選 $e = 3$。檢查 $\gcd(3, 20) = 1$ ✔ |
-| 5 | $d \equiv 3^{-1} \equiv 7 \pmod{20}$。檢查 $3 \times 7 = 21 \equiv 1 \pmod{20}$ ✔ |
+| 5 | $d \equiv 3^{-1} \equiv 7 \ (\mathrm{mod}\ 20)$。檢查 $3 \times 7 = 21 \equiv 1 \ (\mathrm{mod}\ 20)$ ✔ |
 
 【口頭】`[00:40]`「$e = 3$ 剛好等於 $p$，這是巧合，**$e$ 不必等於 $p$**。我很努力想找一個全程能心算的 RSA 例子，不容易。4 跟 20 不互質、5 不互質、6 不互質，只有 7 —— 那數字就變大了，所以選 3。」
 
@@ -314,11 +314,11 @@ $$\gcd(\Phi(n), e) = s \cdot \Phi(n) + t \cdot e$$
 
 **觀察**：31 很接近 33。回想第 2 講的**等價類**：
 
-$$31 \equiv -2 \pmod{33}$$
+$$31 \equiv -2 \ (\mathrm{mod}\ 33)$$
 
 所以：
 
-$$31^7 \equiv (-2)^7 = -128 \pmod{33}$$
+$$31^7 \equiv (-2)^7 = -128 \ (\mathrm{mod}\ 33)$$
 
 【口頭】「我請你們背 2 的次方 —— 2、4、8、16、32、64、128、256、512、1024。晚上醒著或太早醒的時候就在腦中跑一遍。**我自己早上醒太早時就這樣做。**」
 
@@ -333,22 +333,22 @@ $$-128 + 4 \times 33 = -128 + 132 = 4 \;✔$$
 
 **證明概要**：
 
-要證 $d_{k_{pr}}(e_{k_{pub}}(x)) = (x^e)^d = x^{de} \equiv x \pmod n$。
+要證 $d_{k_{pr}}(e_{k_{pub}}(x)) = (x^e)^d = x^{de} \equiv x \ (\mathrm{mod}\ n)$。
 
-由 $de \equiv 1 \pmod{\Phi(n)}$，可寫成 $de = 1 + t \cdot \Phi(n)$（$t$ 為某整數）：
+由 $de \equiv 1 \ (\mathrm{mod}\ \Phi(n))$，可寫成 $de = 1 + t \cdot \Phi(n)$（$t$ 為某整數）：
 
 $$x^{de} = x^{1 + t\Phi(n)} = \left(x^{\Phi(n)}\right)^t \cdot x$$
 
 **情況 1：$\gcd(x, n) = 1$**
-用 **Euler 定理**（第 11 講）：$x^{\Phi(n)} \equiv 1 \pmod n$，所以：
+用 **Euler 定理**（第 11 講）：$x^{\Phi(n)} \equiv 1 \ (\mathrm{mod}\ n)$，所以：
 
-$$x^{de} \equiv 1^t \cdot x = x \pmod n \;✔$$
+$$x^{de} \equiv 1^t \cdot x = x \ (\mathrm{mod}\ n) \;✔$$
 
 **情況 2：$\gcd(x, n) \ne 1$**
 因為 $p, q$ 是質數，$x$ 一定是其中一個的倍數，例如 $x = r \cdot p$（$r < q$），所以 $\gcd(x, q) = 1$。
-- 在 mod $q$ 下用 Euler 定理：$(x^{\Phi(n)})^t = ((x^{q-1})^t)^{p-1} \equiv 1 \pmod q$
+- 在 mod $q$ 下用 Euler 定理：$(x^{\Phi(n)})^t = ((x^{q-1})^t)^{p-1} \equiv 1 \ (\mathrm{mod}\ q)$
 - 寫成 $(x^{\Phi(n)})^t = 1 + u \cdot q$，兩邊乘 $x$：
-$$x \cdot (x^{\Phi(n)})^t = x + r \cdot p \cdot u \cdot q = x + r u n \equiv x \pmod n \;✔$$
+$$x \cdot (x^{\Phi(n)})^t = x + r \cdot p \cdot u \cdot q = x + r u n \equiv x \ (\mathrm{mod}\ n) \;✔$$
 
 課本說：如果用**中國餘數定理**證明會更簡單。
 
@@ -651,7 +651,7 @@ $p$、$q$ 必須是**隨機**的（如果攻擊者能猜到其中一個，RSA �
 | 2 | $n = pq$ |
 | 3 | $\Phi(n) = (p-1)(q-1)$ |
 | 4 | 選 $e$，$\gcd(e, \Phi(n)) = 1$ |
-| 5 | $d \equiv e^{-1} \pmod{\Phi(n)}$（擴展歐幾里得） |
+| 5 | $d \equiv e^{-1} \ (\mathrm{mod}\ \Phi(n))$（擴展歐幾里得） |
 | **加密** | $y \equiv x^e \bmod n$ |
 | **解密** | $x \equiv y^d \bmod n$ |
 | 公鑰 / 私鑰 | $(n, e)$ / $d$ |
