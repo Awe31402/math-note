@@ -388,7 +388,7 @@ Feistel 網路：分成**左右兩半**；右半送進函數 $f$，用 $f$ 的�
 
 【口頭】B **循環左移 30 位**，「等於**右移 2 位**」。
 
-$$\boxed{A, B, C, D, E \;=\; \big(E + f_t(B,C,D) + (A)_{\lll 5} + W_j + K_t\big),\; A,\; (B)_{\lll 30},\; C,\; D}$$
+$$\boxed{A, B, C, D, E \;=\; \left(E + f_t(B,C,D) + (A)_{\lll 5} + W_j + K_t\right),\; A,\; (B)_{\lll 30},\; C,\; D}$$
 
 ```
      A       B       C       D       E
@@ -433,7 +433,7 @@ $$\boxed{A, B, C, D, E \;=\; \big(E + f_t(B,C,D) + (A)_{\lll 5} + W_j + K_t\big)
 問題：輸入 512 bit，怎麼得到 80 個 32 bit 的字 $W_0, \ldots, W_{79}$？
 
 **步驟 1：切成 16 個字**
-$$x_i = \big(x_i^{(0)}, x_i^{(1)}, \ldots, x_i^{(15)}\big)$$
+$$x_i = \left(x_i^{(0)}, x_i^{(1)}, \ldots, x_i^{(15)}\right)$$
 【課堂討論】心算：512 bit 裡能放幾個 32 bit 字？→ 學生先說 15，教授：「是 **16**。16 × 32。最後一個索引是 15，因為從 0 開始數。」
 
 **步驟 2：前 16 個直接複製**
@@ -447,7 +447,7 @@ $$W_j = x_i^{(j)}, \qquad 0 \le j \le 15$$
 
 【課本補充】完整公式（課本 §11.4.2）：
 
-$$W_j = \begin{cases} x_i^{(j)} & 0 \le j \le 15 \\[4pt] \big(W_{j-16} \oplus W_{j-14} \oplus W_{j-8} \oplus W_{j-3}\big)_{\lll 1} & 16 \le j \le 79 \end{cases}$$
+$$W_j = \begin{cases} x_i^{(j)} & 0 \le j \le 15 \\[4pt] \left(W_{j-16} \oplus W_{j-14} \oplus W_{j-8} \oplus W_{j-3}\right)_{\lll 1} & 16 \le j \le 79 \end{cases}$$
 
 ⚠️ **課堂與課本不同**：教授在課堂上只講了四個字的 XOR，**沒有提到最後還要循環左移 1 位**（$\lll 1$）；課本的公式有。以課本為準。
 （課本另外提到 SHA-0 和 SHA-1 的差別就在壓縮函數的「排程」。）
@@ -537,7 +537,7 @@ SHA-1 能處理的訊息最長 $2^{64}$ bit（因為長度欄位 64 bit）。
 ### 5.4 SHA-1 三個公式
 
 **輪函數**：
-$$A, B, C, D, E = \big(E + f_t(B,C,D) + A_{\lll 5} + W_j + K_t\big),\; A,\; B_{\lll 30},\; C,\; D$$
+$$A, B, C, D, E = \left(E + f_t(B,C,D) + A_{\lll 5} + W_j + K_t\right),\; A,\; B_{\lll 30},\; C,\; D$$
 
 **訊息排程**：
 $$W_j = x_i^{(j)}\ (0 \le j \le 15), \qquad W_j = (W_{j-16} \oplus W_{j-14} \oplus W_{j-8} \oplus W_{j-3})_{\lll 1}\ (16 \le j \le 79)$$

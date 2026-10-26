@@ -232,7 +232,7 @@ $R_{15}$ 在加密第 16 輪**根本沒被加密**，只是一路被複製、交
 $$\begin{aligned}
 R_1^d &= L_0^d \oplus f(R_0^d, k_?) && \text{（Feistel 公式）}\\
 &= R_{16} \oplus f(R_{15}, k_?) && \text{（代入起點）}\\
-&= \big[L_{15} \oplus f(R_{15}, k_{16})\big] \oplus f(R_{15}, k_?) && \text{（代入加密第 16 輪的 } R_{16}\text{）}
+&= \left[L_{15} \oplus f(R_{15}, k_{16})\right] \oplus f(R_{15}, k_?) && \text{（代入加密第 16 輪的 } R_{16}\text{）}
 \end{aligned}$$
 
 `[00:46]`【口頭】「**這是整整 90 分鐘裡真正有趣的那一分鐘。**」
@@ -245,7 +245,7 @@ R_1^d &= L_0^d \oplus f(R_0^d, k_?) && \text{（Feistel 公式）}\\
 
 選 $k_? = k_{16}$：
 
-$$R_1^d = L_{15} \oplus \underbrace{\big[f(R_{15}, k_{16}) \oplus f(R_{15}, k_{16})\big]}_{32 \text{ 個 } 0} = L_{15} \;✔$$
+$$R_1^d = L_{15} \oplus \underbrace{\left[f(R_{15}, k_{16}) \oplus f(R_{15}, k_{16})\right]}_{32 \text{ 個 } 0} = L_{15} \;✔$$
 
 > **關鍵**：同一個 $f$ 輸出被 XOR 兩次，互相抵銷。（又是第 3 講的「翻兩次 = 原樣」！）
 

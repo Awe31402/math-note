@@ -352,7 +352,7 @@ $$\text{新 bit} = \text{原本的 bit} \;\oplus\; (\text{「左邊」那一欄�
 
 **ρ 步驟：每個字循環移位固定的位數**
 
-$$\text{temp}[x, y] = \text{ROT}\big(A[x, y],\; r[x, y]\big)$$
+$$\text{temp}[x, y] = \text{ROT}\left(A[x, y],\; r[x, y]\right)$$
 
 $r[x, y]$ 是查表得到的旋轉量（講義表 1.3 / 1.4，完整表格**待補**）。課堂上提到的例子：
 
@@ -383,7 +383,7 @@ $$B[y,\; 2x + 3y] = \text{temp}[x, y], \qquad x, y \in \{0, \ldots, 4\}$$
 
 輸入 $B$（上一步的輸出），輸出 $A$（「不完全一致，但講義裡我就是這樣寫的」）：
 
-$$A[x, y] = B[x, y] \;\oplus\; \big(\overline{B[x+1, y]} \;\wedge\; B[x+2, y]\big)$$
+$$A[x, y] = B[x, y] \;\oplus\; \left(\overline{B[x+1, y]} \;\wedge\; B[x+2, y]\right)$$
 
 - $\overline{\phantom{B}}$ = **反相**（bit 翻轉：1 變 0、0 變 1）
 - $\wedge$ = **AND**

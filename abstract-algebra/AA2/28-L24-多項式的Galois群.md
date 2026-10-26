@@ -50,7 +50,7 @@ notes: 講義/AA2/Math422_Lecture24_GaloisGroupPolynomials.pdf
 「（好吧，被你們抓到——$\sigma_1 = 1$。）這可能是 D&F 的作業題，**肯定**是我弟弟建議的——就是上次那份 PDF 的**可怕計算**。但我想證它。」
 
 **證明**[▶ 05:00](https://youtu.be/RrHAN9FtXHI?t=300)：任取 $\tau\in\mathrm{Gal}(E/F)$：
-$$\tau\Big(\prod_i\sigma_i(z)\Big) = \prod_i(\tau\sigma_i)(z).$$
+$$\tau\left(\prod_i\sigma_i(z)\right) = \prod_i(\tau\sigma_i)(z).$$
 - $\mathrm{Gal}(E/F)$ 是群 ⇒ $\tau\sigma_1,\dots,\tau\sigma_p$ 就是 $\sigma_1,\dots,\sigma_p$ **重新排序** ⇒ 乘積（交換）不變。
 - 所以乘積被**每個** $\tau$ 固定 ⇒ 在固定體裡 ⇒ 在 $F$（Galois：$F = E^{\mathrm{Gal}}$）。
 - 第二部分：解 $\frac1z$——「**別告訴 Spano**」。$\blacksquare$

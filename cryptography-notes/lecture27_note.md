@@ -297,7 +297,7 @@ $$(k_{pub,O},\; ID_A)$$
 > 「瀏覽器跳出『**憑證無效**』的警告，真正的意思是：**這不是一把我們能檢查、確定有效的公鑰**。」
 > 「從現在起，Alice 不用她**赤裸的公鑰**，而是用**憑證**。但請把憑證想成**一把公鑰**。」
 
-$$\boxed{\text{Cert}_A = \Big[\,(k_{pub,A},\; ID_A),\;\; \text{sig}_{k_{pr,CA}}(k_{pub,A},\; ID_A)\,\Big]}$$
+$$\boxed{\text{Cert}_A = \left[\,(k_{pub,A},\; ID_A),\;\; \text{sig}_{k_{pr,CA}}(k_{pub,A},\; ID_A)\,\right]}$$
 
 - 前半：就是剛才的 $(k_{pub,A}, ID_A)$。
 - 後半：**用 CA 的私鑰**對它簽章。
@@ -458,7 +458,7 @@ Alice 也一樣：用 **CA 的公鑰**驗證 $\text{Cert}_B$，再算 $k_{AB} = 
    ver_{k_pub,CA2}(Cert_B)    ⇒  k_pub,B 有效
 ```
 
-$$\text{Cert}_{CA2} = \big[(k_{pub,CA2}, ID_{CA2}),\; \text{sig}_{k_{pr,CA1}}(k_{pub,CA2}, ID_{CA2})\big]$$
+$$\text{Cert}_{CA2} = \left[(k_{pub,CA2}, ID_{CA2}),\; \text{sig}_{k_{pr,CA1}}(k_{pub,CA2}, ID_{CA2})\right]$$
 
 - 這建立了**憑證鏈**：CA1 信任 CA2（簽了它的公鑰）→ Alice 能信任 Bob 的公鑰。叫做**信任的委派**。
 - CA 可以**階層式**排列（每層簽下一層），或互相**交叉認證**。
@@ -512,7 +512,7 @@ Oscar 之後可以：**讀**、**攔下**、**重新加密轉送**、**竄改**�
 
 ### 5.3 憑證公式
 
-$$\text{Cert}_A = \big[(k_{pub,A}, ID_A),\; \text{sig}_{k_{pr,CA}}(k_{pub,A}, ID_A)\big]$$
+$$\text{Cert}_A = \left[(k_{pub,A}, ID_A),\; \text{sig}_{k_{pr,CA}}(k_{pub,A}, ID_A)\right]$$
 
 ### 5.4 對稱 vs 非對稱金鑰建立
 

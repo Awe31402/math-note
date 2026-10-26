@@ -84,7 +84,7 @@ $$\sigma\tau(\sqrt[n]a) = \sigma(\zeta_\tau\sqrt[n]a) = \zeta_\tau\sigma(\sqrt[n
 **計算**[▶ 11:00](https://youtu.be/Yc2ngBwDZVk?t=660)（$\zeta\in F$ 被 $\sigma$ 固定；$\sigma^n = 1$；$\zeta^n = 1$ ⇒ $\zeta^{n-1} = \zeta^{-1}$）：
 $$\sigma(\alpha,\zeta) = \sigma\alpha+\zeta\sigma^2\alpha+\cdots+\zeta^{n-2}\sigma^{n-1}\alpha+\zeta^{-1}\alpha = \zeta^{-1}(\alpha,\zeta).$$
 「**最後的成了第一**。」
-- ⇒ $\sigma\big((\alpha,\zeta)^n\big) = \zeta^{-n}(\alpha,\zeta)^n = (\alpha,\zeta)^n$ ⇒ **$(\alpha,\zeta)^n\in F$**。（老師先說「預解式在 $F$ 裡」，自己改正：「是它的 **$n$ 次方**在 $F$ 裡。」）
+- ⇒ $\sigma\left((\alpha,\zeta)^n\right) = \zeta^{-n}(\alpha,\zeta)^n = (\alpha,\zeta)^n$ ⇒ **$(\alpha,\zeta)^n\in F$**。（老師先說「預解式在 $F$ 裡」，自己改正：「是它的 **$n$ 次方**在 $F$ 裡。」）
 - 【講義補充】用自同構 $1,\sigma,\dots,\sigma^{n-1}$ 的**線性獨立**（「特徵標那套，我之前帶過，這裡沒法講細節。**Sorry**——用 Tucker Carlson 說 sorry 的語氣」）可取 $\alpha$ 使 $(\alpha,\zeta)\neq0$（$\zeta$ 取本原根）。則 $\sigma^j(\alpha,\zeta) = \zeta^{-j}(\alpha,\zeta)$，$j<n$ 時**不固定** ⇒ $(\alpha,\zeta)$ 不在任何真子體 ⇒ $K = F((\alpha,\zeta))$，而 $(\alpha,\zeta)^n = a\in F$ ⇒ $K = F(\sqrt[n]a)$。
 
 > **命題 37**（講義 p.4）[▶ 16:00](https://youtu.be/Yc2ngBwDZVk?t=960)　$\mathrm{ch}F\nmid n$、$\mu_n\subseteq F$ 時，任何 $n$ 次循環擴張都是 $F(\sqrt[n]a)$（某個 $a\in F$）的形式。
@@ -121,7 +121,7 @@ $$\sigma(\alpha,\zeta) = \sigma\alpha+\zeta\sigma^2\alpha+\cdots+\zeta^{n-2}\sig
 - [▶ 25:30](https://youtu.be/Yc2ngBwDZVk?t=1530)「**Lagrange 解不了**、**Abel 證明不可能**、**Galois 也證明不可能**的問題，正是 $f$ 能不能用根式解。能的話，根就有用**係數的算術公式**表達的式子。」
 
 **例 3：正 17 邊形**（講義 p.5，D&F §14.5）[▶ 26:30](https://youtu.be/Yc2ngBwDZVk?t=1590)
-$$K_1 = \mathbb{Q}(\sqrt{17}),\ K_2 = K_1\big(\sqrt{2(17-\sqrt{17})}\big),\ K_3 = K_2\big(\sqrt{2(17+\sqrt{17})}\big),\ K_4 = K_3(\sqrt{a_3}),$$
+$$K_1 = \mathbb{Q}(\sqrt{17}),\ K_2 = K_1\left(\sqrt{2(17-\sqrt{17})}\right),\ K_3 = K_2\left(\sqrt{2(17+\sqrt{17})}\right),\ K_4 = K_3(\sqrt{a_3}),$$
 $a_3 = 17+3\sqrt{17}-\sqrt{2(17-\sqrt{17})}-2\sqrt{2(17+\sqrt{17})}$——「這個**怪物**」。
 - 【課堂討論】「你們幾歲？」「……」「**Gauss** 做這個時 **19 歲**（1796）。」學生：「然後他死了？」「不不，那是 Galois。Gauss 活到**高壽**，是個**脾氣暴躁**的老頭——一般共識是這樣。」
 - 次數 2、4、8、16 的子體——「記得那個講了 3 分鐘的定理：尺規作圖對應 **$2^k$ 次**擴張。」這早於 Galois 二三十年——「所以你看得出 Galois 為什麼做那些事：**這些東西在水裡**，大家都在玩這種遊戲。這是個**很古老**、一直沒解決的歐氏幾何問題，Gauss 解了。」

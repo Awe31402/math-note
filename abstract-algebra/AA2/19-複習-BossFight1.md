@@ -161,7 +161,7 @@ $$x^2+1,\qquad x^2+x+2,\qquad x^2+2x+2.$$
 > **命題**[▶ 46:30](https://youtu.be/w7U_tEGuBLc?t=2790)　從體 $F$ **滿射**到至少有兩個元素的環 $R$ 的環同態 $\varphi$ 是**同構**。
 
 **證明**[▶ 47:00](https://youtu.be/w7U_tEGuBLc?t=2820)：設有 $x\neq y$、$\varphi(x) = \varphi(y)$ ⇒ $\varphi(x-y) = 0$。$x-y\neq0$ 在體裡**可逆** ⇒
-$$\varphi(1) = \varphi(x-y)\varphi\big((x-y)^{-1}\big) = 0\ ⇒\ \varphi(z) = \varphi(1)\varphi(z) = 0\ \ \forall z.$$
+$$\varphi(1) = \varphi(x-y)\varphi\left((x-y)^{-1}\right) = 0\ ⇒\ \varphi(z) = \varphi(1)\varphi(z) = 0\ \ \forall z.$$
 像只有 $\{0\}$，但 $\varphi$ 滿射、$R$ 不只 0，矛盾 ⇒ $\varphi$ 單射 ⇒ 同構。$\blacksquare$
 - 「這其實是**不錯的小題**。」（學生：「所以作業不能只按**有沒有做**來改。」「那不公平！我不想做那題！」）
 - 學生：「我喜歡 26、27。」「每個小題都是**很好的小東西**，同意。」

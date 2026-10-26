@@ -30,7 +30,7 @@ $$t \approx 2^{(n+1)/2}\sqrt{\ln\frac{1}{1 - \lambda}}$$
 
 ### SHA-1 的一輪（📖 §11.4.2、表 11.3）
 
-$$A, B, C, D, E \leftarrow \big(E + f_1(B,C,D) + A_{\lll 5} + W_0 + K_1\big),\; A,\; B_{\lll 30},\; C,\; D$$
+$$A, B, C, D, E \leftarrow \left(E + f_1(B,C,D) + A_{\lll 5} + W_0 + K_1\right),\; A,\; B_{\lll 30},\; C,\; D$$
 
 第 1 階段：$f_1(B, C, D) = (B \wedge C) \vee (\bar{B} \wedge D)$，$K_1 = 5A827999$。
 第 0 輪用的訊息字 $W_0$ = 輸入區塊**最前面的 32 bit**。

@@ -324,7 +324,7 @@ $$m = h(x \,\|\, k) = h(x_O \,\|\, k)$$
 
 `[01:04]` 實際上還要**處理金鑰**（擴展、加 padding），「不完全那麼簡單，但幾乎一樣簡單」。
 
-$$\boxed{\text{HMAC}_k(x) = h\Big[\,(k^+ \oplus \text{opad}) \,\Big\|\, h\big[(k^+ \oplus \text{ipad}) \,\|\, x\big]\,\Big]}$$
+$$\boxed{\text{HMAC}_k(x) = h\left[\,(k^+ \oplus \text{opad}) \,\|\, h\left[(k^+ \oplus \text{ipad}) \,\|\, x\right]\,\right]}$$
 
 | 元件 | 意思 |
 |---|---|

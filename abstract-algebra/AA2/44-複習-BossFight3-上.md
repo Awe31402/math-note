@@ -85,7 +85,7 @@ $$M = eM\oplus(1-e)M.$$
 [▶ 33:30](https://youtu.be/wC7fzfnn89M?t=2010)
 - **$\mathbb{C}\otimes\mathbb{C}$**：元素是簡單張量的**有限和**，不一定能寫成單一簡單張量。實純量乘法**就是定義**為 $r\sum a_i\otimes b_i = \sum(ra_i)\otimes b_i$——「學生和我之前就是卡在試圖**推導**這個定義」[▶ 34:00](https://youtu.be/wC7fzfnn89M?t=2040)。
 - **要點**[▶ 37:00](https://youtu.be/wC7fzfnn89M?t=2220)：$\mathbb{C}\otimes_\mathbb{R}\mathbb{C}$ 實維數 **4**（$\cong\mathbb{R}^2\otimes\mathbb{R}^2$）；$\mathbb{C}\otimes_\mathbb{C}\mathbb{C}\cong\mathbb{C}$ 實維數 **2**。明確計算（$\otimes_\mathbb{C}$ 中 $i$ 可以穿過張量號）：
-$$(a+ib)\otimes(c+id) = \big[(ac-bd)+i(ad+bc)\big](1\otimes1).$$
+$$(a+ib)\otimes(c+id) = \left[(ac-bd)+i(ad+bc)\right](1\otimes1).$$
 - **$e_1\otimes e_2+e_2\otimes e_1$ 不是簡單張量**[▶ 38:00](https://youtu.be/wC7fzfnn89M?t=2280)：設 $= (ae_1+be_2)\otimes(ce_1+de_2)$ ⇒ $ac = 0$、$ad = 1$、$bc = 1$、$bd = 0$，**無解**。
 - **$S\otimes_RR[x]\cong S[x]$**[▶ 38:30](https://youtu.be/wC7fzfnn89M?t=2310)：線性延拓 $s\otimes f\mapsto sf$；最有趣的是**保持乘法**（單項式指數相加、$R$ 係數可以提出）。
 - **反對稱雙線性形式 ↔ $\bigwedge^2$**（「用了**三個寶寶**」）[▶ 40:00](https://youtu.be/wC7fzfnn89M?t=2400)：$x = \sum e^i(x)e_i$（**對偶基底**）代入 $B(x,y)$，把和分成 $k<\ell$、$k>\ell$，重新命名後合併成楔積 ⇒ 張成；代入特定的 $(e_i,e_j)$ 證線性獨立。維數 $\binom n2 = \frac12(n^2-n)$——「就是 Math 321 **反對稱矩陣**空間的維數」。

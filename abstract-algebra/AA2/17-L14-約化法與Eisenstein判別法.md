@@ -88,7 +88,7 @@ $$\Psi(a_nx^n+\cdots+a_0) = \phi(a_n)x^n+\cdots+\phi(a_0).$$
 - 【講義補充】細節（monic 情形）：$a$、$b$ 是 $h$、$g$ 分母的最小公倍數，$abf = (ah)(bg) = c_hh_1\cdot c_gg_1$，$h_1g_1$ 本原（上一定理）⇒ $abf$ 的容度是 $c_hc_g$；$f$ 首一 ⇒ 容度是 $ab$ ⇒ $ab = c_hc_g$ ⇒ $f = h_1g_1$，次數不變。非首一時先提出容度。
 
 **例 2**（講義 p.2，Example 4.6.12）[▶ 22:30](https://youtu.be/pUdxGE7-k_8?t=1350)：
-$$6x^2+19x-7 = 6\Big(x+\tfrac72\Big)\Big(x-\tfrac13\Big) = (2x+7)(3x-1).$$
+$$6x^2+19x-7 = 6\left(x+\tfrac72\right)\left(x-\tfrac13\right) = (2x+7)(3x-1).$$
 把 6 拆成 $2\cdot3$ 分給兩個因子，$\mathbb{Q}$ 上的分解就變成 $\mathbb{Z}$ 上的。（老師中途開始配方：「我在幹嘛？**停**。能配方不代表該配方。」）「實務上，這例子一開始就看出 $(2x+7)(3x-1)$ 容易多了。」
 
 【口頭】[▶ 25:00](https://youtu.be/pUdxGE7-k_8?t=1500)「引入容度主要是為了證這個定理——而我**沒給你們完整證明**，抱歉。」
@@ -150,7 +150,7 @@ $$x^4+1\ \text{在 }\mathbb{Q}\text{ 上不可約，但對**每個**質數 }p,\ 
 
 **證明**[▶ 48:30](https://youtu.be/pUdxGE7-k_8?t=2910)（「我想下次**慢慢**走一遍——這代數之後對我們很重要。」學生：「還有 8 分鐘。」「你們在**搞什麼**？我有 12 分鐘。」）
 - **平移技巧**：令 $f(x) = \Phi_p(x+1)$。二項式定理：
-$$f(x) = \frac{(x+1)^p-1}{(x+1)-1} = \frac1x\Big(x^p+\binom p1x^{p-1}+\cdots+\binom p{p-1}x+1-1\Big) = x^{p-1}+px^{p-2}+\cdots+p.$$
+$$f(x) = \frac{(x+1)^p-1}{(x+1)-1} = \frac1x\left(x^p+\binom p1x^{p-1}+\cdots+\binom p{p-1}x+1-1\right) = x^{p-1}+px^{p-2}+\cdots+p.$$
 - 除首項外每個係數 $\binom pk$ 都被 $p$ 整除，常數項 $p$ 不被 $p^2$ 整除 ⇒ **Eisenstein** ⇒ $f$ 不可約。
 - 若 $\Phi_p = gh$（次數 $<p-1$），則 $f(x) = g(x+1)h(x+1)$ 也可約，矛盾。$\blacksquare$
 - 【口頭】[▶ 51:00](https://youtu.be/pUdxGE7-k_8?t=3060)「**平移**是另一招：把 $x$ 換成 $x+$ 常數。平移後不可約 ⇒ 原來的不可約。比較難的題常用。」

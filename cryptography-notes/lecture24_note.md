@@ -465,7 +465,7 @@ $$v_{0,j} = H(Y_j), \qquad j = 0, \ldots, 2^T - 1$$
 
 【課堂討論】在第 $i$ 層，需要第幾層的節點？→ **$i - 1$**。
 
-$$\boxed{v_{i,j} = H\big(v_{i-1,\,2j} \;\|\; v_{i-1,\,2j+1}\big)}, \qquad i = 1, \ldots, T, \quad j = 0, \ldots, 2^{T-i} - 1$$
+$$\boxed{v_{i,j} = H\left(v_{i-1,\,2j} \;\|\; v_{i-1,\,2j+1}\right)}, \qquad i = 1, \ldots, T, \quad j = 0, \ldots, 2^{T-i} - 1$$
 
 【口頭】「$i$ 從 1 到 $T$ 往上走，$j$ 的範圍**越來越小**，因為是樹。」
 「要玩一下演算法才能體會，我不做了。我覺得重要的是你們**懂了**。**你們很聰明。**」
@@ -592,7 +592,7 @@ $$v_{0,j} = H(Y_j) \qquad v_{i,j} = H(v_{i-1,2j} \,\|\, v_{i-1,2j+1}) \qquad K_{
 
 簽第 $c$ 則訊息，送出：
 
-$$\big(c,\; M_c,\; S_c = \text{WOTS-sign}(X_c, M_c),\; Y_c,\; \underbrace{a_0, \ldots, a_{T-1}}_{\text{認證路徑}}\big)$$
+$$\left(c,\; M_c,\; S_c = \text{WOTS-sign}(X_c, M_c),\; Y_c,\; \underbrace{a_0, \ldots, a_{T-1}}_{\text{認證路徑}}\right)$$
 
 ### 5.4 驗證
 
