@@ -9,7 +9,10 @@ SRCS = $(SRCDIR)/main.cpp \
        $(SRCDIR)/DES.cpp \
        $(SRCDIR)/AES.cpp \
        $(SRCDIR)/GF256.cpp \
-       $(SRCDIR)/BlockCipher.cpp
+       $(SRCDIR)/BlockCipher.cpp \
+       $(SRCDIR)/BigInt.cpp \
+       $(SRCDIR)/RSA.cpp \
+       $(SRCDIR)/RSADemo.cpp
 
 OBJS = $(SRCS:.cpp=.o)
 
@@ -18,7 +21,7 @@ all: $(BIN)
 $(BIN): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-$(SRCDIR)/%.o: $(SRCDIR)/%.cpp
+$(SRCDIR)/%.o: $(SRCDIR)/%.cpp $(wildcard $(INCDIR)/*.hpp)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 test: $(BIN)

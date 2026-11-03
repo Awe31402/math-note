@@ -1,15 +1,17 @@
-# DES & AES C++ 實作指南與 Lecture Notes 理論對照文件
+# DES、AES & RSA C++ 實作指南與 Lecture Notes 理論對照文件
 
-本專案於 `code-implement/` 中完整實作了**資料加密標準（Data Encryption Standard, DES）**與**進階加密標準（Advanced Encryption Standard, AES-128/192/256）**的加密與解密演算法，並提供 **ECB（電子密碼本）** 與 **CBC（密碼區塊鏈）** 兩種分組密碼操作模式及 **PKCS#7** 填補標準。
+本專案於 `code-implement/` 中完整實作了**資料加密標準（Data Encryption Standard, DES）**與**進階加密標準（Advanced Encryption Standard, AES-128/192/256）**的加密與解密演算法，並提供 **ECB（電子密碼本）** 與 **CBC（密碼區塊鏈）** 兩種分組密碼操作模式及 **PKCS#7** 填補標準；另外實作了公鑰密碼 **RSA**（含自製大整數運算、Miller–Rabin 質數產生、CRT 加速解密與 PKCS#1 v1.5 padding）。
 
 本實作深入參考並對照：
-1. **參考教科書**：*Practical Cryptography Algorithms and Implementations Using C++*（Azad S., Khan P. Al-Sakib 編著，CRC Press），特別是 Chapter 4（Block Cipher）、Chapter 5（DES）與 Chapter 6（AES）。
+1. **參考教科書**：*Practical Cryptography Algorithms and Implementations Using C++*（Azad S., Khan P. Al-Sakib 編著，CRC Press），特別是 Chapter 4（Block Cipher）、Chapter 5（DES）、Chapter 6（AES）與 Chapter 8（RSA）。
 2. **課程筆記**：Christof Paar 教授之 *Introduction to Cryptography* 系列講義筆記：
    - `lecture05_note.md`：資料加密標準 DES —— 加密
    - `lecture06_note.md`：DES —— 金鑰排程與解密
    - `lecture07_note.md`：AES 需要的伽羅瓦體（Galois Fields $\text{GF}(2^8)$）
    - `lecture08_note.md`：進階加密標準 AES
    - `lecture09_note.md`：區塊密碼的操作模式（Modes of Operation）
+   - `lecture11_note.md`：公鑰密碼的數論基礎（歐幾里得演算法、EEA、Euler phi、Euler 定理）
+   - `lecture12_note.md`：RSA 密碼系統與快速指數運算
 
 ---
 
@@ -37,9 +39,21 @@
 - [6. 與教科書《Practical Cryptography》之實作對照與錯誤修正](#6-與教科書practical-cryptography之實作對照與錯誤修正)
   - [6.1 DES 實作之對照與缺陷改進](#61-des-實作之對照與缺陷改進)
   - [6.2 AES 實作之對照與缺陷改進](#62-aes-實作之對照與缺陷改進)
+  - [6.3 RSA 實作之對照與缺陷改進](#63-rsa-實作之對照與缺陷改進)
 - [7. 標準測試向量（KAT）與實驗驗證數據](#7-標準測試向量kat與實驗驗證數據)
   - [7.1 NIST FIPS 測試向量 Known Answer Tests](#71-nist-fips-測試向量-known-answer-tests)
   - [7.2 雪崩效應（Avalanche Effect）實測分析](#72-雪崩效應avalanche-effect實測分析)
+- [8. RSA 演算法實作與 Lecture Notes 對照](#8-rsa-演算法實作與-lecture-notes-對照)
+  - [8.1 為什麼要自己寫大整數（BigInt）](#81-為什麼要自己寫大整數bigint)
+  - [8.2 擴展歐幾里得演算法與反元素（對照 Lecture 11）](#82-擴展歐幾里得演算法與反元素對照-lecture-11)
+  - [8.3 RSA 金鑰產生五步驟（對照 Lecture 12 §2）](#83-rsa-金鑰產生五步驟對照-lecture-12-2)
+  - [8.4 加密與解密：紅框公式（對照 Lecture 12 §3）](#84-加密與解密紅框公式對照-lecture-12-3)
+  - [8.5 Square-and-Multiply（對照 Lecture 12 §4）](#85-square-and-multiply對照-lecture-12-4)
+  - [8.6 產生大質數：Miller–Rabin（對照 Lecture 12 §6）](#86-產生大質數millerrabin對照-lecture-12-6)
+  - [8.7 用 CRT 加速解密（對照 Lecture 12 §5.2）](#87-用-crt-加速解密對照-lecture-12-52)
+  - [8.8 Schoolbook RSA 的弱點與 Padding（對照 Lecture 12 §7、§8.1）](#88-schoolbook-rsa-的弱點與-padding對照-lecture-12-781)
+  - [8.9 旁通道攻擊：從 SQ/MUL 順序讀出私鑰（對照 Lecture 12 §8.3）](#89-旁通道攻擊從-sqmul-順序讀出私鑰對照-lecture-12-83)
+  - [8.10 RSA 測試總表](#810-rsa-測試總表)
 
 ---
 
@@ -51,13 +65,18 @@ code-implement/
 │   ├── BlockCipher.hpp   // 通用密碼常數、十六進制轉碼、PKCS#7 填補、ECB/CBC 模式介面
 │   ├── GF256.hpp         // GF(2^8) 有限體算術模組（xtime、多項式乘法、Log/Alog 生成表、S-Box 數學求值）
 │   ├── DES.hpp           // DES 密碼類別定義（NIST FIPS 46-3，支援 64-bit 區塊、字串加解密、單輪追蹤）
-│   └── AES.hpp           // AES 密碼類別定義（NIST FIPS 197，支援 128/192/256-bit 金鑰、單輪追蹤）
+│   ├── AES.hpp           // AES 密碼類別定義（NIST FIPS 197，支援 128/192/256-bit 金鑰、單輪追蹤）
+│   ├── BigInt.hpp        // 非負大整數（2^32 進位 limb）：加減乘、Knuth 長除法、gcd、亂數
+│   └── RSA.hpp           // RSA 類別、EEA、modInverse、Square-and-Multiply、Miller–Rabin
 ├── src/
 │   ├── BlockCipher.cpp   // 十六進制處理、PKCS#7 填補/移除、矩陣除錯輸出實作
 │   ├── GF256.cpp         // GF(2^8) 核心運算、仿射轉換（Affine Transform）、教科書 Log/Alog 表
 │   ├── DES.cpp           // DES IP/FP、16 輪 Feistel 函數、S-box 查表、金鑰排程、ECB/CBC
 │   ├── AES.cpp           // AES SubBytes、ShiftRows、MixColumns、KeyExpansion、InvCipher、ECB/CBC
-│   └── main.cpp          // 完整展示與驗證程式（NIST KAT 測試、雪崩效應驗證、模式比對、單步追蹤）
+│   ├── BigInt.cpp        // 大整數算術實作（Knuth Algorithm D 除法）
+│   ├── RSA.cpp           // RSA 金鑰產生、加解密、CRT 解密、PKCS#1 v1.5、質數產生
+│   ├── RSADemo.cpp       // RSA 展示：筆記中的每個例子、RSA-1024 測試向量、弱點與旁通道示範
+│   └── main.cpp          // 完整展示與驗證程式（NIST KAT 測試、雪崩效應驗證、模式比對、RSA、單步追蹤）
 ├── Makefile              // 自動化建置腳本（支援 make, make test, make trace, make clean）
 └── README.md             // 本詳細實作手冊與理論對照說明文件
 ```
@@ -75,14 +94,14 @@ make
 ```
 這將編譯出可執行檔 `crypto_demo`。
 
-### 執行全自動測試（KAT 測試、雪崩效應、ECB/CBC 對比、有限體驗證）
+### 執行全自動測試（KAT 測試、雪崩效應、ECB/CBC 對比、有限體驗證、RSA）
 ```bash
 make test
 # 或直接執行
 ./crypto_demo
 ```
 
-### 執行單輪逐步追蹤（查看 Feistel 與 SPN 各輪中間狀態）
+### 執行單輪逐步追蹤（查看 Feistel 與 SPN 各輪中間狀態、RSA square-and-multiply 每一步）
 ```bash
 make trace
 # 或直接執行
@@ -431,6 +450,32 @@ AES 解密採用 FIPS 197 標準的逆密碼流程（InvCipher）：
 
 ---
 
+### 6.3 RSA 實作之對照與缺陷改進
+
+教科書 Chapter 8「The RSA Algorithm」（Saad Andaleeb & Saiful Azad）§8.4 的程式碼有以下問題：
+
+1. **只能用 `long int`，乘法會溢位**：
+   - **書中程式碼（p. 143, `Encrypt_Decrypt()`）**：`x = (x * t) % n;`、`t = (t * t) % n;`。只要 $n > 2^{32}$，`x * t` 就超過 64 bit 溢位，結果錯誤。所以書中只能跑 $n = 221$ 這種數字，**離 RSA-1024 差了 1000 bit**。
+   - **本專案修正**：自己寫 `BigInt`（§8.1），可以跑真正的 RSA-1024 / 2048。
+2. **`FindD()` 遞迴結果被丟掉**：
+   - **書中程式碼（p. 143）**：當 `y < 1` 時呼叫 `e = FindE(phi_n); FindD(phi_n, e);` 但**沒有接回傳值**，最後 `return y;` 回傳的仍是舊的、錯誤的 $y$；而且新的 `e` 只改到區域變數，呼叫端拿到的 $e$ 和 $d$ 不成對。
+   - 另外，書中虛擬碼 Algorithm 8.2 寫的是 `if y < 1 then y ← phi_n + y`（這才是對的：負的 $t$ 加上 $\Phi(n)$），但 C++ 程式碼卻改成「叫使用者重選 $e$」，兩者不一致。
+   - **本專案修正**：`modInverse()` 全程以 mod $m$ 計算 $t$（§8.2），不會出現負數，也不需要重選。
+3. **質數與互質檢查是暴力法**：
+   - **書中程式碼（p. 141–142）**：`CheckIsPrime()` 從 2 試除到 $n/2$；`CheckCoPrime()` 從 2 試到較小的數。對 512-bit 的數要試 $2^{511}$ 次，**宇宙毀滅都跑不完**（筆記 §6.3：「不能用分解來判斷」）。
+   - **本專案修正**：互質用歐幾里得演算法（`lecture11_note.md` §1，對數複雜度）；質數用 Miller–Rabin（§8.6）。
+4. **質數由使用者手動輸入**：
+   - **書中程式碼（p. 144, `generate_key()`）**：`cin >> p; cin >> q;`。
+   - **本專案修正**：`generatePrime()` 用作業系統的亂數產生（筆記 §6.1：「$p, q$ 必須是**隨機**的」）。
+5. **字串加密把 `long` 塞進 `char`**：
+   - **書中程式碼（p. 144, `EncDecStr()`）**：`str1[i] = Encrypt_Decrypt(str[i], e, n);` 密文最大到 $n-1 = 220$，但存進 `char`（有號 −128～127）會被截斷，**解不回來**；`str1` 沒有結尾 `'\0'` 就直接 `cout`；兩個 `new char[1000]` 都沒有 `delete`。而且這是**逐字元加密**，等於一個替代密碼（`lecture01_note.md`），用字母頻率就能破。
+   - **本專案修正**：整段訊息轉成一個大數 $x < n$ 一次加密；並提供 PKCS#1 v1.5 padding（§8.8）。
+6. **Square-and-multiply 的方向不同**（不是錯誤，只是對照）：
+   - 書中 `Encrypt_Decrypt()` 是**由右到左**（從 LSB 開始，`rem = e % 2; e = e / 2;`）。
+   - 本專案依照筆記 §4.5 寫成**由左到右**（從 MSB 開始），這樣才能印出「指數左移、補 1」的追蹤表。兩者運算次數相同。
+
+---
+
 ## 7. 標準測試向量（KAT）與實驗驗證數據
 
 執行 `./crypto_demo` 即可重現以下完整實測數據：
@@ -443,6 +488,9 @@ AES 解密採用 FIPS 197 標準的逆密碼流程（InvCipher）：
 | **AES-128** | FIPS 197 App. B | `000102030405060708090A0B0C0D0E0F` | `00112233445566778899AABBCCDDEEFF` | `69C4E0D86A7B0430D8CDB78070B4C55A` | **MATCH (通過)** |
 | **AES-192** | FIPS 197 App. C.2 | `00010203...14151617` | `00112233445566778899AABBCCDDEEFF` | `DDA97CA4864CDFE06EAF70A0EC0D7191` | **MATCH (通過)** |
 | **AES-256** | FIPS 197 App. C.3 | `00010203...1E1F` | `00112233445566778899AABBCCDDEEFF` | `8EA2B7CA516745BFEAFC49904B496089` | **MATCH (通過)** |
+| **RSA（玩具）** | `lecture12_note.md` §3.3 | $p=3, q=11, e=3$ | $x = 4$ | $y = 31$（$d = 7$） | **MATCH (通過)** |
+| **RSA（教科書）** | Azad & Pathan §8.2.3 | $p=17, q=13, e=131$ | $M = 8$ | $C = 70$（$d = 107$） | **MATCH (通過)** |
+| **RSA-1024** | Python `pow()` 獨立計算 | 見 `RSADemo.cpp` TEST 5.4 | `"Introduction to ... RSA"` | `94B3EF56...9919061D` | **MATCH (通過)** |
 
 ---
 
@@ -460,3 +508,223 @@ AES 解密採用 FIPS 197 標準的逆密碼流程（InvCipher）：
   - 密文翻轉位元數：**62 / 128 bits（48.4%）**。
 
 兩者皆極為接近統計上的 50% 完美雪崩效應，證實 S-Box（混淆）與 P-Box / ShiftRows / MixColumns（擴散）的設計完全發揮功效！
+
+---
+
+## 8. RSA 演算法實作與 Lecture Notes 對照
+
+RSA 跟 DES / AES 最大的不同：**它不是「攪亂 bit」，而是一個數學公式**。所以程式分成兩層：
+
+| 層 | 檔案 | 做什麼 | 對照筆記 |
+|---|---|---|---|
+| 大整數算術 | `BigInt.hpp/.cpp` | 1024~2048 bit 的加減乘除、比較、亂數 | `lecture12_note.md` §3.6「沒有其他技術應用需要處理這麼長的數字」 |
+| 數論工具 | `RSA.hpp/.cpp` | EEA、反元素、Square-and-Multiply、Miller–Rabin | `lecture11_note.md` §1–§3、`lecture12_note.md` §4、§6 |
+| RSA 本體 | `RSA.hpp/.cpp` | 金鑰產生、加解密、CRT 解密、PKCS#1 padding | `lecture12_note.md` §2、§3、§5、§7 |
+| 展示與驗證 | `RSADemo.cpp` | 筆記裡的每個例子都跑一次 | 見 §8.10 |
+
+### 8.1 為什麼要自己寫大整數（BigInt）
+
+對照 **`lecture12_note.md` §3.6**：真實 RSA 的 $n, d$ 約 1024 bit 以上，C++ 的 `uint64_t` 只有 64 bit。
+
+`BigInt` 把一個大數拆成很多個 32-bit「位數」（limb），以 $2^{32}$ 為底：
+
+$$\text{value} = \text{limbs}[0] + \text{limbs}[1]\cdot 2^{32} + \text{limbs}[2]\cdot 2^{64} + \cdots$$
+
+- **加、減、乘**：就是小學的直式運算，只是「一位數」變成 32 bit，進位用 64-bit 暫存。
+- **除法 / 取餘數**：Knuth *TAOCP* Vol.2 §4.3.1 的 **Algorithm D**（直式長除法：每次估一位商，估太大就加回來）。RSA 每一步都要 `mod n`，所以除法的速度決定整體速度。
+- 只存**非負數**。RSA 裡的量都在 $\mathbb{Z}_n$ 或 $\mathbb{Z}_{\Phi(n)}$ 中；EEA 的負係數改用「mod $m$ 的代表元」處理（§8.2）。
+- 正確性：用 Python 內建大整數獨立產生 20000 組隨機測資（含全 1、最高位為 1 等邊界），比對 `divmod` 與 `modPow`，**0 錯**。
+
+### 8.2 擴展歐幾里得演算法與反元素（對照 Lecture 11）
+
+對照 **`lecture11_note.md` §2.5「遞迴公式」**：
+
+$$s_i = s_{i-2} - q_{i-1} \cdot s_{i-1}, \qquad t_i = t_{i-2} - q_{i-1} \cdot t_{i-1}$$
+
+初始值 $s_0 = 1, s_1 = 0, t_0 = 0, t_1 = 1$。程式有兩個版本：
+
+1. **教學版** `extendedEuclidTrace(int64_t r0, int64_t r1)`：完整保留 $q, r, s, t$ 四欄，印出來就是筆記 §2.5 的驗算表：
+   ```
+      i | q_{i-1} |   s_i |   t_i |  r_i
+      0 |         |     1 |     0 |  973
+      1 |         |     0 |     1 |  301
+      2 |       3 |     1 |    -3 |   70
+      3 |       4 |    -4 |    13 |   21
+      4 |       3 |    13 |   -42 |    7
+   ```
+   → $7 = 13 \cdot 973 - 42 \cdot 301$，和筆記一模一樣。
+
+2. **大數版** `modInverse(a, m)`：對照 **`lecture11_note.md` §3** 與 **`lecture12_note.md` §2.2**：
+   $\gcd(\Phi(n), e) = s\cdot\Phi(n) + t\cdot e = 1 \Rightarrow d = t \bmod \Phi(n)$，**$s$ 用不到**。
+   因為 BigInt 沒有負數，$t$ 每一步都存成 mod $m$ 的值：
+   ```cpp
+   BigInt qt = (q * t1) % m;
+   BigInt t2 = (t0 + m - qt) % m;   // t_i = t_{i-2} - q·t_{i-1}  (mod m)
+   ```
+   最後餘數不是 1 → 反元素不存在 → 丟出例外（對應筆記 §2.1 步驟 4：「$e$ 和 $\Phi(n)$ 要互質」）。
+
+### 8.3 RSA 金鑰產生五步驟（對照 Lecture 12 §2）
+
+對照 **`lecture12_note.md` §2.1**，`RSA::fromPrimes()` 一行對一步：
+
+```cpp
+k.n_   = p * q;                                 // 步驟 2：n = p·q
+k.phi_ = (p - BigInt(1)) * (q - BigInt(1));     // 步驟 3：Φ(n) = (p-1)(q-1)
+if (BigInt::gcd(e, k.phi_) != BigInt(1))        // 步驟 4：gcd(e, Φ(n)) = 1
+    throw std::invalid_argument(...);
+k.d_   = modInverse(e, k.phi_);                 // 步驟 5：d = e^{-1} mod Φ(n)
+```
+
+`RSA::generate(bits, rng)` 負責步驟 1（產生 $p, q$，見 §8.6），另外做了筆記提到的檢查：
+
+| 檢查 | 筆記出處 |
+|---|---|
+| $p \ne q$ | 教科書 §8.2.1 步驟 1 |
+| $\gcd(e, p-1) = \gcd(e, q-1) = 1$ | §2.3 Q&A「$p-1$ 剛好有 17 這個質因數的機率很低，當然要檢查」 |
+| $n$ 恰好 `bits` 位（$p, q$ 最高兩位都設為 1） | §2.3 Q&A「RSA-1024 永遠是指 $n$ 的長度」 |
+| $d$ 至少 $0.3t$ bit | §5.1「$d$ 不能也選短的」 |
+| 預設 $e = 2^{16}+1 = 65537$ | §5.1 短的公開指數 |
+
+⚠️ 筆記 §2.1 的提醒在程式裡看得很清楚：**只有 `modInverse(e, phi_)` 是 mod $\Phi(n)$**，其他所有運算都是 mod $n$。
+
+### 8.4 加密與解密：紅框公式（對照 Lecture 12 §3）
+
+對照 **`lecture12_note.md` §3.1**：
+
+$$y = x^e \bmod n \qquad x = y^d \bmod n$$
+
+```cpp
+BigInt RSA::encrypt(const BigInt& x) const {
+    if (x >= n_) throw ...;          // x 必須在 Z_n 裡（§3.1 要求 (2)）
+    return modPow(x, e_, n_);
+}
+BigInt RSA::decrypt(const BigInt& y) const { return modPow(y, d_, n_); }
+```
+
+**玩具例子**（§3.3）：$p=3, q=11, e=3 \Rightarrow d=7$；$4^3 \bmod 33 = 31$，$31^7 \bmod 33 = 4$ ✔。程式輸出完全相同。
+
+**正確性**（§3.5）：程式用固定的 RSA-1024 向量驗證 `decrypt(encrypt(x)) == x`，並且把 $n, d, y$ 跟 Python 的 `pow()` 獨立算出的結果逐位比對。
+
+### 8.5 Square-and-Multiply（對照 Lecture 12 §4）
+
+對照 **`lecture12_note.md` §4.5 偽碼**，`modPow()` 是**由左到右**的版本：
+
+```cpp
+BigInt r = base;                              // 最高位 h_t = 1，由初始值處理
+for (size_t i = H.bitLength() - 1; i-- > 0;) {
+    r = (r * r) % n;                          // 每個 bit 都平方（指數左移一位）
+    if (H.testBit(i)) r = (r * base) % n;     // bit 是 1 才乘（最右邊的 0 變 1）
+}
+```
+
+每步之後都 `% n`，中間值不會超過 $n^2$（筆記 §4.5【課本補充】）。
+
+`modPow` 可以傳入 `trace`，記錄每一步的「操作」和「目前指數的二進位」，印出來就是 §4.4 的追蹤表：
+
+```
+  x = 2, H = 26 = 11010₂
+  step | op  | exponent (binary) | value
+     1 | SQ  |                10 | 4
+     2 | MUL |                11 | 8
+     3 | SQ  |               110 | 64
+     4 | SQ  |              1100 | 4096
+     5 | MUL |              1101 | 8192
+     6 | SQ  |             11010 | 67108864
+```
+
+→ **平方、乘、平方、平方、乘、平方**，6 次（天真法 25 次）。
+
+也驗證了 §5.1 的表：$e = 3, 17, 2^{16}+1$ 分別要 **2、5、17** 次運算。
+
+### 8.6 產生大質數：Miller–Rabin（對照 Lecture 12 §6）
+
+對照 **`lecture12_note.md` §6.1** 的流程「隨機數 → 質數測試 → 不是就重來」：
+
+```cpp
+BigInt generatePrime(size_t bits, const RandomSource& rng) {
+    while (true) {
+        BigInt cand = BigInt::random(bits, rng);
+        // 只測奇數（§6.2「只測奇數的話機率加倍」），最高兩位設為 1
+        ...
+        if (isProbablePrime(cand, 40, rng)) return cand;
+    }
+}
+```
+
+`isProbablePrime()` 做兩件事：
+
+1. **先試除前 300 個小質數**：大部分合數在這裡就被擋掉，比做一次指數運算便宜很多。
+2. **Miller–Rabin**（§6.3 提到的機率性測試）：把 $n-1 = 2^u \cdot r$。若 $n$ 是質數，對任何 $a$：$a^r \equiv 1$，或某個 $a^{r \cdot 2^j} \equiv -1 \pmod n$。找到不符合的 $a$ 就**一定是合數**；跑 40 輪都通過，是合數的機率 $\le 4^{-40}$。
+
+實測（固定亂數種子）：找 5 個 512-bit 質數共試了約 1000 個奇數，**平均約 200 個**，跟筆記 §6.2 估的 **177 個**同一個量級。
+
+亂數來源：`systemRandom()` 用 `std::random_device`（Linux 上讀 `getrandom` / `/dev/urandom`）。§6.1：「$p, q$ 必須是**隨機**的」。展示程式中標為 `fixedRandom` 的 xorshift 只用在需要可重現輸出的地方，**不能**拿來產生真的金鑰。
+
+### 8.7 用 CRT 加速解密（對照 Lecture 12 §5.2）
+
+對照 **`lecture12_note.md` §5.2** 的三個步驟，`decryptCRT()`：
+
+```cpp
+BigInt yp = y % p_;                     // 1. 轉到 CRT 領域
+BigInt yq = y % q_;
+BigInt xp = modPow(yp, dp_, p_);        // 2. 在 CRT 領域做指數（數字只有一半長）
+BigInt xq = modPow(yq, dq_, q_);
+BigInt x  = (q·c_p·xp + p·c_q·xq) % n;  // 3. 轉回來
+```
+
+其中 $d_p = d \bmod (p-1)$、$d_q = d \bmod (q-1)$、$c_p = q^{-1} \bmod p$、$c_q = p^{-1} \bmod q$ 都在 `computeCRTParams()` **預先算好**（筆記：「係數可以預先算好」）。
+
+為什麼 $d_p = d \bmod (p-1)$ 可以用？Fermat 小定理（`lecture11_note.md` §5.1）：$y^{p-1} \equiv 1 \pmod p$，所以指數只需要 mod $(p-1)$。
+
+實測 RSA-1024：一般解密約 3.6 ms，CRT 約 1.1 ms，**快約 3 倍**（筆記估 4 倍；差距來自我們的乘法和除法不是純粹的 $O(t^2)$，還有固定開銷）。
+
+### 8.8 Schoolbook RSA 的弱點與 Padding（對照 Lecture 12 §7、§8.1）
+
+`RSADemo.cpp` 把筆記 §7 表格裡的弱點逐一跑出來：
+
+| 弱點 | 程式示範 | 輸出 |
+|---|---|---|
+| **確定性** | `encrypt("YES")` 兩次 | 兩次密文相同 |
+| **小明文** | `encrypt(0)`、`encrypt(1)`、`encrypt(n-1)` | 0、1、$n-1$（原封不動） |
+| **可塑性** | Oscar 只用公鑰把 $y$ 乘上 $3^e$ | Bob 解出 $3 \times 1000 = 3000$ |
+
+**解法：Padding**。`encryptPKCS1()` 實作 **PKCS#1 v1.5**（RFC 8017 §7.2）：
+
+$$\text{EM} = \texttt{00} \,\|\, \texttt{02} \,\|\, \underbrace{\text{PS}}_{\ge 8 \text{ 個非零隨機 byte}} \,\|\, \texttt{00} \,\|\, M$$
+
+- 同一個 `"YES"` 加密兩次 → **兩個不同的密文**，都解得回 `"YES"`。
+- 解密端 `decryptPKCS1()` **檢查結構**（筆記：「解密端要檢查解密後訊息的結構是否正確」）。被乘上 $2^e$ 竄改過的密文，結構檢查失敗，丟出例外。
+
+⚠️ 為什麼不是 OAEP？筆記 §7 說標準做法是 **OAEP**，但 OAEP 需要**雜湊函數**（第 20 講）。這裡先用 v1.5 示範「加入隨機結構」的核心想法。v1.5 本身有 **Bleichenbacher 攻擊**（1998，利用「padding 對不對」的錯誤訊息當成解密神諭），新系統應該用 OAEP。
+
+### 8.9 旁通道攻擊：從 SQ/MUL 順序讀出私鑰（對照 Lecture 12 §8.3）
+
+對照 **`lecture12_note.md` §8.3**：「bit 是 0 → 只做平方（短）；bit 是 1 → 平方 + 乘法（長）。**看曲線就能直接讀出私鑰**。」
+
+`demoSideChannel()` 用 `modPow(..., d, n, &trace)` 記下解密時的操作順序，模擬耗電曲線：
+
+```
+  power trace : S SM SM S SM SM SM S SM S S SM SM ...
+  recovered d : 101101110100111101110101110111000010...
+  real d      : 101101110100111101110101110111000010...
+```
+
+攻擊者的規則就一行：**每個 S 開一個新 bit，後面跟著 M 就是 1，不然是 0**。64-bit 的 $d$ 被**完整讀出**。
+
+這也說明本實作的 `modPow` **不是常數時間**，只能拿來學習。實務對策（課本未展開）：Montgomery ladder、每個 bit 都做相同運算、blinding（解密前先乘上隨機數 $r^e$）。
+
+### 8.10 RSA 測試總表
+
+`./crypto_demo` 第 5 節會跑以下測試，全部 `PASSED`：
+
+| 測試 | 內容 | 對照 |
+|---|---|---|
+| 5.1 | EEA 表格 gcd(973, 301)；$3^{-1} \bmod 20 = 7$ | `lecture11_note.md` §2.3–2.5、§3 |
+| 5.2 | 玩具例子 $n=33$；教科書例子 $n=221$；$e=4$ 被拒絕 | `lecture12_note.md` §3.3、§2.1 步驟 4 |
+| 5.3 | $x^{26}$ 追蹤表；$e = 3, 17, 65537$ 的運算次數 | `lecture12_note.md` §4.4、§5.1 |
+| 5.4 | 固定 RSA-1024 向量（$n, d, y$ 跟 Python 逐位比對） | `lecture12_note.md` §3 |
+| 5.5 | 隨機產生 RSA-1024、$d\cdot e \equiv 1$、CRT 速度、質數密度 | `lecture12_note.md` §2、§5.2、§6 |
+| 5.6 | 確定性、小明文、可塑性；PKCS#1 v1.5 | `lecture12_note.md` §7、§8.1 |
+| 5.7 | 從 SQ/MUL 順序還原私鑰 | `lecture12_note.md` §8.3 |
+
+`./crypto_demo --trace` 還會多印出 $31^7 \bmod 33$（玩具例子的解密）每一步的 square-and-multiply 追蹤。

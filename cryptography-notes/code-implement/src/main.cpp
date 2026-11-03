@@ -12,6 +12,9 @@
 
 using namespace crypto;
 
+// RSADemo.cpp
+void runRSADemo(bool verbose);
+
 void printSeparator(const std::string& title) {
     std::cout << "\n========================================================" << std::endl;
     std::cout << "  " << title << std::endl;
@@ -234,7 +237,7 @@ void runGaloisFieldDemo() {
 // Verbose Pedagogical Trace
 // -------------------------------------------------------------
 void runVerboseTrace() {
-    printSeparator("5. Detailed Round-by-Round Execution Trace");
+    printSeparator("6. Detailed Round-by-Round Execution Trace");
 
     std::cout << "\n--- DES Round Trace ---" << std::endl;
     DES des(0x133457799BBCDFF1ULL);
@@ -257,9 +260,9 @@ void runVerboseTrace() {
 
 int main(int argc, char* argv[]) {
     std::cout << "========================================================\n";
-    std::cout << "   DES & AES Cryptographic Implementation in C++\n";
+    std::cout << "   DES, AES & RSA Cryptographic Implementation in C++\n";
     std::cout << "   Based on 'Practical Cryptography' (Azad & Pathan)\n";
-    std::cout << "   & Christof Paar's Lecture Notes (Lectures 05 to 09)\n";
+    std::cout << "   & Christof Paar's Lecture Notes (Lectures 05 to 12)\n";
     std::cout << "========================================================\n";
 
     bool verbose = false;
@@ -271,11 +274,12 @@ int main(int argc, char* argv[]) {
     runAvalancheDemo();
     runModesDemo();
     runGaloisFieldDemo();
+    runRSADemo(verbose);
 
     if (verbose) {
         runVerboseTrace();
     } else {
-        std::cout << "\n[TIP] Run with '--trace' to view round-by-round Feistel / SPN execution steps!" << std::endl;
+        std::cout << "\n[TIP] Run with '--trace' to view round-by-round Feistel / SPN steps and RSA square-and-multiply traces!" << std::endl;
     }
 
     std::cout << "\n========================================================" << std::endl;
