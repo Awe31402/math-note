@@ -1,0 +1,4994 @@
+WEBVTT
+Kind: captions
+Language: en
+
+00:00:05.760 --> 00:00:08.560
+So today, we're going to
+continue our discussion
+
+00:00:08.560 --> 00:00:10.880
+about reachability,
+and then we move
+
+00:00:10.880 --> 00:00:12.680
+on to the next
+topic, which is that
+
+00:00:12.680 --> 00:00:15.400
+of model predictive control.
+
+00:00:15.400 --> 00:00:17.800
+So as you remember
+from last time,
+
+00:00:17.800 --> 00:00:21.200
+we discussed how a
+particularly useful application
+
+00:00:21.200 --> 00:00:25.480
+of continuous time
+closed-loop optimal control
+
+00:00:25.480 --> 00:00:28.840
+is represented by
+reachability theory.
+
+00:00:28.840 --> 00:00:33.480
+That essentially involves
+computing reachable sets
+
+00:00:33.480 --> 00:00:36.960
+through the lens of the
+Hamilton-Jacobi-Isaacs equation.
+
+00:00:36.960 --> 00:00:40.480
+So we discussed last time
+what reachable sets are
+
+00:00:40.480 --> 00:00:41.900
+and what they represent.
+
+00:00:41.900 --> 00:00:45.600
+Depending on the interpretation
+for the target set,
+
+00:00:45.600 --> 00:00:49.140
+we have two main instantiations
+of the concept of reachable set,
+
+00:00:49.140 --> 00:00:54.200
+namely avoidance
+set and reach sets.
+
+00:00:54.200 --> 00:00:58.300
+So what we're going to do today
+is, based on these definitions,
+
+00:00:58.300 --> 00:01:01.270
+see how we can apply the
+Hamilton-Jacobi-Isaacs
+
+00:01:01.270 --> 00:01:04.290
+equation to compute these
+mathematical objects.
+
+00:01:04.290 --> 00:01:06.270
+And then I will
+discuss how, once you
+
+00:01:06.270 --> 00:01:08.350
+have computed these
+objects, you could use
+
+00:01:08.350 --> 00:01:10.370
+those in a control pipeline.
+
+00:01:13.590 --> 00:01:15.350
+Any questions?
+
+00:01:15.350 --> 00:01:23.350
+So just as a reminder, we
+defined an avoidance set,
+
+00:01:23.350 --> 00:01:26.190
+which is a particular
+instantiation of a backward
+
+00:01:26.190 --> 00:01:29.990
+reachable set, as the
+set of states at time, t,
+
+00:01:29.990 --> 00:01:33.390
+satisfying the
+following definition.
+
+00:01:33.390 --> 00:01:36.030
+A stands for avoidance.
+
+00:01:36.030 --> 00:01:39.070
+This is the set of states for
+which there exists a disturbance
+
+00:01:39.070 --> 00:01:41.830
+such that for all
+possible control,
+
+00:01:41.830 --> 00:01:47.110
+the system enters the target
+set at time t equal 0.
+
+00:01:47.110 --> 00:01:49.590
+And of course, once you
+have computed this set,
+
+00:01:49.590 --> 00:01:53.550
+you want to make sure that
+you start outside of this set
+
+00:01:53.550 --> 00:01:55.550
+to guarantee safety.
+
+00:01:55.550 --> 00:01:59.100
+For the opposite, the
+reachable set is actually
+
+00:01:59.100 --> 00:02:01.660
+the set of desirable
+states, and is
+
+00:02:01.660 --> 00:02:05.060
+defined as the set
+of states at time, t,
+
+00:02:05.060 --> 00:02:07.500
+such that for all
+disturbances, there
+
+00:02:07.500 --> 00:02:09.860
+exists a control such
+that the system enters
+
+00:02:09.860 --> 00:02:12.740
+target set at time t equals 0.
+
+00:02:12.740 --> 00:02:17.180
+So in this case, you would like
+to start within this set so that
+
+00:02:17.180 --> 00:02:19.660
+no matter what nature
+throws at you that there
+
+00:02:19.660 --> 00:02:22.540
+is a control, the optimal
+control, that will still
+
+00:02:22.540 --> 00:02:26.580
+allow you to fulfill
+your control objectives.
+
+00:02:26.580 --> 00:02:28.980
+So this naturally
+become a constraint
+
+00:02:28.980 --> 00:02:30.800
+in your trajectory
+optimization problem.
+
+00:02:30.800 --> 00:02:34.680
+You want to ensure that in
+the case of avoidance set,
+
+00:02:34.680 --> 00:02:36.800
+your trajectory stays
+outside of that set.
+
+00:02:36.800 --> 00:02:40.540
+In the case of a
+reach set, you want
+
+00:02:40.540 --> 00:02:47.060
+to make sure that your initial
+condition is within that set.
+
+00:02:47.060 --> 00:02:50.300
+Now the question is, how
+we compute these sets?
+
+00:02:50.300 --> 00:02:55.260
+So the point is that you can
+use the Hamilton-Jacobi-Isaacs
+
+00:02:55.260 --> 00:03:00.820
+equation to compute these
+sets in a very procedural way.
+
+00:03:00.820 --> 00:03:03.140
+Specifically, as we will
+see, the computation
+
+00:03:03.140 --> 00:03:05.700
+of the backward reachable
+sets, both in the avoidance
+
+00:03:05.700 --> 00:03:09.420
+case and the reach case, entails
+solving a differential game
+
+00:03:09.420 --> 00:03:11.597
+where the outcome is Boolean.
+
+00:03:11.597 --> 00:03:13.180
+What does it mean a
+differential game?
+
+00:03:13.180 --> 00:03:15.540
+From last time,
+differential game
+
+00:03:15.540 --> 00:03:17.320
+means that there
+are two players.
+
+00:03:17.320 --> 00:03:18.780
+We are player 1.
+
+00:03:18.780 --> 00:03:21.340
+We use the controls
+at our disposal
+
+00:03:21.340 --> 00:03:25.340
+in order to either
+avoid a target set
+
+00:03:25.340 --> 00:03:26.840
+or reach a target set.
+
+00:03:26.840 --> 00:03:29.500
+And then there is
+player 2, nature,
+
+00:03:29.500 --> 00:03:31.820
+that, through a
+disturbance control,
+
+00:03:31.820 --> 00:03:35.980
+is trying to thwart our
+attempt to fulfill our control
+
+00:03:35.980 --> 00:03:38.740
+objectives.
+
+00:03:38.740 --> 00:03:42.380
+Now, the question is, at
+the level of a two-player
+
+00:03:42.380 --> 00:03:43.420
+structure--
+
+00:03:43.420 --> 00:03:45.180
+should be quite
+intuitive that, actually,
+
+00:03:45.180 --> 00:03:47.940
+the Hamilton-Jacobi-Isaacs
+formalism is well set up
+
+00:03:47.940 --> 00:03:49.540
+to address these problems.
+
+00:03:49.540 --> 00:03:53.050
+The question, though, how do
+we instantiate all the problem
+
+00:03:53.050 --> 00:03:56.633
+formulation in a
+way that is aligned
+
+00:03:56.633 --> 00:03:58.550
+with the definition of
+backward reachable set,
+
+00:03:58.550 --> 00:04:02.770
+particularly because
+belonging to a set
+
+00:04:02.770 --> 00:04:06.370
+or not is a binary condition?
+
+00:04:06.370 --> 00:04:10.130
+When backward reachable set--
+sorry, in the optimal control
+
+00:04:10.130 --> 00:04:14.310
+formulation, we only framed it
+in terms of a cost function.
+
+00:04:14.310 --> 00:04:22.570
+So the question is, can we
+reframe membership to a set
+
+00:04:22.570 --> 00:04:24.150
+through the lens
+of a cost function
+
+00:04:24.150 --> 00:04:26.570
+so that we can reduce everything
+to the optimal control
+
+00:04:26.570 --> 00:04:28.010
+formulation, to
+which we can then
+
+00:04:28.010 --> 00:04:31.930
+apply the
+Hamilton-Jacobi-Isaacs equation?
+
+00:04:31.930 --> 00:04:36.650
+And the short answer is, yes, we
+can encode this Boolean outcome
+
+00:04:36.650 --> 00:04:40.810
+of belonging or
+not to target set
+
+00:04:40.810 --> 00:04:42.730
+within the
+Hamilton-Jacobi-Isaacs
+
+00:04:42.730 --> 00:04:45.190
+formulation by removing
+the running cost.
+
+00:04:45.190 --> 00:04:48.770
+Since we only care about
+being in the target
+
+00:04:48.770 --> 00:04:51.720
+set at the final time or
+not being in the final set
+
+00:04:51.720 --> 00:04:56.260
+at the target time, there is
+no notion of running cost.
+
+00:04:56.260 --> 00:05:01.320
+And by picking the final cost,
+to denote set membership.
+
+00:05:01.320 --> 00:05:03.240
+The question is how we do that?
+
+00:05:03.240 --> 00:05:07.640
+It turns out that this
+is relatively easy
+
+00:05:07.640 --> 00:05:12.920
+and leads to the level
+set method for backward
+
+00:05:12.920 --> 00:05:15.120
+reachable computations.
+
+00:05:15.120 --> 00:05:18.400
+Specifically,
+remember the equations
+
+00:05:18.400 --> 00:05:22.200
+that one needs to solve in order
+to find the optimal control
+
+00:05:22.200 --> 00:05:24.860
+profile in a differential game.
+
+00:05:27.680 --> 00:05:30.200
+In our problem, we
+only care about getting
+
+00:05:30.200 --> 00:05:34.360
+into the backward reachable
+set at the final time.
+
+00:05:34.360 --> 00:05:36.280
+There is no notion
+of a running cost.
+
+00:05:36.280 --> 00:05:40.960
+So accordingly, we set the
+running cost, g, equal to 0
+
+00:05:40.960 --> 00:05:43.160
+for the specific
+case of computing
+
+00:05:43.160 --> 00:05:45.280
+backward reachable set.
+
+00:05:45.280 --> 00:05:49.230
+So we are only left
+with the final cost, h,
+
+00:05:49.230 --> 00:05:51.230
+which shows up in the
+boundary condition
+
+00:05:51.230 --> 00:05:53.510
+for the partial
+differential equation.
+
+00:05:53.510 --> 00:05:59.190
+Now, can we pick a final
+cost that reflects the notion
+
+00:05:59.190 --> 00:06:01.550
+that you either
+belong to a target set
+
+00:06:01.550 --> 00:06:04.710
+or you do not belong
+to the target set?
+
+00:06:04.710 --> 00:06:06.930
+And the answer is affirmative.
+
+00:06:06.930 --> 00:06:09.550
+So one can always
+find a function h
+
+00:06:09.550 --> 00:06:14.590
+of x such that set
+t, the target set,
+
+00:06:14.590 --> 00:06:17.950
+is equal to the
+0 level set of h.
+
+00:06:17.950 --> 00:06:28.270
+That is, x belongs to a given
+set t if and only if h of x
+
+00:06:28.270 --> 00:06:33.070
+is less than or equal to 0.
+
+00:06:33.070 --> 00:06:34.290
+Let me give you an example.
+
+00:06:34.290 --> 00:06:36.540
+And through the example, you
+see that this is actually
+
+00:06:36.540 --> 00:06:37.630
+quite obvious.
+
+00:06:37.630 --> 00:06:40.910
+So let's assume that
+the set, capital T,
+
+00:06:40.910 --> 00:06:48.860
+is represented by a
+circle with radius R.
+
+00:06:48.860 --> 00:06:54.780
+So T is defined as
+the set of point
+
+00:06:54.780 --> 00:07:02.740
+x such that x squared plus
+y squared is less than
+
+00:07:02.740 --> 00:07:07.100
+or equal to R.
+
+00:07:07.100 --> 00:07:11.460
+Now, you can define
+a function h that
+
+00:07:11.460 --> 00:07:13.380
+is a function of--
+so let's assume
+
+00:07:13.380 --> 00:07:15.760
+that the state space of our
+system is three-dimensional.
+
+00:07:15.760 --> 00:07:18.460
+So we have a unicycle
+with state x.
+
+00:07:18.460 --> 00:07:21.580
+The longitudinal position
+y, the lateral position.
+
+00:07:21.580 --> 00:07:23.580
+And theta, the heading.
+
+00:07:23.580 --> 00:07:30.900
+So we can define the function
+h as h of xr yr theta r
+
+00:07:30.900 --> 00:07:34.280
+as square root of--
+
+00:07:42.860 --> 00:07:47.890
+so if your unicycle,
+whose state space
+
+00:07:47.890 --> 00:07:53.290
+is three-dimensional, x, y
+position and heading, has xy
+
+00:07:53.290 --> 00:07:58.770
+coordinates such that h is
+negative, what is the unicycle?
+
+00:07:58.770 --> 00:08:04.750
+We assume that we have a
+reference frame like this one.
+
+00:08:07.650 --> 00:08:12.469
+If the function h is less than
+or equal to 0, what is it?
+
+00:08:12.469 --> 00:08:13.770
+Inside the circle.
+
+00:08:13.770 --> 00:08:14.630
+Inside the circle.
+
+00:08:14.630 --> 00:08:15.530
+Exactly.
+
+00:08:15.530 --> 00:08:20.010
+Because it means that the
+distance is less than R.
+
+00:08:20.010 --> 00:08:25.850
+So if h less than or
+equal to 0, it means--
+
+00:08:25.850 --> 00:08:27.970
+x squared plus y
+squared less than
+
+00:08:27.970 --> 00:08:32.610
+or equal to R, which means that
+its position, its displacement
+
+00:08:32.610 --> 00:08:34.250
+from the origin, has
+to be less than R.
+
+00:08:34.250 --> 00:08:36.090
+So it's inside the circle.
+
+00:08:36.090 --> 00:08:40.409
+If h is greater than 0, it
+means that you are outside.
+
+00:08:40.409 --> 00:08:44.210
+And of course, the more h
+is negative means the deeper
+
+00:08:44.210 --> 00:08:45.570
+you are in the circle.
+
+00:08:45.570 --> 00:08:50.090
+The more h is positive, the
+farther you are from the circle.
+
+00:08:50.090 --> 00:08:53.730
+Actually, the magnitude h
+also has an interpretation
+
+00:08:53.730 --> 00:08:57.370
+in terms of how safe
+or how unsafe you are.
+
+00:08:57.370 --> 00:09:03.730
+But most importantly,
+the level set of h
+
+00:09:03.730 --> 00:09:07.370
+tells you whether a system
+is in the target set
+
+00:09:07.370 --> 00:09:10.810
+or is not in the target set.
+
+00:09:10.810 --> 00:09:14.445
+So then the idea of reframing
+backward reachable set
+
+00:09:14.445 --> 00:09:16.570
+through the lens of
+Hamilton-Jacobi-Isaacs equation
+
+00:09:16.570 --> 00:09:17.903
+is fairly straightforward.
+
+00:09:17.903 --> 00:09:19.070
+You remove the running cost.
+
+00:09:19.070 --> 00:09:20.612
+This is not a notion
+on running cost.
+
+00:09:20.612 --> 00:09:22.170
+In computing backward
+reachable sets,
+
+00:09:22.170 --> 00:09:26.330
+you find a function
+h that represents
+
+00:09:26.330 --> 00:09:31.730
+belonging to a given set
+for whatever target set, t,
+
+00:09:31.730 --> 00:09:32.710
+you have defined.
+
+00:09:32.710 --> 00:09:34.250
+That's always possible.
+
+00:09:34.250 --> 00:09:37.890
+Of course, if you have something
+that is a bit more complicated
+
+00:09:37.890 --> 00:09:39.412
+than a circle, then
+a function h is
+
+00:09:39.412 --> 00:09:40.870
+going to be a bit
+more complicated,
+
+00:09:40.870 --> 00:09:42.100
+but that's not a problem.
+
+00:09:44.760 --> 00:09:48.800
+And thus, we have
+reframed the problem
+
+00:09:48.800 --> 00:09:56.000
+of avoidance of a target set
+as the problem of maximizing
+
+00:09:56.000 --> 00:09:56.820
+over u.
+
+00:09:56.820 --> 00:09:59.020
+We want to stay
+outside of the set.
+
+00:09:59.020 --> 00:10:00.160
+So we want to make--
+
+00:10:00.160 --> 00:10:03.320
+us, as player 1, we
+want to make h positive
+
+00:10:03.320 --> 00:10:07.440
+while the enemy, player 2,
+wants to make h negative.
+
+00:10:07.440 --> 00:10:10.480
+And so we are in the
+same exact formalism
+
+00:10:10.480 --> 00:10:13.760
+of the Hamilton-Jacobi-Isaacs
+problem,
+
+00:10:13.760 --> 00:10:16.780
+but the difference is that
+we only have the final cost.
+
+00:10:16.780 --> 00:10:19.180
+We don't have the running cost.
+
+00:10:19.180 --> 00:10:22.200
+Remember that for the
+continuous time optimal control
+
+00:10:22.200 --> 00:10:24.300
+formulation, the
+final time is 0.
+
+00:10:24.300 --> 00:10:27.460
+So we start from some negative
+time and the final time is 0.
+
+00:10:27.460 --> 00:10:30.560
+This is more of a convention.
+
+00:10:30.560 --> 00:10:31.740
+So this is an example.
+
+00:10:31.740 --> 00:10:33.480
+So this is an example
+where the avoidance
+
+00:10:33.480 --> 00:10:38.240
+set is this red circle.
+
+00:10:38.240 --> 00:10:42.710
+For this trajectory
+here, the cost
+
+00:10:42.710 --> 00:10:46.230
+is positive since
+the final point
+
+00:10:46.230 --> 00:10:47.910
+is outside of the
+avoidance set, which
+
+00:10:47.910 --> 00:10:51.150
+means that the h, the
+final cost, is positive.
+
+00:10:51.150 --> 00:10:56.710
+And then opposite to that,
+for this blue trajectory,
+
+00:10:56.710 --> 00:10:58.990
+the final condition is
+in the circle, which
+
+00:10:58.990 --> 00:11:03.230
+means that h is negative, which
+means that the overall cost is
+
+00:11:03.230 --> 00:11:05.510
+negative.
+
+00:11:05.510 --> 00:11:07.650
+So we're not doing
+anything deep here.
+
+00:11:07.650 --> 00:11:10.220
+We're just trying to find
+a one-to-one correspondence
+
+00:11:10.220 --> 00:11:12.470
+between the abstract problem
+of backward reachable set
+
+00:11:12.470 --> 00:11:15.030
+computation and the tool
+that we know of, which is
+
+00:11:15.030 --> 00:11:16.610
+that of Hamilton-Jacobi-Isaacs.
+
+00:11:16.610 --> 00:11:17.310
+Yeah.
+
+00:11:17.310 --> 00:11:21.230
+[INAUDIBLE] show me how
+safe you are? [? Will h ?]
+
+00:11:21.230 --> 00:11:23.110
+always be more positive?
+
+00:11:23.110 --> 00:11:23.690
+Yeah, yeah.
+
+00:11:23.690 --> 00:11:27.230
+So that's why, actually,
+the magnitude of h
+
+00:11:27.230 --> 00:11:31.430
+not only allows you to reflect
+the problem of a reachable set
+
+00:11:31.430 --> 00:11:33.750
+computation in the
+Hamilton-Jacobi-Bellman
+
+00:11:33.750 --> 00:11:36.350
+framework, but also gives you
+some interesting additional
+
+00:11:36.350 --> 00:11:39.220
+information, which is,
+loosely speaking, a buffer.
+
+00:11:39.220 --> 00:11:41.220
+The information about
+how much buffer you
+
+00:11:41.220 --> 00:11:44.040
+have before crossing
+the danger line,
+
+00:11:44.040 --> 00:11:45.640
+which is when h is equal to 0.
+
+00:11:45.640 --> 00:11:48.380
+So short answer is yes.
+
+00:11:48.380 --> 00:11:52.060
+OK, so we're almost there.
+
+00:11:52.060 --> 00:11:56.140
+So this is the formulation
+for an avoidance set.
+
+00:11:56.140 --> 00:11:58.460
+So now that you want to--
+
+00:11:58.460 --> 00:12:00.140
+so if you have a
+problem where you
+
+00:12:00.140 --> 00:12:03.340
+want to find a backward
+reachable set, that is,
+
+00:12:03.340 --> 00:12:06.780
+the set of initial conditions
+that would lead you
+
+00:12:06.780 --> 00:12:11.500
+to a collision-- so for your
+set to enter some unsafe region
+
+00:12:11.500 --> 00:12:16.660
+for some adversarial selection
+of the [INAUDIBLE] profile,
+
+00:12:16.660 --> 00:12:20.740
+the problem that you want
+to solve is minimax problem.
+
+00:12:20.740 --> 00:12:23.100
+We already discussed
+how to pick h.
+
+00:12:23.100 --> 00:12:25.400
+And then there is nothing
+else that you have to do.
+
+00:12:25.400 --> 00:12:29.940
+You just write down the
+Hamilton-Jacobi-Isaacs equation
+
+00:12:29.940 --> 00:12:31.660
+for this specific problem.
+
+00:12:31.660 --> 00:12:33.000
+Same as last time.
+
+00:12:33.000 --> 00:12:35.140
+We don't have the running cost.
+
+00:12:35.140 --> 00:12:37.270
+And of course, for the
+boundary condition,
+
+00:12:37.270 --> 00:12:40.090
+we use the h function
+that represents membership
+
+00:12:40.090 --> 00:12:42.250
+to a given set.
+
+00:12:42.250 --> 00:12:45.170
+If instead you want to solve
+the opposite problem, that
+
+00:12:45.170 --> 00:12:49.730
+of reaching a goal-- so now
+you want to enter into the set.
+
+00:12:49.730 --> 00:12:51.970
+So you want to make h negative.
+
+00:12:51.970 --> 00:12:54.290
+And the player wants to
+make-- the nature wants
+
+00:12:54.290 --> 00:12:56.250
+to make h positive
+because it doesn't
+
+00:12:56.250 --> 00:12:59.330
+want you to go into the set.
+
+00:12:59.330 --> 00:13:03.790
+Then the problem formulation
+is a swap in terms of minimax.
+
+00:13:03.790 --> 00:13:06.410
+And now, you want to minimize h.
+
+00:13:06.410 --> 00:13:11.010
+Player 2 wants to
+maximize the cost.
+
+00:13:11.010 --> 00:13:12.430
+So all stays the same.
+
+00:13:12.430 --> 00:13:15.290
+It's just that the
+max min and min max
+
+00:13:15.290 --> 00:13:17.610
+are swapped in the conditions.
+
+00:13:17.610 --> 00:13:19.430
+So you would do the
+same derivation,
+
+00:13:19.430 --> 00:13:21.590
+but just swapping min max.
+
+00:13:21.590 --> 00:13:22.090
+Yeah.
+
+00:13:22.090 --> 00:13:24.250
+[INAUDIBLE] would
+like to be used
+
+00:13:24.250 --> 00:13:27.810
+to define a set such that you
+can enter the feasible set?
+
+00:13:27.810 --> 00:13:30.770
+Like iterate?
+
+00:13:30.770 --> 00:13:31.690
+A set--
+
+00:13:31.690 --> 00:13:33.610
+If you got reachable sets.
+
+00:13:37.670 --> 00:13:38.170
+Right?
+
+00:13:38.170 --> 00:13:40.545
+Yeah, I mean that's the notion
+of backward reachable set.
+
+00:13:40.545 --> 00:13:43.876
+But by feasible set,
+what do you mean exactly?
+
+00:13:43.876 --> 00:13:45.370
+[INAUDIBLE] course.
+
+00:13:45.370 --> 00:13:46.930
+Yeah, of course.
+
+00:13:46.930 --> 00:13:49.650
+This will become then your
+target set and then you can
+
+00:13:49.650 --> 00:13:51.290
+propagate the dynamics, even--
+
+00:13:51.290 --> 00:13:53.570
+yeah, yeah, of course.
+
+00:13:53.570 --> 00:13:56.772
+And in general, we'll see--
+
+00:13:56.772 --> 00:13:58.730
+so I think your question
+is pointing, actually,
+
+00:13:58.730 --> 00:14:02.770
+to the next point I
+want to make here,
+
+00:14:02.770 --> 00:14:07.650
+which is the following, that
+the formulation so far is
+
+00:14:07.650 --> 00:14:08.433
+pretty static.
+
+00:14:08.433 --> 00:14:09.850
+So basically, I'm
+telling you what
+
+00:14:09.850 --> 00:14:13.470
+is the set of initial conditions
+such that, at the end,
+
+00:14:13.470 --> 00:14:15.770
+you are in a
+desirable condition.
+
+00:14:15.770 --> 00:14:18.770
+But in general, you
+want to be desirable
+
+00:14:18.770 --> 00:14:21.450
+along your full trajectory,
+not necessarily just
+
+00:14:21.450 --> 00:14:25.970
+at the endpoint, which
+leads to the notion
+
+00:14:25.970 --> 00:14:28.610
+of an evolution of the
+concept of reachable
+
+00:14:28.610 --> 00:14:30.490
+set into reachable tube.
+
+00:14:30.490 --> 00:14:32.380
+Specifically, look at this case.
+
+00:14:32.380 --> 00:14:34.800
+So here we have a case
+where the trajectory stays
+
+00:14:34.800 --> 00:14:39.240
+outside of the avoidance set.
+
+00:14:39.240 --> 00:14:41.840
+So the cost is positive.
+
+00:14:41.840 --> 00:14:46.540
+Here you have-- in particular
+because the endpoint is outside.
+
+00:14:46.540 --> 00:14:50.200
+Here, the blue trajectory,
+the endpoint is inside.
+
+00:14:50.200 --> 00:14:52.760
+So the cost is negative, OK?
+
+00:14:52.760 --> 00:14:55.120
+But here, there is a case
+whereby the trajectory
+
+00:14:55.120 --> 00:15:00.440
+passes through the avoidance set
+for some time at t less than 0.
+
+00:15:00.440 --> 00:15:01.740
+But time t equals 0.
+
+00:15:01.740 --> 00:15:05.680
+So at the end, the state is
+outside the avoidance set.
+
+00:15:05.680 --> 00:15:09.200
+So the cost, because of how we
+formulated the problem before,
+
+00:15:09.200 --> 00:15:10.060
+is negative.
+
+00:15:10.060 --> 00:15:13.400
+So we deem this
+trajectory as safe.
+
+00:15:13.400 --> 00:15:15.500
+Well, I mean it's
+safe for the endpoint,
+
+00:15:15.500 --> 00:15:19.740
+but there was a portion of time
+where you were in a danger zone.
+
+00:15:19.740 --> 00:15:21.480
+Maybe this is a
+zone where you were
+
+00:15:21.480 --> 00:15:22.980
+too close to another aircraft.
+
+00:15:22.980 --> 00:15:26.120
+So you might have
+had a near-miss.
+
+00:15:26.120 --> 00:15:27.960
+So the question
+then is, how do we
+
+00:15:27.960 --> 00:15:30.910
+make sure that we protect the
+full trajectory from being
+
+00:15:30.910 --> 00:15:35.390
+outside of an avoidance set, as
+opposed to just the endpoint?
+
+00:15:35.390 --> 00:15:38.670
+This leads to the notion
+of a tube, whereby
+
+00:15:38.670 --> 00:15:41.750
+we want to reason not just
+with respect to the final time,
+
+00:15:41.750 --> 00:15:47.090
+but across the
+full time horizon.
+
+00:15:47.090 --> 00:15:49.310
+So basically, you're
+building a safety tube
+
+00:15:49.310 --> 00:15:53.630
+so that you stay your trajectory
+and basically a tube outside it
+
+00:15:53.630 --> 00:15:56.590
+outside of the avoidance set.
+
+00:15:56.590 --> 00:16:01.790
+Can we still use techniques from
+Hamilton-Jacobi-Isaacs equation?
+
+00:16:01.790 --> 00:16:04.790
+The answer is, yes, we can.
+
+00:16:04.790 --> 00:16:07.110
+I will just give
+you the intuition
+
+00:16:07.110 --> 00:16:10.590
+here because this gets
+a bit more convoluted.
+
+00:16:10.590 --> 00:16:13.270
+But essentially, the
+intuition is as follows.
+
+00:16:13.270 --> 00:16:16.550
+So before setting
+of reachable set,
+
+00:16:16.550 --> 00:16:22.510
+you cared only about
+the final endpoint.
+
+00:16:22.510 --> 00:16:26.190
+Now, you care about making sure
+that your entire trajectory
+
+00:16:26.190 --> 00:16:28.740
+stays out of the avoidance set.
+
+00:16:28.740 --> 00:16:32.660
+How do you change the
+problem formulation such
+
+00:16:32.660 --> 00:16:34.780
+that you encode this objective?
+
+00:16:34.780 --> 00:16:39.780
+So one way that you can do
+that is by replacing h of x0
+
+00:16:39.780 --> 00:16:46.380
+as your cost with minimum
+of tau in the optimization
+
+00:16:46.380 --> 00:16:49.140
+horizon of h of x tau.
+
+00:16:49.140 --> 00:16:52.380
+So what is this saying is that
+you are interested in making
+
+00:16:52.380 --> 00:16:57.700
+sure that not just h
+evaluated at x of 0
+
+00:16:57.700 --> 00:17:00.740
+is greater than 0, which
+means that you're safe,
+
+00:17:00.740 --> 00:17:04.619
+but that the minimum of h
+across all of that trajectory
+
+00:17:04.619 --> 00:17:06.140
+is greater than 0.
+
+00:17:06.140 --> 00:17:08.380
+Because if that is
+the case, it means
+
+00:17:08.380 --> 00:17:12.740
+that at every single point in
+time, h evaluated at x of t
+
+00:17:12.740 --> 00:17:14.900
+is greater than 0,
+which means that you are
+
+00:17:14.900 --> 00:17:16.560
+outside of the avoidance set.
+
+00:17:19.460 --> 00:17:21.140
+Make sense?
+
+00:17:21.140 --> 00:17:23.900
+So basically, you are
+strengthening or actually
+
+00:17:23.900 --> 00:17:27.432
+making your cost a bit more
+sophisticated to encode
+
+00:17:27.432 --> 00:17:28.890
+the notion that
+you don't just care
+
+00:17:28.890 --> 00:17:32.430
+about what happens at the end
+of the optimization horizon,
+
+00:17:32.430 --> 00:17:35.590
+but you care about what
+happens throughout the horizon.
+
+00:17:35.590 --> 00:17:39.210
+In particular, you
+want to make sure that,
+
+00:17:39.210 --> 00:17:42.610
+in the worst possible situation
+across your optimization
+
+00:17:42.610 --> 00:17:48.210
+horizon, h never dips below 0.
+
+00:17:48.210 --> 00:17:52.010
+Now, this is a cost that
+we haven't seen last time.
+
+00:17:52.010 --> 00:17:55.210
+So actually, it changes a little
+bit the derivation that we did.
+
+00:17:55.210 --> 00:17:57.650
+We're not going to
+do the derivation,
+
+00:17:57.650 --> 00:18:02.650
+but basically, the
+Hamilton-Jacobi-Isaacs equation
+
+00:18:02.650 --> 00:18:05.490
+takes this form that is
+a bit more complicated
+
+00:18:05.490 --> 00:18:08.730
+because now we have an
+additional minimization.
+
+00:18:08.730 --> 00:18:11.070
+And I'm not going to dig
+much deeper than that.
+
+00:18:11.070 --> 00:18:15.170
+My main point is that if
+you care about making sure
+
+00:18:15.170 --> 00:18:18.850
+that your entire trajectory
+stays out of danger,
+
+00:18:18.850 --> 00:18:21.490
+there is actually a
+formulation of optimal control
+
+00:18:21.490 --> 00:18:23.470
+that allows you to
+compute that object.
+
+00:18:23.470 --> 00:18:24.890
+It's a little bit
+of a refinement
+
+00:18:24.890 --> 00:18:27.150
+of the Hamilton-Jacobi-Isaacs
+equation.
+
+00:18:27.150 --> 00:18:29.370
+We're not going to
+go down this path
+
+00:18:29.370 --> 00:18:31.930
+because we have many
+other concepts to discuss
+
+00:18:31.930 --> 00:18:32.712
+in this class.
+
+00:18:32.712 --> 00:18:35.170
+But if you're interested, I
+provided you with the reference
+
+00:18:35.170 --> 00:18:35.697
+to do so.
+
+00:18:35.697 --> 00:18:37.530
+My most important point
+here is to make sure
+
+00:18:37.530 --> 00:18:39.327
+that you are familiar
+with this problem,
+
+00:18:39.327 --> 00:18:41.410
+and you know that there
+are tools at your disposal
+
+00:18:41.410 --> 00:18:43.770
+to solve it.
+
+00:18:43.770 --> 00:18:44.490
+Yeah.
+
+00:18:44.490 --> 00:18:50.010
+So both of BRS and BRT refer
+to a set of initial states?
+
+00:18:50.010 --> 00:18:50.850
+Yeah.
+
+00:18:50.850 --> 00:18:51.572
+So what is the--
+
+00:18:51.572 --> 00:18:53.030
+What were the
+different properties?
+
+00:18:53.030 --> 00:18:56.330
+So here, you make sure that it's
+a set of initial states such
+
+00:18:56.330 --> 00:19:00.610
+that you don't end up in danger
+at the end of optimization
+
+00:19:00.610 --> 00:19:01.610
+horizon.
+
+00:19:01.610 --> 00:19:03.410
+This is the set
+of initial states
+
+00:19:03.410 --> 00:19:05.410
+such that throughout
+optimization horizon,
+
+00:19:05.410 --> 00:19:08.130
+you stay out of danger.
+
+00:19:08.130 --> 00:19:13.258
+[INAUDIBLE] we'll be solving
+for either the BRS or BRT?
+
+00:19:13.258 --> 00:19:14.050
+Or are we solving--
+
+00:19:14.050 --> 00:19:14.675
+For two things.
+
+00:19:14.675 --> 00:19:16.890
+You are solving for
+the BRS and you're
+
+00:19:16.890 --> 00:19:21.130
+solving for the optimal
+control profile, u.
+
+00:19:21.130 --> 00:19:26.440
+So I mean, you start from
+a state in the backward
+
+00:19:26.440 --> 00:19:27.840
+reachable set, OK?
+
+00:19:27.840 --> 00:19:32.080
+But if you don't use the
+optimal control policy,
+
+00:19:32.080 --> 00:19:34.400
+you might still-- so
+actually, in the case
+
+00:19:34.400 --> 00:19:37.120
+of the avoidance set, you
+start with an initial condition
+
+00:19:37.120 --> 00:19:39.680
+outside the backward
+reachable set.
+
+00:19:39.680 --> 00:19:42.160
+But if you don't use the
+optimal control policy,
+
+00:19:42.160 --> 00:19:44.760
+actually, the disturbance
+might still lead you
+
+00:19:44.760 --> 00:19:45.740
+into the avoidance set.
+
+00:19:45.740 --> 00:19:49.080
+So you need both, both
+the set and the associated
+
+00:19:49.080 --> 00:19:50.600
+optimal control policy.
+
+00:19:50.600 --> 00:19:52.560
+But the optimal control
+policy, once you
+
+00:19:52.560 --> 00:19:55.400
+have solved for the
+Hamilton-Jacobi-Isaacs equation,
+
+00:19:55.400 --> 00:19:57.540
+can be computed quite readily.
+
+00:19:57.540 --> 00:19:59.840
+So this is an easy computation.
+
+00:19:59.840 --> 00:20:04.800
+So once you compute the
+backward reachable set,
+
+00:20:04.800 --> 00:20:09.960
+you can also easily compute
+the optimal control.
+
+00:20:09.960 --> 00:20:11.560
+Yeah.
+
+00:20:11.560 --> 00:20:15.920
+So what you were talking about
+with reaching versus avoiding,
+
+00:20:15.920 --> 00:20:19.020
+when you hear you switch
+maximum to min max,
+
+00:20:19.020 --> 00:20:21.950
+then it would be
+a value function
+
+00:20:21.950 --> 00:20:23.850
+in the backwards reachable tube.
+
+00:20:23.850 --> 00:20:24.870
+Does the outside--
+
+00:20:24.870 --> 00:20:26.370
+So here there are
+two things, right?
+
+00:20:26.370 --> 00:20:30.450
+So there is a avoid versus
+reach and tube versus set.
+
+00:20:30.450 --> 00:20:33.830
+So this slide is only
+about avoid versus reach.
+
+00:20:33.830 --> 00:20:36.070
+There is no notion of tube here.
+
+00:20:36.070 --> 00:20:39.670
+Is there any notion
+of reaching for tubes?
+
+00:20:39.670 --> 00:20:44.790
+Like if you want your agent to
+pass through a certain corridor?
+
+00:20:44.790 --> 00:20:47.970
+Yeah, there is, even though it's
+slightly less commonly used.
+
+00:20:47.970 --> 00:20:53.910
+So typically-- even though
+I frame the problem also
+
+00:20:53.910 --> 00:20:56.750
+from the point of view
+of reach, typically,
+
+00:20:56.750 --> 00:20:58.430
+reachability-based
+computations are
+
+00:20:58.430 --> 00:21:00.670
+used more for the
+purposes of safety
+
+00:21:00.670 --> 00:21:02.630
+to-- basically as
+additional constraints
+
+00:21:02.630 --> 00:21:04.630
+you have in your trajectory
+optimization process
+
+00:21:04.630 --> 00:21:07.590
+to make sure that you have
+enough buffer to avoid
+
+00:21:07.590 --> 00:21:09.430
+collisions or stuff like that.
+
+00:21:09.430 --> 00:21:13.610
+So the most common formulation
+is the avoidance safety one.
+
+00:21:16.590 --> 00:21:18.370
+So let me show you one example.
+
+00:21:18.370 --> 00:21:21.380
+And of course, the set
+of initial conditions
+
+00:21:21.380 --> 00:21:24.420
+for which you're guaranteed
+to stay out of danger
+
+00:21:24.420 --> 00:21:31.520
+is that such that the value
+function is greater than 0.
+
+00:21:35.980 --> 00:21:39.660
+Now, let me show you an example
+to make these things a bit more
+
+00:21:39.660 --> 00:21:40.400
+concrete.
+
+00:21:40.400 --> 00:21:41.740
+Yes.
+
+00:21:41.740 --> 00:21:45.380
+Oh, are dynamics make it
+such that we can never
+
+00:21:45.380 --> 00:21:47.060
+reach our target set?
+
+00:21:47.060 --> 00:21:49.340
+What happens when you're
+trying to initialize
+
+00:21:49.340 --> 00:21:51.300
+a condition in the target set?
+
+00:21:51.300 --> 00:21:53.940
+Yeah, basically
+your set is empty.
+
+00:21:53.940 --> 00:21:56.820
+And either you
+change the problem
+
+00:21:56.820 --> 00:21:59.980
+or you don't
+control-- basically,
+
+00:21:59.980 --> 00:22:01.820
+you don't deploy your robot.
+
+00:22:01.820 --> 00:22:04.040
+But at least it gives
+you a strong information.
+
+00:22:04.040 --> 00:22:07.420
+It means that the way
+you frame the problem,
+
+00:22:07.420 --> 00:22:09.620
+maybe because you were
+too conservative-- it
+
+00:22:09.620 --> 00:22:13.420
+might be that your problem
+formulation is too conservative.
+
+00:22:13.420 --> 00:22:15.680
+Maybe you don't have
+enough control actuation,
+
+00:22:15.680 --> 00:22:17.770
+so you want to spend
+a bit more money
+
+00:22:17.770 --> 00:22:20.470
+on buying better actuators.
+
+00:22:20.470 --> 00:22:22.960
+But it's saying something
+about your problem formulation.
+
+00:22:22.960 --> 00:22:24.710
+Maybe it's just how
+you frame the problem.
+
+00:22:24.710 --> 00:22:28.830
+Or maybe there is an inherent
+limitation in your robot.
+
+00:22:28.830 --> 00:22:33.690
+And then, for example, you
+have to design a better robot,
+
+00:22:33.690 --> 00:22:35.530
+have more control authority.
+
+00:22:35.530 --> 00:22:37.170
+But, yeah.
+
+00:22:37.170 --> 00:22:38.470
+So let me show you one example.
+
+00:22:38.470 --> 00:22:40.850
+So this is actually
+quite illustrative.
+
+00:22:40.850 --> 00:22:47.210
+So we have a situation whereby
+we have two airplanes modeled
+
+00:22:47.210 --> 00:22:48.710
+with unicycle dynamics.
+
+00:22:48.710 --> 00:22:51.490
+So the equations of motion
+for the first airplanes
+
+00:22:51.490 --> 00:22:54.030
+are x dot equal v
+cosine of theta,
+
+00:22:54.030 --> 00:22:57.353
+where dot is equal to v sine of
+theta, theta dot is equal to u.
+
+00:22:57.353 --> 00:22:58.770
+So essentially,
+the state space is
+
+00:22:58.770 --> 00:23:01.850
+three-dimensional, xy
+position and heading.
+
+00:23:01.850 --> 00:23:04.710
+And you control
+the heading theta.
+
+00:23:04.710 --> 00:23:10.890
+So basically, the time rate
+of change of the heading
+
+00:23:10.890 --> 00:23:14.200
+through the control u.
+
+00:23:14.200 --> 00:23:20.960
+And the vehicle goes at speed
+v. Same equations of motion
+
+00:23:20.960 --> 00:23:23.920
+for the other vehicle, x
+dot equal v cosine of theta,
+
+00:23:23.920 --> 00:23:27.020
+y dot equal v sine of
+theta, theta dot equal ub.
+
+00:23:29.560 --> 00:23:32.620
+So now, I pose
+you this question.
+
+00:23:32.620 --> 00:23:35.280
+So what is the initial set of--
+
+00:23:35.280 --> 00:23:38.200
+what is the set of
+initial conditions joint?
+
+00:23:38.200 --> 00:23:42.520
+So between aircraft A
+and aircraft B. Such
+
+00:23:42.520 --> 00:23:46.760
+that there is a
+trajectory for aircraft B
+
+00:23:46.760 --> 00:23:49.760
+that no matter how much we're
+trying to avoid a collision,
+
+00:23:49.760 --> 00:23:52.200
+may lead to a collision,
+whereby by collision we
+
+00:23:52.200 --> 00:24:01.910
+mean that the relative position
+between A and B is in--
+
+00:24:01.910 --> 00:24:05.200
+so the relative
+distance is less than r.
+
+00:24:05.200 --> 00:24:07.160
+So essentially,
+our avoidance set
+
+00:24:07.160 --> 00:24:14.960
+is, indeed, a circle in
+the relative position xa
+
+00:24:14.960 --> 00:24:17.720
+minus xb and ya minus yb.
+
+00:24:17.720 --> 00:24:21.320
+We want the relative distance
+between the two aircraft
+
+00:24:21.320 --> 00:24:23.080
+to be less than r.
+
+00:24:23.080 --> 00:24:30.160
+So if we center everything
+around aircraft A,
+
+00:24:30.160 --> 00:24:35.820
+want to make sure that B is
+never inside this kind of shape
+
+00:24:35.820 --> 00:24:36.460
+of circle.
+
+00:24:39.480 --> 00:24:43.000
+So what is the set of
+initial conditions that
+
+00:24:43.000 --> 00:24:46.400
+allow us to make sure that
+a collision, or at least
+
+00:24:46.400 --> 00:24:49.800
+a near-miss, never happens?
+
+00:24:49.800 --> 00:24:53.200
+So we are exactly in the setting
+of computing and avoidance
+
+00:24:53.200 --> 00:24:55.060
+set and associated
+control profile
+
+00:24:55.060 --> 00:24:59.240
+for player A, which is
+us, to avoid a collision.
+
+00:24:59.240 --> 00:25:02.400
+So I posted a script.
+
+00:25:02.400 --> 00:25:03.580
+Is the problem clear?
+
+00:25:06.680 --> 00:25:08.215
+Any question about
+the problem set?
+
+00:25:08.215 --> 00:25:09.340
+I mean, this is real stuff.
+
+00:25:09.340 --> 00:25:11.990
+I mean, how people
+may want to implement
+
+00:25:11.990 --> 00:25:16.510
+some level of collision
+avoidance for aircraft.
+
+00:25:16.510 --> 00:25:23.790
+So I implemented the
+Hamilton-Jacobi reachability
+
+00:25:23.790 --> 00:25:24.530
+computation.
+
+00:25:24.530 --> 00:25:28.030
+So this is useful because it
+gives you a reference codebase
+
+00:25:28.030 --> 00:25:30.270
+to do this type of computation.
+
+00:25:30.270 --> 00:25:34.210
+But here, in particular, I
+want to show the main result.
+
+00:25:34.210 --> 00:25:38.510
+So I implemented the
+dynamics of these systems.
+
+00:25:38.510 --> 00:25:40.230
+So this is not too important.
+
+00:25:40.230 --> 00:25:43.176
+I will just highlight here.
+
+00:25:43.176 --> 00:25:45.590
+You know, it's a bit small.
+
+00:25:45.590 --> 00:25:48.910
+That basically, the terminal
+set, the terminal values,
+
+00:25:48.910 --> 00:25:54.110
+is defined as a
+circle with radius 5.
+
+00:25:54.110 --> 00:25:58.390
+So that's where I
+implement the h function.
+
+00:25:58.390 --> 00:26:00.910
+So I call the package--
+we called it up in my lab.
+
+00:26:00.910 --> 00:26:02.830
+Called HJ reachability.
+
+00:26:02.830 --> 00:26:08.510
+This is essentially the end
+result of an HJ computation.
+
+00:26:08.510 --> 00:26:10.180
+So what is this thing saying?
+
+00:26:10.180 --> 00:26:12.860
+It's a weird shape.
+
+00:26:12.860 --> 00:26:19.140
+So x represents in
+relative coordinate
+
+00:26:19.140 --> 00:26:21.760
+the relative longitudinal
+displacement.
+
+00:26:24.660 --> 00:26:29.380
+So if this is
+aircraft, aircraft--
+
+00:26:29.380 --> 00:26:34.540
+so this distance
+here would be x.
+
+00:26:34.540 --> 00:26:39.500
+This distance here would be y.
+
+00:26:39.500 --> 00:26:43.660
+So what we have here-- and
+z is the relative heading
+
+00:26:43.660 --> 00:26:45.580
+between the two aircraft.
+
+00:26:45.580 --> 00:26:47.080
+OK?
+
+00:26:47.080 --> 00:26:53.700
+So this is the 0-level set of
+the cost function as computed
+
+00:26:53.700 --> 00:26:56.540
+through Hamilton-Jacobi-Isaacs
+equation,
+
+00:26:56.540 --> 00:27:02.220
+which means that for those
+set of states for which j is
+
+00:27:02.220 --> 00:27:09.570
+negative, namely, you are
+within these green shape,
+
+00:27:09.570 --> 00:27:11.310
+then you might end
+up in a collision.
+
+00:27:11.310 --> 00:27:14.930
+If you're outside, you
+don't end up in a collision.
+
+00:27:14.930 --> 00:27:16.930
+Why this weird shape?
+
+00:27:16.930 --> 00:27:20.170
+So to illustrate how to
+interpret this result--
+
+00:27:20.170 --> 00:27:22.890
+so this is basically
+the set of states
+
+00:27:22.890 --> 00:27:26.290
+for which j is equal to 0.
+
+00:27:26.290 --> 00:27:34.330
+Assume that z, the
+relative heading, is--
+
+00:27:39.116 --> 00:27:41.270
+the relative heading is 0.
+
+00:27:41.270 --> 00:27:50.910
+So basically, the
+aircraft are aligned.
+
+00:27:50.910 --> 00:27:59.090
+So, if this is the case, then
+in order to be out of danger,
+
+00:27:59.090 --> 00:28:02.090
+it's just the aircraft
+can follow each other,
+
+00:28:02.090 --> 00:28:04.330
+either they start
+outside of the circle
+
+00:28:04.330 --> 00:28:06.340
+and they will stay outside
+the circle forever.
+
+00:28:06.340 --> 00:28:07.980
+Or if they are
+inside the circle,
+
+00:28:07.980 --> 00:28:09.720
+we just say inside
+the circle forever,
+
+00:28:09.720 --> 00:28:11.880
+and they are in a
+dangerous situation.
+
+00:28:11.880 --> 00:28:16.880
+So that's why the backward
+reachable set is simply
+
+00:28:16.880 --> 00:28:22.080
+the shape of your avoidance set.
+
+00:28:22.080 --> 00:28:25.600
+But let's see what happens
+when z, the relative heading,
+
+00:28:25.600 --> 00:28:28.860
+is close to 3, which
+basically means pi.
+
+00:28:33.200 --> 00:28:36.240
+So it takes a little
+bit actually of practice
+
+00:28:36.240 --> 00:28:40.200
+to view all of this, but then
+it becomes quite intriguing.
+
+00:28:40.200 --> 00:28:41.980
+Now, why it's not
+picking this up?
+
+00:28:48.360 --> 00:28:50.900
+So this is the part where
+I had to show my computer.
+
+00:28:50.900 --> 00:28:57.280
+It's very difficult to show
+this shape on the board.
+
+00:28:57.280 --> 00:28:57.960
+Yeah.
+
+00:28:57.960 --> 00:29:01.480
+So let me try to
+make it a bit bigger.
+
+00:29:01.480 --> 00:29:04.040
+So say that-- ugh.
+
+00:29:04.040 --> 00:29:07.760
+Told you that is a
+little bit tricky.
+
+00:29:07.760 --> 00:29:08.620
+Oh, come on.
+
+00:29:12.680 --> 00:29:19.240
+So say that your pi equals
+3 so that the aircraft are
+
+00:29:19.240 --> 00:29:20.460
+opposite of each other.
+
+00:29:32.480 --> 00:29:43.460
+And-- so this axis is still
+the longitudinal displacement.
+
+00:29:43.460 --> 00:29:45.200
+So what is it saying?
+
+00:29:45.200 --> 00:29:50.400
+That if you are with a positive
+longitudinal displacement,
+
+00:29:50.400 --> 00:29:54.760
+namely the aircraft--
+so this is aircraft A.
+
+00:29:54.760 --> 00:29:57.280
+So aircraft B is here.
+
+00:29:57.280 --> 00:30:01.790
+In order to ensure
+collision avoidance,
+
+00:30:01.790 --> 00:30:07.150
+initially, the aircraft
+had to be more separated.
+
+00:30:07.150 --> 00:30:09.790
+Because the other aircraft
+is just pointing at you.
+
+00:30:09.790 --> 00:30:12.310
+So you need a little bit more
+maneuvering space in order
+
+00:30:12.310 --> 00:30:14.510
+to avoid the other aircraft.
+
+00:30:14.510 --> 00:30:19.733
+If instead the aircraft is
+beneath you, then no problem.
+
+00:30:19.733 --> 00:30:21.150
+The only thing
+that you care about
+
+00:30:21.150 --> 00:30:22.950
+is that you don't
+start in a situation
+
+00:30:22.950 --> 00:30:25.110
+where you are already
+within the circle,
+
+00:30:25.110 --> 00:30:27.230
+but then otherwise,
+you can just escape.
+
+00:30:27.230 --> 00:30:29.910
+So that's why you have
+this kind of protrusion
+
+00:30:29.910 --> 00:30:35.357
+in this direction to take into
+account about the geometric part
+
+00:30:35.357 --> 00:30:36.690
+and dynamic part of the problem.
+
+00:30:36.690 --> 00:30:37.630
+Does that make sense?
+
+00:30:37.630 --> 00:30:39.630
+So this is just saying
+something obvious, right,
+
+00:30:39.630 --> 00:30:45.090
+that if the two aircraft
+are on a collision course,
+
+00:30:45.090 --> 00:30:47.550
+you need to have more
+lateral separation.
+
+00:30:47.550 --> 00:30:51.830
+That's what this
+blob here is saying.
+
+00:30:51.830 --> 00:30:54.030
+It's kind of nice that
+we computed, actually,
+
+00:30:54.030 --> 00:30:55.430
+from first principle.
+
+00:30:55.430 --> 00:30:59.900
+And we know exactly for
+then each possible value
+
+00:30:59.900 --> 00:31:02.340
+of the relative
+heading by how much you
+
+00:31:02.340 --> 00:31:04.040
+want to ensure
+lateral separation,
+
+00:31:04.040 --> 00:31:06.360
+also take into account--
+longitudinal separation.
+
+00:31:06.360 --> 00:31:08.840
+Also taking into account
+about lateral separation.
+
+00:31:08.840 --> 00:31:12.820
+So now I can tell you exactly
+how much longitudinal separation
+
+00:31:12.820 --> 00:31:15.940
+you should have if you start
+from this initial condition,
+
+00:31:15.940 --> 00:31:18.100
+or if you start from
+initial condition,
+
+00:31:18.100 --> 00:31:20.500
+or if you start from
+initial condition.
+
+00:31:20.500 --> 00:31:22.780
+Of course, this one,
+from the point of view
+
+00:31:22.780 --> 00:31:26.040
+of avoiding collision
+is worse than this one.
+
+00:31:26.040 --> 00:31:27.780
+And this is actually
+reflecting this kind
+
+00:31:27.780 --> 00:31:31.280
+of non-symmetrical
+shape of this object.
+
+00:31:31.280 --> 00:31:31.980
+Yeah.
+
+00:31:31.980 --> 00:31:34.160
+Assuming the same
+constant velocity.
+
+00:31:34.160 --> 00:31:35.740
+Yes, v, yeah.
+
+00:31:35.740 --> 00:31:38.740
+Otherwise, that-- you can also
+choose two different velocities?
+
+00:31:38.740 --> 00:31:39.560
+Of course.
+
+00:31:39.560 --> 00:31:43.220
+The shape of the
+thing will change.
+
+00:31:43.220 --> 00:31:45.220
+Just to reiterate
+on the concept.
+
+00:31:45.220 --> 00:31:52.380
+So here, I'm showing how the
+projection of the backward
+
+00:31:52.380 --> 00:31:57.100
+reachable set changes depending
+on how long the time horizon is.
+
+00:31:57.100 --> 00:32:02.610
+For now, let's just look
+at the black curve here.
+
+00:32:02.610 --> 00:32:04.210
+Blue means negative.
+
+00:32:04.210 --> 00:32:06.098
+I mean, darker blue
+means negative.
+
+00:32:06.098 --> 00:32:07.390
+Everything else means positive.
+
+00:32:07.390 --> 00:32:10.170
+So here is the scale.
+
+00:32:10.170 --> 00:32:13.370
+So this is essentially the
+projection of that weird thing
+
+00:32:13.370 --> 00:32:16.690
+that was three-dimensional
+on a 2D space,
+
+00:32:16.690 --> 00:32:20.410
+where we fix the
+relative heading at 3.7.
+
+00:32:20.410 --> 00:32:22.290
+So it'd be higher than pi.
+
+00:32:22.290 --> 00:32:25.050
+x, still notion of
+longitudinal distance. y,
+
+00:32:25.050 --> 00:32:27.570
+notion of lateral distance.
+
+00:32:27.570 --> 00:32:31.890
+So we're fixing the relative
+heading at a little bit more
+
+00:32:31.890 --> 00:32:32.550
+than pi.
+
+00:32:32.550 --> 00:32:36.210
+So it's basically
+something like that.
+
+00:32:36.210 --> 00:32:38.570
+So the vehicle is
+pointing-- the vehicle
+
+00:32:38.570 --> 00:32:40.810
+B is pointing in this
+direction, and then you
+
+00:32:40.810 --> 00:32:43.570
+want to understand where
+it should be placed
+
+00:32:43.570 --> 00:32:46.450
+at the beginning to
+make sure that we do not
+
+00:32:46.450 --> 00:32:48.490
+incur a collision.
+
+00:32:48.490 --> 00:32:52.510
+So fix the longitudinal
+separation equal to 5.
+
+00:32:56.040 --> 00:33:03.120
+So if-- and my point is, why,
+basically, the reachable set
+
+00:33:03.120 --> 00:33:06.520
+has the shape that
+is a bit tilted?
+
+00:33:06.520 --> 00:33:11.400
+Well, if you fix the
+longitudinal separation at 5,
+
+00:33:11.400 --> 00:33:20.320
+then do you want to add more
+lateral buffer if the vehicle--
+
+00:33:20.320 --> 00:33:25.160
+so we're fixing the
+longitudinal separation, right?
+
+00:33:25.160 --> 00:33:28.560
+So the question is, do you
+want to add more lateral safety
+
+00:33:28.560 --> 00:33:33.240
+buffer if the vehicle starts
+with a negative lateral distance
+
+00:33:33.240 --> 00:33:35.680
+or with a positive
+lateral distance?
+
+00:33:35.680 --> 00:33:38.800
+In other words, do you think
+that this situation is safer?
+
+00:33:38.800 --> 00:33:40.220
+Or this situation is safer?
+
+00:33:43.760 --> 00:33:47.120
+Who votes for option 1?
+
+00:33:47.120 --> 00:33:49.120
+Who votes for option 2?
+
+00:33:49.120 --> 00:33:50.320
+Great.
+
+00:33:50.320 --> 00:33:52.440
+Happy to fly with all of you.
+
+00:33:52.440 --> 00:33:55.855
+So yeah, of course, because this
+guy, in order to really collide
+
+00:33:55.855 --> 00:33:58.230
+with us, will need to do a
+much more complicated maneuver
+
+00:33:58.230 --> 00:34:01.550
+and we have much
+more space to evade.
+
+00:34:01.550 --> 00:34:04.570
+So that's why now the
+reachable set is tilted.
+
+00:34:04.570 --> 00:34:07.950
+It's simply saying
+that if you are
+
+00:34:07.950 --> 00:34:11.330
+in-- you start with a
+negative lateral distance,
+
+00:34:11.330 --> 00:34:13.230
+you need less buffer.
+
+00:34:13.230 --> 00:34:15.449
+With a positive distance,
+you need more buffer.
+
+00:34:15.449 --> 00:34:20.630
+You need up to 5, say, meters.
+
+00:34:20.630 --> 00:34:24.350
+What it's saying-- why is this
+thing evolving through time?
+
+00:34:24.350 --> 00:34:26.570
+The shape of the
+reachable set, of course,
+
+00:34:26.570 --> 00:34:29.290
+depends on the initial time.
+
+00:34:29.290 --> 00:34:31.909
+So if you are computing
+the backward reachable set
+
+00:34:31.909 --> 00:34:35.870
+from the perspective of
+time equal minus 2.5,
+
+00:34:35.870 --> 00:34:39.150
+minus 3, minus 3.5, remember
+that the final time is always
+
+00:34:39.150 --> 00:34:41.630
+0 for these computations.
+
+00:34:41.630 --> 00:34:47.150
+So it turns out that after
+3.5 units of time, actually,
+
+00:34:47.150 --> 00:34:49.810
+the backward reachable
+set goes to a constant.
+
+00:34:49.810 --> 00:34:53.489
+So after minus 4,
+minus 5, minus 6,
+
+00:34:53.489 --> 00:34:56.190
+you always get the same
+backward reachable set.
+
+00:34:56.190 --> 00:34:57.170
+Why is that the case?
+
+00:34:57.170 --> 00:34:59.530
+Is that in most
+of these problems,
+
+00:34:59.530 --> 00:35:02.690
+where things are stationary,
+after a transient,
+
+00:35:02.690 --> 00:35:07.110
+then the problem setups into a
+stationary situation, whereby
+
+00:35:07.110 --> 00:35:12.530
+either the player 2 is just
+chasing us or we have collided.
+
+00:35:12.530 --> 00:35:17.230
+So it doesn't change that we
+have more time at our disposal.
+
+00:35:17.230 --> 00:35:20.870
+Let me show you
+some example of--
+
+00:35:20.870 --> 00:35:23.710
+so you do this computation, you
+compute the control profiles,
+
+00:35:23.710 --> 00:35:25.870
+and then you start injecting
+some possible initial
+
+00:35:25.870 --> 00:35:26.950
+conditions.
+
+00:35:26.950 --> 00:35:28.770
+And here I picked three for fun.
+
+00:35:28.770 --> 00:35:30.770
+So blue is player 1.
+
+00:35:30.770 --> 00:35:32.510
+Red is player 2.
+
+00:35:32.510 --> 00:35:37.190
+So we want to make sure
+the player 2 doesn't
+
+00:35:37.190 --> 00:35:39.710
+enter our personal space.
+
+00:35:39.710 --> 00:35:42.750
+So here is a situation
+where we started
+
+00:35:42.750 --> 00:35:47.830
+in terms of relative coordinates
+outside of the backward
+
+00:35:47.830 --> 00:35:49.030
+reachable set.
+
+00:35:49.030 --> 00:35:53.980
+So no matter how hard player
+2 is trying to play the game
+
+00:35:53.980 --> 00:35:56.380
+to catch with us, it can't.
+
+00:35:56.380 --> 00:35:58.020
+Velocity here is the same.
+
+00:35:58.020 --> 00:35:59.660
+You see that after
+a while, then you're
+
+00:35:59.660 --> 00:36:00.960
+just going to steady state.
+
+00:36:00.960 --> 00:36:04.020
+Additional time doesn't
+really buy you anything.
+
+00:36:04.020 --> 00:36:09.940
+So this is a situation where
+we started with player 2
+
+00:36:09.940 --> 00:36:12.120
+essentially inside
+the personal space,
+
+00:36:12.120 --> 00:36:13.780
+and then it just
+locks in, and then it
+
+00:36:13.780 --> 00:36:17.660
+stays in our personal
+space throughout.
+
+00:36:17.660 --> 00:36:20.300
+Here is an interesting
+case that I found,
+
+00:36:20.300 --> 00:36:29.100
+whereby the player 2,
+for a little while,
+
+00:36:29.100 --> 00:36:32.060
+transitioned in our
+backward reachable set.
+
+00:36:32.060 --> 00:36:35.700
+Sorry, in our protected space.
+
+00:36:35.700 --> 00:36:37.700
+But then we're able
+to maneuver out,
+
+00:36:37.700 --> 00:36:41.380
+and then the other player
+is unable to catch with us.
+
+00:36:41.380 --> 00:36:45.780
+So for the way we frame this
+problem, we have succeeded.
+
+00:36:45.780 --> 00:36:49.090
+In reality, we should
+care about the fact
+
+00:36:49.090 --> 00:36:51.850
+that for some small
+portion of time, actually,
+
+00:36:51.850 --> 00:36:54.950
+player 2 enter our
+personal space.
+
+00:36:54.950 --> 00:36:56.330
+So this is undesirable.
+
+00:36:56.330 --> 00:36:58.530
+So this is motivation
+for actually switching
+
+00:36:58.530 --> 00:37:00.850
+to a backward reachable
+tube formulation, which
+
+00:37:00.850 --> 00:37:02.070
+is not what we're doing here.
+
+00:37:02.070 --> 00:37:03.690
+So that's why for
+this computation,
+
+00:37:03.690 --> 00:37:05.195
+actually, this is
+a success story,
+
+00:37:05.195 --> 00:37:06.570
+but in reality,
+probably we would
+
+00:37:06.570 --> 00:37:08.670
+like to use a backward
+reachable tube formulation.
+
+00:37:08.670 --> 00:37:12.210
+In which case, this would
+be a negative story.
+
+00:37:12.210 --> 00:37:15.930
+So what I'm doing here is just
+to initialize the two vehicles
+
+00:37:15.930 --> 00:37:18.890
+inside or outside the
+backward reachable set,
+
+00:37:18.890 --> 00:37:21.090
+playing the game
+optimally, as derived
+
+00:37:21.090 --> 00:37:24.290
+through the solution of the
+Hamilton-Jacobi-Isaacs equation,
+
+00:37:24.290 --> 00:37:28.170
+and then displaying
+the trajectories.
+
+00:37:28.170 --> 00:37:30.050
+Isn't this cool?
+
+00:37:30.050 --> 00:37:32.970
+I think it's nice.
+
+00:37:32.970 --> 00:37:34.770
+And people use this
+stuff for real.
+
+00:37:34.770 --> 00:37:40.090
+So for example, in the--
+
+00:37:40.090 --> 00:37:43.810
+in several production-grade
+autopilots for cars,
+
+00:37:43.810 --> 00:37:47.560
+you have something reminiscent
+of a backwards reachable set
+
+00:37:47.560 --> 00:37:52.240
+to ensure that at the lowest
+level of safety, no matter what
+
+00:37:52.240 --> 00:37:55.400
+another driver might
+do close to you,
+
+00:37:55.400 --> 00:37:58.740
+you still have a safety buffer
+so that you can maneuver it out.
+
+00:37:58.740 --> 00:37:59.620
+Yeah.
+
+00:37:59.620 --> 00:38:02.500
+Is it guaranteed to
+converge for some?
+
+00:38:02.500 --> 00:38:03.840
+The backward reachable tube?
+
+00:38:03.840 --> 00:38:05.200
+So first of all, here
+we're not computing
+
+00:38:05.200 --> 00:38:06.200
+backward reachable tube.
+
+00:38:06.200 --> 00:38:06.720
+Oh.
+
+00:38:06.720 --> 00:38:08.440
+We are computing
+backward reachable sets.
+
+00:38:08.440 --> 00:38:11.240
+In general, for a
+time-varying formulation,
+
+00:38:11.240 --> 00:38:13.060
+it converges to a
+steady-state solution.
+
+00:38:18.240 --> 00:38:19.540
+I think it's pretty neat.
+
+00:38:19.540 --> 00:38:21.720
+I know that mathematically,
+probably this was
+
+00:38:21.720 --> 00:38:25.200
+the most sophisticated lecture.
+
+00:38:25.200 --> 00:38:29.280
+I tried to give you as
+much intuition as I could.
+
+00:38:29.280 --> 00:38:33.460
+The treatment of differential
+games, mathematically speaking,
+
+00:38:33.460 --> 00:38:36.120
+is quite involved.
+
+00:38:36.120 --> 00:38:38.880
+But I do hope that at least
+you have an understanding
+
+00:38:38.880 --> 00:38:43.040
+of the main ideas about what
+is possible with this formalism
+
+00:38:43.040 --> 00:38:47.150
+and also what are the underlying
+algorithmic packages that
+
+00:38:47.150 --> 00:38:49.270
+allow you to--
+
+00:38:49.270 --> 00:38:52.510
+algorithm concepts and
+packages that allow
+
+00:38:52.510 --> 00:38:54.410
+you to solve these problems.
+
+00:38:58.590 --> 00:39:01.550
+And speaking about
+algorithmic packages,
+
+00:39:01.550 --> 00:39:03.830
+how do you solve this stuff?
+
+00:39:03.830 --> 00:39:07.910
+Well, solving a partial
+differential equation is hard.
+
+00:39:07.910 --> 00:39:11.030
+Actually, the
+example that I gave
+
+00:39:11.030 --> 00:39:12.898
+you is based on a
+package we developed
+
+00:39:12.898 --> 00:39:15.190
+in my lab, which is one of
+the fastest packages written
+
+00:39:15.190 --> 00:39:17.230
+in Python to solve
+Hamilton-Jacobi reachability
+
+00:39:17.230 --> 00:39:18.150
+equations.
+
+00:39:18.150 --> 00:39:20.070
+So you could use that.
+
+00:39:20.070 --> 00:39:23.910
+That said, typically, you
+can solve these problems
+
+00:39:23.910 --> 00:39:28.310
+for maybe five-dimensional state
+space, six-dimensional state
+
+00:39:28.310 --> 00:39:31.590
+space, and then things
+break down because
+
+00:39:31.590 --> 00:39:33.890
+of the curse of dimensionality.
+
+00:39:33.890 --> 00:39:40.730
+So the solvers don't scale
+beyond that dimensionality.
+
+00:39:40.730 --> 00:39:43.230
+That said, it doesn't mean that
+you can't solve reachability
+
+00:39:43.230 --> 00:39:45.570
+a problem with more than
+five or six dimensions.
+
+00:39:45.570 --> 00:39:48.110
+You just have to resort
+to approximations.
+
+00:39:48.110 --> 00:39:51.630
+And this is still a fairly
+active field of research.
+
+00:39:51.630 --> 00:39:54.670
+There are many different
+ways of breaking
+
+00:39:54.670 --> 00:39:58.030
+this scalability barrier
+by using approximations
+
+00:39:58.030 --> 00:40:01.590
+through neural networks,
+sampling-based methods,
+
+00:40:01.590 --> 00:40:04.270
+giving up some guarantees of
+accuracy, and so on and so
+
+00:40:04.270 --> 00:40:05.430
+forth.
+
+00:40:05.430 --> 00:40:07.330
+So I won't go into
+the details here,
+
+00:40:07.330 --> 00:40:09.910
+but at least you have
+an exact implementation
+
+00:40:09.910 --> 00:40:12.150
+of the Hamilton-Jacobi
+reachability computations
+
+00:40:12.150 --> 00:40:15.150
+through the HJ package
+that I showed you before.
+
+00:40:15.150 --> 00:40:17.830
+And then just for
+you to know, there
+
+00:40:17.830 --> 00:40:20.378
+are a number of techniques
+that are approximate in nature
+
+00:40:20.378 --> 00:40:22.670
+that allow you to solve this
+problem beyond five or six
+
+00:40:22.670 --> 00:40:25.590
+dimensions.
+
+00:40:25.590 --> 00:40:28.910
+All right, let's move to MPC.
+
+00:40:28.910 --> 00:40:30.330
+Any questions in the meantime?
+
+00:40:36.390 --> 00:40:38.110
+Comparatively
+speaking, MPC is going
+
+00:40:38.110 --> 00:40:41.460
+to be a walk in the park
+in terms of complexity.
+
+00:40:41.460 --> 00:40:44.900
+MPC is actually very--
+
+00:40:44.900 --> 00:40:46.820
+it's very intuitive in general.
+
+00:40:46.820 --> 00:40:49.560
+It just feels right, I
+think, as a control strategy,
+
+00:40:49.560 --> 00:40:51.740
+as you'll see.
+
+00:40:51.740 --> 00:40:53.200
+Going back to roadmap.
+
+00:40:53.200 --> 00:40:56.200
+So we spent quite a bit of time
+on open-loop optimal control.
+
+00:40:56.200 --> 00:41:00.220
+We spent quite a bit of time
+on closed-loop optimal control.
+
+00:41:00.220 --> 00:41:03.380
+This is fast, but less powerful
+because we reason in terms
+
+00:41:03.380 --> 00:41:05.620
+of open-loop control sequences.
+
+00:41:05.620 --> 00:41:09.860
+This is powerful, we reason in
+terms of closed-loop policies,
+
+00:41:09.860 --> 00:41:13.260
+but computationally complex both
+in discrete-time formulations
+
+00:41:13.260 --> 00:41:15.558
+through the discrete-time
+Bellman equation
+
+00:41:15.558 --> 00:41:17.100
+or in the continuous
+time formulation
+
+00:41:17.100 --> 00:41:21.020
+through Hamilton-Jacobi-Bellman
+and Hamilton-Jacobi-Isaacs.
+
+00:41:21.020 --> 00:41:23.420
+Can we get the best
+of both worlds?
+
+00:41:23.420 --> 00:41:26.700
+Basically, the speed
+of an open-loop
+
+00:41:26.700 --> 00:41:32.140
+control method with the power
+of a closed-loop control
+
+00:41:32.140 --> 00:41:33.500
+methodology.
+
+00:41:33.500 --> 00:41:35.860
+The answer is, yes,
+to a large extent,
+
+00:41:35.860 --> 00:41:39.610
+through the lens of MPC,
+Model Predictive Control.
+
+00:41:39.610 --> 00:41:45.410
+MPC is really a framework
+more than a specific control
+
+00:41:45.410 --> 00:41:46.570
+strategy.
+
+00:41:46.570 --> 00:41:50.250
+That said, I would say
+that after PID controllers,
+
+00:41:50.250 --> 00:41:52.290
+it's probably the most
+widely-used control
+
+00:41:52.290 --> 00:41:54.410
+methodology out there.
+
+00:41:54.410 --> 00:41:59.650
+Originally developed in the '70s
+and '80s more as a heuristic,
+
+00:41:59.650 --> 00:42:02.770
+primarily in the chemical
+engineering domain.
+
+00:42:02.770 --> 00:42:04.810
+You may wonder why
+chemical engineering.
+
+00:42:04.810 --> 00:42:08.010
+Because, two reasons.
+
+00:42:08.010 --> 00:42:09.690
+First, there was a need.
+
+00:42:09.690 --> 00:42:11.772
+You want to reason
+about constraints.
+
+00:42:11.772 --> 00:42:13.230
+Typically, in
+chemical engineering,
+
+00:42:13.230 --> 00:42:16.290
+you don't want the
+temperature of the products
+
+00:42:16.290 --> 00:42:18.890
+that you're mixing
+to go out of whack.
+
+00:42:18.890 --> 00:42:21.310
+So you really care
+about constraints.
+
+00:42:21.310 --> 00:42:23.970
+Otherwise, the entire
+thing blows up.
+
+00:42:23.970 --> 00:42:25.530
+And constraints
+are difficult to be
+
+00:42:25.530 --> 00:42:30.450
+dealt with directly through
+frequency-based controls.
+
+00:42:30.450 --> 00:42:32.970
+But at the same time,
+chemical processes typically
+
+00:42:32.970 --> 00:42:35.720
+evolve on a slower timescale.
+
+00:42:35.720 --> 00:42:37.440
+Multiple seconds.
+
+00:42:37.440 --> 00:42:41.800
+So even though MPC relies
+on, oftentimes, online
+
+00:42:41.800 --> 00:42:43.280
+optimization--
+
+00:42:43.280 --> 00:42:46.400
+and at the time, the computers
+were not particularly fast.
+
+00:42:46.400 --> 00:42:48.720
+People could still solve
+those optimization problems
+
+00:42:48.720 --> 00:42:51.520
+at the level of a few seconds.
+
+00:42:51.520 --> 00:42:53.060
+So it was just a sweet spot.
+
+00:42:53.060 --> 00:42:53.940
+There was a need.
+
+00:42:53.940 --> 00:42:56.200
+And actually, the
+problem itself was
+
+00:42:56.200 --> 00:42:59.760
+well-attuned to solve
+optimization problems at maybe
+
+00:42:59.760 --> 00:43:03.760
+0.5 hertz or 0.1 hertz.
+
+00:43:03.760 --> 00:43:05.480
+So what we're going
+to do today is
+
+00:43:05.480 --> 00:43:09.280
+to introduce the
+basic ideas behind MPC
+
+00:43:09.280 --> 00:43:11.480
+and start developing
+a bit of theory
+
+00:43:11.480 --> 00:43:15.680
+about how to apply MPC
+in a principled way.
+
+00:43:15.680 --> 00:43:19.280
+Good readings about
+MPC are the textbooks
+
+00:43:19.280 --> 00:43:21.600
+from Borrelli,
+Bemporad, and Morari
+
+00:43:21.600 --> 00:43:25.760
+and the textbook from
+Rawlings, and Mayne, and Diehl.
+
+00:43:25.760 --> 00:43:29.760
+These scientists,
+in general, have
+
+00:43:29.760 --> 00:43:32.440
+been quite influential
+in setting up
+
+00:43:32.440 --> 00:43:35.870
+the algorithmic
+foundations of MPC.
+
+00:43:35.870 --> 00:43:39.350
+Until the early '90s, MPC
+was used mostly in heuristic.
+
+00:43:39.350 --> 00:43:44.430
+And then people in the '90s and
+2000 started developing a theory
+
+00:43:44.430 --> 00:43:51.270
+about MPC that allow researchers
+and developers to deploy MPC
+
+00:43:51.270 --> 00:43:55.630
+with mathematical assurances
+about the correctness
+
+00:43:55.630 --> 00:43:57.310
+of the design.
+
+00:43:57.310 --> 00:44:00.830
+Most recently, as you
+know, there have been a lot
+
+00:44:00.830 --> 00:44:04.630
+of advantages in terms of--
+advances in terms of online
+
+00:44:04.630 --> 00:44:05.990
+solvers--
+
+00:44:05.990 --> 00:44:09.270
+so this has been the main
+trend, to really push MPC
+
+00:44:09.270 --> 00:44:13.390
+into the control loop
+with increasingly more
+
+00:44:13.390 --> 00:44:15.990
+stringent requirements
+in terms of replanning
+
+00:44:15.990 --> 00:44:19.410
+rates, 10 hertz, 30
+hertz, kilohertz,
+
+00:44:19.410 --> 00:44:21.710
+and so on and so forth.
+
+00:44:21.710 --> 00:44:22.770
+So what is MPC?
+
+00:44:22.770 --> 00:44:26.190
+The idea of MPC
+is really simple.
+
+00:44:26.190 --> 00:44:28.990
+And as I said, very natural.
+
+00:44:28.990 --> 00:44:32.980
+So the underlying idea is that
+you have an infinite horizon
+
+00:44:32.980 --> 00:44:34.400
+optimal control problem.
+
+00:44:34.400 --> 00:44:36.320
+You want to solve it optimally.
+
+00:44:39.220 --> 00:44:41.340
+But that is very expensive.
+
+00:44:41.340 --> 00:44:44.900
+And so you're fine with
+solving it sub-optimally
+
+00:44:44.900 --> 00:44:48.100
+but still in closed-loop form.
+
+00:44:48.100 --> 00:44:50.300
+So what does MPC do?
+
+00:44:50.300 --> 00:44:55.420
+MPC measures and
+keeps, basically track,
+
+00:44:55.420 --> 00:45:00.260
+of previous values
+of the states.
+
+00:45:00.260 --> 00:45:03.180
+Based on that information,
+based on information
+
+00:45:03.180 --> 00:45:07.820
+about the dynamics, based on the
+controlling state constraints,
+
+00:45:07.820 --> 00:45:11.500
+it computes a control profile.
+
+00:45:11.500 --> 00:45:13.660
+Here, we assume
+that we are solving
+
+00:45:13.660 --> 00:45:15.000
+the problem in discrete time.
+
+00:45:15.000 --> 00:45:19.660
+So essentially,
+solves-- it solves
+
+00:45:19.660 --> 00:45:22.420
+an open-loop optimal
+control problem
+
+00:45:22.420 --> 00:45:27.220
+over a finite horizon between
+time, t, at time t plus Np.
+
+00:45:30.020 --> 00:45:36.100
+You find that your
+open-loop control sequence,
+
+00:45:36.100 --> 00:45:43.540
+along with a predicted sequence
+of states or outputs that stem
+
+00:45:43.540 --> 00:45:48.900
+from the application of your
+optimized control sequence
+
+00:45:48.900 --> 00:45:52.220
+to the dynamics of your system--
+
+00:45:52.220 --> 00:45:56.660
+so, so far, this is just an
+open-loop optimal control.
+
+00:45:56.660 --> 00:46:06.340
+But then what MPC does is to
+use only the first control that
+
+00:46:06.340 --> 00:46:10.020
+makes the system
+transition to the new state
+
+00:46:10.020 --> 00:46:12.500
+or output at time t plus 1.
+
+00:46:12.500 --> 00:46:15.780
+And then you completely
+discard everything else
+
+00:46:15.780 --> 00:46:18.860
+that you computed at a
+previous planning cycle,
+
+00:46:18.860 --> 00:46:21.820
+and you recompute
+everything from scratch,
+
+00:46:21.820 --> 00:46:26.980
+but now starting at a new
+state at time t plus 1.
+
+00:46:26.980 --> 00:46:32.450
+With the idea that at every
+single planning cycle,
+
+00:46:32.450 --> 00:46:36.530
+you always compute-- you always
+solve for an open-loop control
+
+00:46:36.530 --> 00:46:38.170
+problem.
+
+00:46:38.170 --> 00:46:41.250
+But since you
+replan, which means
+
+00:46:41.250 --> 00:46:45.690
+that you get to observe a
+new state, and based on that,
+
+00:46:45.690 --> 00:46:49.750
+you solve a new open-loop
+optimal control problem,
+
+00:46:49.750 --> 00:46:56.130
+you actually endow
+the entire framework
+
+00:46:56.130 --> 00:46:59.090
+with the notion of
+closed-loop because you
+
+00:46:59.090 --> 00:47:01.490
+are closing the loop on
+your most recent observation
+
+00:47:01.490 --> 00:47:03.330
+on the state.
+
+00:47:03.330 --> 00:47:06.490
+But you're always solving an
+open-loop control problem.
+
+00:47:06.490 --> 00:47:09.290
+Turns out that this is really
+a sweet spot between doing
+
+00:47:09.290 --> 00:47:12.170
+open-loop optimal
+control and actually
+
+00:47:12.170 --> 00:47:14.490
+using closed-loop information
+from the measurement
+
+00:47:14.490 --> 00:47:16.570
+of the state.
+
+00:47:16.570 --> 00:47:17.650
+It seems wasteful, right?
+
+00:47:17.650 --> 00:47:23.035
+Because you solve the problem
+over maybe a long horizon,
+
+00:47:23.035 --> 00:47:24.410
+and then everything
+that you have
+
+00:47:24.410 --> 00:47:29.960
+computed after the first time
+step goes into the trash.
+
+00:47:29.960 --> 00:47:31.680
+Not always, because
+you can always
+
+00:47:31.680 --> 00:47:36.340
+use this information to inform
+the solution at the next step.
+
+00:47:36.340 --> 00:47:39.100
+But in its simplest
+vanilla form,
+
+00:47:39.100 --> 00:47:41.200
+you put everything
+into the trash.
+
+00:47:41.200 --> 00:47:44.600
+There are some nuances,
+like, for example, you
+
+00:47:44.600 --> 00:47:49.680
+may want to compute your
+optimal control sequences up
+
+00:47:49.680 --> 00:47:54.200
+until end horizon t plus Nm
+but keep your predictions
+
+00:47:54.200 --> 00:47:55.680
+going for a little bit further.
+
+00:47:55.680 --> 00:47:58.380
+So that there are a lot of
+variations in the theme.
+
+00:47:58.380 --> 00:48:00.100
+So MPC is a framework.
+
+00:48:00.100 --> 00:48:02.120
+It's not a specific
+control algorithm.
+
+00:48:02.120 --> 00:48:05.800
+But the main idea is
+that you do receding
+
+00:48:05.800 --> 00:48:08.800
+horizon optimization,
+always moving,
+
+00:48:08.800 --> 00:48:13.020
+which again, is very natural,
+is also what we do as humans.
+
+00:48:13.020 --> 00:48:17.520
+We optimize our control
+profile, then we
+
+00:48:17.520 --> 00:48:20.320
+walk around a little bit, of
+course, we gather information,
+
+00:48:20.320 --> 00:48:22.280
+and we revise our plan.
+
+00:48:22.280 --> 00:48:25.310
+So the idea shouldn't
+be too surprising.
+
+00:48:25.310 --> 00:48:27.950
+Does it make sense?
+
+00:48:27.950 --> 00:48:30.830
+There is a little bit of
+notation here, t plus 1
+
+00:48:30.830 --> 00:48:33.270
+plus k given t plus 1.
+
+00:48:33.270 --> 00:48:36.630
+I will explain this
+terminology in a second.
+
+00:48:36.630 --> 00:48:37.910
+So key ideas.
+
+00:48:37.910 --> 00:48:40.350
+At each sampling
+time t, we solve
+
+00:48:40.350 --> 00:48:43.830
+an open-loop optimal control
+problem over a finite horizon.
+
+00:48:43.830 --> 00:48:47.350
+How long the horizon should
+be, we will discuss it later.
+
+00:48:47.350 --> 00:48:49.630
+We apply the
+optimal input signal
+
+00:48:49.630 --> 00:48:54.150
+during the sampling
+interval t, t plus 1.
+
+00:48:54.150 --> 00:48:57.710
+We throw into the
+trash everything else.
+
+00:48:57.710 --> 00:49:00.830
+Then the system, under the
+application of this input,
+
+00:49:00.830 --> 00:49:04.110
+evolves into the new
+state at time t plus 1.
+
+00:49:04.110 --> 00:49:06.350
+And now, at time
+step t plus 1, we
+
+00:49:06.350 --> 00:49:08.550
+solve a new optimal
+control problem
+
+00:49:08.550 --> 00:49:12.090
+based on new measurements of
+the state of a shifted horizon.
+
+00:49:12.090 --> 00:49:15.330
+So now the horizon goes
+one step into the future.
+
+00:49:19.790 --> 00:49:24.260
+So let me give you a little
+bit more concrete formulation,
+
+00:49:24.260 --> 00:49:29.460
+particularly in the
+setting of linear dynamics.
+
+00:49:29.460 --> 00:49:32.980
+So we consider the problem
+again of regulating
+
+00:49:32.980 --> 00:49:37.780
+to the origin, the discrete-time
+linear time-invariant system,
+
+00:49:37.780 --> 00:49:41.020
+x t plus 1 equals Ax plus Bu.
+
+00:49:41.020 --> 00:49:42.580
+So very similar
+to what you would
+
+00:49:42.580 --> 00:49:46.020
+do with the classical
+frequency domain control.
+
+00:49:46.020 --> 00:49:47.365
+But we also have constraints.
+
+00:49:47.365 --> 00:49:48.740
+So this is not
+something that you
+
+00:49:48.740 --> 00:49:50.657
+can do with classical
+frequency-based control.
+
+00:49:50.657 --> 00:49:55.660
+So we assume that the state
+x belongs to some capital set
+
+00:49:55.660 --> 00:49:58.940
+X. So the set of safe states.
+
+00:49:58.940 --> 00:50:02.245
+And u belongs to
+some capital set U.
+
+00:50:02.245 --> 00:50:03.620
+And here, we're
+assuming that the
+
+00:50:03.620 --> 00:50:06.940
+sets X and U are
+polyhedra, that is,
+
+00:50:06.940 --> 00:50:11.140
+the sets that can be defined
+by finitely many linear
+
+00:50:11.140 --> 00:50:12.540
+inequalities.
+
+00:50:12.540 --> 00:50:16.860
+So basically, half planes that
+defines your feasible state
+
+00:50:16.860 --> 00:50:19.604
+space.
+
+00:50:19.604 --> 00:50:20.580
+A cube, for example.
+
+00:50:20.580 --> 00:50:23.380
+You're are confined
+within the cube.
+
+00:50:23.380 --> 00:50:28.020
+So what is the basic
+formulation of MPC then?
+
+00:50:28.020 --> 00:50:35.580
+Assume that we can measure
+fully the state x of t.
+
+00:50:35.580 --> 00:50:38.660
+Then at each
+replanning time at t,
+
+00:50:38.660 --> 00:50:41.580
+we solve an optimal
+control problem
+
+00:50:41.580 --> 00:50:45.900
+in open-loop in terms of
+the variables ut, ut plus 1,
+
+00:50:45.900 --> 00:50:50.187
+all the way to ut plus N minus
+1, to minimize an additive cost.
+
+00:50:50.187 --> 00:50:52.520
+But now, you should be very
+familiar with the structure.
+
+00:50:52.520 --> 00:50:56.260
+So you have a terminal cost
+plus the summation of a running
+
+00:50:56.260 --> 00:51:00.320
+cost, subject to the
+dynamics state constraints
+
+00:51:00.320 --> 00:51:02.220
+control constraints.
+
+00:51:02.220 --> 00:51:04.100
+The initial condition
+has to be xt,
+
+00:51:04.100 --> 00:51:06.180
+the state you are in right now.
+
+00:51:06.180 --> 00:51:08.100
+That's how you close the loop.
+
+00:51:08.100 --> 00:51:11.160
+And also potentially adding
+some terminal constraints.
+
+00:51:11.160 --> 00:51:14.580
+So you want to make sure
+that your predicted state
+
+00:51:14.580 --> 00:51:19.970
+after N steps belong to
+some desirable set x of f.
+
+00:51:19.970 --> 00:51:23.950
+I will discuss later why we may
+want to add this constraint.
+
+00:51:27.130 --> 00:51:30.150
+So you solve for this
+optimal control sequence.
+
+00:51:30.150 --> 00:51:31.590
+You use the first term.
+
+00:51:31.590 --> 00:51:33.305
+You move into state xt plus 1.
+
+00:51:33.305 --> 00:51:33.930
+You measure it.
+
+00:51:33.930 --> 00:51:37.050
+And then you replan.
+
+00:51:37.050 --> 00:51:40.410
+Where is all this complicated
+formulation here coming from?
+
+00:51:40.410 --> 00:51:42.430
+This vertical bar t and so on?
+
+00:51:42.430 --> 00:51:45.130
+What does that mean?
+
+00:51:45.130 --> 00:51:46.510
+So that means the following.
+
+00:51:46.510 --> 00:51:52.890
+So xt plus k given t
+use this terminology.
+
+00:51:52.890 --> 00:51:57.050
+It's the state vector at
+time t plus k predicted
+
+00:51:57.050 --> 00:51:59.930
+at time t, the system dynamics.
+
+00:51:59.930 --> 00:52:03.370
+ut plus k given t is
+the input u at time t
+
+00:52:03.370 --> 00:52:05.690
+plus k computed at time t.
+
+00:52:05.690 --> 00:52:08.930
+Note that the state
+predicted a step
+
+00:52:08.930 --> 00:52:13.410
+3 from the perspective of
+time 1 is not necessarily
+
+00:52:13.410 --> 00:52:17.840
+the same state 3 predicted
+from the perspective of time 2
+
+00:52:17.840 --> 00:52:21.080
+simply because maybe
+disturbance might have perturbed
+
+00:52:21.080 --> 00:52:22.460
+our nominal trajectory.
+
+00:52:27.000 --> 00:52:28.020
+Any questions here?
+
+00:52:31.960 --> 00:52:35.800
+So here, what I want to
+highlight is these two guys.
+
+00:52:35.800 --> 00:52:42.400
+So these two guys
+are additional terms
+
+00:52:42.400 --> 00:52:50.160
+that we inject in our MPC
+formulation to regularize it.
+
+00:52:50.160 --> 00:52:55.860
+Our optimal control formulation
+basically has the running cost.
+
+00:52:55.860 --> 00:52:57.920
+It has the control constraints.
+
+00:52:57.920 --> 00:53:01.080
+Where are these determinant
+constraints coming from?
+
+00:53:01.080 --> 00:53:07.320
+And what is this
+auxiliary cost that
+
+00:53:07.320 --> 00:53:12.720
+is placed on the predictive
+variable at time N coming from?
+
+00:53:12.720 --> 00:53:16.590
+So those two terms are actually
+the two design choices or tuning
+
+00:53:16.590 --> 00:53:18.790
+knobs that, as
+MPC designers, you
+
+00:53:18.790 --> 00:53:26.030
+can tune in order to optimize
+the performance of an MPC
+
+00:53:26.030 --> 00:53:27.550
+control framework.
+
+00:53:27.550 --> 00:53:30.930
+So what we will see for
+the rest of this lecture
+
+00:53:30.930 --> 00:53:32.790
+and then the
+lecture on Wednesday
+
+00:53:32.790 --> 00:53:38.630
+will be to see how do we
+tune this auxiliary terminal
+
+00:53:38.630 --> 00:53:44.590
+constraint here, this terminal
+cost here, and potentially
+
+00:53:44.590 --> 00:53:45.970
+the end.
+
+00:53:45.970 --> 00:53:48.710
+So how much lookahead
+steps you have
+
+00:53:48.710 --> 00:53:53.470
+to make sure that you
+have a good performance
+
+00:53:53.470 --> 00:53:55.390
+once you deploy MPC.
+
+00:53:55.390 --> 00:53:58.070
+And in general, you
+care about two things.
+
+00:53:58.070 --> 00:54:00.750
+First of all, you care
+about the so-called notion
+
+00:54:00.750 --> 00:54:02.990
+of a persistent feasibility.
+
+00:54:02.990 --> 00:54:06.270
+So you want to make sure
+that once you transition
+
+00:54:06.270 --> 00:54:09.390
+into the new state,
+the new optimal control
+
+00:54:09.390 --> 00:54:13.260
+problem that you're trying
+to solve is still feasible.
+
+00:54:13.260 --> 00:54:14.280
+Otherwise, you're stuck.
+
+00:54:14.280 --> 00:54:16.500
+I mean, that's back to
+your colleague's question
+
+00:54:16.500 --> 00:54:20.480
+before, what happens when the
+reachable set, for example,
+
+00:54:20.480 --> 00:54:21.180
+is empty?
+
+00:54:21.180 --> 00:54:22.580
+You don't want to end
+up in that situation
+
+00:54:22.580 --> 00:54:23.640
+because it means
+that you're stuck.
+
+00:54:23.640 --> 00:54:25.015
+You have nothing
+that you can do.
+
+00:54:25.015 --> 00:54:26.540
+Whatever you do,
+basically, you're
+
+00:54:26.540 --> 00:54:28.460
+going to violate a constraint.
+
+00:54:28.460 --> 00:54:30.340
+So how do you make sure
+that doesn't happen?
+
+00:54:30.340 --> 00:54:32.780
+So how do you play
+with your tuning knobs
+
+00:54:32.780 --> 00:54:34.380
+so that doesn't happen?
+
+00:54:34.380 --> 00:54:37.780
+And then of course, assuming
+that doesn't happen, how do you
+
+00:54:37.780 --> 00:54:40.220
+make sure that you fulfill
+your task, in this case,
+
+00:54:40.220 --> 00:54:43.480
+regulating the
+state to the origin?
+
+00:54:43.480 --> 00:54:45.360
+So you basically
+want x equal to 0.
+
+00:54:48.180 --> 00:54:53.020
+OK, so we talked
+about the terminology.
+
+00:54:53.020 --> 00:54:57.060
+Before we address the two
+questions I mentioned before,
+
+00:54:57.060 --> 00:54:59.940
+let me add a little bit more
+notation, but not too much.
+
+00:54:59.940 --> 00:55:04.820
+So as I said, what
+you do in MPC is
+
+00:55:04.820 --> 00:55:09.660
+you take the first control in
+the optimal control sequence
+
+00:55:09.660 --> 00:55:14.580
+that you have computed, which
+is a function of the state,
+
+00:55:14.580 --> 00:55:22.420
+because the first
+predicted state
+
+00:55:22.420 --> 00:55:25.880
+has to be equal to the current
+state, x of t, of course.
+
+00:55:28.980 --> 00:55:34.860
+And that's the control that
+you enact on your system.
+
+00:55:34.860 --> 00:55:38.460
+Then the optimization problem
+is repeated at time t plus 1,
+
+00:55:38.460 --> 00:55:41.420
+but with a new state constraint
+that the state predicted
+
+00:55:41.420 --> 00:55:44.260
+at time t plus 1 from
+the perspective of t
+
+00:55:44.260 --> 00:55:47.760
+plus 1 has to be the state at
+time t plus 1, as measured.
+
+00:55:51.300 --> 00:55:54.940
+So now, we can define
+a closed-loop policy
+
+00:55:54.940 --> 00:55:59.820
+as the first control
+input that is determined
+
+00:55:59.820 --> 00:56:01.940
+when we solve the optimal
+control problem starting
+
+00:56:01.940 --> 00:56:03.580
+from the state x of t.
+
+00:56:03.580 --> 00:56:06.340
+You see how, actually, this
+is how we are closing the loop
+
+00:56:06.340 --> 00:56:10.530
+and bridging the gap between
+closed-loop control--
+
+00:56:10.530 --> 00:56:11.690
+Sorry.
+
+00:56:11.690 --> 00:56:14.170
+--and the open-loop
+optimal control.
+
+00:56:14.170 --> 00:56:15.530
+Is this point clear?
+
+00:56:15.530 --> 00:56:20.010
+That's really the crux of MPC.
+
+00:56:20.010 --> 00:56:22.210
+So then the closed-loop
+evolves as xt plus 1
+
+00:56:22.210 --> 00:56:24.890
+equals Ax plus B
+pi, which we can
+
+00:56:24.890 --> 00:56:27.970
+abstractly written as a
+closed-loop function of x
+
+00:56:27.970 --> 00:56:28.790
+and the time.
+
+00:56:31.930 --> 00:56:34.050
+So how do we characterize
+the closed-loop behavior
+
+00:56:34.050 --> 00:56:37.490
+of the system?
+
+00:56:37.490 --> 00:56:40.750
+One more thing notationally,
+and I know this is a bit boring,
+
+00:56:40.750 --> 00:56:45.130
+but it will be needed
+later, is that in the case
+
+00:56:45.130 --> 00:56:47.850
+that the problem
+is time-invariant,
+
+00:56:47.850 --> 00:56:51.990
+that is, A does not explicitly
+depend on the current time,
+
+00:56:51.990 --> 00:56:55.570
+so there is no
+subscript k, B does not
+
+00:56:55.570 --> 00:56:58.010
+depend on the current
+time, C does not
+
+00:56:58.010 --> 00:57:00.730
+depend on the current time.
+
+00:57:00.730 --> 00:57:02.850
+So this problem,
+the only thing that
+
+00:57:02.850 --> 00:57:06.770
+changes across planning horizon
+is the initial condition
+
+00:57:06.770 --> 00:57:08.120
+for the state.
+
+00:57:08.120 --> 00:57:13.360
+So we can write it in
+a simpler form, where
+
+00:57:13.360 --> 00:57:17.360
+we drop all the
+things of predicting
+
+00:57:17.360 --> 00:57:20.080
+from perspective of time
+t and so on and so forth.
+
+00:57:20.080 --> 00:57:23.240
+We can just drop
+all that terminology
+
+00:57:23.240 --> 00:57:26.020
+and use this
+simpler formulation.
+
+00:57:26.020 --> 00:57:29.080
+But we're understanding that
+we solve this problem starting
+
+00:57:29.080 --> 00:57:30.280
+at state x of t.
+
+00:57:30.280 --> 00:57:32.440
+We use the first control u0.
+
+00:57:32.440 --> 00:57:34.528
+We transition into a
+new state xt plus 1.
+
+00:57:34.528 --> 00:57:36.320
+And then we solve the
+same problem, but now
+
+00:57:36.320 --> 00:57:39.240
+with x0 equal xt plus 1.
+
+00:57:39.240 --> 00:57:40.740
+Yeah.
+
+00:57:40.740 --> 00:57:42.600
+[INAUDIBLE]
+
+00:57:42.600 --> 00:57:43.340
+Oh, I'm sorry.
+
+00:57:43.340 --> 00:57:46.440
+So does this formulation
+require that our time
+
+00:57:46.440 --> 00:57:51.480
+horizon is long enough for
+the final state at time N or--
+
+00:57:51.480 --> 00:57:53.600
+Yeah, yeah, otherwise,
+you will not get there.
+
+00:57:53.600 --> 00:57:54.100
+Yes.
+
+00:57:54.100 --> 00:57:55.360
+Yeah, yeah.
+
+00:57:55.360 --> 00:58:00.920
+I mean, in general,
+the best way to see
+
+00:58:00.920 --> 00:58:05.470
+MPC is that the underlying
+problem you're trying to solve
+
+00:58:05.470 --> 00:58:09.010
+is an infinite horizon,
+which, as we discussed before,
+
+00:58:09.010 --> 00:58:12.570
+is a bit of an abstraction,
+of course, was a good framing.
+
+00:58:15.860 --> 00:58:19.370
+Make it so if your
+horizon is shorter,
+
+00:58:19.370 --> 00:58:22.250
+you might have more
+aggressive control?
+
+00:58:22.250 --> 00:58:22.970
+Yeah, it will be.
+
+00:58:22.970 --> 00:58:23.470
+OK.
+
+00:58:23.470 --> 00:58:26.150
+So actually, if
+it's too short, you
+
+00:58:26.150 --> 00:58:29.190
+may not actually converge
+and regulate your state.
+
+00:58:29.190 --> 00:58:34.910
+So that's why the time
+horizon, the terminal cost, p,
+
+00:58:34.910 --> 00:58:37.750
+and the terminal
+constraint, x of f,
+
+00:58:37.750 --> 00:58:43.510
+are crucial to tune to make
+sure that you properly balance
+
+00:58:43.510 --> 00:58:46.830
+lookahead capabilities
+or how long in the future
+
+00:58:46.830 --> 00:58:51.090
+you optimize over, which is, in
+general, the longer the better.
+
+00:58:51.090 --> 00:58:53.030
+You make your
+decision on your form,
+
+00:58:53.030 --> 00:58:56.030
+but you pay more
+computational cost.
+
+00:58:56.030 --> 00:58:59.270
+And how short your time
+horizon is, in which case
+
+00:58:59.270 --> 00:59:02.430
+you might be too greedy or
+even myopic, in which case,
+
+00:59:02.430 --> 00:59:04.100
+you may not fulfill your task.
+
+00:59:04.100 --> 00:59:06.740
+So it's going to be a
+delicate balance between how
+
+00:59:06.740 --> 00:59:10.420
+much computation time you want
+to invest versus whether you
+
+00:59:10.420 --> 00:59:11.920
+can actually achieve your task.
+
+00:59:18.380 --> 00:59:19.980
+OK, so let's simplify
+the notation.
+
+00:59:19.980 --> 00:59:23.900
+Then your optimal control
+is the first control input
+
+00:59:23.900 --> 00:59:26.880
+that you compute in the previous
+optimal control formulation,
+
+00:59:26.880 --> 00:59:31.820
+and then you have a
+closed-loop control law.
+
+00:59:31.820 --> 00:59:35.340
+Now, what type of cost
+functions do people use?
+
+00:59:35.340 --> 00:59:38.060
+Here, there are
+not many surprises.
+
+00:59:38.060 --> 00:59:40.380
+So for the running
+cost, quite common
+
+00:59:40.380 --> 00:59:43.540
+to use just the quadratic
+cost similar to LQR.
+
+00:59:43.540 --> 00:59:48.640
+Or you might use also some other
+p norms, where for example,
+
+00:59:48.640 --> 00:59:52.520
+you could use the 1-norm
+or the infinity-norm.
+
+00:59:58.060 --> 00:59:59.640
+The 1-norm of the vector--
+
+01:00:04.650 --> 01:00:05.810
+I don't have a marker.
+
+01:00:12.410 --> 01:00:18.290
+--is the sum of the absolute
+value of its component instead
+
+01:00:18.290 --> 01:00:19.030
+of the square.
+
+01:00:24.210 --> 01:00:29.010
+So to wrap it up, in online
+model predictive control,
+
+01:00:29.010 --> 01:00:31.730
+we measure the state x of t.
+
+01:00:31.730 --> 01:00:35.770
+We solve finite time
+optimal control problem.
+
+01:00:35.770 --> 01:00:40.670
+If, god forbid, the problem
+isn't infeasible, you're stuck,
+
+01:00:40.670 --> 01:00:41.930
+you call for help.
+
+01:00:41.930 --> 01:00:45.550
+Otherwise, you apply the first
+element U0 to the system.
+
+01:00:45.550 --> 01:00:48.410
+You transition to the
+new time t plus 1.
+
+01:00:48.410 --> 01:00:50.230
+You measure xt plus 1.
+
+01:00:50.230 --> 01:00:52.610
+And you repeat.
+
+01:00:52.610 --> 01:00:53.948
+Why online?
+
+01:00:53.948 --> 01:00:55.490
+Because here, the
+idea is that we are
+
+01:00:55.490 --> 01:00:57.710
+solving this problem online.
+
+01:00:57.710 --> 01:01:00.090
+So as you are
+deploying your system.
+
+01:01:00.090 --> 01:01:01.910
+As we will discuss
+briefly next time,
+
+01:01:01.910 --> 01:01:04.250
+there are also
+offline formulation,
+
+01:01:04.250 --> 01:01:07.410
+whereby you do the
+optimization offline,
+
+01:01:07.410 --> 01:01:10.050
+basically anticipating all
+possible conditions that
+
+01:01:10.050 --> 01:01:12.210
+might arise.
+
+01:01:12.210 --> 01:01:15.550
+But for most of these
+exposition of MPC,
+
+01:01:15.550 --> 01:01:20.116
+we will consider only
+the online version.
+
+01:01:20.116 --> 01:01:25.410
+Right, so what I was mentioning
+before is what are the things
+
+01:01:25.410 --> 01:01:26.350
+we care about?
+
+01:01:26.350 --> 01:01:34.010
+So the two things we care about
+are persistent feasibility
+
+01:01:34.010 --> 01:01:35.530
+and stability.
+
+01:01:35.530 --> 01:01:36.510
+Persistent feasibility.
+
+01:01:36.510 --> 01:01:39.730
+We want to make sure
+that the optimal control
+
+01:01:39.730 --> 01:01:42.490
+problem is always feasible.
+
+01:01:42.490 --> 01:01:44.450
+That's quite obvious.
+
+01:01:44.450 --> 01:01:48.010
+Stability means that
+we want to make sure
+
+01:01:48.010 --> 01:01:51.810
+that the genetic control
+inputs lead to trajectories
+
+01:01:51.810 --> 01:01:54.490
+that converge to the origin.
+
+01:01:54.490 --> 01:01:58.320
+So the question is, how do
+we tune the three main design
+
+01:01:58.320 --> 01:02:02.240
+knobs so that these two
+objectives are fulfilled?
+
+01:02:02.240 --> 01:02:04.742
+Up until the '90s, this
+was mostly heuristic.
+
+01:02:04.742 --> 01:02:07.200
+Then between the '90s and 2000,
+that's where people started
+
+01:02:07.200 --> 01:02:10.400
+putting some theory to allow you
+to make informed choices about
+
+01:02:10.400 --> 01:02:12.680
+how to select
+those tuning knobs.
+
+01:02:12.680 --> 01:02:16.313
+So-- sorry for the cough.
+
+01:02:16.313 --> 01:02:17.980
+That's what we're
+going to discuss next.
+
+01:02:21.800 --> 01:02:25.300
+So there are two possible ways
+of approaching the problem.
+
+01:02:25.300 --> 01:02:29.140
+The first one is a
+closed-loop system, right?
+
+01:02:29.140 --> 01:02:37.800
+So we have xt plus 1 equal
+f for a closed-loop x of t.
+
+01:02:37.800 --> 01:02:41.760
+We try to somewhat
+analyze how the dynamics
+
+01:02:41.760 --> 01:02:44.560
+of this closed-loop system
+evolve depending on the three
+
+01:02:44.560 --> 01:02:47.760
+tuning knobs, and then we
+optimize the three tuning knobs.
+
+01:02:47.760 --> 01:02:53.240
+That's very hard because this
+is a non-linear system that
+
+01:02:53.240 --> 01:02:55.890
+entails an inner optimization.
+
+01:02:55.890 --> 01:02:59.150
+So basically, this is
+a closed-loop function
+
+01:02:59.150 --> 01:03:01.970
+f is the result of applying
+an optimization step.
+
+01:03:01.970 --> 01:03:03.670
+So it's difficult to analyze.
+
+01:03:03.670 --> 01:03:06.693
+And that's where the
+people were stuck.
+
+01:03:06.693 --> 01:03:08.110
+Then people realized
+that a better
+
+01:03:08.110 --> 01:03:11.070
+way to do that is to
+directly derive conditions
+
+01:03:11.070 --> 01:03:14.790
+in the terminal function p the
+terminal constraint set Xf,
+
+01:03:14.790 --> 01:03:17.590
+so that the closed-loop
+feasibility are guaranteed
+
+01:03:17.590 --> 01:03:24.230
+by design without having to
+analyze ad hoc the trajectory
+
+01:03:24.230 --> 01:03:26.190
+evolutions.
+
+01:03:26.190 --> 01:03:27.910
+So what we're
+going to do next is
+
+01:03:27.910 --> 01:03:31.210
+to first tackle the problem
+of persistent feasibility.
+
+01:03:31.210 --> 01:03:32.730
+That's the most basic one.
+
+01:03:32.730 --> 01:03:35.070
+If you can even solve the
+optimal control problem,
+
+01:03:35.070 --> 01:03:37.390
+then the question of stability
+is not even relevant.
+
+01:03:37.390 --> 01:03:39.943
+And then we're going
+to see how we can--
+
+01:03:39.943 --> 01:03:42.110
+once we solve the problem
+of persistent feasibility,
+
+01:03:42.110 --> 01:03:45.390
+address the problem
+of stability.
+
+01:03:45.390 --> 01:03:48.070
+So let's focus on persistent
+feasibility first.
+
+01:03:48.070 --> 01:03:51.310
+So the goal is to
+tune our tuning knobs
+
+01:03:51.310 --> 01:03:55.540
+so that feasibility for all
+future times is guaranteed.
+
+01:03:55.540 --> 01:03:57.660
+To address a problem,
+we leverage tools
+
+01:03:57.660 --> 01:03:59.468
+from invariant set theory.
+
+01:03:59.468 --> 01:04:01.760
+So I'm going to give you a
+little bit more terminology.
+
+01:04:01.760 --> 01:04:04.260
+Sorry about that.
+
+01:04:04.260 --> 01:04:10.800
+MPC is a bit less mathematically
+intense than reachability,
+
+01:04:10.800 --> 01:04:14.860
+but it's a bit more boring
+in terms of terminology.
+
+01:04:14.860 --> 01:04:16.600
+What is invariant set?
+
+01:04:16.600 --> 01:04:19.840
+So let me first pin down a
+little bit of terminology.
+
+01:04:19.840 --> 01:04:24.060
+So we define the set of
+feasible initial state capital
+
+01:04:24.060 --> 01:04:28.960
+X0 as the set of states
+that are feasible,
+
+01:04:28.960 --> 01:04:32.860
+meaning belong to the
+set capital X, such
+
+01:04:32.860 --> 01:04:37.620
+that there is a feasible
+controlled sequence.
+
+01:04:37.620 --> 01:04:43.380
+By feasible meaning that each
+control Uk belongs to capital U,
+
+01:04:43.380 --> 01:04:45.700
+such that the
+evolution of the state
+
+01:04:45.700 --> 01:04:48.460
+trajectories stemming from an
+application of this control
+
+01:04:48.460 --> 01:04:52.170
+sequence gives
+rise to states that
+
+01:04:52.170 --> 01:04:56.170
+are feasible at
+all times and such
+
+01:04:56.170 --> 01:05:02.490
+that the terminal state belongs
+to the desired final set.
+
+01:05:02.490 --> 01:05:04.810
+So this is a set of
+initial conditions
+
+01:05:04.810 --> 01:05:06.890
+for which the optimal
+control problem
+
+01:05:06.890 --> 01:05:10.690
+has at least one solution.
+
+01:05:10.690 --> 01:05:14.890
+A control input can be found
+only if our current state
+
+01:05:14.890 --> 01:05:16.390
+belongs to this set.
+
+01:05:19.450 --> 01:05:25.170
+Then we define a notion
+of a controllable set.
+
+01:05:25.170 --> 01:05:27.290
+For an autonomous
+systems xt plus 1
+
+01:05:27.290 --> 01:05:31.370
+equal to phi of x of t with
+state and control constraints,
+
+01:05:31.370 --> 01:05:34.690
+the one-step
+controllable set to set S
+
+01:05:34.690 --> 01:05:37.850
+is defined as the
+set of states such
+
+01:05:37.850 --> 01:05:42.770
+that after one-step application
+of our transition dynamics,
+
+01:05:42.770 --> 01:05:47.870
+we end up into
+set S. Yes, great.
+
+01:05:47.870 --> 01:05:50.330
+Thank you.
+
+01:05:50.330 --> 01:06:09.890
+Specifically-- say
+that you're given a set
+
+01:06:09.890 --> 01:06:13.450
+S. The question
+that you are asking
+
+01:06:13.450 --> 01:06:20.930
+is, what is the set of the
+states, referred to as Pre
+
+01:06:20.930 --> 01:06:27.810
+or previous, of S, such
+that if you start here
+
+01:06:27.810 --> 01:06:32.170
+and then you apply your
+dynamics, f of x, you
+
+01:06:32.170 --> 01:06:34.730
+end up here?
+
+01:06:34.730 --> 01:06:37.970
+So given a set, you're trying
+to answer the question, what
+
+01:06:37.970 --> 01:06:40.970
+is the set of k such
+that after one-step
+
+01:06:40.970 --> 01:06:45.750
+under the natural dynamics
+of the system, I land into S?
+
+01:06:49.520 --> 01:06:52.160
+The notion of a one-step
+controllable set
+
+01:06:52.160 --> 01:06:55.020
+extends to the case
+of control system,
+
+01:06:55.020 --> 01:06:58.280
+where now xt plus 1 is
+a function of x and u,
+
+01:06:58.280 --> 01:07:01.200
+where the definition
+is a very similar.
+
+01:07:01.200 --> 01:07:04.680
+The only difference
+is that now, we
+
+01:07:04.680 --> 01:07:07.120
+define the one-step
+controllable set
+
+01:07:07.120 --> 01:07:10.200
+as the set of states for
+which there exists a u, such
+
+01:07:10.200 --> 01:07:15.680
+that a one-step application of
+our dynamics leads us into S.
+
+01:07:15.680 --> 01:07:21.240
+So there exists a
+u such that f of xu
+
+01:07:21.240 --> 01:07:24.240
+leads me into S in one step.
+
+01:07:24.240 --> 01:07:25.980
+Well, that's just
+the definition.
+
+01:07:28.560 --> 01:07:30.260
+One more set of definitions.
+
+01:07:30.260 --> 01:07:34.800
+So another important
+definition is the notion
+
+01:07:34.800 --> 01:07:37.300
+of a control invariant set.
+
+01:07:37.300 --> 01:07:39.240
+Actually, this is a
+concept that arises
+
+01:07:39.240 --> 01:07:44.800
+quite ubiquitously in
+model predictive control.
+
+01:07:44.800 --> 01:07:48.650
+Given set C is a
+control invariant set--
+
+01:07:58.390 --> 01:08:03.110
+Let's call it C. Given set
+C is a control invariant set
+
+01:08:03.110 --> 01:08:06.550
+for a given system xt
+plus 1 equal f of xu.
+
+01:08:11.070 --> 01:08:15.990
+If you start in C-- so
+this is your state, x of t.
+
+01:08:15.990 --> 01:08:21.270
+--then there exists a control
+u such that under the state
+
+01:08:21.270 --> 01:08:25.830
+transition dynamics,
+you land in C.
+
+01:08:25.830 --> 01:08:27.649
+So if you start
+with C, think of C,
+
+01:08:27.649 --> 01:08:31.029
+say, as the safe set, the
+set of relative states
+
+01:08:31.029 --> 01:08:32.990
+where you are far
+enough from danger,
+
+01:08:32.990 --> 01:08:36.170
+there exists a u that allows
+you to stay in that set.
+
+01:08:36.170 --> 01:08:39.109
+It seems a useful concept.
+
+01:08:39.109 --> 01:08:48.500
+So there exists a u
+such that f of xu lands
+
+01:08:48.500 --> 01:08:52.939
+into, again, C, the same set.
+
+01:08:52.939 --> 01:08:54.700
+So of course, we
+want to choose the C
+
+01:08:54.700 --> 01:08:59.220
+as a set of desirable states.
+
+01:08:59.220 --> 01:09:02.540
+The set C infinity-- this is
+really just a minor notation.
+
+01:09:02.540 --> 01:09:04.819
+--is said to be the
+maximum control invariant
+
+01:09:04.819 --> 01:09:07.899
+set if this control invariant
+contains all control
+
+01:09:07.899 --> 01:09:09.240
+invariant sets containing x.
+
+01:09:09.240 --> 01:09:11.448
+It's basically the largest
+possible control invariant
+
+01:09:11.448 --> 01:09:15.500
+set that you might have
+for a dynamical system.
+
+01:09:15.500 --> 01:09:20.600
+Similar definition arises
+for autonomous systems.
+
+01:09:20.600 --> 01:09:23.939
+So systems where you don't
+have explicit dependency
+
+01:09:23.939 --> 01:09:24.740
+on the control.
+
+01:09:24.740 --> 01:09:29.979
+The set is said to be
+positive invariant if,
+
+01:09:29.979 --> 01:09:33.180
+after one application of the--
+
+01:09:33.180 --> 01:09:37.720
+so if you start in the set A
+and you apply your dynamics,
+
+01:09:37.720 --> 01:09:43.450
+you still remain in A.
+
+01:09:43.450 --> 01:09:47.010
+So these sets can be computed by
+using a fairly powerful Matlab
+
+01:09:47.010 --> 01:09:48.350
+tool called MPT.
+
+01:09:48.350 --> 01:09:51.029
+And actually, you will use this
+tool as part of your homework.
+
+01:09:51.029 --> 01:09:51.529
+Yeah.
+
+01:09:51.529 --> 01:09:55.410
+Can you explain how a control
+invariant set could not
+
+01:09:55.410 --> 01:09:57.090
+be maximal?
+
+01:09:57.090 --> 01:10:00.090
+Like a good example
+of a set that--
+
+01:10:00.090 --> 01:10:02.250
+Yeah, I mean, sure.
+
+01:10:02.250 --> 01:10:04.450
+I mean, you might have
+a control invariant set
+
+01:10:04.450 --> 01:10:08.210
+with this definition,
+but no one is telling us
+
+01:10:08.210 --> 01:10:14.970
+that there might not
+be an extension that
+
+01:10:14.970 --> 01:10:16.630
+still has this property.
+
+01:10:16.630 --> 01:10:18.870
+So actually, you
+must-- so for example,
+
+01:10:18.870 --> 01:10:22.650
+a control invariant
+set could be 0 for--
+
+01:10:22.650 --> 01:10:25.490
+I mean, literally the set
+with a single point, 0,
+
+01:10:25.490 --> 01:10:27.950
+whereby if you have
+a linear system
+
+01:10:27.950 --> 01:10:32.170
+and you start a state equals
+0, you use control u equals 0,
+
+01:10:32.170 --> 01:10:34.890
+the next state is 0.
+
+01:10:34.890 --> 01:10:37.050
+So the origin typically--
+
+01:10:37.050 --> 01:10:38.070
+you see what I'm saying?
+
+01:10:38.070 --> 01:10:41.640
+So you start at the
+origin, x equals 0.
+
+01:10:41.640 --> 01:10:44.800
+Assuming that the control
+u is a feasible control,
+
+01:10:44.800 --> 01:10:49.100
+then Ax plus Bu is still 0,
+which means the next state is 0.
+
+01:10:49.100 --> 01:10:50.800
+So that's a control
+invariant set.
+
+01:10:50.800 --> 01:10:54.240
+But that doesn't mean that there
+might be some other states that
+
+01:10:54.240 --> 01:11:01.080
+actually still allow you to
+transition into the same set.
+
+01:11:01.080 --> 01:11:05.160
+We'll see actually
+some examples later.
+
+01:11:05.160 --> 01:11:11.160
+All right, so let's get to the
+first useful result related
+
+01:11:11.160 --> 01:11:15.760
+to feasibility,
+which is as follows.
+
+01:11:15.760 --> 01:11:20.520
+So let's define x1 as the
+truncated feasibility set.
+
+01:11:20.520 --> 01:11:27.320
+So the set of states for
+which the problem now
+
+01:11:27.320 --> 01:11:31.720
+solves over the horizon
+N minus 1 is feasible.
+
+01:11:31.720 --> 01:11:34.160
+So this is the set of states
+such that there exists
+
+01:11:34.160 --> 01:11:37.000
+a truncated control
+sequence starting from u1
+
+01:11:37.000 --> 01:11:42.960
+and not u0 such
+that it is feasible.
+
+01:11:42.960 --> 01:11:44.457
+So Uk belongs to u.
+
+01:11:44.457 --> 01:11:46.540
+And so that under the
+application of the dynamics,
+
+01:11:46.540 --> 01:11:48.880
+the states satisfies
+the state constraints
+
+01:11:48.880 --> 01:11:52.240
+and satisfies the
+terminal constraint.
+
+01:11:52.240 --> 01:11:53.880
+The key result is as follows.
+
+01:11:53.880 --> 01:12:01.720
+If set x1 is a control
+invariant set for your system,
+
+01:12:01.720 --> 01:12:06.260
+then the MPC law is
+persistently feasible.
+
+01:12:09.400 --> 01:12:11.060
+The intuition is
+that, basically,
+
+01:12:11.060 --> 01:12:15.760
+if x1 is control invariant, you
+can use this control invariant
+
+01:12:15.760 --> 01:12:18.820
+to buy a one-step of
+staying in that set,
+
+01:12:18.820 --> 01:12:23.520
+and then solve the problem
+for N minus 1 steps.
+
+01:12:23.520 --> 01:12:25.080
+Now, the result per se--
+
+01:12:25.080 --> 01:12:27.240
+I mean, we'll prove
+this result next time.
+
+01:12:27.240 --> 01:12:30.800
+The result per se is
+completely useless
+
+01:12:30.800 --> 01:12:36.910
+because your tuning knobs
+are Xf at the terminal cost p
+
+01:12:36.910 --> 01:12:41.350
+and at the horizon N. You
+don't really control--
+
+01:12:41.350 --> 01:12:44.110
+you don't really tune x1.
+
+01:12:44.110 --> 01:12:47.070
+But as we will see,
+this is a useful lemma
+
+01:12:47.070 --> 01:12:51.750
+that allows us to then derive
+a theorem that is actually
+
+01:12:51.750 --> 01:12:52.330
+actionable.
+
+01:12:52.330 --> 01:12:56.430
+Allows us to tune the tuning
+knobs that we have in MPC.
+
+01:12:56.430 --> 01:12:59.070
+So we'll prove this
+lemma next time.
+
+01:12:59.070 --> 01:13:01.510
+Take 30 minutes at most.
+
+01:13:01.510 --> 01:13:03.230
+And then we continue
+our exposition
+
+01:13:03.230 --> 01:13:06.950
+about persistent feasibility,
+and then we move into stability.
+
+01:13:06.950 --> 01:13:09.910
+The end result will be a set
+of conditions that tells you
+
+01:13:09.910 --> 01:13:15.670
+explicitly how to tune p
+and terminal set X of f
+
+01:13:15.670 --> 01:13:17.850
+to ensure persistent
+feasibility and stability.
+
+01:13:17.850 --> 01:13:21.590
+And then your p set, you
+will solve a few problems
+
+01:13:21.590 --> 01:13:27.310
+so that you really
+appreciate this theorem.
+
+01:13:27.310 --> 01:13:29.270
+All right?
+
+01:13:29.270 --> 01:13:30.820
+OK.
+

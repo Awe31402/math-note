@@ -1,0 +1,5210 @@
+WEBVTT
+Kind: captions
+Language: en
+
+00:00:06.120 --> 00:00:10.600
+So welcome to the
+last week of W23.
+
+00:00:10.600 --> 00:00:15.060
+So from our usual roadmap,
+for the last few weeks,
+
+00:00:15.060 --> 00:00:17.820
+we have been in the top right
+quadrant of our roadmap,
+
+00:00:17.820 --> 00:00:19.960
+specifically looking at
+learning-based methods
+
+00:00:19.960 --> 00:00:21.320
+for optimal control.
+
+00:00:21.320 --> 00:00:23.182
+And over the last
+couple of weeks,
+
+00:00:23.182 --> 00:00:25.640
+we've basically been introducing
+the reinforcement learning
+
+00:00:25.640 --> 00:00:28.840
+setting, where we are
+looking at ways to estimate
+
+00:00:28.840 --> 00:00:30.417
+value functions.
+
+00:00:30.417 --> 00:00:33.000
+Specifically, we introduce Monte
+Carlo and temporal difference
+
+00:00:33.000 --> 00:00:37.400
+learning as really fundamental,
+model-free learning strategies.
+
+00:00:37.400 --> 00:00:41.120
+And last week, we also looked at
+one of the families of methods
+
+00:00:41.120 --> 00:00:43.800
+for model-free reinforcement
+learning, namely
+
+00:00:43.800 --> 00:00:46.480
+value-based methods.
+
+00:00:46.480 --> 00:00:49.040
+On the other hand,
+today, we switch topics
+
+00:00:49.040 --> 00:00:51.600
+and we complete, if
+you wish, and start
+
+00:00:51.600 --> 00:00:54.400
+to discuss the second main
+family of methods that
+
+00:00:54.400 --> 00:00:56.780
+belong to the model-free
+reinforcement learning family,
+
+00:00:56.780 --> 00:00:58.460
+namely policy optimization.
+
+00:00:58.460 --> 00:01:02.320
+And as we will see today,
+in policy optimization,
+
+00:01:02.320 --> 00:01:04.640
+differently from what we
+did in value-based methods,
+
+00:01:04.640 --> 00:01:08.940
+whereby the policy is implicitly
+defined through the value
+
+00:01:08.940 --> 00:01:10.060
+function itself.
+
+00:01:10.060 --> 00:01:11.620
+In policy
+optimization, we'll see
+
+00:01:11.620 --> 00:01:14.500
+how we will be representing
+the policy explicitly, namely
+
+00:01:14.500 --> 00:01:16.980
+through parametric
+representation of the policy,
+
+00:01:16.980 --> 00:01:19.540
+and then tune or
+adjust the parameters
+
+00:01:19.540 --> 00:01:22.460
+of this parametric
+representation of the policy
+
+00:01:22.460 --> 00:01:24.700
+to directly maximize the
+reinforcement learning
+
+00:01:24.700 --> 00:01:25.460
+objective.
+
+00:01:25.460 --> 00:01:27.420
+But long story
+short, today, we'll
+
+00:01:27.420 --> 00:01:31.740
+be looking at policy
+optimization methods.
+
+00:01:31.740 --> 00:01:35.740
+Specifically, we'll start
+by introducing and defining
+
+00:01:35.740 --> 00:01:38.020
+policy gradients,
+which will lead us
+
+00:01:38.020 --> 00:01:40.380
+into the very first
+algorithm, which will
+
+00:01:40.380 --> 00:01:41.720
+be the reinforced algorithm.
+
+00:01:41.720 --> 00:01:45.980
+And we'll do some
+discussions on the role
+
+00:01:45.980 --> 00:01:48.925
+of variants of these
+policy gradient estimators.
+
+00:01:48.925 --> 00:01:51.300
+Then we'll be looking at that
+actor critic methods, which
+
+00:01:51.300 --> 00:01:54.820
+are extremely popular
+instantiation of policy
+
+00:01:54.820 --> 00:01:59.310
+optimization, and then conclude
+with some mention to kind
+
+00:01:59.310 --> 00:02:02.170
+of recent reinforcement learning
+algorithms and applications.
+
+00:02:05.090 --> 00:02:07.510
+So let's start
+from-- if you recall,
+
+00:02:07.510 --> 00:02:09.270
+at the beginning
+of our discussions
+
+00:02:09.270 --> 00:02:13.030
+on reinforcement learning, we
+loosely introduced reinforcement
+
+00:02:13.030 --> 00:02:16.630
+learning as a problem,
+where we have an agent that
+
+00:02:16.630 --> 00:02:18.950
+interacts with the environment.
+
+00:02:18.950 --> 00:02:21.150
+Through this
+interaction, we generate
+
+00:02:21.150 --> 00:02:23.750
+some trajectories style,
+which are nothing else
+
+00:02:23.750 --> 00:02:25.870
+than a kind of sequences
+of states and controls
+
+00:02:25.870 --> 00:02:28.230
+that we observe over time.
+
+00:02:28.230 --> 00:02:33.510
+And through this, we defined
+the formalism for reinforcement
+
+00:02:33.510 --> 00:02:35.950
+learning as a Markov
+decision process,
+
+00:02:35.950 --> 00:02:40.030
+whereby we defined a
+trajectory distribution
+
+00:02:40.030 --> 00:02:43.710
+p of tau, where p of
+tau essentially encodes
+
+00:02:43.710 --> 00:02:47.790
+all the stochasticity that
+we have in the environment.
+
+00:02:47.790 --> 00:02:50.070
+Namely, we could
+have an initial state
+
+00:02:50.070 --> 00:02:54.430
+x0, which is sampled from a
+distribution over x states.
+
+00:02:54.430 --> 00:02:57.690
+Concretely, this could be like
+the dot reset method in our gym
+
+00:02:57.690 --> 00:03:00.010
+environment, for example.
+
+00:03:00.010 --> 00:03:03.690
+We have uncertainty that
+comes from the policy itself,
+
+00:03:03.690 --> 00:03:06.850
+so we are defining a policy
+pi as a distribution over
+
+00:03:06.850 --> 00:03:10.450
+controls given states, and
+so this is in itself is also
+
+00:03:10.450 --> 00:03:12.090
+a random process.
+
+00:03:12.090 --> 00:03:14.370
+And then we obviously
+discussed also
+
+00:03:14.370 --> 00:03:17.770
+the stochasticity that comes
+from the transition function
+
+00:03:17.770 --> 00:03:21.290
+itself, which is a
+distribution over next state xt
+
+00:03:21.290 --> 00:03:27.110
+plus 1 given the current
+state xt and the control ut.
+
+00:03:27.110 --> 00:03:31.610
+And so by taking all of these
+sources of stochasticity
+
+00:03:31.610 --> 00:03:34.910
+and factorizing them, as we've
+shown here on this slide,
+
+00:03:34.910 --> 00:03:38.170
+we basically derive the
+probability distribution
+
+00:03:38.170 --> 00:03:41.450
+over all possible
+trajectories style
+
+00:03:41.450 --> 00:03:44.270
+as this factorized
+distribution over here.
+
+00:03:47.210 --> 00:03:48.510
+Why was this important?
+
+00:03:48.510 --> 00:03:50.210
+It was important
+because this enabled
+
+00:03:50.210 --> 00:03:53.500
+us to define the reinforcement
+learning objective, essentially
+
+00:03:53.500 --> 00:03:57.460
+as a maximization problem,
+where we want to basically pick
+
+00:03:57.460 --> 00:04:00.700
+the policy pi that maximizes
+a certain objective.
+
+00:04:00.700 --> 00:04:05.540
+And this objective is the sum of
+discounted cumulative rewards,
+
+00:04:05.540 --> 00:04:07.660
+but the sum of discounted
+cumulative returns
+
+00:04:07.660 --> 00:04:10.140
+is an expectation,
+where the expectation is
+
+00:04:10.140 --> 00:04:12.080
+under this trajectory
+distribution,
+
+00:04:12.080 --> 00:04:14.760
+so this is basically where we
+started a couple of weeks back.
+
+00:04:17.660 --> 00:04:20.720
+How does policy optimization
+go for solving this problem?
+
+00:04:20.720 --> 00:04:22.740
+As we were briefly
+mentioning before,
+
+00:04:22.740 --> 00:04:25.660
+in policy optimization,
+what we do
+
+00:04:25.660 --> 00:04:28.500
+is we essentially
+define our policy
+
+00:04:28.500 --> 00:04:30.980
+to be a parametric
+policy, pi of theta,
+
+00:04:30.980 --> 00:04:32.900
+with some parameters theta.
+
+00:04:32.900 --> 00:04:36.900
+And therefore, the
+reinforcement learning objective
+
+00:04:36.900 --> 00:04:38.980
+and the trajectory
+distribution itself
+
+00:04:38.980 --> 00:04:40.860
+can essentially be
+written with respect
+
+00:04:40.860 --> 00:04:43.400
+to these parameters theta.
+
+00:04:43.400 --> 00:04:47.580
+So the initial state
+distribution and the transition
+
+00:04:47.580 --> 00:04:50.240
+distribution do not
+depend on theta directly,
+
+00:04:50.240 --> 00:04:54.520
+but our policy does indeed
+inform the evolution
+
+00:04:54.520 --> 00:04:55.720
+of the trajectory.
+
+00:04:55.720 --> 00:04:58.300
+And therefore, what we
+want to pick essentially,
+
+00:04:58.300 --> 00:05:01.040
+is the values of
+the parameters theta
+
+00:05:01.040 --> 00:05:03.060
+that maximize the RL objective.
+
+00:05:05.960 --> 00:05:09.580
+So long story short, at face
+value in a policy optimization,
+
+00:05:09.580 --> 00:05:13.200
+we take the reinforcement
+learning objective as it is,
+
+00:05:13.200 --> 00:05:17.320
+and we basically define
+it as a optimization
+
+00:05:17.320 --> 00:05:22.520
+problem with respect to the
+parameters of our policy.
+
+00:05:22.520 --> 00:05:24.740
+Again, going forward, to
+simplify the notation,
+
+00:05:24.740 --> 00:05:27.620
+we will assume that this is
+an undiscounted environment,
+
+00:05:27.620 --> 00:05:29.640
+but everything still
+holds when we actually
+
+00:05:29.640 --> 00:05:31.180
+account for discounting.
+
+00:05:36.040 --> 00:05:41.700
+So let us start solving
+this problem in practice.
+
+00:05:41.700 --> 00:05:44.683
+So we saw how--
+
+00:05:44.683 --> 00:05:46.600
+well, in value-based
+methods, if you remember,
+
+00:05:46.600 --> 00:05:50.750
+we were ideally solving
+this exact same problem,
+
+00:05:50.750 --> 00:05:52.690
+but we were doing this
+in an indirect way
+
+00:05:52.690 --> 00:05:55.370
+because we were doing
+essentially fixed point
+
+00:05:55.370 --> 00:05:59.170
+iteration on q values
+and value functions.
+
+00:05:59.170 --> 00:06:01.570
+And then we saw that
+that convergence--
+
+00:06:01.570 --> 00:06:04.090
+we derived some theory,
+or, at least, mentioned
+
+00:06:04.090 --> 00:06:08.530
+some theory for which the
+algorithms that we proposed
+
+00:06:08.530 --> 00:06:10.990
+would converge to the
+optimal value function
+
+00:06:10.990 --> 00:06:12.890
+and therefore to
+the optimal policy.
+
+00:06:12.890 --> 00:06:14.610
+In reinforcement
+learning, now we
+
+00:06:14.610 --> 00:06:19.890
+want to solve this explicit
+optimization problem.
+
+00:06:19.890 --> 00:06:22.610
+So we know that,
+before in this class,
+
+00:06:22.610 --> 00:06:28.010
+we mentioned as a good idea when
+we want to solve optimization
+
+00:06:28.010 --> 00:06:31.370
+problems, that gradient
+ascent or gradient descent
+
+00:06:31.370 --> 00:06:33.890
+is a good approach for
+solving a general class
+
+00:06:33.890 --> 00:06:36.770
+of numerical
+optimization problems.
+
+00:06:36.770 --> 00:06:39.370
+Fundamentally, if we were
+to approach this problem
+
+00:06:39.370 --> 00:06:41.810
+through gradient
+ascent because we
+
+00:06:41.810 --> 00:06:44.510
+want to maximize this
+objective function,
+
+00:06:44.510 --> 00:06:46.130
+we would need to
+first of all estimate
+
+00:06:46.130 --> 00:06:49.230
+the gradient of the objective
+we're interested in,
+
+00:06:49.230 --> 00:06:52.230
+and then basically cast
+learning or learning
+
+00:06:52.230 --> 00:06:55.990
+the policy as doing gradient
+descent on the objective
+
+00:06:55.990 --> 00:06:57.010
+that we care about.
+
+00:06:57.010 --> 00:07:00.970
+That is, iteratively takes
+steps in parameter space,
+
+00:07:00.970 --> 00:07:04.810
+following the direction that is
+given to us by this gradient,
+
+00:07:04.810 --> 00:07:09.130
+so pictorially, hill
+climbing are RL objective.
+
+00:07:12.590 --> 00:07:16.110
+A first question
+here is already we
+
+00:07:16.110 --> 00:07:20.550
+see how our objective
+that we wish to optimize
+
+00:07:20.550 --> 00:07:22.510
+is a non-trivial
+object because we
+
+00:07:22.510 --> 00:07:26.030
+have this expectation under the
+trajectory distribution, which
+
+00:07:26.030 --> 00:07:28.310
+is something which we
+don't really know about
+
+00:07:28.310 --> 00:07:31.190
+because the trajectory
+distribution, as we said before,
+
+00:07:31.190 --> 00:07:34.010
+has these three sources
+of stochasticity,
+
+00:07:34.010 --> 00:07:37.310
+so we can assume that
+we know our policy
+
+00:07:37.310 --> 00:07:41.030
+and we can evaluate the
+distribution under our policy,
+
+00:07:41.030 --> 00:07:43.730
+but we don't really know
+the transition dynamics,
+
+00:07:43.730 --> 00:07:47.810
+for example, because
+this is the whole point.
+
+00:07:47.810 --> 00:07:50.570
+So our first question
+is, how can we
+
+00:07:50.570 --> 00:07:53.690
+even evaluate this
+expectation in the objective?
+
+00:07:53.690 --> 00:07:55.570
+And the answer here
+is, by basically
+
+00:07:55.570 --> 00:07:59.370
+leveraging the same tools that
+we discussed over and over
+
+00:07:59.370 --> 00:08:02.150
+the last couple of weeks,
+which is essentially, sampling.
+
+00:08:02.150 --> 00:08:03.930
+So in reinforcement
+learning, whenever
+
+00:08:03.930 --> 00:08:06.610
+we don't know some quantity,
+for example, the transition
+
+00:08:06.610 --> 00:08:12.130
+functions, we go around it by
+sampling in the environment.
+
+00:08:12.130 --> 00:08:13.490
+What did we mean by sampling?
+
+00:08:13.490 --> 00:08:15.370
+So far, is essentially
+taking rollouts
+
+00:08:15.370 --> 00:08:19.050
+and interacting with our
+environments over time.
+
+00:08:19.050 --> 00:08:22.370
+So in other words, we
+have this objective
+
+00:08:22.370 --> 00:08:26.250
+that we wish to
+optimize, which entails
+
+00:08:26.250 --> 00:08:29.890
+computing the expectation under
+the trajectory distribution.
+
+00:08:29.890 --> 00:08:32.929
+We don't know how to
+compute this expectation,
+
+00:08:32.929 --> 00:08:36.289
+and so we can approximate
+it by running our policy n
+
+00:08:36.289 --> 00:08:39.350
+times in the environment and
+just taking the empirical mean.
+
+00:08:42.289 --> 00:08:44.900
+So in practice, you
+could imagine indeed
+
+00:08:44.900 --> 00:08:48.100
+following n possible
+rollouts of our policy.
+
+00:08:48.100 --> 00:08:50.680
+These rollouts will
+have some rewards.
+
+00:08:50.680 --> 00:08:53.800
+We will be observing different
+quality of these rollouts,
+
+00:08:53.800 --> 00:08:56.300
+and then we simply average
+out all of the rewards
+
+00:08:56.300 --> 00:08:57.600
+that we observe over time.
+
+00:08:57.600 --> 00:09:00.100
+And this would be a
+valid approximation
+
+00:09:00.100 --> 00:09:01.560
+of this expectation.
+
+00:09:07.220 --> 00:09:11.220
+So we mentioned that we
+want to approach this
+
+00:09:11.220 --> 00:09:15.443
+through stochastic gradient
+ascent or gradient ascent.
+
+00:09:15.443 --> 00:09:16.860
+The first thing
+that we need to do
+
+00:09:16.860 --> 00:09:18.280
+is compute the gradient right.
+
+00:09:18.280 --> 00:09:22.380
+So what we'll do right now is
+basically derive the policy
+
+00:09:22.380 --> 00:09:29.140
+gradient and specifically derive
+actionable kind of expression
+
+00:09:29.140 --> 00:09:31.100
+of the policy
+gradient, and then see
+
+00:09:31.100 --> 00:09:35.820
+how we can use this expression
+within working algorithms.
+
+00:09:35.820 --> 00:09:37.240
+Any questions so far?
+
+00:09:43.720 --> 00:09:44.240
+Great.
+
+00:09:47.060 --> 00:09:50.560
+So for compactness,
+let us define
+
+00:09:50.560 --> 00:09:54.600
+r of the trajectory tau
+as the sum of rewards
+
+00:09:54.600 --> 00:09:56.860
+that we observed in a
+specific trajectory,
+
+00:09:56.860 --> 00:10:00.920
+so simply the sum of all the
+rewards observed from time 1
+
+00:10:00.920 --> 00:10:03.340
+until time t within
+that trajectory tau.
+
+00:10:06.940 --> 00:10:10.960
+So we can use this r tau
+to basically rewrite the RL
+
+00:10:10.960 --> 00:10:12.980
+objective that we were
+introducing before,
+
+00:10:12.980 --> 00:10:15.600
+so J of theta,
+which we introduced
+
+00:10:15.600 --> 00:10:18.320
+before as being the expectation
+under the trajectory
+
+00:10:18.320 --> 00:10:20.180
+distribution of
+the sum of rewards,
+
+00:10:20.180 --> 00:10:23.760
+we can just write it
+as a small r of tau.
+
+00:10:23.760 --> 00:10:25.540
+And by definition
+of expectation,
+
+00:10:25.540 --> 00:10:30.800
+we can write this expectation
+as the integral of p tau times
+
+00:10:30.800 --> 00:10:32.500
+r tau into tau.
+
+00:10:35.400 --> 00:10:38.160
+So what we said is
+what we want to take
+
+00:10:38.160 --> 00:10:39.970
+the gradient of this
+objective function
+
+00:10:39.970 --> 00:10:41.530
+and use this to hill climb.
+
+00:10:41.530 --> 00:10:44.730
+So given this
+definition or rewriting
+
+00:10:44.730 --> 00:10:48.250
+of the objective J of
+theta, the gradient
+
+00:10:48.250 --> 00:10:50.650
+of J of theta with
+respect to theta
+
+00:10:50.650 --> 00:10:53.690
+is the integral of the
+gradient with respect
+
+00:10:53.690 --> 00:10:58.530
+to theta of p tau times r tau
+and the tau, so nothing special
+
+00:10:58.530 --> 00:10:59.330
+here.
+
+00:10:59.330 --> 00:11:03.050
+We rewrote our RL
+objective and then
+
+00:11:03.050 --> 00:11:06.550
+we're taking the gradient at
+face value of that objective.
+
+00:11:11.890 --> 00:11:14.010
+So here, of course, in--
+
+00:11:14.010 --> 00:11:16.130
+this would not be
+actionable because we
+
+00:11:16.130 --> 00:11:18.330
+would like to
+evaluate this gradient
+
+00:11:18.330 --> 00:11:21.890
+and basically, take a step in
+the direction of that gradient.
+
+00:11:21.890 --> 00:11:25.850
+But the problem here is that
+how we define it right now,
+
+00:11:25.850 --> 00:11:29.330
+basically the gradient
+depends on unknown dynamics
+
+00:11:29.330 --> 00:11:31.610
+and the initial
+state distribution
+
+00:11:31.610 --> 00:11:37.430
+through the probability
+of trajectories p tau,
+
+00:11:37.430 --> 00:11:39.430
+so this is still the
+object that we don't really
+
+00:11:39.430 --> 00:11:41.450
+know how to compute.
+
+00:11:44.430 --> 00:11:47.890
+So here, essentially, what
+we'll be doing in this slide
+
+00:11:47.890 --> 00:11:50.470
+and the next is that
+we'll be basically
+
+00:11:50.470 --> 00:11:53.630
+massaging this definition
+of the policy gradient
+
+00:11:53.630 --> 00:11:58.550
+until we derive an analytically
+tractable and actually
+
+00:11:58.550 --> 00:12:02.550
+computable expression
+of that same gradient.
+
+00:12:02.550 --> 00:12:04.210
+So the first thing
+that we do is,
+
+00:12:04.210 --> 00:12:08.430
+so we realize that this is the
+object that is creating problems
+
+00:12:08.430 --> 00:12:11.630
+for us, and so we
+leverage that identity
+
+00:12:11.630 --> 00:12:13.250
+on the right of this slide.
+
+00:12:13.250 --> 00:12:18.230
+Specifically, the identity
+whereby the probability, p tau,
+
+00:12:18.230 --> 00:12:23.710
+times the grad log p can
+be rewritten as the grad p,
+
+00:12:23.710 --> 00:12:24.630
+essentially.
+
+00:12:24.630 --> 00:12:29.190
+So we know that the grad of
+the logarithm of a function
+
+00:12:29.190 --> 00:12:32.910
+can be essentially written as
+the gradient of that function,
+
+00:12:32.910 --> 00:12:35.080
+divided by the function itself.
+
+00:12:35.080 --> 00:12:37.480
+And so the two terms
+cancel out, and so we
+
+00:12:37.480 --> 00:12:41.960
+get that kind of useful
+identity on the right.
+
+00:12:41.960 --> 00:12:44.800
+So specifically, now we
+can do this substitution
+
+00:12:44.800 --> 00:12:47.520
+in our expression of
+the policy gradient.
+
+00:12:47.520 --> 00:12:53.240
+And what we get is that we get
+the integral of the p tau, times
+
+00:12:53.240 --> 00:12:56.600
+the grad log p's, times r tau.
+
+00:12:56.600 --> 00:12:58.800
+Always in the tau, of course.
+
+00:12:58.800 --> 00:13:03.480
+Now, again, we can use the
+definition of expectation.
+
+00:13:03.480 --> 00:13:09.640
+And we can basically rewrite
+this integral as the expectation
+
+00:13:09.640 --> 00:13:12.000
+under the trajectory
+distribution
+
+00:13:12.000 --> 00:13:13.820
+of this part over here.
+
+00:13:17.460 --> 00:13:22.800
+Now, this is not actionable
+yet because still we
+
+00:13:22.800 --> 00:13:24.460
+have this expectation.
+
+00:13:24.460 --> 00:13:27.360
+And this term here
+is not something
+
+00:13:27.360 --> 00:13:30.920
+we know how to deal with,
+but you can probably
+
+00:13:30.920 --> 00:13:34.340
+start to see that we are
+somehow on the right track
+
+00:13:34.340 --> 00:13:37.820
+because we know that whenever
+we have some quantity that
+
+00:13:37.820 --> 00:13:41.760
+is defined as expectations under
+the trajectory distribution,
+
+00:13:41.760 --> 00:13:44.780
+we can just approximate this
+expectation through interactions
+
+00:13:44.780 --> 00:13:47.740
+with the environment
+and through sampling.
+
+00:13:47.740 --> 00:13:49.680
+So this is one step in
+the right direction,
+
+00:13:49.680 --> 00:13:51.260
+but still not
+completely actionable
+
+00:13:51.260 --> 00:13:54.460
+because we have this grad log p
+in the equation, which is still
+
+00:13:54.460 --> 00:13:55.520
+something we don't know.
+
+00:13:59.340 --> 00:14:03.300
+So let's keep going.
+
+00:14:03.300 --> 00:14:09.220
+So let us recall as from the
+previous slide, the definition
+
+00:14:09.220 --> 00:14:11.580
+of the trajectory distribution,
+which is basically
+
+00:14:11.580 --> 00:14:13.580
+this factorization
+of what for us
+
+00:14:13.580 --> 00:14:16.100
+is the trajectory distribution.
+
+00:14:16.100 --> 00:14:19.980
+If we take the logarithm of
+the trajectory distribution,
+
+00:14:19.980 --> 00:14:21.940
+products become sums.
+
+00:14:21.940 --> 00:14:24.280
+Each individual terms
+becomes the-- of course,
+
+00:14:24.280 --> 00:14:26.060
+we take the logarithm.
+
+00:14:26.060 --> 00:14:28.700
+And basically, what
+we get is the log
+
+00:14:28.700 --> 00:14:33.770
+p's is equal to the sum of
+these three terms over here.
+
+00:14:33.770 --> 00:14:36.270
+So the logarithm of the
+probability of the initial
+
+00:14:36.270 --> 00:14:40.950
+state, plus the sum over time
+of the log pi's, essentially
+
+00:14:40.950 --> 00:14:43.110
+the logarithm of the
+distribution induced
+
+00:14:43.110 --> 00:14:45.710
+by our policy, and the log p's.
+
+00:14:45.710 --> 00:14:49.510
+That is the transition dynamics.
+
+00:14:49.510 --> 00:14:54.390
+So we just substitute this in
+into our equation of the policy
+
+00:14:54.390 --> 00:14:59.210
+gradient, and we get this
+object over here, where--
+
+00:15:02.030 --> 00:15:04.830
+yes, so we are taking
+the gradient with respect
+
+00:15:04.830 --> 00:15:08.010
+to theta of this
+entire term here,
+
+00:15:08.010 --> 00:15:11.750
+which we derived as the
+logarithm of the probability
+
+00:15:11.750 --> 00:15:15.630
+distribution over trajectories,
+multiplied by the sum of rewards
+
+00:15:15.630 --> 00:15:18.910
+in that trajectory.
+
+00:15:18.910 --> 00:15:20.910
+Now, of course, notice
+that since we're
+
+00:15:20.910 --> 00:15:24.470
+taking the gradient
+with respect to theta,
+
+00:15:24.470 --> 00:15:26.590
+the first and the
+third term here
+
+00:15:26.590 --> 00:15:29.050
+don't depend on theta
+directly, so they don't
+
+00:15:29.050 --> 00:15:30.790
+contribute to our gradient.
+
+00:15:33.330 --> 00:15:36.530
+And notice that the
+only term that remains
+
+00:15:36.530 --> 00:15:38.730
+is actually something
+that we know
+
+00:15:38.730 --> 00:15:44.690
+how to compute because the
+policy is an object we define.
+
+00:15:44.690 --> 00:15:48.810
+For example, the
+policy for us might
+
+00:15:48.810 --> 00:15:52.210
+be a Gaussian over a
+one-dimensional continuous
+
+00:15:52.210 --> 00:15:56.490
+action, so we could
+have our u of t.
+
+00:15:56.490 --> 00:16:02.050
+And so our policy
+pi of ut given xt
+
+00:16:02.050 --> 00:16:06.010
+might be a Gaussian, where
+the parameters theta might
+
+00:16:06.010 --> 00:16:09.610
+represent maybe the mean and
+the variance of that Gaussian.
+
+00:16:09.610 --> 00:16:16.030
+And so basically, the log
+pi's are completely specified,
+
+00:16:16.030 --> 00:16:17.630
+and so we can actually
+evaluate them.
+
+00:16:20.810 --> 00:16:23.650
+And so this means that if we
+take that expression over there
+
+00:16:23.650 --> 00:16:28.030
+and just rewrite it
+compactly over here,
+
+00:16:28.030 --> 00:16:30.990
+where the only thing that
+changes that we re-expanded
+
+00:16:30.990 --> 00:16:35.190
+our terms small r of tau.
+
+00:16:35.190 --> 00:16:39.270
+We see that we get an expression
+of the policy gradient, which
+
+00:16:39.270 --> 00:16:41.430
+is something where
+first of all, everything
+
+00:16:41.430 --> 00:16:44.050
+inside this
+expectation is known,
+
+00:16:44.050 --> 00:16:45.510
+so this is just
+the sum of rewards
+
+00:16:45.510 --> 00:16:49.790
+that we observe according
+to some trajectories tau.
+
+00:16:49.790 --> 00:16:53.470
+This is the sum of the log pi's
+according to our policy, which,
+
+00:16:53.470 --> 00:16:55.910
+again, is something we
+know how to compute,
+
+00:16:55.910 --> 00:16:58.290
+and so everything inside
+this expectation is known.
+
+00:17:01.470 --> 00:17:05.050
+Do these steps make sense
+or any questions until now?
+
+00:17:13.845 --> 00:17:16.230
+So we said that everything
+inside this expectation
+
+00:17:16.230 --> 00:17:18.470
+is known.
+
+00:17:18.470 --> 00:17:20.109
+How do we evaluate
+this in practice?
+
+00:17:20.109 --> 00:17:21.490
+We use the same trick.
+
+00:17:21.490 --> 00:17:23.390
+So we have this
+expectation under
+
+00:17:23.390 --> 00:17:25.130
+the trajectory distribution.
+
+00:17:25.130 --> 00:17:29.320
+We know that we can approximate
+this as the empirical mean
+
+00:17:29.320 --> 00:17:33.840
+by basically sampling n
+rollouts in our environment.
+
+00:17:33.840 --> 00:17:35.580
+We did this before
+for the objective,
+
+00:17:35.580 --> 00:17:40.400
+so we can do exactly the same
+with the policy gradient, which
+
+00:17:40.400 --> 00:17:44.520
+basically means that we can now
+completely evaluate the policy
+
+00:17:44.520 --> 00:17:50.440
+gradient that we're interested
+in by taking n rollouts
+
+00:17:50.440 --> 00:17:55.840
+or trajectories, basically
+tau's in the environment,
+
+00:17:55.840 --> 00:17:58.280
+computing this quantity for
+all of these trajectories,
+
+00:17:58.280 --> 00:18:00.575
+and taking the mean.
+
+00:18:00.575 --> 00:18:02.200
+And this would be a
+valid approximation
+
+00:18:02.200 --> 00:18:03.620
+of the policy gradient.
+
+00:18:17.160 --> 00:18:21.480
+And so basically,
+if this is clear
+
+00:18:21.480 --> 00:18:26.320
+through this derivation
+of the policy gradient,
+
+00:18:26.320 --> 00:18:28.880
+this leads us directly
+into, if you wish,
+
+00:18:28.880 --> 00:18:31.180
+the very first
+policy optimization
+
+00:18:31.180 --> 00:18:35.100
+algorithms that we will see in
+this class, which is also known
+
+00:18:35.100 --> 00:18:38.580
+as the reinforced algorithm.
+
+00:18:38.580 --> 00:18:43.460
+So as you can probably
+imagine, the derivations
+
+00:18:43.460 --> 00:18:47.000
+that we derived so far basically
+give us an actionable strategy,
+
+00:18:47.000 --> 00:18:49.900
+because now what we can do
+is something along the lines
+
+00:18:49.900 --> 00:18:52.020
+of these three steps over here.
+
+00:18:52.020 --> 00:18:55.660
+So we will be sampling
+n trajectories
+
+00:18:55.660 --> 00:18:57.660
+from the environment by
+basically just letting
+
+00:18:57.660 --> 00:19:01.020
+our policy interact with
+the environment itself.
+
+00:19:01.020 --> 00:19:03.100
+Through these
+trajectories, we can now
+
+00:19:03.100 --> 00:19:06.700
+always evaluate these gradient,
+or the policy gradient,
+
+00:19:06.700 --> 00:19:08.820
+or, at least, approximate it.
+
+00:19:08.820 --> 00:19:12.540
+And once we have this estimate
+of the policy gradient,
+
+00:19:12.540 --> 00:19:14.860
+we can take a step in
+the parameter space,
+
+00:19:14.860 --> 00:19:19.380
+according to this gradient,
+to improve basically
+
+00:19:19.380 --> 00:19:22.830
+the quality of our
+parameters pi theta
+
+00:19:22.830 --> 00:19:24.330
+that represent our policy pi.
+
+00:19:29.430 --> 00:19:32.990
+So taking the bird's eye view
+on this reinforce algorithm,
+
+00:19:32.990 --> 00:19:35.390
+according to our usual
+skeleton, kind of we
+
+00:19:35.390 --> 00:19:38.510
+have our usual three
+components, whereby
+
+00:19:38.510 --> 00:19:40.470
+we are generating
+samples by interacting
+
+00:19:40.470 --> 00:19:42.790
+with the environment.
+
+00:19:42.790 --> 00:19:46.730
+We are estimating our
+return through Monte Carlo,
+
+00:19:46.730 --> 00:19:49.470
+because we're basically running
+our policy in the environment
+
+00:19:49.470 --> 00:19:52.110
+and explicitly summing
+up all of the rewards
+
+00:19:52.110 --> 00:19:55.710
+that we observe at the
+end of our episode,
+
+00:19:55.710 --> 00:19:58.790
+and then we're using those
+estimates of the returns
+
+00:19:58.790 --> 00:20:01.590
+to improve the
+policy, namely taking
+
+00:20:01.590 --> 00:20:03.090
+a step in parameter space.
+
+00:20:08.790 --> 00:20:14.550
+Of course, this is,
+if you wish, one step
+
+00:20:14.550 --> 00:20:16.950
+of an inner loop,
+whereby we would then
+
+00:20:16.950 --> 00:20:18.650
+have to repeat this over time.
+
+00:20:18.650 --> 00:20:20.990
+So here, we're taking
+one gradient step,
+
+00:20:20.990 --> 00:20:23.690
+but then you can
+imagine that we have
+
+00:20:23.690 --> 00:20:27.170
+outer for loop that is kind
+of wrapping these three
+
+00:20:27.170 --> 00:20:30.330
+steps, where we repeat this
+process because now we will have
+
+00:20:30.330 --> 00:20:33.490
+an improved policy with some
+new parameters theta, which will
+
+00:20:33.490 --> 00:20:36.210
+collect new experience, and
+we'll use this experience
+
+00:20:36.210 --> 00:20:39.510
+to re-estimate the gradient
+and keep iterating over time.
+
+00:20:52.250 --> 00:20:55.770
+But let's stop for
+a second and try
+
+00:20:55.770 --> 00:20:59.370
+to build some intuition into
+what policy gradient is actually
+
+00:20:59.370 --> 00:21:01.570
+doing under the
+hood and indeed, get
+
+00:21:01.570 --> 00:21:06.850
+some intuition behind the math,
+which I think is always useful.
+
+00:21:06.850 --> 00:21:11.490
+So we did all of those
+kind of algebraic steps
+
+00:21:11.490 --> 00:21:15.530
+to basically derive this
+estimator for the policy
+
+00:21:15.530 --> 00:21:16.370
+gradient.
+
+00:21:19.001 --> 00:21:23.060
+We explained before how
+the log pies essentially
+
+00:21:23.060 --> 00:21:32.500
+represent the log
+probabilities of the action
+
+00:21:32.500 --> 00:21:33.760
+according to our policy.
+
+00:21:33.760 --> 00:21:36.380
+And we saw before how this
+could be represented either
+
+00:21:36.380 --> 00:21:39.180
+in the continuous space,
+exactly as we were doing here
+
+00:21:39.180 --> 00:21:41.940
+on the slide, but
+this is equally
+
+00:21:41.940 --> 00:21:45.020
+holds if we're looking at
+a discrete action space,
+
+00:21:45.020 --> 00:21:48.140
+whereby namely, the
+policy will be expressing
+
+00:21:48.140 --> 00:21:52.580
+a categorical distribution
+over a finite set of actions
+
+00:21:52.580 --> 00:21:54.900
+that we could pick.
+
+00:21:54.900 --> 00:21:58.140
+And so this is basically
+the term that we derived.
+
+00:21:58.140 --> 00:22:01.540
+But it's useful to compare
+it with the expression
+
+00:22:01.540 --> 00:22:03.540
+of the gradient
+that we would when
+
+00:22:03.540 --> 00:22:05.980
+we try to perform
+maximum likelihood,
+
+00:22:05.980 --> 00:22:08.940
+or if you wish, kind of
+behavior cloning for us
+
+00:22:08.940 --> 00:22:11.060
+for the purpose of control.
+
+00:22:11.060 --> 00:22:13.240
+So remember the setting
+of behavior cloning.
+
+00:22:13.240 --> 00:22:15.600
+In behavior cloning, we
+have some demonstrations
+
+00:22:15.600 --> 00:22:19.400
+of an expert doing something
+and executing a task, which
+
+00:22:19.400 --> 00:22:24.800
+for us, namely means data sets
+of tuples of states and action
+
+00:22:24.800 --> 00:22:28.960
+pairs, which basically are
+examples of this mapping
+
+00:22:28.960 --> 00:22:33.100
+that we wish to approximate.
+
+00:22:33.100 --> 00:22:36.100
+In maximum likelihood
+estimation or behavior cloning,
+
+00:22:36.100 --> 00:22:37.600
+what we wanted to
+do is, we wanted
+
+00:22:37.600 --> 00:22:41.080
+to maximize the
+probability of the actions
+
+00:22:41.080 --> 00:22:46.960
+that we observed from our
+expert given the state.
+
+00:22:46.960 --> 00:22:50.920
+And so formally, the gradient
+in the maximum likelihood case
+
+00:22:50.920 --> 00:22:54.800
+would essentially be
+comprised of this term, where
+
+00:22:54.800 --> 00:22:59.320
+we are trying to maximize the
+probability of the actions
+
+00:22:59.320 --> 00:23:02.600
+in our data set because
+this would essentially
+
+00:23:02.600 --> 00:23:05.720
+mean be equivalent
+to approximating
+
+00:23:05.720 --> 00:23:07.320
+the behavior of the expert.
+
+00:23:10.596 --> 00:23:15.700
+If you compare this
+equation of the gradient
+
+00:23:15.700 --> 00:23:18.680
+to what we just derived
+for the policy gradient,
+
+00:23:18.680 --> 00:23:22.860
+you see that this is
+essentially a weighted version
+
+00:23:22.860 --> 00:23:26.020
+of the gradient that you would
+get from maximum likelihood
+
+00:23:26.020 --> 00:23:30.820
+estimation, where the weight is
+specifically the sum of rewards
+
+00:23:30.820 --> 00:23:33.940
+in that trajectory.
+
+00:23:33.940 --> 00:23:35.060
+So what does this mean?
+
+00:23:35.060 --> 00:23:38.780
+Is that in behavior
+cloning, we taking a step
+
+00:23:38.780 --> 00:23:41.020
+in the direction of the
+gradient, essentially
+
+00:23:41.020 --> 00:23:45.500
+means updating the probability
+of all the actions in my data
+
+00:23:45.500 --> 00:23:47.820
+set.
+
+00:23:47.820 --> 00:23:51.020
+In policy gradient, we are
+updating the probability
+
+00:23:51.020 --> 00:23:54.140
+of the actions according
+to their performance
+
+00:23:54.140 --> 00:23:57.340
+in those rollouts,
+so those actions that
+
+00:23:57.340 --> 00:24:03.260
+led to higher reward are more
+updated in my policy gradient
+
+00:24:03.260 --> 00:24:05.960
+term, and so we're
+updating that probability,
+
+00:24:05.960 --> 00:24:06.800
+if that makes sense.
+
+00:24:10.660 --> 00:24:12.735
+Is this clear?
+
+00:24:12.735 --> 00:24:13.610
+Does that make sense?
+
+00:24:25.110 --> 00:24:26.550
+Indeed, and so the
+policy gradient
+
+00:24:26.550 --> 00:24:29.190
+is a weighted version of the
+maximum likelihood estimation
+
+00:24:29.190 --> 00:24:31.790
+gradient.
+
+00:24:31.790 --> 00:24:37.910
+So again, to hammer
+down this idea,
+
+00:24:37.910 --> 00:24:40.790
+if we take a step in the
+direction of the policy
+
+00:24:40.790 --> 00:24:42.630
+gradient, what we're
+doing is that we're
+
+00:24:42.630 --> 00:24:45.990
+changing the parameters
+theta such that trajectories
+
+00:24:45.990 --> 00:24:49.550
+with high reward have
+higher probability.
+
+00:24:49.550 --> 00:24:54.630
+And so you could imagine if we
+have this fictitious landscape
+
+00:24:54.630 --> 00:25:00.350
+of rollouts, where
+the width of the lines
+
+00:25:00.350 --> 00:25:02.510
+here represents the
+probability mass
+
+00:25:02.510 --> 00:25:06.270
+that my policy is allocating
+to those trajectories.
+
+00:25:06.270 --> 00:25:08.990
+Then here what we
+want is we want
+
+00:25:08.990 --> 00:25:12.010
+the good trajectories
+to be more likely
+
+00:25:12.010 --> 00:25:13.650
+than the bad trajectories.
+
+00:25:13.650 --> 00:25:17.450
+And so in a way, policy
+gradient really formalizes
+
+00:25:17.450 --> 00:25:19.950
+this idea of learning
+by trial and error,
+
+00:25:19.950 --> 00:25:24.210
+because we are running out
+kind of getting rollouts
+
+00:25:24.210 --> 00:25:26.550
+in of the policy
+in the environment,
+
+00:25:26.550 --> 00:25:28.930
+so we're trying out
+different strategies.
+
+00:25:28.930 --> 00:25:33.610
+And then through basically
+updates in parameter space,
+
+00:25:33.610 --> 00:25:37.410
+we are learning what
+is more effective
+
+00:25:37.410 --> 00:25:39.650
+and making it more
+likely, and we're
+
+00:25:39.650 --> 00:25:42.310
+learning what is less effective
+and making it less likely.
+
+00:25:53.690 --> 00:25:56.550
+And there's a lot of
+imitation learning context.
+
+00:25:56.550 --> 00:25:58.130
+We could use this
+approach because we
+
+00:25:58.130 --> 00:26:01.030
+don't have an explicit
+formulation of the reward.
+
+00:26:01.030 --> 00:26:03.450
+Is that kind of why or?
+
+00:26:03.450 --> 00:26:05.735
+I would say, so, yes.
+
+00:26:05.735 --> 00:26:07.860
+For example, you might not
+have an explicit measure
+
+00:26:07.860 --> 00:26:09.260
+of the reward.
+
+00:26:09.260 --> 00:26:12.740
+I mean, you could construct
+it and then maybe reweight
+
+00:26:12.740 --> 00:26:15.840
+your behavior cloning
+loss, for example,
+
+00:26:15.840 --> 00:26:18.087
+so this is something
+that if you recall,
+
+00:26:18.087 --> 00:26:20.420
+we did discuss towards the
+end of the behavioral cloning
+
+00:26:20.420 --> 00:26:22.940
+class, where we looked at--
+
+00:26:22.940 --> 00:26:25.380
+So we refer to them
+as reinforcement
+
+00:26:25.380 --> 00:26:28.500
+via supervised learning
+methods, where we did
+
+00:26:28.500 --> 00:26:30.220
+have a notion of
+reward, and maybe we
+
+00:26:30.220 --> 00:26:33.780
+use that to filter the
+demonstrations or whatnot.
+
+00:26:33.780 --> 00:26:36.560
+But so at face value, yes,
+this is the reason why.
+
+00:26:42.980 --> 00:26:49.300
+And so I would say, this is
+probably the most fundamental
+
+00:26:49.300 --> 00:26:51.340
+idea for this lecture.
+
+00:26:51.340 --> 00:26:56.123
+So we started saying,
+we want to approach
+
+00:26:56.123 --> 00:26:57.540
+the reinforcement
+learning problem
+
+00:26:57.540 --> 00:26:58.873
+from a slightly different angle.
+
+00:26:58.873 --> 00:27:01.220
+That is one of
+policy optimization,
+
+00:27:01.220 --> 00:27:03.740
+so we parameterize
+our policy, and then
+
+00:27:03.740 --> 00:27:07.520
+we cast reinforcement
+learning as an optimization
+
+00:27:07.520 --> 00:27:11.240
+problem with respect to these
+parameters of the policy.
+
+00:27:11.240 --> 00:27:13.013
+And to do this, we
+do gradient ascent,
+
+00:27:13.013 --> 00:27:14.680
+and so everything
+that we've done so far
+
+00:27:14.680 --> 00:27:18.040
+is derive the expression
+of the gradient.
+
+00:27:18.040 --> 00:27:21.660
+So of course, this is not it.
+
+00:27:21.660 --> 00:27:24.920
+There is much more to policy
+optimization in the sense
+
+00:27:24.920 --> 00:27:26.580
+that what we discussed
+so far is great,
+
+00:27:26.580 --> 00:27:29.140
+and from an
+intuitive standpoint,
+
+00:27:29.140 --> 00:27:33.120
+it also makes a lot of sense,
+at least, to me personally.
+
+00:27:33.120 --> 00:27:36.100
+But I would say that if
+you look at this gradient,
+
+00:27:36.100 --> 00:27:39.120
+there are some clear
+limitations, and I would say,
+
+00:27:39.120 --> 00:27:42.200
+the main one is the fact
+that this gradient, so
+
+00:27:42.200 --> 00:27:46.860
+our estimate of the gradient,
+has extremely high variance.
+
+00:27:46.860 --> 00:27:49.740
+And so this is an
+extremely, if you wish,
+
+00:27:49.740 --> 00:27:53.520
+unstable learning
+signal to follow.
+
+00:27:53.520 --> 00:27:57.320
+But so let us now
+spend a few minutes
+
+00:27:57.320 --> 00:28:00.660
+on this problem of high
+variance of the policy gradient.
+
+00:28:00.660 --> 00:28:05.250
+And so we'll do now is,
+we'll first briefly build
+
+00:28:05.250 --> 00:28:08.590
+some intuition to why this high
+variance might be happening,
+
+00:28:08.590 --> 00:28:10.330
+and then we'll look
+at two strategies
+
+00:28:10.330 --> 00:28:12.990
+for reducing the variance
+of the policy gradient.
+
+00:28:17.170 --> 00:28:20.570
+So consider this, again,
+kind of fictitious example
+
+00:28:20.570 --> 00:28:21.810
+here on the slide.
+
+00:28:21.810 --> 00:28:25.490
+Specifically, here
+we are visualizing,
+
+00:28:25.490 --> 00:28:29.910
+if you wish, on the x-axis
+the space of trajectories,
+
+00:28:29.910 --> 00:28:32.410
+so all possible
+trajectories that we may
+
+00:28:32.410 --> 00:28:36.490
+follow according to our policy.
+
+00:28:36.490 --> 00:28:40.530
+And this Gaussian here
+is basically represents
+
+00:28:40.530 --> 00:28:44.830
+a distribution over trajectories
+induced by our policy pi.
+
+00:28:47.970 --> 00:28:52.190
+Now, say that we basically run
+our policy in the environment
+
+00:28:52.190 --> 00:28:55.350
+and we observe
+three trajectories,
+
+00:28:55.350 --> 00:28:58.630
+and these three trajectories
+have some associated return.
+
+00:28:58.630 --> 00:29:00.830
+So we have these
+three trajectories,
+
+00:29:00.830 --> 00:29:04.670
+we sum up all of the rewards,
+and we obtain this three
+
+00:29:04.670 --> 00:29:08.630
+specific performances.
+
+00:29:08.630 --> 00:29:10.590
+Now, out of these
+three, two of them
+
+00:29:10.590 --> 00:29:15.910
+were positive in this direction
+and one of them was negative.
+
+00:29:15.910 --> 00:29:21.270
+Now, from everything that we've
+said so far on policy gradient,
+
+00:29:21.270 --> 00:29:24.630
+well, we would expect
+to policy gradient
+
+00:29:24.630 --> 00:29:27.850
+to do is that if we then
+use these trajectories,
+
+00:29:27.850 --> 00:29:30.430
+estimate the gradient and
+take a step in the parameter
+
+00:29:30.430 --> 00:29:34.030
+space, what we're doing is that
+we're making this behavior more
+
+00:29:34.030 --> 00:29:36.550
+likely than this behavior
+here because this
+
+00:29:36.550 --> 00:29:39.790
+is exactly what we've
+been discussing so far.
+
+00:29:39.790 --> 00:29:42.830
+And this is actually
+what would happen.
+
+00:29:42.830 --> 00:29:46.230
+But now let's suppose that
+we take those same three
+
+00:29:46.230 --> 00:29:52.950
+trajectories and simply add
+the same positive constant
+
+00:29:52.950 --> 00:29:56.970
+to the returns to get
+these three new values.
+
+00:29:56.970 --> 00:29:59.330
+So the relative gap
+is always the same,
+
+00:29:59.330 --> 00:30:01.850
+but what changes is the
+kind of absolute numbers
+
+00:30:01.850 --> 00:30:04.605
+of those rewards.
+
+00:30:04.605 --> 00:30:07.230
+The catch here is that if we now
+would do the exact same thing,
+
+00:30:07.230 --> 00:30:10.810
+that is policy gradient on these
+trajectories, what we would get
+
+00:30:10.810 --> 00:30:13.410
+is something slightly
+more dispersed.
+
+00:30:13.410 --> 00:30:17.410
+So because this is also a
+positive number, in this case,
+
+00:30:17.410 --> 00:30:21.250
+policy gradient
+will still try to--
+
+00:30:21.250 --> 00:30:23.570
+well, it will try to of
+course, give more likelihood
+
+00:30:23.570 --> 00:30:25.530
+to the better ones,
+but it will still
+
+00:30:25.530 --> 00:30:30.730
+try to cover this
+trajectory over here.
+
+00:30:30.730 --> 00:30:34.050
+And so, of course, this is, if
+you wish, an extreme example,
+
+00:30:34.050 --> 00:30:36.850
+but the main idea that
+I'm trying to convey here
+
+00:30:36.850 --> 00:30:39.810
+is that because
+we are estimating
+
+00:30:39.810 --> 00:30:42.170
+the true value of
+the policy gradient
+
+00:30:42.170 --> 00:30:46.170
+through samples, depending on
+the samples that we observe,
+
+00:30:46.170 --> 00:30:49.810
+the policy gradient can vary
+also quite substantially.
+
+00:30:49.810 --> 00:30:52.410
+And so this is
+exactly what we mean
+
+00:30:52.410 --> 00:30:55.690
+that the estimator that we came
+up with of the policy gradient
+
+00:30:55.690 --> 00:30:59.300
+has a high variance.
+
+00:30:59.300 --> 00:31:00.460
+Why do we care about this?
+
+00:31:00.460 --> 00:31:03.780
+Is because in practice,
+if our estimator
+
+00:31:03.780 --> 00:31:06.980
+of the gradient that we follow
+for learning has high variance,
+
+00:31:06.980 --> 00:31:09.760
+this will essentially
+lead to worse performance,
+
+00:31:09.760 --> 00:31:13.380
+slower convergence, and
+potentially more unstable
+
+00:31:13.380 --> 00:31:16.620
+training curves, essentially.
+
+00:31:16.620 --> 00:31:20.780
+So within this
+framing, I would say
+
+00:31:20.780 --> 00:31:24.460
+that a lot, if not the
+majority of the research
+
+00:31:24.460 --> 00:31:27.740
+in policy optimization,
+essentially revolves
+
+00:31:27.740 --> 00:31:32.340
+around finding ways to lower the
+variance of these estimators,
+
+00:31:32.340 --> 00:31:35.340
+and so different algorithms
+essentially boil down
+
+00:31:35.340 --> 00:31:38.520
+to instantiating the policy
+gradient in different ways.
+
+00:31:44.700 --> 00:31:47.700
+Any questions on this?
+
+00:31:47.700 --> 00:31:49.340
+Yeah.
+
+00:31:49.340 --> 00:31:52.820
+So rewards can be discrete
+or can be continuous.
+
+00:31:52.820 --> 00:31:57.680
+And it's just like a more
+clear gradient decrease
+
+00:31:57.680 --> 00:31:59.810
+the variance of
+the policy gradient
+
+00:31:59.810 --> 00:32:01.440
+is another interpretation?
+
+00:32:01.440 --> 00:32:02.720
+Sorry.
+
+00:32:02.720 --> 00:32:07.020
+Compared goal point let
+say, and you reach the goal,
+
+00:32:07.020 --> 00:32:10.120
+you get 5 points,
+versus you get points
+
+00:32:10.120 --> 00:32:13.920
+based on proximity to the goal,
+so just continuous signal.
+
+00:32:13.920 --> 00:32:16.120
+Just supplying a
+continuous reward signal
+
+00:32:16.120 --> 00:32:18.120
+decrease the variance?
+
+00:32:18.120 --> 00:32:21.960
+Yes, I would say that
+in general, the more
+
+00:32:21.960 --> 00:32:25.320
+dense your reward
+is, the better it
+
+00:32:25.320 --> 00:32:28.880
+is for propagating that learning
+throughout the algorithm,
+
+00:32:28.880 --> 00:32:30.467
+in general.
+
+00:32:30.467 --> 00:32:32.800
+Now, it's not only because
+of the variance of the policy
+
+00:32:32.800 --> 00:32:34.400
+gradient, but I would
+say, in general,
+
+00:32:34.400 --> 00:32:37.500
+also for credit assignment.
+
+00:32:37.500 --> 00:32:41.080
+So if basically,
+it encodes learning
+
+00:32:41.080 --> 00:32:44.100
+to be more granular throughout
+your entire trajectory,
+
+00:32:44.100 --> 00:32:46.540
+if that makes sense, but yes,
+your intuition is correct.
+
+00:32:53.850 --> 00:32:56.410
+So let's look at a
+couple of strategies
+
+00:32:56.410 --> 00:32:59.850
+to reduce the variance
+of policy gradients.
+
+00:32:59.850 --> 00:33:04.330
+So the first one, I would say,
+is more than a simple trick
+
+00:33:04.330 --> 00:33:06.010
+than an actual strategy.
+
+00:33:06.010 --> 00:33:07.730
+In the sense that
+if we look back
+
+00:33:07.730 --> 00:33:11.090
+at what we were doing to
+define the policy gradient,
+
+00:33:11.090 --> 00:33:14.030
+we essentially defined it as,
+of course, the empirical mean,
+
+00:33:14.030 --> 00:33:16.690
+because we want to
+approximate the expectations.
+
+00:33:16.690 --> 00:33:18.930
+We have this first term,
+which is the log pi's.
+
+00:33:18.930 --> 00:33:20.790
+Great, something we can compute.
+
+00:33:20.790 --> 00:33:22.330
+And we were weighting
+the log pi's
+
+00:33:22.330 --> 00:33:26.970
+by the sum of rewards throughout
+the entire trajectory.
+
+00:33:26.970 --> 00:33:31.250
+Now, if you look a little bit
+more closely into what this is
+
+00:33:31.250 --> 00:33:36.570
+doing, is that what it may
+happen that for time t prime,
+
+00:33:36.570 --> 00:33:42.130
+greater than t, the log pi's
+of this t prime would still be
+
+00:33:42.130 --> 00:33:46.690
+weighted by the sum of all
+the t's before t prime,
+
+00:33:46.690 --> 00:33:48.490
+which is something
+counterintuitive,
+
+00:33:48.490 --> 00:33:53.750
+because basically the policy
+at time t prime cannot really
+
+00:33:53.750 --> 00:33:58.250
+affect the reward for the
+time steps before that action.
+
+00:33:58.250 --> 00:34:02.850
+And so this is what I mean by
+causality here on the slide.
+
+00:34:02.850 --> 00:34:05.830
+And so the first trick
+essentially entails leveraging
+
+00:34:05.830 --> 00:34:10.110
+this intuition for the fact that
+actions at time t prime cannot
+
+00:34:10.110 --> 00:34:12.510
+affect the rewards
+that happen before it,
+
+00:34:12.510 --> 00:34:16.270
+and simply encode this into
+how we are defining the policy
+
+00:34:16.270 --> 00:34:19.270
+gradient.
+
+00:34:19.270 --> 00:34:22.909
+So right now, here, I'm just
+taking out this summation
+
+00:34:22.909 --> 00:34:25.310
+to make it more explicit.
+
+00:34:25.310 --> 00:34:27.150
+But so rather than
+summing from t
+
+00:34:27.150 --> 00:34:29.710
+equals 1, what we
+would be doing here
+
+00:34:29.710 --> 00:34:36.909
+is summing from t prime
+equals t, specifically.
+
+00:34:36.909 --> 00:34:40.070
+So this makes sense intuitively,
+but why does this lower
+
+00:34:40.070 --> 00:34:40.695
+the variance?
+
+00:34:40.695 --> 00:34:42.070
+So first of all,
+of course, we're
+
+00:34:42.070 --> 00:34:45.989
+not including a lot of terms on
+which the action doesn't really
+
+00:34:45.989 --> 00:34:47.750
+have any influence on.
+
+00:34:47.750 --> 00:34:52.320
+And then also, I would
+say quite intuitively,
+
+00:34:52.320 --> 00:34:55.699
+we are summing less terms
+in our policy gradient.
+
+00:34:55.699 --> 00:34:58.160
+Less terms of the reward.
+
+00:34:58.160 --> 00:35:00.120
+And remember that the
+reward is essentially
+
+00:35:00.120 --> 00:35:04.760
+something that depends on a
+number of stochastic elements
+
+00:35:04.760 --> 00:35:06.180
+throughout the trajectory.
+
+00:35:06.180 --> 00:35:08.920
+So again, throughout
+the trajectory,
+
+00:35:08.920 --> 00:35:11.880
+we will be sampling repeatedly
+from our policy, which
+
+00:35:11.880 --> 00:35:13.800
+is indeed something stochastic.
+
+00:35:13.800 --> 00:35:15.920
+We'll be sampling repeatedly
+from the transition
+
+00:35:15.920 --> 00:35:18.480
+function, which is also
+something stochastic.
+
+00:35:18.480 --> 00:35:22.460
+And so simply put, here
+we're summing less terms,
+
+00:35:22.460 --> 00:35:25.680
+and so there is less variance
+associated with this policy
+
+00:35:25.680 --> 00:35:27.140
+gradient, overall.
+
+00:35:32.225 --> 00:35:33.100
+Does this make sense?
+
+00:35:33.100 --> 00:35:35.160
+This is pretty simple
+trick, I would say,
+
+00:35:35.160 --> 00:35:38.660
+but it does indeed
+measurably improve things.
+
+00:35:44.280 --> 00:35:46.600
+The second strategy,
+which I would
+
+00:35:46.600 --> 00:35:52.500
+say is very important for the
+space of policy optimization
+
+00:35:52.500 --> 00:35:57.180
+methods, is one of introducing
+the concept of baselines.
+
+00:35:57.180 --> 00:36:00.680
+So to understand exactly
+what we mean by baseline,
+
+00:36:00.680 --> 00:36:03.220
+let's reconsider the
+intuition we were discussing
+
+00:36:03.220 --> 00:36:06.220
+before regarding
+policy gradient,
+
+00:36:06.220 --> 00:36:08.780
+when we were saying that
+policy gradient makes
+
+00:36:08.780 --> 00:36:12.420
+good behavior more likely.
+
+00:36:12.420 --> 00:36:17.260
+And so, specifically, what
+we're discussing is that policy
+
+00:36:17.260 --> 00:36:21.420
+gradient will only
+do, quote-unquote,
+
+00:36:21.420 --> 00:36:24.820
+"the right thing,"
+if the returns,
+
+00:36:24.820 --> 00:36:28.100
+that is the sum of all the
+rewards that we are observing,
+
+00:36:28.100 --> 00:36:29.280
+were centered.
+
+00:36:29.280 --> 00:36:32.660
+So we specifically consider
+this counter example
+
+00:36:32.660 --> 00:36:35.640
+on the right, where the relative
+difference was the same,
+
+00:36:35.640 --> 00:36:37.760
+but simply those returns
+were not centered,
+
+00:36:37.760 --> 00:36:40.060
+and so the policy gradient
+was actually doing something
+
+00:36:40.060 --> 00:36:43.035
+that we didn't want it to do.
+
+00:36:43.035 --> 00:36:44.660
+Intuitively, what we
+would like to have
+
+00:36:44.660 --> 00:36:49.400
+instead is that we would like
+to use some mechanism to center
+
+00:36:49.400 --> 00:36:53.920
+our returns, such that the
+policy gradient essentially
+
+00:36:53.920 --> 00:36:58.040
+becomes something whereby the
+probability of behavior that
+
+00:36:58.040 --> 00:37:00.900
+is better than average
+gets increased,
+
+00:37:00.900 --> 00:37:04.880
+and the probability of behavior
+that is worse than average gets
+
+00:37:04.880 --> 00:37:06.960
+decreased.
+
+00:37:06.960 --> 00:37:09.440
+So in other words, we
+want to have a mechanism
+
+00:37:09.440 --> 00:37:12.040
+to recenter the returns
+from our interactions
+
+00:37:12.040 --> 00:37:15.520
+with the environment.
+
+00:37:15.520 --> 00:37:17.680
+The way we'll do this
+is through something
+
+00:37:17.680 --> 00:37:19.440
+that is referred to
+as a baseline, here
+
+00:37:19.440 --> 00:37:22.600
+referred to as b, which
+is basically a quantity
+
+00:37:22.600 --> 00:37:26.480
+that we are subtracting
+to the sum of reward
+
+00:37:26.480 --> 00:37:28.180
+to the return r of tau.
+
+00:37:38.200 --> 00:37:44.690
+So before we get into actionable
+ways of using the baseline,
+
+00:37:44.690 --> 00:37:47.050
+kind of a valuable
+sanity check here
+
+00:37:47.050 --> 00:37:48.650
+is so we're
+introducing something
+
+00:37:48.650 --> 00:37:51.730
+in the policy gradient.
+
+00:37:51.730 --> 00:37:55.010
+We don't want to change the
+expectation of the policy
+
+00:37:55.010 --> 00:38:00.030
+gradient because we derived
+our equations analytically.
+
+00:38:00.030 --> 00:38:02.890
+And we know that in
+expectation, the policy gradient
+
+00:38:02.890 --> 00:38:06.330
+will go to the limit
+of infinite samples
+
+00:38:06.330 --> 00:38:09.470
+from our distribution
+over trajectories,
+
+00:38:09.470 --> 00:38:11.490
+we'll get the correct object.
+
+00:38:11.490 --> 00:38:13.850
+But now if we subtract
+this baseline b,
+
+00:38:13.850 --> 00:38:17.110
+do we still get the
+same expectation?
+
+00:38:17.110 --> 00:38:21.050
+Is the estimator still
+unbiased, essentially?
+
+00:38:21.050 --> 00:38:23.330
+And so the claim
+here as a spoiler
+
+00:38:23.330 --> 00:38:25.690
+is that adding this
+baseline does not
+
+00:38:25.690 --> 00:38:28.570
+change the value of
+the expected gradient,
+
+00:38:28.570 --> 00:38:31.390
+and so let's look at this
+more and more closely.
+
+00:38:34.210 --> 00:38:37.610
+So to understand
+this, let's consider
+
+00:38:37.610 --> 00:38:39.730
+the following expectation.
+
+00:38:39.730 --> 00:38:48.070
+So specifically, let's look
+at the part of the policy
+
+00:38:48.070 --> 00:38:50.150
+gradient, which only
+takes into account
+
+00:38:50.150 --> 00:38:55.830
+the baseline, so the grad log
+p is times the baseline p.
+
+00:38:55.830 --> 00:38:58.250
+Again, from the definition
+of the expectation,
+
+00:38:58.250 --> 00:39:00.630
+we can rewrite this
+as the integral
+
+00:39:00.630 --> 00:39:06.850
+of p tau, times the grad
+log p, times the baseline b,
+
+00:39:06.850 --> 00:39:11.350
+so here just the definition
+of expectation again.
+
+00:39:11.350 --> 00:39:14.470
+And now we can use the
+exact same identity
+
+00:39:14.470 --> 00:39:16.710
+that we used before in the
+derivation of the policy
+
+00:39:16.710 --> 00:39:20.110
+gradient, but now in the
+reverse direction, if you wish.
+
+00:39:20.110 --> 00:39:27.310
+So we can basically take
+the p times grad log p's,
+
+00:39:27.310 --> 00:39:33.430
+which is equal to the
+grad p's over here.
+
+00:39:33.430 --> 00:39:36.850
+And so this entails two grad
+p's times the baseline b.
+
+00:39:39.640 --> 00:39:43.440
+Now, we can take the
+b because this is just
+
+00:39:43.440 --> 00:39:46.040
+a constant out of the integral.
+
+00:39:46.040 --> 00:39:49.720
+We can do the same with
+the gradient operator,
+
+00:39:49.720 --> 00:39:53.960
+and so what we get
+is the b multiplied
+
+00:39:53.960 --> 00:39:57.240
+by the gradient of the integral
+of the probability of tau
+
+00:39:57.240 --> 00:39:58.720
+in the tau.
+
+00:39:58.720 --> 00:40:01.360
+Since the probability
+distribution over trajectories
+
+00:40:01.360 --> 00:40:03.640
+is a valid probability
+density, we
+
+00:40:03.640 --> 00:40:07.240
+know that the integral
+has to be equal to 1.
+
+00:40:07.240 --> 00:40:10.760
+And so what we get is we
+get b, times the gradient
+
+00:40:10.760 --> 00:40:13.140
+of a constant,
+which is equal to 0.
+
+00:40:19.320 --> 00:40:22.560
+And so this basically
+makes the estimate
+
+00:40:22.560 --> 00:40:26.800
+of the gradient with the
+additional baseline term still
+
+00:40:26.800 --> 00:40:29.560
+unbiased in expectation
+because here,
+
+00:40:29.560 --> 00:40:33.080
+we basically verified
+that the expected value
+
+00:40:33.080 --> 00:40:36.600
+of the term that we are
+subtracting is equal to 0,
+
+00:40:36.600 --> 00:40:39.100
+and so we're not really
+changing the actual expectation
+
+00:40:39.100 --> 00:40:49.100
+of our estimator, which
+is something pretty
+
+00:40:49.100 --> 00:40:51.740
+neat because basically
+now we have this mechanism
+
+00:40:51.740 --> 00:40:54.660
+through which we can recenter
+the returns in our policy
+
+00:40:54.660 --> 00:40:58.960
+gradient, and therefore, reduce
+the variance basically for free,
+
+00:40:58.960 --> 00:41:01.140
+because we're not really
+losing anything in terms
+
+00:41:01.140 --> 00:41:06.100
+of bias of our estimator.
+
+00:41:06.100 --> 00:41:09.340
+Since what we say is that
+the goal here is to center
+
+00:41:09.340 --> 00:41:14.300
+the returns, a pretty
+effective and popular choice
+
+00:41:14.300 --> 00:41:16.580
+of the baseline is actually
+to define the baseline
+
+00:41:16.580 --> 00:41:18.420
+as the average return.
+
+00:41:18.420 --> 00:41:21.860
+So remember, again,
+here we are interacting
+
+00:41:21.860 --> 00:41:25.620
+n times with our environments,
+so we have n trajectories tile.
+
+00:41:25.620 --> 00:41:28.540
+For all of these trajectories,
+we will have some return,
+
+00:41:28.540 --> 00:41:31.580
+and so we just define
+b as the average return
+
+00:41:31.580 --> 00:41:33.120
+over our trajectories.
+
+00:41:35.950 --> 00:41:38.150
+We'll see how this
+idea of average returns
+
+00:41:38.150 --> 00:41:40.790
+basically motivates many
+popular reinforcement learning
+
+00:41:40.790 --> 00:41:43.030
+algorithms, but for
+now, I would say,
+
+00:41:43.030 --> 00:41:46.190
+this is the intuition that
+we are trying to capture.
+
+00:41:46.190 --> 00:41:50.250
+So remember what
+we're doing here.
+
+00:41:50.250 --> 00:41:55.070
+We are interested in using
+policy gradient like algorithms.
+
+00:41:55.070 --> 00:41:58.630
+We recognized that the policy
+gradient is a high variance
+
+00:41:58.630 --> 00:42:02.310
+object, and so we want to reduce
+this variance through baselines.
+
+00:42:02.310 --> 00:42:05.610
+And here, we basically
+showed one way of doing so.
+
+00:42:13.230 --> 00:42:14.650
+Any questions on this?
+
+00:42:24.418 --> 00:42:26.810
+What does it mean in
+practice to have a baseline?
+
+00:42:26.810 --> 00:42:30.390
+Again, this is just kind of
+a simple example of training
+
+00:42:30.390 --> 00:42:33.190
+curves, but to give you an idea
+is that in practice what this
+
+00:42:33.190 --> 00:42:36.770
+would mean is that even for
+very simple environments,
+
+00:42:36.770 --> 00:42:42.050
+you would get a
+much faster training
+
+00:42:42.050 --> 00:42:44.490
+for the exact same
+algorithm when
+
+00:42:44.490 --> 00:42:46.650
+you're just changing the
+expression of the policy
+
+00:42:46.650 --> 00:42:47.450
+gradient.
+
+00:42:47.450 --> 00:42:50.050
+So here, we're
+basically looking at it
+
+00:42:50.050 --> 00:42:52.430
+from the perspective of
+maybe sample efficiency,
+
+00:42:52.430 --> 00:42:54.850
+so you converge faster,
+but in some cases
+
+00:42:54.850 --> 00:42:56.610
+this actually makes
+the difference
+
+00:42:56.610 --> 00:43:01.675
+between converging or not
+converging to a good solution.
+
+00:43:01.675 --> 00:43:03.050
+So basically, this
+is what I mean
+
+00:43:03.050 --> 00:43:07.530
+when I say that the quality
+of the estimator of the policy
+
+00:43:07.530 --> 00:43:11.550
+gradient actually influences
+training quite substantially.
+
+00:43:17.930 --> 00:43:23.510
+So let's take a step back and
+think about what we're doing.
+
+00:43:23.510 --> 00:43:25.810
+So everything that
+we've done so far today
+
+00:43:25.810 --> 00:43:29.010
+is basically defining
+a different way
+
+00:43:29.010 --> 00:43:31.940
+of solving the reinforcement
+learning objective.
+
+00:43:31.940 --> 00:43:36.740
+First of all, we express it as a
+function of the parameters theta
+
+00:43:36.740 --> 00:43:40.760
+of our policy, we evaluate the
+gradient of that objective,
+
+00:43:40.760 --> 00:43:44.460
+we saw how to do it, and we
+take a step in parameter space
+
+00:43:44.460 --> 00:43:46.500
+according to this gradient.
+
+00:43:46.500 --> 00:43:49.660
+Now, given basically this
+high level structure,
+
+00:43:49.660 --> 00:43:52.580
+if you recall last
+week, we were discussing
+
+00:43:52.580 --> 00:43:55.940
+the differences between on
+and off policy algorithms.
+
+00:43:55.940 --> 00:43:59.220
+Specifically, we mentioned
+that an on policy algorithm
+
+00:43:59.220 --> 00:44:03.140
+is an algorithm that
+uses experience collected
+
+00:44:03.140 --> 00:44:07.820
+under the policy that we are
+using to explore the environment
+
+00:44:07.820 --> 00:44:10.660
+to improve.
+
+00:44:10.660 --> 00:44:14.140
+Would you say that this is an on
+policy or off policy algorithm
+
+00:44:14.140 --> 00:44:16.500
+in this case?
+
+00:44:16.500 --> 00:44:17.400
+Yeah.
+
+00:44:17.400 --> 00:44:21.220
+[INAUDIBLE] are
+updating the policy
+
+00:44:21.220 --> 00:44:24.460
+under different
+runs of the market?
+
+00:44:24.460 --> 00:44:25.440
+Yeah, exactly.
+
+00:44:25.440 --> 00:44:29.100
+So this is in this
+specific framework,
+
+00:44:29.100 --> 00:44:32.880
+as we've have seen so far,
+policy gradient algorithms
+
+00:44:32.880 --> 00:44:35.120
+are indeed a
+naturally on policy,
+
+00:44:35.120 --> 00:44:39.600
+because the estimate
+of the gradient
+
+00:44:39.600 --> 00:44:42.720
+depends on basically,
+the rollouts that we
+
+00:44:42.720 --> 00:44:46.840
+did in the environment,
+according to the current policy
+
+00:44:46.840 --> 00:44:48.160
+pi theta.
+
+00:44:48.160 --> 00:44:50.400
+The moment we update
+the policy, we'll
+
+00:44:50.400 --> 00:44:52.280
+have to collect new
+experience in order
+
+00:44:52.280 --> 00:44:56.020
+to re-evaluate the policy
+gradient for that policy.
+
+00:45:01.120 --> 00:45:04.300
+Of course, there are extensions
+of policy optimization.
+
+00:45:04.300 --> 00:45:07.140
+So the takeaway here is
+not policy optimization.
+
+00:45:07.140 --> 00:45:09.720
+Algorithms are on
+policy, but there
+
+00:45:09.720 --> 00:45:12.260
+are for the way we
+derive it so far,
+
+00:45:12.260 --> 00:45:14.700
+these are indeed on
+policy algorithms.
+
+00:45:18.800 --> 00:45:20.960
+And indeed, exactly
+as we said, it
+
+00:45:20.960 --> 00:45:24.480
+is on policy because we need
+samples from the current policy
+
+00:45:24.480 --> 00:45:27.080
+to estimate the gradient.
+
+00:45:27.080 --> 00:45:29.460
+So let's look a little
+bit more closely
+
+00:45:29.460 --> 00:45:35.500
+at a couple of pros and cons
+of policy gradient methods.
+
+00:45:35.500 --> 00:45:40.860
+First of all, it's
+nice to point out
+
+00:45:40.860 --> 00:45:44.700
+how policy gradient
+methods naturally handle
+
+00:45:44.700 --> 00:45:46.660
+continuous action spaces.
+
+00:45:46.660 --> 00:45:49.740
+And this is because
+basically, all we have to do
+
+00:45:49.740 --> 00:45:52.700
+is we have to define an
+appropriate representation
+
+00:45:52.700 --> 00:45:55.800
+of our policy pi of ut given xt.
+
+00:45:55.800 --> 00:45:57.780
+For example, this
+could be a Gaussian,
+
+00:45:57.780 --> 00:46:00.960
+and we parameterize the
+parameters of that Gaussian.
+
+00:46:00.960 --> 00:46:06.540
+So same thing if we were to
+use a discrete distribution, so
+
+00:46:06.540 --> 00:46:08.700
+a categorical
+distribution, we will
+
+00:46:08.700 --> 00:46:11.580
+be essentially able to leverage
+the exact same formalism
+
+00:46:11.580 --> 00:46:16.500
+regardless if the action space
+is continuous or discrete.
+
+00:46:16.500 --> 00:46:19.080
+On the other hand, in
+value-based methods,
+
+00:46:19.080 --> 00:46:23.060
+if you recall, the policy for
+us was basically, implicitly
+
+00:46:23.060 --> 00:46:29.250
+defined as an argmax over you
+of, for example, a q function.
+
+00:46:32.742 --> 00:46:36.910
+Doing this argmax is obviously
+easy in the moment in which this
+
+00:46:36.910 --> 00:46:40.310
+is the action space is
+discrete, so we have finite set
+
+00:46:40.310 --> 00:46:42.710
+of values for our actions u.
+
+00:46:42.710 --> 00:46:45.550
+The moment u is a
+continuous object, then
+
+00:46:45.550 --> 00:46:47.910
+this in itself is an
+optimization problem,
+
+00:46:47.910 --> 00:46:50.490
+so which might or
+might not be trivial.
+
+00:46:53.070 --> 00:46:54.210
+Same caveat here.
+
+00:46:54.210 --> 00:46:56.390
+There are, of
+course, methods that
+
+00:46:56.390 --> 00:47:00.390
+allow value-based methods to be
+applied for continuous action
+
+00:47:00.390 --> 00:47:04.270
+spaces, but at face value,
+this is a clear distinction.
+
+00:47:08.350 --> 00:47:13.830
+A second pro is that
+by how we derived it,
+
+00:47:13.830 --> 00:47:16.470
+policy optimization
+methods directly
+
+00:47:16.470 --> 00:47:18.970
+optimize the objective
+we care about,
+
+00:47:18.970 --> 00:47:21.950
+which is the discounted
+sum of rewards over time.
+
+00:47:21.950 --> 00:47:26.210
+So we are clearly
+differentiating
+
+00:47:26.210 --> 00:47:28.250
+between policy
+optimization methods that
+
+00:47:28.250 --> 00:47:32.570
+take the rl objective and
+optimize this objective at face
+
+00:47:32.570 --> 00:47:34.850
+value, so we literally
+do gradient ascent
+
+00:47:34.850 --> 00:47:36.530
+on that objective.
+
+00:47:36.530 --> 00:47:39.730
+From value-based methods
+such as q-learning,
+
+00:47:39.730 --> 00:47:44.250
+which derive a mechanism, for
+example, the Bellman optimality
+
+00:47:44.250 --> 00:47:49.170
+equations, to enforce a kind
+of a fixed point iteration
+
+00:47:49.170 --> 00:47:52.090
+scheme that at
+convergence will also
+
+00:47:52.090 --> 00:47:55.130
+lead to optimizing
+that same objective,
+
+00:47:55.130 --> 00:47:58.970
+but for intermediate solutions,
+it's not really clear
+
+00:47:58.970 --> 00:48:00.890
+if there is a partial ordering.
+
+00:48:00.890 --> 00:48:03.070
+So for policy
+optimization method,
+
+00:48:03.070 --> 00:48:07.250
+since we're doing hill
+climbing, if we stop halfway,
+
+00:48:07.250 --> 00:48:10.290
+we probably have a good
+estimate of how much we
+
+00:48:10.290 --> 00:48:12.330
+have been improving over time.
+
+00:48:12.330 --> 00:48:14.650
+On the other hand,
+with q-learning, we
+
+00:48:14.650 --> 00:48:16.785
+know that we have
+guarantees of convergence,
+
+00:48:16.785 --> 00:48:18.410
+but if we stop halfway,
+we don't really
+
+00:48:18.410 --> 00:48:22.940
+know how we are with
+respect to previous versions
+
+00:48:22.940 --> 00:48:25.080
+of the policies we computed.
+
+00:48:28.580 --> 00:48:29.500
+Yes.
+
+00:48:29.500 --> 00:48:33.140
+Sir, what do you mean by, for
+q-learning, to stop halfway?
+
+00:48:33.140 --> 00:48:36.060
+Yes, so in both cases,
+remember that we're
+
+00:48:36.060 --> 00:48:39.240
+looking at sequential
+iterative algorithms.
+
+00:48:39.240 --> 00:48:41.580
+So here, this is
+basically gradient ascent,
+
+00:48:41.580 --> 00:48:43.900
+which we take sequential steps.
+
+00:48:43.900 --> 00:48:47.080
+In q-learning, we are basically
+doing fixed point iteration,
+
+00:48:47.080 --> 00:48:50.260
+so we are recursively enforcing
+maybe the Bellman optimality
+
+00:48:50.260 --> 00:48:51.500
+equation.
+
+00:48:51.500 --> 00:48:57.420
+In both cases, you might
+stop before convergence.
+
+00:48:57.420 --> 00:48:59.700
+In policy optimization
+case, I would
+
+00:48:59.700 --> 00:49:02.340
+argue it's pretty clear
+to understand progress
+
+00:49:02.340 --> 00:49:05.180
+because you're
+maximizing an objective.
+
+00:49:05.180 --> 00:49:07.260
+In q-learning,
+it's less clear how
+
+00:49:07.260 --> 00:49:10.380
+to value, to compute,
+or evaluate progress
+
+00:49:10.380 --> 00:49:13.400
+in between before you
+reach convergence.
+
+00:49:19.440 --> 00:49:21.240
+But I would say,
+the bottom line here
+
+00:49:21.240 --> 00:49:23.000
+is that in value-based
+learning, we
+
+00:49:23.000 --> 00:49:27.360
+are introducing an intermediate
+objective to achieve
+
+00:49:27.360 --> 00:49:29.480
+the same thing, while
+in policy optimization,
+
+00:49:29.480 --> 00:49:33.260
+we say we want to optimize the
+rl problem and we just do that.
+
+00:49:37.040 --> 00:49:41.640
+The con is that at face value,
+at least, the kind of algorithms
+
+00:49:41.640 --> 00:49:46.160
+we just discussed are on policy
+compared to, for example,
+
+00:49:46.160 --> 00:49:50.040
+q-learning, which might be prone
+to off policy learning as well.
+
+00:49:50.040 --> 00:49:54.040
+And so on policy in this
+case can be extremely sample
+
+00:49:54.040 --> 00:49:57.120
+inefficient, whereby
+we essentially,
+
+00:49:57.120 --> 00:49:59.460
+mean that we might have to
+interact with the environment
+
+00:49:59.460 --> 00:50:01.980
+many, many times before
+we actually converge.
+
+00:50:08.160 --> 00:50:12.940
+Any questions so far before we
+move on to actor-critic methods?
+
+00:50:20.810 --> 00:50:25.970
+And so let's now look at
+actor critic methods, which
+
+00:50:25.970 --> 00:50:29.650
+build, I would say,
+quite substantially
+
+00:50:29.650 --> 00:50:31.850
+on all the ideas we
+introduced so far,
+
+00:50:31.850 --> 00:50:34.650
+namely the policy gradient.
+
+00:50:34.650 --> 00:50:37.610
+But I would say, at their
+core, actor-critic methods
+
+00:50:37.610 --> 00:50:43.130
+try to blend and leverage
+the best of both worlds
+
+00:50:43.130 --> 00:50:47.310
+between policy gradient methods
+and value-based methods,
+
+00:50:47.310 --> 00:50:49.470
+and we'll see shortly how.
+
+00:50:53.890 --> 00:50:56.490
+So specifically, consider,
+again, the policy
+
+00:50:56.490 --> 00:50:58.850
+gradient expression
+we just derived,
+
+00:50:58.850 --> 00:51:01.990
+which is, again, the sum.
+
+00:51:01.990 --> 00:51:05.050
+So the average of the
+sum of the log pi's,
+
+00:51:05.050 --> 00:51:09.770
+times the sum of the
+reward of our trajectory.
+
+00:51:09.770 --> 00:51:13.490
+The sum of rewards from
+time t up until capital T,
+
+00:51:13.490 --> 00:51:15.250
+is also referred
+to as the reward
+
+00:51:15.250 --> 00:51:17.230
+to go, because
+essentially, encodes
+
+00:51:17.230 --> 00:51:19.110
+all of the rewards
+that we will be
+
+00:51:19.110 --> 00:51:22.810
+seeing in the future
+of our trajectory.
+
+00:51:27.990 --> 00:51:31.270
+And in a way basically,
+all of the discussions
+
+00:51:31.270 --> 00:51:33.430
+of the high variance
+of the policy
+
+00:51:33.430 --> 00:51:35.950
+gradient that we were doing
+before, essentially boil
+
+00:51:35.950 --> 00:51:42.510
+down that to the fact
+that this reward to go
+
+00:51:42.510 --> 00:51:46.150
+is indeed the part
+whereby we have
+
+00:51:46.150 --> 00:51:48.390
+that is basically contributing
+to this high variance
+
+00:51:48.390 --> 00:51:50.990
+because this reward
+to go, we only
+
+00:51:50.990 --> 00:51:57.030
+have a limited sample estimate
+of what the expected reward
+
+00:51:57.030 --> 00:51:59.710
+to go is.
+
+00:51:59.710 --> 00:52:02.690
+And when we actually sample
+from the environment,
+
+00:52:02.690 --> 00:52:06.750
+this might only be kind of a
+noisy estimate of the ground
+
+00:52:06.750 --> 00:52:10.390
+truth expectation
+we're interested in.
+
+00:52:10.390 --> 00:52:12.670
+Why is this a noisy estimate?
+
+00:52:12.670 --> 00:52:14.710
+Is because, again, as
+we were saying before,
+
+00:52:14.710 --> 00:52:16.730
+we are basically
+repeatedly sampling
+
+00:52:16.730 --> 00:52:19.170
+from various sources
+of noise, and so even
+
+00:52:19.170 --> 00:52:22.210
+if we were to take the exact
+same sequence of actions,
+
+00:52:22.210 --> 00:52:25.690
+over time, we might end in
+slightly different rollouts
+
+00:52:25.690 --> 00:52:27.510
+in our environment.
+
+00:52:30.250 --> 00:52:32.810
+So I would say,
+actor-critic methods
+
+00:52:32.810 --> 00:52:37.570
+are kind of fundamentally
+say the following.
+
+00:52:37.570 --> 00:52:43.130
+So rather than estimating
+these expected rewards
+
+00:52:43.130 --> 00:52:46.210
+to go through sampling,
+whereby sampling
+
+00:52:46.210 --> 00:52:48.610
+basically entails just
+evaluating rollouts
+
+00:52:48.610 --> 00:52:50.770
+of our policy and
+the environment,
+
+00:52:50.770 --> 00:52:56.770
+why don't we try to estimate the
+actual expectation by fitting,
+
+00:52:56.770 --> 00:53:02.030
+for example, a
+parametric function,
+
+00:53:02.030 --> 00:53:04.290
+to basically estimate
+this ground truth
+
+00:53:04.290 --> 00:53:08.090
+expectation that we care about?
+
+00:53:08.090 --> 00:53:12.340
+And so at a high level,
+what actor-critic methods do
+
+00:53:12.340 --> 00:53:15.540
+is that they define two
+parametric functions that we
+
+00:53:15.540 --> 00:53:17.180
+are interested in learning.
+
+00:53:17.180 --> 00:53:19.460
+The first one is the actor.
+
+00:53:19.460 --> 00:53:22.340
+Basically, our policy, so
+our policy pi of theta.
+
+00:53:22.340 --> 00:53:24.140
+So we have some
+parameters theta that we
+
+00:53:24.140 --> 00:53:26.500
+wish to estimate as
+we're doing so far,
+
+00:53:26.500 --> 00:53:30.420
+but they also introduce a critic
+that is basically a mechanism
+
+00:53:30.420 --> 00:53:35.860
+to estimate more accurately
+the expected reward to go
+
+00:53:35.860 --> 00:53:38.300
+that we would like to have.
+
+00:53:38.300 --> 00:53:40.200
+How do we do this?
+
+00:53:40.200 --> 00:53:41.700
+This is basically
+everything that we
+
+00:53:41.700 --> 00:53:45.380
+have been doing so far in
+the last couple of weeks,
+
+00:53:45.380 --> 00:53:50.380
+which is basically, we want to
+estimate the value functions.
+
+00:53:50.380 --> 00:53:54.700
+And so we saw before
+already how we can use,
+
+00:53:54.700 --> 00:53:56.940
+for example, parametric
+approximations
+
+00:53:56.940 --> 00:54:01.820
+to estimate an approximate
+value functions.
+
+00:54:01.820 --> 00:54:06.620
+So very high level, what
+actor-critic methods do
+
+00:54:06.620 --> 00:54:11.440
+is that they recognize that
+part of this high variance
+
+00:54:11.440 --> 00:54:13.920
+problem that we see
+in policy gradients
+
+00:54:13.920 --> 00:54:19.520
+basically is caused by
+approximating the reward
+
+00:54:19.520 --> 00:54:21.760
+to go through samples.
+
+00:54:21.760 --> 00:54:25.660
+And so instead of approximating
+this reward to go to samples,
+
+00:54:25.660 --> 00:54:30.000
+let's fit a parametric
+approximator of the ground truth
+
+00:54:30.000 --> 00:54:34.880
+expectation, which assuming
+we are able to do correctly,
+
+00:54:34.880 --> 00:54:39.800
+then this will reduce the
+variance of my policy gradient.
+
+00:54:39.800 --> 00:54:43.960
+So putting this together,
+instead of multiplying my log
+
+00:54:43.960 --> 00:54:48.180
+pi's by the sample return
+as we were doing over there,
+
+00:54:48.180 --> 00:54:51.160
+so our reward to go,
+let's replace the reward
+
+00:54:51.160 --> 00:54:55.600
+to go with an estimator
+of, for example,
+
+00:54:55.600 --> 00:54:58.020
+a value function with
+some parameters phi.
+
+00:55:07.930 --> 00:55:08.870
+Does this make sense?
+
+00:55:20.770 --> 00:55:24.490
+And so if this is clear--
+
+00:55:24.490 --> 00:55:29.210
+so this is a good
+idea, so let's just fit
+
+00:55:29.210 --> 00:55:33.930
+a parametric function
+to our value functions.
+
+00:55:33.930 --> 00:55:37.170
+Can we combine what we're
+doing, so this idea,
+
+00:55:37.170 --> 00:55:41.610
+with the discussion on
+baselines that we did before?
+
+00:55:41.610 --> 00:55:43.250
+Well, the answer is yes.
+
+00:55:43.250 --> 00:55:46.690
+So let us try to reduce
+even further the variance
+
+00:55:46.690 --> 00:55:51.410
+of our policy gradient
+by basically taking
+
+00:55:51.410 --> 00:55:55.650
+our new estimate of the
+policy gradient, where
+
+00:55:55.650 --> 00:55:58.290
+we are using our
+fitted q function,
+
+00:55:58.290 --> 00:56:00.590
+and let us add the
+baseline again.
+
+00:56:03.610 --> 00:56:05.330
+Exactly as we were
+saying before,
+
+00:56:05.330 --> 00:56:07.950
+the intuition that we tried
+to leverage in the baseline
+
+00:56:07.950 --> 00:56:11.590
+is that we wanted to
+center our returns.
+
+00:56:11.590 --> 00:56:19.130
+And so in this case, to center
+our value function here,
+
+00:56:19.130 --> 00:56:22.610
+we could pick a state
+dependent baseline b of xt.
+
+00:56:22.610 --> 00:56:28.150
+That depends on state xt, which
+is basically the expected q
+
+00:56:28.150 --> 00:56:29.390
+function value.
+
+00:56:29.390 --> 00:56:31.690
+So here, we're basically
+doing the same thing.
+
+00:56:31.690 --> 00:56:34.390
+We want to center this quantity.
+
+00:56:34.390 --> 00:56:35.810
+How do we center this?
+
+00:56:35.810 --> 00:56:39.550
+Well, we could pick b as the
+expected q function, where
+
+00:56:39.550 --> 00:56:44.990
+this expectation is taken under
+the distribution over controls
+
+00:56:44.990 --> 00:56:47.090
+ut according to our policy.
+
+00:56:53.470 --> 00:57:01.110
+So even if the exact details
+here are slightly unclear,
+
+00:57:01.110 --> 00:57:05.440
+I would say, the main idea
+here that we want to take home
+
+00:57:05.440 --> 00:57:09.320
+is that actor-critic
+methods introduce
+
+00:57:09.320 --> 00:57:10.840
+an estimate of
+the value function
+
+00:57:10.840 --> 00:57:13.040
+to better approximate
+the reward to go.
+
+00:57:13.040 --> 00:57:14.080
+This is great.
+
+00:57:14.080 --> 00:57:16.640
+Can we combine this
+idea with baselines?
+
+00:57:16.640 --> 00:57:19.800
+Yes, we can do that.
+
+00:57:19.800 --> 00:57:23.280
+We said that with baselines, we
+wanted to recenter our reward
+
+00:57:23.280 --> 00:57:25.460
+to go term.
+
+00:57:25.460 --> 00:57:28.040
+We can center this by picking
+the baseline in this way,
+
+00:57:28.040 --> 00:57:29.240
+essentially.
+
+00:57:37.240 --> 00:57:42.160
+Now, let's look at this term
+a little bit more closely.
+
+00:57:42.160 --> 00:57:47.800
+The expected q function
+under our policy
+
+00:57:47.800 --> 00:57:52.640
+is basically nothing else that
+the value function itself.
+
+00:57:52.640 --> 00:57:58.360
+So this is something that can
+be somewhat confusing at first,
+
+00:57:58.360 --> 00:58:01.900
+but let us try to
+look a little bit more
+
+00:58:01.900 --> 00:58:03.080
+closely with an example.
+
+00:58:03.080 --> 00:58:08.340
+So consider a discrete
+environment, again, for example
+
+00:58:08.340 --> 00:58:11.780
+our gridworld, where
+we can take maybe one
+
+00:58:11.780 --> 00:58:14.280
+of a finite number of actions.
+
+00:58:17.320 --> 00:58:23.380
+So we know that the q
+function, in this case,
+
+00:58:23.380 --> 00:58:33.700
+under some policy pi is
+basically the expected reward
+
+00:58:33.700 --> 00:58:37.500
+that we expect to have
+in state x, taking action
+
+00:58:37.500 --> 00:58:43.220
+ut, and then following the
+policy pi for all the time
+
+00:58:43.220 --> 00:58:44.040
+steps that come.
+
+00:58:44.040 --> 00:58:47.800
+So this is the definition that
+we had so far of the q function.
+
+00:58:51.620 --> 00:58:54.580
+Where specifically you see
+that here we are basically
+
+00:58:54.580 --> 00:58:57.260
+picking the action ut
+because the q function
+
+00:58:57.260 --> 00:59:01.840
+is defined over this
+tuple, states and controls.
+
+00:59:01.840 --> 00:59:03.720
+How can we connect
+the q function
+
+00:59:03.720 --> 00:59:09.400
+with the value function
+for that same policy?
+
+00:59:09.400 --> 00:59:13.560
+Is that intuitively,
+the value of a state
+
+00:59:13.560 --> 00:59:19.160
+is the average
+value that we would
+
+00:59:19.160 --> 00:59:25.240
+get of the future states,
+where this average is taken
+
+00:59:25.240 --> 00:59:29.080
+under the probability
+distribution that
+
+00:59:29.080 --> 00:59:32.840
+decides which action I'm picking
+right now, if that makes sense.
+
+00:59:32.840 --> 00:59:38.040
+So this value function
+here is basically
+
+00:59:38.040 --> 00:59:41.280
+averaging out the
+future values, according
+
+00:59:41.280 --> 00:59:44.860
+to all the possible controls
+that I might pick in that state.
+
+00:59:49.920 --> 00:59:51.560
+Does this make sense?
+
+00:59:51.560 --> 00:59:52.080
+Yeah.
+
+00:59:52.080 --> 00:59:54.840
+So it that-- now we can
+cancel the [INAUDIBLE]
+
+00:59:54.840 --> 00:59:58.850
+to where you're looking
+over all possible states
+
+00:59:58.850 --> 01:00:01.430
+are up for actions
+in the future,
+
+01:00:01.430 --> 01:00:04.690
+and then, like you just
+said, averaging them out?
+
+01:00:04.690 --> 01:00:06.910
+Yes, I would say the
+intuition is very similar.
+
+01:00:06.910 --> 01:00:10.510
+So maybe one other way to
+see this is a temporary.
+
+01:00:10.510 --> 01:00:13.370
+So basically, the only
+thing that changes
+
+01:00:13.370 --> 01:00:15.290
+is the one step
+reasoning that we're
+
+01:00:15.290 --> 01:00:19.050
+doing, because from
+t plus 1 onwards,
+
+01:00:19.050 --> 01:00:21.030
+we're still sampling
+from our policy,
+
+01:00:21.030 --> 01:00:23.530
+and so we're averaging out
+over all possible things that
+
+01:00:23.530 --> 01:00:26.210
+could happen over our policy.
+
+01:00:26.210 --> 01:00:29.450
+In the one-step, so
+from t to t plus 1,
+
+01:00:29.450 --> 01:00:33.930
+the q function is basically
+has one information more, which
+
+01:00:33.930 --> 01:00:37.530
+is we are specifying what
+control we're taking right now,
+
+01:00:37.530 --> 01:00:42.570
+so we're basically committing
+to one specific action.
+
+01:00:42.570 --> 01:00:44.690
+On the other hand,
+the value function
+
+01:00:44.690 --> 01:00:47.450
+is a function only of the state.
+
+01:00:47.450 --> 01:00:49.250
+And so what we're
+basically saying
+
+01:00:49.250 --> 01:00:53.490
+is that the value of this state,
+if we don't know which action
+
+01:00:53.490 --> 01:00:55.330
+we're picking in this
+state, will basically
+
+01:00:55.330 --> 01:00:58.670
+depend on the average action
+that we're picking in the state,
+
+01:00:58.670 --> 01:01:07.670
+and so the average action is
+sampled according to our policy,
+
+01:01:07.670 --> 01:01:08.610
+if that makes sense.
+
+01:01:11.950 --> 01:01:15.430
+So this is just
+basically a small detour,
+
+01:01:15.430 --> 01:01:19.510
+but useful to figure out
+what we're saying here.
+
+01:01:19.510 --> 01:01:23.470
+So here, we're looking at
+introducing the baselines.
+
+01:01:23.470 --> 01:01:29.550
+We mentioned that this was a
+reasonable choice of a baseline.
+
+01:01:29.550 --> 01:01:32.830
+We now just saw how the expected
+q-function is nothing else
+
+01:01:32.830 --> 01:01:35.430
+than the value function.
+
+01:01:35.430 --> 01:01:38.750
+And so we can then rewrite
+the expression of the policy
+
+01:01:38.750 --> 01:01:42.950
+gradient as, again, the
+average over n trajectories
+
+01:01:42.950 --> 01:01:46.910
+of the grad log pi's,
+multiplied by our critic
+
+01:01:46.910 --> 01:01:50.670
+estimator of the reward to go,
+minus the value function, which
+
+01:01:50.670 --> 01:01:53.250
+in this case is the
+policy is the baseline.
+
+01:01:59.800 --> 01:02:02.040
+And if you look at this
+term a little bit more
+
+01:02:02.040 --> 01:02:03.880
+closely, what this
+term is saying
+
+01:02:03.880 --> 01:02:08.040
+is that this is essentially
+quantifying how much the action
+
+01:02:08.040 --> 01:02:14.040
+ut is better than the average
+action in that same state xt.
+
+01:02:14.040 --> 01:02:16.240
+And so following this
+gradient essentially
+
+01:02:16.240 --> 01:02:17.840
+increases the
+probability of actions
+
+01:02:17.840 --> 01:02:20.920
+that have returns
+better than average
+
+01:02:20.920 --> 01:02:24.280
+and decreases the probability of
+the actions that have returned
+
+01:02:24.280 --> 01:02:28.040
+worse than average,
+so this is one way
+
+01:02:28.040 --> 01:02:32.280
+of recentering the returns.
+
+01:02:32.280 --> 01:02:35.680
+This quantity is actually
+so important in practice
+
+01:02:35.680 --> 01:02:37.440
+that it has its
+own name, and it is
+
+01:02:37.440 --> 01:02:44.320
+referred to as the
+advantage function
+
+01:02:44.320 --> 01:02:47.360
+because it is as if this
+quantity is encoding
+
+01:02:47.360 --> 01:02:50.760
+the advantage of taking
+action u with respect
+
+01:02:50.760 --> 01:02:54.320
+to the average action
+that I could take.
+
+01:03:02.540 --> 01:03:03.400
+Questions here.
+
+01:03:06.260 --> 01:03:07.140
+Yeah.
+
+01:03:07.140 --> 01:03:12.140
+The critic is like
+agnostic of the actor.
+
+01:03:12.140 --> 01:03:15.820
+It's a model of actions
+that you can take.
+
+01:03:15.820 --> 01:03:20.540
+It's you could swap out the
+actor for a new one [INAUDIBLE],
+
+01:03:20.540 --> 01:03:22.845
+and it would still be
+representative of the problem.
+
+01:03:22.845 --> 01:03:24.220
+Is that the right
+interpretation?
+
+01:03:24.220 --> 01:03:28.393
+I would say so
+functionally, this is just
+
+01:03:28.393 --> 01:03:30.060
+a separate parametric
+function, so there
+
+01:03:30.060 --> 01:03:31.460
+are two different objects.
+
+01:03:31.460 --> 01:03:35.540
+Of course, the way we fit the
+parameters of the critic, phi
+
+01:03:35.540 --> 01:03:37.740
+in this case,
+depend on the policy
+
+01:03:37.740 --> 01:03:44.300
+because you can imagine that
+we will be fitting our critic,
+
+01:03:44.300 --> 01:03:47.040
+depending on the experience
+that we have in our environment,
+
+01:03:47.040 --> 01:03:49.660
+and this experience is
+dictated by the policy.
+
+01:03:49.660 --> 01:03:51.535
+So I would say, this
+is not independent,
+
+01:03:51.535 --> 01:03:52.910
+because here,
+we're still fitting
+
+01:03:52.910 --> 01:03:56.430
+the value function
+of that policy, which
+
+01:03:56.430 --> 01:03:58.750
+for us is the actor.
+
+01:03:58.750 --> 01:04:00.230
+Does that make sense?
+
+01:04:00.230 --> 01:04:02.270
+Yeah.
+
+01:04:02.270 --> 01:04:05.190
+I think a good example on
+how policy might give you
+
+01:04:05.190 --> 01:04:07.550
+an average action and
+what that might look
+
+01:04:07.550 --> 01:04:10.390
+like for the value function.
+
+01:04:10.390 --> 01:04:15.030
+So remember that
+the policy for us
+
+01:04:15.030 --> 01:04:16.970
+is just a distribution
+over actions.
+
+01:04:16.970 --> 01:04:19.310
+So in the continuous
+case, it could
+
+01:04:19.310 --> 01:04:22.990
+be a Gaussian over a
+continuous action ut,
+
+01:04:22.990 --> 01:04:26.470
+or in the discrete
+case, it might be say,
+
+01:04:26.470 --> 01:04:29.850
+we have the four cardinal
+directions again,
+
+01:04:29.850 --> 01:04:32.190
+and these are our actions.
+
+01:04:32.190 --> 01:04:35.670
+The policy might just be
+a categorical distribution
+
+01:04:35.670 --> 01:04:38.190
+over these actions.
+
+01:04:38.190 --> 01:04:43.950
+So what I meant by average
+action in all our discussions
+
+01:04:43.950 --> 01:04:48.350
+of value functions that are on
+the slide was basically mean,
+
+01:04:48.350 --> 01:04:53.830
+since these are valid
+distributions over actions,
+
+01:04:53.830 --> 01:04:56.890
+we could take the expectations
+under these distributions,
+
+01:04:56.890 --> 01:04:59.970
+if that makes sense.
+
+01:04:59.970 --> 01:05:05.730
+So this is kind of a
+stochastic environment?
+
+01:05:05.730 --> 01:05:07.530
+This would be a
+stochastic policy.
+
+01:05:07.530 --> 01:05:08.190
+OK, yeah.
+
+01:05:13.050 --> 01:05:15.410
+Going back to this
+question, but even
+
+01:05:15.410 --> 01:05:18.650
+if it will be a different
+critic based on the actor,
+
+01:05:18.650 --> 01:05:21.930
+could you use a
+pre-trained critic
+
+01:05:21.930 --> 01:05:24.250
+so you don't have to have
+it start from scratch
+
+01:05:24.250 --> 01:05:26.167
+at the beginning of
+training, or do you always
+
+01:05:26.167 --> 01:05:27.150
+train them together?
+
+01:05:30.210 --> 01:05:32.030
+So I have two answers.
+
+01:05:32.030 --> 01:05:35.670
+One answer is the kind of
+theoretically grounded answer.
+
+01:05:35.670 --> 01:05:40.090
+I would say, no, you cannot
+do that, because this is--
+
+01:05:40.090 --> 01:05:42.232
+so here, we're estimating
+the value function.
+
+01:05:42.232 --> 01:05:43.690
+And remember, the
+value function is
+
+01:05:43.690 --> 01:05:47.070
+an object that refers
+to a specific policy,
+
+01:05:47.070 --> 01:05:49.230
+so here, we want
+to use the value
+
+01:05:49.230 --> 01:05:53.950
+function of the policy
+that we're learning,
+
+01:05:53.950 --> 01:05:56.910
+at least, for these algorithms
+that we're looking at right now.
+
+01:05:56.910 --> 01:06:04.230
+In practice, as long
+as this quantity here
+
+01:06:04.230 --> 01:06:11.270
+is something useful and aligned
+for gradient updates, then
+
+01:06:11.270 --> 01:06:14.410
+you might get some benefit in
+using a pre-trained critic.
+
+01:06:17.750 --> 01:06:19.750
+What's the one
+specific mechanism
+
+01:06:19.750 --> 01:06:23.510
+that you're using to
+update the phi parameters?
+
+01:06:23.510 --> 01:06:25.970
+Is it similar to q-learning
+or is it something--
+
+01:06:25.970 --> 01:06:26.573
+Yeah, great.
+
+01:06:26.573 --> 01:06:27.490
+It's a great question.
+
+01:06:27.490 --> 01:06:30.310
+It's coming in one or two sides.
+
+01:06:30.310 --> 01:06:32.470
+Short answer is
+if you recall what
+
+01:06:32.470 --> 01:06:35.510
+we were doing last week
+with fitted q-learning
+
+01:06:35.510 --> 01:06:40.050
+or using function approximators
+to estimate the value functions,
+
+01:06:40.050 --> 01:06:42.390
+this is exactly the
+same thing, but it's
+
+01:06:42.390 --> 01:06:43.850
+coming in a couple of slides.
+
+01:06:50.220 --> 01:06:56.880
+And so we introduced actor
+critic methods as strategies
+
+01:06:56.880 --> 01:07:01.600
+to try to blend the best of
+both worlds between policy
+
+01:07:01.600 --> 01:07:04.800
+optimization and value-based
+approaches, so let
+
+01:07:04.800 --> 01:07:09.400
+us even just visually look at an
+example of a value-based methods
+
+01:07:09.400 --> 01:07:12.120
+in the top left, so
+fitted q-learning
+
+01:07:12.120 --> 01:07:17.480
+and the visual version of a
+policy optimization algorithm
+
+01:07:17.480 --> 01:07:21.960
+that is reinforce and compare
+it with what we're doing here
+
+01:07:21.960 --> 01:07:23.520
+with actor-critic methods.
+
+01:07:23.520 --> 01:07:25.980
+So in fitted q-learning,
+if you remember,
+
+01:07:25.980 --> 01:07:28.680
+we were well, of course, running
+policy in the environment
+
+01:07:28.680 --> 01:07:31.000
+to collect trajectories.
+
+01:07:31.000 --> 01:07:36.200
+And then we were fitting a
+parametric function of our value
+
+01:07:36.200 --> 01:07:41.080
+function q phi in order to
+basically solve a regression
+
+01:07:41.080 --> 01:07:43.380
+problem, so we
+specifying some targets
+
+01:07:43.380 --> 01:07:47.340
+which could be either the Monte
+Carlo targets or the TD target.
+
+01:07:47.340 --> 01:07:50.620
+And then we were trying to
+minimize the prediction error
+
+01:07:50.620 --> 01:07:53.900
+from our parametric
+approximation and the ground
+
+01:07:53.900 --> 01:07:55.280
+truth target.
+
+01:08:00.620 --> 01:08:04.080
+And this is exactly what we will
+find in actor critic methods,
+
+01:08:04.080 --> 01:08:06.780
+so we still run the
+policy in our environment
+
+01:08:06.780 --> 01:08:08.540
+to generate trajectories.
+
+01:08:08.540 --> 01:08:10.660
+And here in actor
+critic methods,
+
+01:08:10.660 --> 01:08:13.740
+we are fitting either a value
+function, or a q function,
+
+01:08:13.740 --> 01:08:15.080
+or advantage function.
+
+01:08:15.080 --> 01:08:15.920
+It will depend.
+
+01:08:15.920 --> 01:08:17.939
+This is a choice,
+but we are ideally
+
+01:08:17.939 --> 01:08:19.979
+doing exactly the same thing.
+
+01:08:19.979 --> 01:08:22.220
+So in a way, this is
+exactly the same thing
+
+01:08:22.220 --> 01:08:23.979
+we're doing with
+fitted q-learning.
+
+01:08:23.979 --> 01:08:26.040
+Here, we're doing
+actor-critic methods.
+
+01:08:28.740 --> 01:08:32.939
+At the same time, while
+in fitted q-learning,
+
+01:08:32.939 --> 01:08:39.100
+we were using the function to
+implicitly define the policy.
+
+01:08:39.100 --> 01:08:42.149
+In actor-critic methods,
+we are doing the same thing
+
+01:08:42.149 --> 01:08:43.689
+that we're doing
+in the reinforce.
+
+01:08:43.689 --> 01:08:47.710
+That is, we are leveraging
+our computations here
+
+01:08:47.710 --> 01:08:51.069
+to define a policy
+gradient expression
+
+01:08:51.069 --> 01:08:55.750
+and use this to take a
+step in parameter space.
+
+01:08:55.750 --> 01:08:59.390
+So I hope that, at least,
+intuitively, you're
+
+01:08:59.390 --> 01:09:03.350
+starting to see how here we're
+trying to stitch together
+
+01:09:03.350 --> 01:09:06.270
+different individual components
+of different families
+
+01:09:06.270 --> 01:09:07.410
+of algorithms.
+
+01:09:13.974 --> 01:09:15.689
+Now, a question here is--
+
+01:09:18.950 --> 01:09:22.390
+so first of all, we
+had many examples
+
+01:09:22.390 --> 01:09:26.550
+of using value functions v
+using q functions or advantage
+
+01:09:26.550 --> 01:09:27.670
+functions.
+
+01:09:27.670 --> 01:09:31.350
+What quantity should we estimate
+and what are the trade-offs?
+
+01:09:31.350 --> 01:09:34.689
+I would say, in general, there
+are no right or wrong answers.
+
+01:09:34.689 --> 01:09:36.189
+I would say,
+different algorithms
+
+01:09:36.189 --> 01:09:38.170
+might just have
+different implementations
+
+01:09:38.170 --> 01:09:42.850
+of the same underlying idea.
+
+01:09:42.850 --> 01:09:45.290
+But for example, one thing
+that you might consider
+
+01:09:45.290 --> 01:09:49.569
+is just the complexity of
+the value function estimation
+
+01:09:49.569 --> 01:09:50.609
+problem.
+
+01:09:50.609 --> 01:09:53.609
+So for example,
+the value function
+
+01:09:53.609 --> 01:09:57.750
+might be easier because it only
+depends on states as the inputs.
+
+01:09:57.750 --> 01:09:59.490
+On the other hand,
+if we were to learn
+
+01:09:59.490 --> 01:10:02.210
+a Q function or an
+advantage function,
+
+01:10:02.210 --> 01:10:05.450
+we would have to learn a
+mapping from states and controls
+
+01:10:05.450 --> 01:10:06.630
+rather than just states.
+
+01:10:09.450 --> 01:10:14.410
+I would say, probably the
+most popular implementation
+
+01:10:14.410 --> 01:10:19.850
+of an actor-critic algorithm,
+which uses the advantage
+
+01:10:19.850 --> 01:10:24.330
+also refers to as a to z,
+or advantage actor-critic
+
+01:10:24.330 --> 01:10:27.730
+is something that has this
+specific choice of what
+
+01:10:27.730 --> 01:10:28.810
+we're fitting.
+
+01:10:28.810 --> 01:10:31.530
+So in principle, we want
+to use the advantage, which
+
+01:10:31.530 --> 01:10:36.540
+is the q function, minus
+the value function v.
+
+01:10:36.540 --> 01:10:38.220
+Of course, what we
+want to do is we
+
+01:10:38.220 --> 01:10:41.380
+want to avoid to have
+to estimate two objects.
+
+01:10:41.380 --> 01:10:44.900
+We don't want to fit two
+separate networks, one for the q
+
+01:10:44.900 --> 01:10:47.020
+function and one for
+the value function.
+
+01:10:47.020 --> 01:10:51.900
+And so the trick that
+is typically being used
+
+01:10:51.900 --> 01:10:56.140
+is that we can
+approximate the Q function
+
+01:10:56.140 --> 01:10:59.260
+as the instantaneous
+reward, plus the value
+
+01:10:59.260 --> 01:11:02.180
+function at the next state.
+
+01:11:02.180 --> 01:11:06.060
+And so according to
+this approximation, now
+
+01:11:06.060 --> 01:11:10.580
+you can see how the
+advantage can be rewritten
+
+01:11:10.580 --> 01:11:13.900
+as a function only of the value
+function v of the state value
+
+01:11:13.900 --> 01:11:16.300
+function.
+
+01:11:16.300 --> 01:11:21.640
+And so basically, through this
+kind of reparameterization here,
+
+01:11:21.640 --> 01:11:24.540
+this enables us to
+basically fit the advantage
+
+01:11:24.540 --> 01:11:28.540
+or use the advantage in our
+policy updates, while only
+
+01:11:28.540 --> 01:11:31.680
+having to fit the value
+function, if that makes sense.
+
+01:11:37.880 --> 01:11:41.880
+And so indeed, the advantage
+actor critic algorithm,
+
+01:11:41.880 --> 01:11:45.640
+or a to z is indeed
+something that
+
+01:11:45.640 --> 01:11:47.580
+runs the policy in
+the environment,
+
+01:11:47.580 --> 01:11:52.720
+uses those interactions
+to fit a value function,
+
+01:11:52.720 --> 01:11:56.640
+uses that value function to
+compute the advantage according
+
+01:11:56.640 --> 01:12:04.240
+to this approximation, and then
+uses the advantage in the policy
+
+01:12:04.240 --> 01:12:06.980
+gradient expression.
+
+01:12:19.260 --> 01:12:23.200
+So now to answer also to
+your colleague's question,
+
+01:12:23.200 --> 01:12:26.120
+so here, we're talking about
+estimating different quantities
+
+01:12:26.120 --> 01:12:29.160
+and different value functions.
+
+01:12:29.160 --> 01:12:30.580
+How do we do this?
+
+01:12:30.580 --> 01:12:35.130
+And the main ideas
+that we simply
+
+01:12:35.130 --> 01:12:38.530
+leverage exactly what we were
+doing in value-based methods
+
+01:12:38.530 --> 01:12:41.410
+with function approximation.
+
+01:12:41.410 --> 01:12:47.770
+Specifically, you could do this
+through a Monte Carlo learning.
+
+01:12:47.770 --> 01:12:53.690
+That is, we collect a data
+set of state and return pairs,
+
+01:12:53.690 --> 01:12:56.570
+and basically, do
+supervised learning
+
+01:12:56.570 --> 01:12:59.030
+on these tuples on these pairs.
+
+01:13:02.690 --> 01:13:07.250
+Or we could use equivalently,
+TD learning by similarly,
+
+01:13:07.250 --> 01:13:12.810
+collecting a data set of
+state and TD target pairs,
+
+01:13:12.810 --> 01:13:15.450
+and basically solve a
+regression problem that
+
+01:13:15.450 --> 01:13:19.090
+fits a value function that
+approximates, or minimizes
+
+01:13:19.090 --> 01:13:21.110
+the error with respect
+to this target.
+
+01:13:28.130 --> 01:13:30.410
+Does this clarify?
+
+01:13:30.410 --> 01:13:30.910
+Yeah.
+
+01:13:38.390 --> 01:13:43.090
+OK, so now, just
+as a brief detour.
+
+01:13:46.270 --> 01:13:52.950
+I wanted to briefly go
+through the AlphaGo paper.
+
+01:13:52.950 --> 01:13:59.070
+First of all, to show you
+that, this is like 10, 20, 14
+
+01:13:59.070 --> 01:14:04.233
+or something along
+those times, but it
+
+01:14:04.233 --> 01:14:06.650
+is one of the biggest successes
+of reinforcement learning,
+
+01:14:06.650 --> 01:14:07.430
+arguably.
+
+01:14:07.430 --> 01:14:09.968
+And I definitely invite
+you to check out the paper,
+
+01:14:09.968 --> 01:14:12.510
+because I would say that through
+everything that we discussed
+
+01:14:12.510 --> 01:14:15.870
+today, we actually can
+understand, I would say,
+
+01:14:15.870 --> 01:14:18.170
+the entire paper most likely.
+
+01:14:21.190 --> 01:14:23.050
+And I just want to
+highlight a couple of,
+
+01:14:23.050 --> 01:14:24.630
+I think interesting points.
+
+01:14:24.630 --> 01:14:27.270
+So remember, AlphaGo
+is basically,
+
+01:14:27.270 --> 01:14:31.570
+this project, where they wanted
+to learn through reinforcement
+
+01:14:31.570 --> 01:14:35.290
+learning how to
+play Go, which is
+
+01:14:35.290 --> 01:14:40.090
+extremely high dimensional
+board game, if you wish.
+
+01:14:40.090 --> 01:14:46.285
+The idea here was to
+first of all, define--
+
+01:14:46.285 --> 01:14:48.410
+you already start seeing
+a policy network and value
+
+01:14:48.410 --> 01:14:53.730
+network, so here, they
+use an actor-critic method
+
+01:14:53.730 --> 01:14:56.890
+for this problem, whereby the
+policy is basically something
+
+01:14:56.890 --> 01:15:02.730
+that maps states that is board
+configurations to actions, which
+
+01:15:02.730 --> 01:15:06.730
+is a distribution
+over a finite amount
+
+01:15:06.730 --> 01:15:09.650
+of next moves in the board.
+
+01:15:09.650 --> 01:15:12.410
+And the value
+network is basically
+
+01:15:12.410 --> 01:15:16.810
+a parametric representation of
+the state value function, which
+
+01:15:16.810 --> 01:15:20.850
+similarly maps from current
+configuration of the board,
+
+01:15:20.850 --> 01:15:24.130
+or the state, to a
+scalar number that
+
+01:15:24.130 --> 01:15:28.980
+represents the value of
+that board configuration.
+
+01:15:28.980 --> 01:15:38.860
+Now, if we skim to how the
+actual algorithm is implemented,
+
+01:15:38.860 --> 01:15:41.620
+so you will see how--
+
+01:15:41.620 --> 01:15:43.580
+So of course, we train
+the policy network
+
+01:15:43.580 --> 01:15:45.640
+by policy gradient
+reinforcement learning.
+
+01:15:49.820 --> 01:15:54.080
+It was learned
+through self-play,
+
+01:15:54.080 --> 01:15:59.620
+so you could imagine having the
+policy pitched against itself
+
+01:15:59.620 --> 01:16:03.340
+or previous versions of itself
+in a simulated environment.
+
+01:16:03.340 --> 01:16:07.220
+And so the games were replayed
+to determine the policy gradient
+
+01:16:07.220 --> 01:16:11.720
+update, which is defined
+exactly as we were doing today.
+
+01:16:11.720 --> 01:16:15.220
+Again, the notation slightly
+changes, but here, we
+
+01:16:15.220 --> 01:16:17.660
+are basically discussing our--
+
+01:16:17.660 --> 01:16:20.260
+this is the update that
+you do in parameter space
+
+01:16:20.260 --> 01:16:27.760
+as the empirical mean 1/m times
+a step size alpha of the-- here,
+
+01:16:27.760 --> 01:16:32.640
+we have the grad log pi's, so
+the probability distribution
+
+01:16:32.640 --> 01:16:37.160
+over action given state,
+times the z here represents
+
+01:16:37.160 --> 01:16:40.680
+the return, so the
+return that they observed
+
+01:16:40.680 --> 01:16:46.000
+in the environment, minus the
+value function of the state v.
+
+01:16:46.000 --> 01:16:48.360
+And here, they say
+that indeed-- so they
+
+01:16:48.360 --> 01:16:53.120
+use the reinforce algorithm
+with a baseline v of s, which
+
+01:16:53.120 --> 01:16:55.780
+is basically the value
+function as a baseline,
+
+01:16:55.780 --> 01:16:58.060
+and they use this for
+variance reduction.
+
+01:17:00.680 --> 01:17:03.080
+Again, I definitely
+invite you to check this
+
+01:17:03.080 --> 01:17:05.800
+the details of this
+paper, because I
+
+01:17:05.800 --> 01:17:07.760
+would say that vast
+majority of the concepts
+
+01:17:07.760 --> 01:17:10.920
+here we did indeed cover today.
+
+01:17:10.920 --> 01:17:14.260
+Is there a reward signal we'll
+use at the end of the episode?
+
+01:17:14.260 --> 01:17:14.760
+Yes.
+
+01:17:18.880 --> 01:17:24.190
+Of course, here we glossed over
+one of the main contributions,
+
+01:17:24.190 --> 01:17:29.330
+which is the search
+element of this approach,
+
+01:17:29.330 --> 01:17:32.590
+meaning in order to
+sample from the policy,
+
+01:17:32.590 --> 01:17:35.447
+they weren't just sampling
+from a categorical distribution
+
+01:17:35.447 --> 01:17:37.530
+of reaction, but they were
+using that distribution
+
+01:17:37.530 --> 01:17:40.970
+to guide an explicit search
+process, specifically
+
+01:17:40.970 --> 01:17:43.650
+Monte Carlo tree search.
+
+01:17:43.650 --> 01:17:45.650
+But I would say,
+high-level intuitions
+
+01:17:45.650 --> 01:17:48.210
+from the perspective of
+the reinforcement learning
+
+01:17:48.210 --> 01:17:52.470
+side of things are exactly
+the topics we covered today.
+
+01:17:58.470 --> 01:18:00.230
+Yeah.
+
+01:18:00.230 --> 01:18:01.730
+There was nothing
+in the policy they
+
+01:18:01.730 --> 01:18:05.850
+found that guaranteed to be
+best, or was it like a human
+
+01:18:05.850 --> 01:18:06.850
+could not beat it?
+
+01:18:06.850 --> 01:18:11.090
+No, so, of course, the moment
+you go for deep reinforcement
+
+01:18:11.090 --> 01:18:13.770
+learning algorithms,
+there is no theory
+
+01:18:13.770 --> 01:18:18.010
+that can back any of
+this in terms of proofs
+
+01:18:18.010 --> 01:18:21.870
+or guarantees of convergence.
+
+01:18:21.870 --> 01:18:23.850
+They were able to beat
+the world champion Go,
+
+01:18:23.850 --> 01:18:28.730
+and so they claim this as a good
+enough result for this policy.
+
+01:18:28.730 --> 01:18:29.230
+Yeah.
+
+01:18:29.230 --> 01:18:32.990
+Why did they keep the
+human-version one [INAUDIBLE]?
+
+01:18:36.070 --> 01:18:39.030
+The full picture here
+is that, at the time,
+
+01:18:39.030 --> 01:18:43.670
+the worm started learning
+through behavioral cloning,
+
+01:18:43.670 --> 01:18:45.853
+and then they
+basically collected
+
+01:18:45.853 --> 01:18:47.270
+data sets of expert
+demonstrations
+
+01:18:47.270 --> 01:18:51.310
+and then they fine tuned this
+through reinforcement learning.
+
+01:18:51.310 --> 01:18:54.168
+Jump starting this
+work, they actually
+
+01:18:54.168 --> 01:18:55.710
+showed that the
+behavior cloning part
+
+01:18:55.710 --> 01:18:58.430
+was detrimental to
+final performance,
+
+01:18:58.430 --> 01:19:00.970
+and they just learned
+everything through self-play.
+
+01:19:00.970 --> 01:19:01.590
+Yeah.
+
+01:19:01.590 --> 01:19:02.210
+Sorry.
+
+01:19:02.210 --> 01:19:05.470
+I know that [INAUDIBLE].
+
+01:19:05.470 --> 01:19:08.970
+You mentioned that like
+every 500 iterations,
+
+01:19:08.970 --> 01:19:12.370
+if we updated one that it
+was training itself off of,
+
+01:19:12.370 --> 01:19:14.447
+but the parameters have
+found worked the best.
+
+01:19:14.447 --> 01:19:16.530
+Do you know if there's a
+way that they avoided it,
+
+01:19:16.530 --> 01:19:19.000
+like converging on
+some policy just
+
+01:19:19.000 --> 01:19:22.220
+one of those parameters that
+the other one was playing with,
+
+01:19:22.220 --> 01:19:24.175
+if that makes sense?
+
+01:19:24.175 --> 01:19:24.800
+I don't think--
+
+01:19:24.800 --> 01:19:26.480
+Or was that part
+of my [INAUDIBLE]?
+
+01:19:26.480 --> 01:19:28.200
+[INAUDIBLE] they were doing.
+
+01:19:28.200 --> 01:19:32.880
+I mean, the intuition there is
+that you want increasing level
+
+01:19:32.880 --> 01:19:36.820
+of proficiency also for
+your kind of adversary,
+
+01:19:36.820 --> 01:19:39.857
+if that makes sense.
+
+01:19:39.857 --> 01:19:41.440
+I'll have to double
+check, but I think
+
+01:19:41.440 --> 01:19:45.640
+that just by the fact that you
+are updating your adversary
+
+01:19:45.640 --> 01:19:49.680
+and you have this learning loop
+that goes around this update,
+
+01:19:49.680 --> 01:19:53.240
+you'll always be incentivized
+to find strategies that
+
+01:19:53.240 --> 01:19:56.060
+are better with respect
+to your previous version,
+
+01:19:56.060 --> 01:19:59.040
+and so you'll improve hill
+climbing in that sense.
+
+01:19:59.040 --> 01:20:02.960
+But maybe they did something
+slightly more sophisticated.
+
+01:20:02.960 --> 01:20:06.680
+All right, so finish this
+lecture on Wednesday.
+
+01:20:06.680 --> 01:20:09.120
+We'll also start
+discussing model based
+
+01:20:09.120 --> 01:20:10.920
+reinforcement learning methods.
+
+01:20:10.920 --> 01:20:12.710
+Thank you.
+

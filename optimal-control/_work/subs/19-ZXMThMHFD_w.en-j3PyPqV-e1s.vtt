@@ -1,0 +1,5661 @@
+WEBVTT
+Kind: captions
+Language: en
+
+00:00:05.640 --> 00:00:09.120
+Well, welcome to the last
+lecture for this quarter.
+
+00:00:09.120 --> 00:00:12.640
+Today, we will be
+completing our roadmap.
+
+00:00:12.640 --> 00:00:15.240
+Specifically, we'll be
+starting by wrapping up
+
+00:00:15.240 --> 00:00:18.260
+our discussion on model-free
+reinforcement learning first,
+
+00:00:18.260 --> 00:00:20.420
+where we're looking at
+policy optimization methods.
+
+00:00:20.420 --> 00:00:22.860
+And then we'll discuss
+model-based RL.
+
+00:00:25.680 --> 00:00:29.080
+So, if you recall, basically,
+what we were saying last time
+
+00:00:29.080 --> 00:00:32.640
+is that we started looking at
+policy optimization approaches
+
+00:00:32.640 --> 00:00:35.320
+for model-free reinforcement
+learning, whereby
+
+00:00:35.320 --> 00:00:38.920
+the main idea was to basically
+build and compute these policy
+
+00:00:38.920 --> 00:00:42.478
+gradients, which are basically
+the gradients of the ground
+
+00:00:42.478 --> 00:00:44.520
+truth reinforcement learning
+objective that we're
+
+00:00:44.520 --> 00:00:47.280
+interested in optimizing, which
+enabled us to basically derive
+
+00:00:47.280 --> 00:00:49.680
+the number of algorithms
+ranging from reinforce
+
+00:00:49.680 --> 00:00:52.080
+to actor-critic algorithms.
+
+00:00:52.080 --> 00:01:00.630
+And then we basically concluded
+with having to basically discuss
+
+00:01:00.630 --> 00:01:03.750
+some more recent reinforcement
+learning algorithms that relate
+
+00:01:03.750 --> 00:01:05.870
+with policy optimization.
+
+00:01:05.870 --> 00:01:12.110
+And if we take a step back and
+think about how state-of-the-art
+
+00:01:12.110 --> 00:01:15.910
+algorithms in machine learning
+more broadly typically work,
+
+00:01:15.910 --> 00:01:19.870
+they ultimately boil down
+learning to numerical
+
+00:01:19.870 --> 00:01:21.070
+optimization problem.
+
+00:01:21.070 --> 00:01:22.730
+So let's think
+back, for example,
+
+00:01:22.730 --> 00:01:26.310
+at our classical
+regression problem, which
+
+00:01:26.310 --> 00:01:29.870
+is described as a
+supervised learning problem,
+
+00:01:29.870 --> 00:01:33.190
+there we typically formulate it
+as a training error minimization
+
+00:01:33.190 --> 00:01:36.870
+problem, which we can
+optimize sequentially
+
+00:01:36.870 --> 00:01:38.870
+taking a data set of
+observation until we
+
+00:01:38.870 --> 00:01:43.230
+converge to some local optima.
+
+00:01:43.230 --> 00:01:45.167
+And this is fundamentally
+different from what
+
+00:01:45.167 --> 00:01:47.250
+we've been doing so far
+in reinforcement learning.
+
+00:01:47.250 --> 00:01:49.410
+Because if we think back
+at value-based methods,
+
+00:01:49.410 --> 00:01:51.822
+kind of Q-learning being
+a prototypical example,
+
+00:01:51.822 --> 00:01:54.030
+this is-- well, first of
+all, fundamentally different
+
+00:01:54.030 --> 00:01:56.090
+because we're not really
+optimizing an objective,
+
+00:01:56.090 --> 00:01:59.290
+but we're doing fixed-point
+iteration, which
+
+00:01:59.290 --> 00:02:02.610
+can, in principle, include
+all of the transitions
+
+00:02:02.610 --> 00:02:04.650
+from an offline data set.
+
+00:02:04.650 --> 00:02:06.890
+But from the
+perspective of trying
+
+00:02:06.890 --> 00:02:09.798
+to mirror this same
+formalism, this
+
+00:02:09.798 --> 00:02:12.090
+is not really optimizing the
+ground truth reinforcement
+
+00:02:12.090 --> 00:02:15.250
+learning optimization problem.
+
+00:02:15.250 --> 00:02:18.210
+On the other hand, we saw how
+policy optimization methods.
+
+00:02:18.210 --> 00:02:21.570
+On one hand, do optimize for
+the ground truth reinforcement
+
+00:02:21.570 --> 00:02:24.810
+learning objective, but we
+only do basically one step
+
+00:02:24.810 --> 00:02:26.670
+of gradient descent at a time.
+
+00:02:26.670 --> 00:02:29.210
+So we saw how, at
+least nominally, these
+
+00:02:29.210 --> 00:02:32.210
+are on-policy algorithms,
+where we have some interactions
+
+00:02:32.210 --> 00:02:35.050
+with the environment, we collect
+data, take one gradient step
+
+00:02:35.050 --> 00:02:35.770
+and repeat.
+
+00:02:35.770 --> 00:02:37.610
+So this is really, in
+a way, fundamentally
+
+00:02:37.610 --> 00:02:40.970
+different from just positing,
+this as a numerical optimization
+
+00:02:40.970 --> 00:02:43.330
+problem and crunching
+the numbers until we
+
+00:02:43.330 --> 00:02:45.730
+converge, if that makes sense.
+
+00:02:45.730 --> 00:02:50.210
+So we'll discuss two specific
+algorithms, namely trust region
+
+00:02:50.210 --> 00:02:53.450
+policy optimization, TRPO for
+short, and proximal policy
+
+00:02:53.450 --> 00:02:57.440
+optimization, or PPO for short,
+which originally kind of--
+
+00:02:57.440 --> 00:03:00.880
+were born by trying
+to replicate this
+
+00:03:00.880 --> 00:03:03.680
+formalism of positing
+an optimization problem
+
+00:03:03.680 --> 00:03:07.360
+and crunching it at convergence
+for the purpose of reinforcement
+
+00:03:07.360 --> 00:03:09.760
+learning.
+
+00:03:09.760 --> 00:03:10.520
+Where the goal?
+
+00:03:10.520 --> 00:03:14.360
+Therefore, will be to
+define a surrogate problem
+
+00:03:14.360 --> 00:03:17.920
+and have it such that we
+can take continuous updates
+
+00:03:17.920 --> 00:03:21.240
+to our policy before potentially
+grabbing new experience
+
+00:03:21.240 --> 00:03:22.900
+from our environment.
+
+00:03:25.720 --> 00:03:29.520
+And so we saw how in
+policy optimization, what
+
+00:03:29.520 --> 00:03:31.480
+we want to do kind
+of a face value
+
+00:03:31.480 --> 00:03:35.800
+is to compute the policy
+gradient, which, last Monday, we
+
+00:03:35.800 --> 00:03:39.040
+defined as being the expected
+value of the [? grad ?]
+
+00:03:39.040 --> 00:03:41.600
+replies multiplied by
+some quantity, which is
+
+00:03:41.600 --> 00:03:43.460
+a metric of the reward to go.
+
+00:03:43.460 --> 00:03:47.080
+We saw how an attractive
+quantity to have here
+
+00:03:47.080 --> 00:03:51.480
+is the advantage A.
+Now, the first idea
+
+00:03:51.480 --> 00:03:53.120
+is that what we
+would like to have
+
+00:03:53.120 --> 00:03:57.230
+is define this surrogate
+optimization problem, whereby
+
+00:03:57.230 --> 00:04:00.390
+if we were to take gradients of
+this objective function, which
+
+00:04:00.390 --> 00:04:02.390
+we define, the gradients
+would themselves
+
+00:04:02.390 --> 00:04:06.350
+be the policy gradient, which
+are interested in following.
+
+00:04:06.350 --> 00:04:10.590
+And so a simple idea, which is
+also how you might have seen
+
+00:04:10.590 --> 00:04:13.830
+by playing with your
+[? p-sets, ?] is that when you
+
+00:04:13.830 --> 00:04:17.550
+want to introduce a concretely
+implement, these kind of things,
+
+00:04:17.550 --> 00:04:20.073
+and solve them through
+automatic differentiation,
+
+00:04:20.073 --> 00:04:21.990
+since we're interested,
+at the end of the day,
+
+00:04:21.990 --> 00:04:23.930
+in following this
+object over here,
+
+00:04:23.930 --> 00:04:27.710
+kind of a pragmatic way of doing
+so, is to define a surrogate
+
+00:04:27.710 --> 00:04:31.750
+objective, which is a quantity
+that we don't necessarily care
+
+00:04:31.750 --> 00:04:33.520
+too much about in practice.
+
+00:04:33.520 --> 00:04:35.770
+But if we were to take the
+gradient of this objective,
+
+00:04:35.770 --> 00:04:38.850
+we would actually get
+the policy gradient.
+
+00:04:38.850 --> 00:04:41.350
+So in practice, this is
+how we would normally
+
+00:04:41.350 --> 00:04:44.770
+implement this through auto
+differentiation methods.
+
+00:04:44.770 --> 00:04:46.610
+We will define the
+surrogate objective,
+
+00:04:46.610 --> 00:04:48.070
+and autodiff will
+basically give us
+
+00:04:48.070 --> 00:04:50.650
+the gradient of this object,
+which is the policy gradient,
+
+00:04:50.650 --> 00:04:51.810
+and we can follow that.
+
+00:04:54.530 --> 00:05:00.070
+An alternative representation
+of this surrogate objective,
+
+00:05:00.070 --> 00:05:02.530
+which we might want to
+use in the exact same way,
+
+00:05:02.530 --> 00:05:08.930
+is what I'm referring
+here as the loss IS where
+
+00:05:08.930 --> 00:05:12.090
+stands for importance
+sampling, which is essentially
+
+00:05:12.090 --> 00:05:17.370
+an equivalent objective to the
+one shown here above, whereby
+
+00:05:17.370 --> 00:05:21.610
+rather than having this defined
+as the log pi's multiplied
+
+00:05:21.610 --> 00:05:25.770
+by the advantage, we have this
+probability density ratio which
+
+00:05:25.770 --> 00:05:28.910
+comes from an old
+version of our policy pi,
+
+00:05:28.910 --> 00:05:31.190
+described by some
+old parameters theta
+
+00:05:31.190 --> 00:05:35.290
+old and potentially new version
+of that same policy described
+
+00:05:35.290 --> 00:05:38.730
+by some current
+parameters theta.
+
+00:05:38.730 --> 00:05:40.530
+So first of all,
+to sanity check,
+
+00:05:40.530 --> 00:05:43.330
+that the gradient that
+we get from these two
+
+00:05:43.330 --> 00:05:46.110
+is equivalent just by
+applying the chain rule,
+
+00:05:46.110 --> 00:05:47.730
+we will see that the--
+
+00:05:47.730 --> 00:05:50.250
+well, the grad of the
+logarithm of a function
+
+00:05:50.250 --> 00:05:54.760
+is actually equal to the
+gradient of this ratio.
+
+00:05:54.760 --> 00:05:58.120
+So the gradient of the function
+divided by the function
+
+00:05:58.120 --> 00:06:01.560
+evaluated at theta old.
+
+00:06:01.560 --> 00:06:04.360
+And so long story
+short is that these
+
+00:06:04.360 --> 00:06:07.200
+are two separate
+surrogate functions
+
+00:06:07.200 --> 00:06:11.120
+we could use to nominally
+get the policy gradient out
+
+00:06:11.120 --> 00:06:12.480
+of it in the same way.
+
+00:06:12.480 --> 00:06:16.240
+However, the second one, that
+is the importance sampling one,
+
+00:06:16.240 --> 00:06:20.520
+has this nice interpretation
+whereby this objective is
+
+00:06:20.520 --> 00:06:25.560
+actually well-defined even
+if we are using a collecting
+
+00:06:25.560 --> 00:06:28.620
+data according to a previous
+version of the policy,
+
+00:06:28.620 --> 00:06:32.840
+in this case, f
+theta pi theta old.
+
+00:06:32.840 --> 00:06:34.720
+So you're probably
+starting to imagine
+
+00:06:34.720 --> 00:06:38.600
+how this form-- this objective
+is still valid in the moment
+
+00:06:38.600 --> 00:06:43.400
+where I'm updating my policy
+multiple steps sequentially
+
+00:06:43.400 --> 00:06:44.060
+in a row.
+
+00:06:44.060 --> 00:06:48.040
+So I'm kind of diverging from
+my original theta old policy.
+
+00:06:48.040 --> 00:06:49.960
+And this objective is
+still valid in the sense
+
+00:06:49.960 --> 00:06:51.460
+that the importance
+sampling is kind
+
+00:06:51.460 --> 00:06:54.940
+of reweighting my
+probability that I
+
+00:06:54.940 --> 00:06:57.540
+give to the action with
+respect to my previous version
+
+00:06:57.540 --> 00:06:58.860
+of the policy.
+
+00:06:58.860 --> 00:07:01.820
+So I'm aware that I'm going
+through this quite fast.
+
+00:07:01.820 --> 00:07:08.300
+But the main ideas that we
+want to reach the state where
+
+00:07:08.300 --> 00:07:11.900
+we are defining a
+surrogate objective, which
+
+00:07:11.900 --> 00:07:14.700
+still follows the main
+ideas of policy gradient.
+
+00:07:14.700 --> 00:07:16.920
+Here we're seeing two
+different alternatives,
+
+00:07:16.920 --> 00:07:18.590
+which are equivalent
+in that sense,
+
+00:07:18.590 --> 00:07:20.340
+because these are two
+loss functions which
+
+00:07:20.340 --> 00:07:24.200
+if we differentiate, we'll
+still get the policy gradient.
+
+00:07:24.200 --> 00:07:25.700
+But this importance
+sampling version
+
+00:07:25.700 --> 00:07:27.820
+has this nice
+interpretation which
+
+00:07:27.820 --> 00:07:30.660
+still holds when we are
+actually considering
+
+00:07:30.660 --> 00:07:33.140
+data collected according
+to a previous version
+
+00:07:33.140 --> 00:07:35.500
+of our same policy.
+
+00:07:35.500 --> 00:07:36.480
+Does this make sense?
+
+00:07:42.900 --> 00:07:49.210
+And so, of course,
+this is the objective
+
+00:07:49.210 --> 00:07:52.770
+that is used within the trust
+region policy optimization
+
+00:07:52.770 --> 00:07:54.495
+algorithm with a caveat.
+
+00:07:54.495 --> 00:07:56.370
+And the caveat, which
+we didn't discuss here,
+
+00:07:56.370 --> 00:07:58.090
+is that-- so here
+we are mentioning
+
+00:07:58.090 --> 00:08:01.450
+this idea of taking
+multiple steps
+
+00:08:01.450 --> 00:08:04.250
+and therefore starting to
+diverge from our original theta
+
+00:08:04.250 --> 00:08:05.210
+old.
+
+00:08:05.210 --> 00:08:08.630
+But of course, the more
+we go further away,
+
+00:08:08.630 --> 00:08:11.370
+so the more we move from
+our original theta old,
+
+00:08:11.370 --> 00:08:14.210
+the more our estimate, for
+example, of the advantage
+
+00:08:14.210 --> 00:08:18.730
+will be less accurate,
+and the more potentially
+
+00:08:18.730 --> 00:08:21.870
+this ratio will stagnate
+learning to some extent.
+
+00:08:21.870 --> 00:08:25.690
+And so what we want to do
+is we want to potentially
+
+00:08:25.690 --> 00:08:29.570
+take multiple steps
+sequentially, as we were saying,
+
+00:08:29.570 --> 00:08:35.090
+but we want to do this while
+remaining within a neighborhood
+
+00:08:35.090 --> 00:08:37.613
+of the original
+policy within which
+
+00:08:37.613 --> 00:08:39.530
+we are kind of confident
+that what we're doing
+
+00:08:39.530 --> 00:08:41.850
+is still meaningful.
+
+00:08:41.850 --> 00:08:44.850
+And so this is the idea of
+introducing what is often
+
+00:08:44.850 --> 00:08:46.430
+referred to as a trust region.
+
+00:08:46.430 --> 00:08:48.800
+This is a pretty
+common technique
+
+00:08:48.800 --> 00:08:53.000
+in optimization, whereby given
+that same objective that we were
+
+00:08:53.000 --> 00:08:54.800
+discussing before,
+we're now introducing
+
+00:08:54.800 --> 00:08:58.000
+this constraint, which
+is basically expressed
+
+00:08:58.000 --> 00:09:01.240
+through the KL divergence,
+that is a measure of divergence
+
+00:09:01.240 --> 00:09:03.480
+between distributions.
+
+00:09:03.480 --> 00:09:05.840
+Such that, we want that the
+distribution over action
+
+00:09:05.840 --> 00:09:07.700
+induced by our old policy.
+
+00:09:07.700 --> 00:09:14.040
+See, the old has to be
+closer with delta close
+
+00:09:14.040 --> 00:09:18.040
+to the new policy, to the
+new distribution over action
+
+00:09:18.040 --> 00:09:23.800
+induced by the new policy by
+theta, if that makes sense.
+
+00:09:23.800 --> 00:09:25.303
+So why is this interesting?
+
+00:09:25.303 --> 00:09:26.720
+Is because, of
+course, there could
+
+00:09:26.720 --> 00:09:31.720
+be many possible ways of
+defining closeness for two
+
+00:09:31.720 --> 00:09:32.760
+policies.
+
+00:09:32.760 --> 00:09:35.000
+Maybe one more
+intuitive way would
+
+00:09:35.000 --> 00:09:38.960
+be to just measure distance
+in parameter space.
+
+00:09:38.960 --> 00:09:41.080
+For example, penalizing,
+like the norm
+
+00:09:41.080 --> 00:09:44.120
+of the distance between
+the two theta vectors.
+
+00:09:44.120 --> 00:09:48.460
+But this is pretty attractive
+because this is directly
+
+00:09:48.460 --> 00:09:52.820
+evaluating distance in policy
+distribution space, which is
+
+00:09:52.820 --> 00:09:54.280
+ultimately what we care about.
+
+00:09:54.280 --> 00:09:56.540
+So we are measuring
+distance with respect
+
+00:09:56.540 --> 00:09:59.640
+to the distribution over actions
+induced by the two policies.
+
+00:09:59.640 --> 00:10:02.965
+So maybe the parameters
+vary quite a lot.
+
+00:10:02.965 --> 00:10:04.340
+But ultimately
+what we care about
+
+00:10:04.340 --> 00:10:08.480
+is that the distribution induced
+by the policies remains similar.
+
+00:10:08.480 --> 00:10:08.980
+Yeah.
+
+00:10:08.980 --> 00:10:12.513
+Is it that there's also
+expectation [INAUDIBLE]?
+
+00:10:22.832 --> 00:10:23.760
+Yeah.
+
+00:10:23.760 --> 00:10:28.420
+So this depends also
+if you're averaging
+
+00:10:28.420 --> 00:10:29.760
+over different trajectories.
+
+00:10:29.760 --> 00:10:33.220
+So remember that this will be
+doing an empirical evaluation
+
+00:10:33.220 --> 00:10:33.720
+of this.
+
+00:10:33.720 --> 00:10:36.060
+So we'll be sampling multiple
+trajectories over time
+
+00:10:36.060 --> 00:10:39.000
+and doing empirical means
+instead of expectations,
+
+00:10:39.000 --> 00:10:39.900
+but this is why.
+
+00:10:39.900 --> 00:10:40.400
+Yeah.
+
+00:10:44.810 --> 00:10:51.490
+So this was incredibly
+successful at the time, meaning,
+
+00:10:51.490 --> 00:10:55.210
+it was able to be a pretty
+reliable reinforcement learning
+
+00:10:55.210 --> 00:10:58.410
+algorithm, especially for
+continuous control problems.
+
+00:10:58.410 --> 00:11:01.010
+However, it came with its
+own set of limitations
+
+00:11:01.010 --> 00:11:04.810
+because, of course,
+now we are changing
+
+00:11:04.810 --> 00:11:07.050
+from having to solve an
+unconstrained problem
+
+00:11:07.050 --> 00:11:11.010
+to actually having a constraint
+in our formulation, which
+
+00:11:11.010 --> 00:11:12.770
+complicates things.
+
+00:11:12.770 --> 00:11:15.610
+Specifically, in order
+to solve these problems,
+
+00:11:15.610 --> 00:11:18.530
+people usually use conjugate
+gradient methods, which
+
+00:11:18.530 --> 00:11:21.730
+can be tricky to implement.
+
+00:11:21.730 --> 00:11:27.170
+And empirically, this
+algorithm usually
+
+00:11:27.170 --> 00:11:29.890
+seemed to perform
+pretty weakly when
+
+00:11:29.890 --> 00:11:32.270
+we're using maybe
+deep neural networks,
+
+00:11:32.270 --> 00:11:34.690
+such as convolutional neural
+networks or large transformer
+
+00:11:34.690 --> 00:11:40.290
+networks, which was indeed
+one of the main practical
+
+00:11:40.290 --> 00:11:43.120
+limitations of TRPO.
+
+00:11:43.120 --> 00:11:47.680
+So this algorithm was
+still extremely impactful
+
+00:11:47.680 --> 00:11:52.360
+because, in a way, it motivated
+successive algorithms which
+
+00:11:52.360 --> 00:11:56.000
+try to simplify and remove
+these limitations, which is
+
+00:11:56.000 --> 00:11:57.820
+exactly what PPO actually is.
+
+00:11:57.820 --> 00:12:01.400
+So PPO in a way is a
+derivative of TRPO,
+
+00:12:01.400 --> 00:12:04.200
+which is trying fundamentally
+to answer the question of,
+
+00:12:04.200 --> 00:12:06.640
+can we replicate the
+exact same objective
+
+00:12:06.640 --> 00:12:10.480
+that we were trying to achieve
+with TRPO without having
+
+00:12:10.480 --> 00:12:13.140
+to resort to this second
+order optimization,
+
+00:12:13.140 --> 00:12:16.960
+which is basically entailing
+this more complex optimization
+
+00:12:16.960 --> 00:12:19.840
+problem that we have to solve
+in the constrained problem
+
+00:12:19.840 --> 00:12:22.880
+that we introduced in
+the previous slide.
+
+00:12:22.880 --> 00:12:26.500
+Is this setting clear on the
+transition from TRPO to PPO?
+
+00:12:29.880 --> 00:12:36.280
+And so, if you look around
+for different implementations
+
+00:12:36.280 --> 00:12:38.920
+of PPO, most likely
+you will stumble
+
+00:12:38.920 --> 00:12:41.360
+upon one of these two versions.
+
+00:12:41.360 --> 00:12:44.197
+So the first one is, well, we
+have this constraint problem.
+
+00:12:44.197 --> 00:12:45.780
+We are saying that
+this is introducing
+
+00:12:45.780 --> 00:12:49.180
+some challenges, at least from
+an implementation perspective.
+
+00:12:49.180 --> 00:12:51.700
+Let's basically
+move the constraint
+
+00:12:51.700 --> 00:12:54.180
+to the objective
+function with a penalty
+
+00:12:54.180 --> 00:12:57.580
+through Lagrange
+multipliers, which then leads
+
+00:12:57.580 --> 00:12:59.140
+to an unconstrained problem.
+
+00:12:59.140 --> 00:13:02.420
+And let's solve this through
+stochastic gradient descent
+
+00:13:02.420 --> 00:13:05.100
+tools, as we have always done.
+
+00:13:05.100 --> 00:13:07.900
+So in a way, this
+is completely valid.
+
+00:13:07.900 --> 00:13:11.820
+Although, I would say that
+the most popular version is
+
+00:13:11.820 --> 00:13:16.420
+this second version here,
+where we're basically
+
+00:13:16.420 --> 00:13:21.820
+trying to empirically replicate
+the behavior of the constraint
+
+00:13:21.820 --> 00:13:27.500
+through an empirically
+derived equation in a way.
+
+00:13:27.500 --> 00:13:32.540
+So we are basically introducing
+this specific objective here,
+
+00:13:32.540 --> 00:13:36.280
+where we are trying to replicate
+the behavior of this constraint,
+
+00:13:36.280 --> 00:13:38.340
+which we introduced before.
+
+00:13:38.340 --> 00:13:39.530
+How are we doing so?
+
+00:13:39.530 --> 00:13:43.010
+We're doing so by, first of
+all, defining the ratio just
+
+00:13:43.010 --> 00:13:46.170
+for compactness as
+a small r of theta.
+
+00:13:46.170 --> 00:13:49.490
+So this is the ratio between
+the two policy distributions
+
+00:13:49.490 --> 00:13:50.970
+which we're using before.
+
+00:13:50.970 --> 00:13:56.610
+Of course, if we evaluate r at
+the old version of the parameter
+
+00:13:56.610 --> 00:13:59.370
+theta, we will
+get r equals to 1.
+
+00:13:59.370 --> 00:14:02.410
+And the objective is
+comprised as the minimization
+
+00:14:02.410 --> 00:14:04.250
+between two terms.
+
+00:14:04.250 --> 00:14:06.850
+The minimization
+here is used as such
+
+00:14:06.850 --> 00:14:11.650
+that we are basically having
+that this overall objective is
+
+00:14:11.650 --> 00:14:13.490
+a lower bound of
+the ground truth
+
+00:14:13.490 --> 00:14:16.627
+objective of the ratio
+times the advantage.
+
+00:14:16.627 --> 00:14:18.210
+So we're basically
+picking the minimum
+
+00:14:18.210 --> 00:14:20.730
+between the ratio
+times the advantage,
+
+00:14:20.730 --> 00:14:23.810
+and this clip term over here.
+
+00:14:23.810 --> 00:14:27.290
+So what does the
+clip function do?
+
+00:14:27.290 --> 00:14:32.850
+We're basically taking
+the ratio, small r,
+
+00:14:32.850 --> 00:14:36.412
+assume this is the axis where
+we are considering small r.
+
+00:14:36.412 --> 00:14:37.870
+And we are basically
+saying that we
+
+00:14:37.870 --> 00:14:40.990
+are constraining it to be
+between 1 minus epsilon
+
+00:14:40.990 --> 00:14:43.750
+and 1 plus epsilon.
+
+00:14:43.750 --> 00:14:50.430
+So if r falls within these two
+bounds, we are keeping the--
+
+00:14:50.430 --> 00:14:52.150
+well, the value of r.
+
+00:14:52.150 --> 00:14:56.450
+Otherwise, we are clipping
+it to r theta would be here,
+
+00:14:56.450 --> 00:14:58.590
+we would be using
+1 minus epsilon.
+
+00:14:58.590 --> 00:15:01.270
+If r theta would be greater
+than 1 plus epsilon,
+
+00:15:01.270 --> 00:15:02.770
+we would be using
+1 plus epsilon.
+
+00:15:02.770 --> 00:15:04.990
+So we're basically
+keeping r theta
+
+00:15:04.990 --> 00:15:07.190
+in between these values,
+and then the extremes
+
+00:15:07.190 --> 00:15:08.690
+when we're going
+beyond that value.
+
+00:15:11.390 --> 00:15:14.450
+Of course, this gets then
+multiplied by the advantage.
+
+00:15:14.450 --> 00:15:16.070
+So you're starting
+to see how this
+
+00:15:16.070 --> 00:15:20.310
+is, at least intuitively, an
+empirical way in which you can
+
+00:15:20.310 --> 00:15:25.590
+somehow approximate this idea
+whereby we want to stay closer
+
+00:15:25.590 --> 00:15:30.990
+to the original policy, because
+we're basically these values
+
+00:15:30.990 --> 00:15:36.180
+are constraining the ratio
+r theta to be only as kind
+
+00:15:36.180 --> 00:15:39.700
+of not incredibly different from
+the original policy, if that
+
+00:15:39.700 --> 00:15:40.320
+makes sense.
+
+00:15:44.020 --> 00:15:45.380
+Yeah.
+
+00:15:45.380 --> 00:15:46.760
+What is better?
+
+00:15:46.760 --> 00:15:49.980
+[INAUDIBLE]
+
+00:15:58.420 --> 00:16:02.780
+So the point of the
+minimum here is that--
+
+00:16:02.780 --> 00:16:06.620
+so the full picture
+here is that we
+
+00:16:06.620 --> 00:16:10.660
+are interested in the gradients
+that we get from this objective.
+
+00:16:10.660 --> 00:16:14.340
+And specifically, we want
+to saturate the gradients
+
+00:16:14.340 --> 00:16:18.780
+whenever we are beyond
+these clip values,
+
+00:16:18.780 --> 00:16:23.080
+but only if these are
+in a negative direction.
+
+00:16:23.080 --> 00:16:26.680
+Meaning, if we are moving
+very far away from the policy,
+
+00:16:26.680 --> 00:16:29.220
+but we are moving
+in a direction that
+
+00:16:29.220 --> 00:16:31.700
+is negative for performance,
+we want to clip it.
+
+00:16:31.700 --> 00:16:35.650
+On the other hand, if
+taking a bigger step
+
+00:16:35.650 --> 00:16:43.230
+would allow us to bring us
+closer to the previous policy,
+
+00:16:43.230 --> 00:16:45.410
+we are still enabling
+gradients to flow.
+
+00:16:45.410 --> 00:16:47.410
+So this minimum--
+
+00:16:47.410 --> 00:16:50.250
+I advise you to maybe
+even just plot this
+
+00:16:50.250 --> 00:16:52.287
+and trying to see case
+by case scenarios.
+
+00:16:52.287 --> 00:16:54.370
+But the overall intuition,
+I think, there are two.
+
+00:16:54.370 --> 00:16:57.570
+One, this allows us
+to have a lower bound
+
+00:16:57.570 --> 00:16:58.970
+on the actual objective.
+
+00:16:58.970 --> 00:17:00.570
+And two, if you
+look at the behavior
+
+00:17:00.570 --> 00:17:03.310
+of the resulting gradients that
+you get from this objective,
+
+00:17:03.310 --> 00:17:05.609
+you're getting something
+that saturates whenever
+
+00:17:05.609 --> 00:17:07.530
+it is actually good
+to saturate, and it
+
+00:17:07.530 --> 00:17:09.849
+doesn't when you want
+to recover, essentially.
+
+00:17:09.849 --> 00:17:10.349
+Yeah.
+
+00:17:13.890 --> 00:17:14.390
+But yeah.
+
+00:17:14.390 --> 00:17:18.490
+So long story short, PPO is
+derived from the same intuitions
+
+00:17:18.490 --> 00:17:21.450
+that we were discussing
+before from TRPO.
+
+00:17:21.450 --> 00:17:23.609
+And this is definitely
+the most popular version
+
+00:17:23.609 --> 00:17:25.030
+you will find out there.
+
+00:17:25.030 --> 00:17:27.490
+And I would arguably say
+that now PPO is probably
+
+00:17:27.490 --> 00:17:30.850
+one of the most, if not the most
+popular reinforcement learning
+
+00:17:30.850 --> 00:17:32.970
+algorithm out there.
+
+00:17:37.590 --> 00:17:40.570
+So before moving
+to today's lecture,
+
+00:17:40.570 --> 00:17:42.530
+first of all, any
+questions so far?
+
+00:17:46.390 --> 00:17:50.710
+So I want to spend just a couple
+of minutes really driving home
+
+00:17:50.710 --> 00:17:52.270
+the main messages
+which we discussed
+
+00:17:52.270 --> 00:17:55.110
+so far for model-free RL.
+
+00:17:55.110 --> 00:17:58.030
+And so remember how we basically
+started all of our discussions
+
+00:17:58.030 --> 00:18:01.430
+a few weeks back by talking
+about different ways
+
+00:18:01.430 --> 00:18:04.310
+to estimate value functions,
+where we were originally
+
+00:18:04.310 --> 00:18:06.070
+motivated by the
+appealing properties
+
+00:18:06.070 --> 00:18:10.190
+of dynamic programming,
+where these were essentially
+
+00:18:10.190 --> 00:18:18.110
+allowing us to decompose
+the problem over time
+
+00:18:18.110 --> 00:18:22.870
+by enabling us to have an exact
+representation of the value
+
+00:18:22.870 --> 00:18:25.830
+for each state at the
+end of our problem
+
+00:18:25.830 --> 00:18:29.150
+by just looking at the
+one step propagation.
+
+00:18:29.150 --> 00:18:31.620
+And we were able to do this
+because we are actually
+
+00:18:31.620 --> 00:18:34.140
+able to compute exactly
+those expectations
+
+00:18:34.140 --> 00:18:37.420
+through the use of the knowledge
+of the system dynamics.
+
+00:18:37.420 --> 00:18:40.300
+And so saw how these methods
+were in principle exact
+
+00:18:40.300 --> 00:18:44.060
+because we were not losing any
+information through this one
+
+00:18:44.060 --> 00:18:46.460
+step expectation,
+but it required
+
+00:18:46.460 --> 00:18:49.540
+us to have a knowledge
+of the underlying MDP.
+
+00:18:49.540 --> 00:18:51.140
+And so this motivated
+to introduce
+
+00:18:51.140 --> 00:18:54.900
+two fundamental model-free
+learning paradigms, Monte Carlo
+
+00:18:54.900 --> 00:19:00.258
+learning, which basically used
+sampling from our environment.
+
+00:19:00.258 --> 00:19:02.300
+In other words, interactions
+with our environment
+
+00:19:02.300 --> 00:19:06.220
+to approximate that expectation
+and specifically define
+
+00:19:06.220 --> 00:19:09.260
+the update to our value
+function as taking a step
+
+00:19:09.260 --> 00:19:11.655
+in the direction of
+the observed returns.
+
+00:19:11.655 --> 00:19:13.280
+So we would sample
+in our environments,
+
+00:19:13.280 --> 00:19:15.640
+reach a terminal state,
+observe a return,
+
+00:19:15.640 --> 00:19:17.260
+and update our
+estimate of the value
+
+00:19:17.260 --> 00:19:20.300
+function towards that return.
+
+00:19:20.300 --> 00:19:22.600
+On one hand, this is great
+because it's unbiased.
+
+00:19:22.600 --> 00:19:24.460
+This is an actual
+unbiased estimator
+
+00:19:24.460 --> 00:19:26.580
+of the ground truth return.
+
+00:19:26.580 --> 00:19:28.500
+But it is high
+variance because there
+
+00:19:28.500 --> 00:19:31.610
+is a lot of stochastic
+sampling happening over time,
+
+00:19:31.610 --> 00:19:35.010
+and we need to reach a
+terminal state in order
+
+00:19:35.010 --> 00:19:37.490
+to actually sum backwards
+all of the rewards
+
+00:19:37.490 --> 00:19:39.810
+that we have obtained.
+
+00:19:39.810 --> 00:19:41.970
+On the other hand, temporal
+difference learning
+
+00:19:41.970 --> 00:19:45.713
+tries to combine ideas from both
+of these paradigms, the sampling
+
+00:19:45.713 --> 00:19:47.130
+of Monte Carlo
+because we're still
+
+00:19:47.130 --> 00:19:48.930
+interacting with
+the environment,
+
+00:19:48.930 --> 00:19:51.230
+and the bootstrapping
+of dynamic programming
+
+00:19:51.230 --> 00:19:55.730
+because we are updating our
+guess towards the one step ahead
+
+00:19:55.730 --> 00:19:59.450
+estimate of our future return.
+
+00:19:59.450 --> 00:20:01.570
+Which is great, because
+this lowers the variance
+
+00:20:01.570 --> 00:20:04.130
+because we're sampling only
+once, instead of having
+
+00:20:04.130 --> 00:20:06.130
+to account for all
+the stochasticity
+
+00:20:06.130 --> 00:20:09.290
+of the possible futures
+and it can learn online,
+
+00:20:09.290 --> 00:20:13.770
+because we can do this update
+with just a single step.
+
+00:20:13.770 --> 00:20:16.610
+But it does introduce bias
+because we are updating
+
+00:20:16.610 --> 00:20:18.210
+the [INAUDIBLE] I guess.
+
+00:20:18.210 --> 00:20:21.530
+And so there are
+some trade-offs.
+
+00:20:21.530 --> 00:20:24.730
+Of course, we mentioned how this
+is true both for state value
+
+00:20:24.730 --> 00:20:27.370
+functions V, but
+also for Q functions,
+
+00:20:27.370 --> 00:20:29.050
+and this holds equally.
+
+00:20:31.730 --> 00:20:35.310
+The other main idea is that
+we saw how all of these ideas
+
+00:20:35.310 --> 00:20:39.290
+basically held true for the
+tabular representations,
+
+00:20:39.290 --> 00:20:42.690
+whereby value functions
+are just lists or matrices,
+
+00:20:42.690 --> 00:20:45.790
+and each entry in
+those lists of matrices
+
+00:20:45.790 --> 00:20:49.710
+is our estimate for
+the value function.
+
+00:20:49.710 --> 00:20:53.450
+And it holds similarly for
+value function approximation.
+
+00:20:53.450 --> 00:20:56.130
+Whereby rather than
+having lists or matrices,
+
+00:20:56.130 --> 00:20:58.630
+we have a parametric
+function described
+
+00:20:58.630 --> 00:21:01.590
+by some parameters theta,
+which we can basically
+
+00:21:01.590 --> 00:21:04.590
+tune in order to better
+approximate these values.
+
+00:21:04.590 --> 00:21:06.230
+How do we tune them?
+
+00:21:06.230 --> 00:21:09.990
+Exactly how we were defining
+before these backups
+
+00:21:09.990 --> 00:21:11.490
+for the tabular case.
+
+00:21:11.490 --> 00:21:15.750
+Now the same targets, that is
+the return and the TD target
+
+00:21:15.750 --> 00:21:20.090
+represent elements in a
+update for in parameter space.
+
+00:21:23.390 --> 00:21:24.910
+With all of these
+machinery, we then
+
+00:21:24.910 --> 00:21:27.860
+looked at value-based methods
+and policy optimization methods
+
+00:21:27.860 --> 00:21:31.140
+as two broad families of
+model-free reinforcement
+
+00:21:31.140 --> 00:21:33.020
+learning approaches.
+
+00:21:33.020 --> 00:21:36.300
+In value-based methods, we used
+generalized policy iteration
+
+00:21:36.300 --> 00:21:41.620
+as the fundamental scheme in
+order to obtain optimal policy.
+
+00:21:41.620 --> 00:21:44.680
+In generalized policy
+iteration, loosely speaking,
+
+00:21:44.680 --> 00:21:50.020
+alternates between two
+processes, a policy evaluation
+
+00:21:50.020 --> 00:21:52.700
+step, whereby giving
+a policy, we estimate
+
+00:21:52.700 --> 00:21:54.420
+the value for the policy.
+
+00:21:54.420 --> 00:21:56.840
+And the policy improvement
+step, which on the other hand,
+
+00:21:56.840 --> 00:22:00.020
+tries to be greedy with respect
+to the newly updated value
+
+00:22:00.020 --> 00:22:02.100
+function.
+
+00:22:02.100 --> 00:22:04.560
+And we saw on-policy and
+off-policy algorithms,
+
+00:22:04.560 --> 00:22:07.440
+namely SARSA and Q-learning
+as specific examples,
+
+00:22:07.440 --> 00:22:08.860
+and how these were
+instantiations
+
+00:22:08.860 --> 00:22:12.260
+of that same framework.
+
+00:22:12.260 --> 00:22:13.820
+Of course, this
+applies also when
+
+00:22:13.820 --> 00:22:16.000
+you have deep neural
+nets in the picture,
+
+00:22:16.000 --> 00:22:21.540
+and we looked at deep neural
+networks as a specific example.
+
+00:22:21.540 --> 00:22:24.570
+For policy optimization,
+which we just concluded today,
+
+00:22:24.570 --> 00:22:28.330
+we, on the other hand, said
+that in policy optimization
+
+00:22:28.330 --> 00:22:31.730
+we care about learning an
+explicit parametric policy theta
+
+00:22:31.730 --> 00:22:34.690
+pi theta with some
+parameters theta.
+
+00:22:34.690 --> 00:22:39.010
+And we want to optimize these
+parameters to directly optimize
+
+00:22:39.010 --> 00:22:42.890
+the reinforcement learning
+objective, as we said today.
+
+00:22:42.890 --> 00:22:46.230
+And this at a very high
+level entails well,
+
+00:22:46.230 --> 00:22:47.650
+estimating the
+gradient if we want
+
+00:22:47.650 --> 00:22:50.230
+to solve them through
+gradient descent techniques.
+
+00:22:50.230 --> 00:22:52.650
+And so all of our discussions
+of policy gradient
+
+00:22:52.650 --> 00:22:54.978
+fall into step one here.
+
+00:22:54.978 --> 00:22:56.770
+And then we want to do
+approximate gradient
+
+00:22:56.770 --> 00:22:59.770
+descent using this gradient.
+
+00:22:59.770 --> 00:23:02.050
+We saw how policy
+gradient naturally
+
+00:23:02.050 --> 00:23:03.970
+describes this idea
+of trial and error
+
+00:23:03.970 --> 00:23:07.650
+learning by essentially
+being a weighted version
+
+00:23:07.650 --> 00:23:10.830
+of the maximum
+likelihood gradient.
+
+00:23:10.830 --> 00:23:13.010
+If you recall here, we
+were describing this idea
+
+00:23:13.010 --> 00:23:16.250
+where the policy gradient
+tries to basically push up
+
+00:23:16.250 --> 00:23:22.370
+the probability assigned to
+actions which have high reward.
+
+00:23:22.370 --> 00:23:25.890
+And so this encodes this idea
+of trial and error learning.
+
+00:23:29.430 --> 00:23:32.710
+But we saw how policy gradient
+is fundamentally doomed
+
+00:23:32.710 --> 00:23:35.343
+by this problem of high
+variance of the gradient itself.
+
+00:23:35.343 --> 00:23:37.510
+And so we discussed a number
+of different strategies
+
+00:23:37.510 --> 00:23:38.730
+to reduce the variance.
+
+00:23:38.730 --> 00:23:40.790
+Namely, we looked
+at baselines and we
+
+00:23:40.790 --> 00:23:43.710
+introduced critics in
+actor-critic methods
+
+00:23:43.710 --> 00:23:47.190
+and so forth.
+
+00:23:47.190 --> 00:23:50.097
+So if you wish this is like a
+3-minute run through everything
+
+00:23:50.097 --> 00:23:51.930
+we've been doing over
+the last few lectures.
+
+00:23:51.930 --> 00:23:54.670
+But I think it's good
+to make sure that we are
+
+00:23:54.670 --> 00:23:56.090
+driving the main ideas home.
+
+00:23:56.090 --> 00:23:57.730
+But any questions on this?
+
+00:24:06.590 --> 00:24:13.350
+So remember that basically we
+were introducing this skeleton,
+
+00:24:13.350 --> 00:24:16.870
+and all of the methods we
+discussed so far, essentially
+
+00:24:16.870 --> 00:24:20.610
+are different instantiation
+of this key RL skeleton.
+
+00:24:20.610 --> 00:24:24.900
+So we always have this
+generate samples step where we
+
+00:24:24.900 --> 00:24:26.660
+interact with an environment.
+
+00:24:26.660 --> 00:24:31.020
+We typically could estimate
+a return or a value function
+
+00:24:31.020 --> 00:24:33.780
+of some sort, so we could
+be having a value function
+
+00:24:33.780 --> 00:24:35.280
+approximator, for example.
+
+00:24:35.280 --> 00:24:38.580
+We'll see today how we
+could fit the model as well.
+
+00:24:38.580 --> 00:24:41.260
+And then we could use whatever
+we do in the second step
+
+00:24:41.260 --> 00:24:45.180
+to improve the policy, either
+through a greedy policy
+
+00:24:45.180 --> 00:24:46.980
+improvement, as we're
+doing in Q-learning,
+
+00:24:46.980 --> 00:24:49.020
+or through gradient
+descent, as we're doing
+
+00:24:49.020 --> 00:24:52.220
+in policy optimization methods.
+
+00:24:52.220 --> 00:24:56.360
+And at the beginning of our
+reinforcement learning lectures,
+
+00:24:56.360 --> 00:24:58.900
+we briefly mentioned
+a number of trade-offs
+
+00:24:58.900 --> 00:25:02.900
+between algorithms and ways
+to navigate these algorithms.
+
+00:25:02.900 --> 00:25:06.100
+But I hope that maybe before
+these trade-offs were,
+
+00:25:06.100 --> 00:25:07.780
+I guess, a little bit vague.
+
+00:25:07.780 --> 00:25:10.480
+But now if we actually look
+at those same slides again,
+
+00:25:10.480 --> 00:25:13.420
+I hope that most of these
+trade-offs start to make sense.
+
+00:25:13.420 --> 00:25:16.580
+So we're discussing trade-offs
+in terms of sample efficiency
+
+00:25:16.580 --> 00:25:17.520
+and stability.
+
+00:25:17.520 --> 00:25:20.800
+And so I think here on-policy
+and off-policy algorithms are
+
+00:25:20.800 --> 00:25:23.680
+exactly hinting at these
+trade-offs over here,
+
+00:25:23.680 --> 00:25:26.320
+that is, how much
+is it expensive
+
+00:25:26.320 --> 00:25:29.920
+for us to interact
+with the environment?
+
+00:25:29.920 --> 00:25:33.840
+We looked at continuous
+or discrete action spaces,
+
+00:25:33.840 --> 00:25:38.320
+which could have implications in
+choosing value-based methods as
+
+00:25:38.320 --> 00:25:40.720
+opposed to policy
+optimization methods.
+
+00:25:40.720 --> 00:25:42.920
+We looked at episodic
+or infinite horizon
+
+00:25:42.920 --> 00:25:46.840
+cases, where Monte Carlo
+requires an episodic setting,
+
+00:25:46.840 --> 00:25:52.240
+because we need a terminal state
+to back propagate those values.
+
+00:25:52.240 --> 00:25:54.080
+And loosely speaking,
+I think we started
+
+00:25:54.080 --> 00:25:59.060
+to explore this spectrum
+of sample efficiency.
+
+00:25:59.060 --> 00:26:01.940
+So we were looking
+at, for example,
+
+00:26:01.940 --> 00:26:04.520
+ranging from the less
+efficient algorithms,
+
+00:26:04.520 --> 00:26:07.360
+all the way here we see
+on-policy, policy gradient
+
+00:26:07.360 --> 00:26:08.260
+algorithms.
+
+00:26:08.260 --> 00:26:10.400
+We have actor-critic
+algorithms, which
+
+00:26:10.400 --> 00:26:14.240
+try to leverage value function
+approximation to become
+
+00:26:14.240 --> 00:26:15.840
+more sample efficient.
+
+00:26:15.840 --> 00:26:17.960
+We looked at
+off-policy Q-learning
+
+00:26:17.960 --> 00:26:20.990
+as example, where we could use
+offline data or data gathered
+
+00:26:20.990 --> 00:26:23.810
+from other policies, which
+makes it more sample efficient.
+
+00:26:23.810 --> 00:26:27.110
+And today we'll be
+introducing some key ideas
+
+00:26:27.110 --> 00:26:29.950
+in the realm of model-based RL.
+
+00:26:29.950 --> 00:26:34.950
+But long story short, is that
+we introduced these trade-offs,
+
+00:26:34.950 --> 00:26:37.590
+I guess, pretty vaguely
+in the first lecture.
+
+00:26:37.590 --> 00:26:39.190
+But hopefully
+you're appreciating
+
+00:26:39.190 --> 00:26:42.090
+how many of these trade-offs
+now are more concrete.
+
+00:26:47.190 --> 00:26:51.190
+And so let's move to
+model-based approaches.
+
+00:26:51.190 --> 00:26:55.850
+Specifically today, we'll
+be starting from-- well,
+
+00:26:55.850 --> 00:27:00.950
+introducing a basic recipe
+for model-based reinforcement
+
+00:27:00.950 --> 00:27:02.270
+learning.
+
+00:27:02.270 --> 00:27:06.350
+And we'll discuss the key
+limitations and challenges that
+
+00:27:06.350 --> 00:27:09.463
+come from this basic recipe.
+
+00:27:09.463 --> 00:27:11.630
+And then we'll start to see
+basically different ways
+
+00:27:11.630 --> 00:27:15.150
+of addressing those challenges
+and limitations, namely
+
+00:27:15.150 --> 00:27:17.440
+through the lens of
+uncertainty quantification.
+
+00:27:17.440 --> 00:27:20.740
+And so we'll have a small
+parenthesis on uncertainty
+
+00:27:20.740 --> 00:27:22.700
+quantification in general.
+
+00:27:22.700 --> 00:27:25.620
+And then we'll conclude with
+some examples, as well as
+
+00:27:25.620 --> 00:27:31.620
+some more broader scope
+remarks for the entire class.
+
+00:27:31.620 --> 00:27:33.900
+The caveat here is
+that, of course,
+
+00:27:33.900 --> 00:27:38.380
+model-based RL is goes
+clearly beyond anything
+
+00:27:38.380 --> 00:27:40.300
+that we'll be discussing today.
+
+00:27:40.300 --> 00:27:42.520
+But for today, I hope
+that at the very least,
+
+00:27:42.520 --> 00:27:45.100
+we'll be conveying the main
+ideas and challenges that
+
+00:27:45.100 --> 00:27:47.760
+come through model-based
+reinforcement learning.
+
+00:27:51.680 --> 00:27:54.540
+So let's start from introducing
+this general recipe.
+
+00:27:54.540 --> 00:27:58.960
+So at the very kind
+of fundamental level,
+
+00:27:58.960 --> 00:28:02.340
+if we knew the dynamics, that
+is a function that basically
+
+00:28:02.340 --> 00:28:04.860
+predicts the next state,
+given the state and an action
+
+00:28:04.860 --> 00:28:08.220
+that we take in that
+state, we could use tools
+
+00:28:08.220 --> 00:28:09.580
+from optimal control.
+
+00:28:09.580 --> 00:28:12.220
+So basically pick a
+method from the first half
+
+00:28:12.220 --> 00:28:13.520
+of this class we could use.
+
+00:28:13.520 --> 00:28:15.580
+We have a model, we
+could plan through it,
+
+00:28:15.580 --> 00:28:18.360
+we could use a direct
+method, indirect method.
+
+00:28:18.360 --> 00:28:20.640
+Basically, our favorite choice.
+
+00:28:20.640 --> 00:28:23.480
+And so a very simple
+idea would be,
+
+00:28:23.480 --> 00:28:25.880
+well, we want this
+object because it
+
+00:28:25.880 --> 00:28:29.600
+could allow us to use any of
+the tools we discussed before.
+
+00:28:29.600 --> 00:28:32.360
+Let's use interactions
+with the environment
+
+00:28:32.360 --> 00:28:36.800
+to collect data and examples
+of these transitions and let's
+
+00:28:36.800 --> 00:28:40.380
+learn an approximate model of
+this ground truth dynamics.
+
+00:28:43.840 --> 00:28:46.040
+And so we could
+apply a strategy that
+
+00:28:46.040 --> 00:28:49.000
+looks like the one shown
+here on the slide, whereby
+
+00:28:49.000 --> 00:28:53.660
+we might have a base
+policy pi 0, in this case.
+
+00:28:53.660 --> 00:28:54.540
+This could be random.
+
+00:28:54.540 --> 00:28:56.400
+It could be an
+exploration policy
+
+00:28:56.400 --> 00:28:59.360
+that is given to us from some
+domain knowledge or anything
+
+00:28:59.360 --> 00:29:00.800
+that we choose.
+
+00:29:00.800 --> 00:29:02.822
+And we could
+collect and we would
+
+00:29:02.822 --> 00:29:04.280
+run this in the
+environment and use
+
+00:29:04.280 --> 00:29:08.480
+this to collect a data set of
+transitions, which are basically
+
+00:29:08.480 --> 00:29:11.880
+comprised of these
+triplets over here.
+
+00:29:11.880 --> 00:29:17.790
+So we would be running our
+policy in the environment.
+
+00:29:17.790 --> 00:29:21.150
+In doing so, we would be seeing
+examples of these one step
+
+00:29:21.150 --> 00:29:26.190
+transitions, which we can
+then collect to basically
+
+00:29:26.190 --> 00:29:31.350
+be examples of mapping
+from state and control
+
+00:29:31.350 --> 00:29:34.270
+to a next state.
+
+00:29:34.270 --> 00:29:38.150
+Once we have this data set, we
+can then fit a dynamical model
+
+00:29:38.150 --> 00:29:41.790
+to this data through our
+well, favorite regression
+
+00:29:41.790 --> 00:29:44.350
+or supervised
+learning technique.
+
+00:29:44.350 --> 00:29:46.910
+For example, minimizing
+some form of squared error
+
+00:29:46.910 --> 00:29:49.870
+or maximizing some log
+likelihood of our data.
+
+00:29:49.870 --> 00:29:54.470
+And then we could use this
+model to basically plan.
+
+00:29:54.470 --> 00:29:57.550
+So the question here
+is, would this work?
+
+00:29:57.550 --> 00:29:59.970
+Well, in some cases, yes.
+
+00:29:59.970 --> 00:30:05.010
+So especially if dynamics are
+relatively simple, for example,
+
+00:30:05.010 --> 00:30:07.990
+we could have some linear
+time invariant dynamics.
+
+00:30:07.990 --> 00:30:10.430
+This tends to work pretty well.
+
+00:30:10.430 --> 00:30:14.420
+And this also relates to some
+of the discussions we were doing
+
+00:30:14.420 --> 00:30:17.500
+on system
+identification, whereby
+
+00:30:17.500 --> 00:30:20.700
+if you have a fairly
+well-understood model,
+
+00:30:20.700 --> 00:30:24.820
+if the underlying dynamics
+are within the function class
+
+00:30:24.820 --> 00:30:26.740
+that we're trying to
+fit and maybe we only
+
+00:30:26.740 --> 00:30:30.660
+have to tune a limited
+number of parameters,
+
+00:30:30.660 --> 00:30:33.820
+then these tools
+actually work quite well,
+
+00:30:33.820 --> 00:30:38.440
+and we might hope to generalize
+good enough to the real system.
+
+00:30:41.100 --> 00:30:45.940
+Of course, this doesn't hold in
+probably the majority of cases,
+
+00:30:45.940 --> 00:30:48.740
+specifically when we're dealing
+with complex, potentially
+
+00:30:48.740 --> 00:30:51.460
+nonlinear dynamics,
+and especially
+
+00:30:51.460 --> 00:30:53.820
+in the combination
+of complex dynamics,
+
+00:30:53.820 --> 00:30:56.920
+and high capacity
+approximate models,
+
+00:30:56.920 --> 00:30:59.020
+for example, neural networks.
+
+00:30:59.020 --> 00:31:02.900
+And this is because
+extrapolating from observed data
+
+00:31:02.900 --> 00:31:05.500
+to, for example,
+out-of-distribution examples
+
+00:31:05.500 --> 00:31:09.220
+from our environment is
+difficult and can be misleading.
+
+00:31:09.220 --> 00:31:11.380
+So for basically the
+rest of this class,
+
+00:31:11.380 --> 00:31:16.360
+we'll be looking at ways
+to basically or approaches
+
+00:31:16.360 --> 00:31:20.440
+to try and have this exact same
+formalism work in the cases
+
+00:31:20.440 --> 00:31:25.540
+where we might be having
+complex dynamics to learn.
+
+00:31:30.520 --> 00:31:33.620
+So why is this an issue?
+
+00:31:33.620 --> 00:31:38.400
+So let us look at a fictitious
+and a pictorial example.
+
+00:31:38.400 --> 00:31:40.540
+So say we are in this
+very simple world,
+
+00:31:40.540 --> 00:31:42.500
+the agent is the black
+dot here on the slide,
+
+00:31:42.500 --> 00:31:45.920
+and we have an obstacle
+which we wish to avoid.
+
+00:31:45.920 --> 00:31:49.640
+The goal here is to go as
+further north as possible.
+
+00:31:49.640 --> 00:31:52.520
+So in this case, say that
+our exploration policy pi
+
+00:31:52.520 --> 00:31:56.960
+0 is something that explores a
+certain amount, certain subset
+
+00:31:56.960 --> 00:32:01.000
+of the state space, specifically
+describing the state
+
+00:32:01.000 --> 00:32:04.040
+distribution under
+policy pi 0 P sub pi
+
+00:32:04.040 --> 00:32:06.840
+0 of x, which is basically
+the subset of the state
+
+00:32:06.840 --> 00:32:10.470
+space induced by that policy.
+
+00:32:10.470 --> 00:32:12.310
+Of course, if we
+were to learn now
+
+00:32:12.310 --> 00:32:15.630
+a dynamical model on this
+transitions, which we collected
+
+00:32:15.630 --> 00:32:19.270
+through this experience,
+we might-- and then
+
+00:32:19.270 --> 00:32:21.070
+we use this for
+planning, we might
+
+00:32:21.070 --> 00:32:25.430
+be ending doing something
+extremely meaningful
+
+00:32:25.430 --> 00:32:28.928
+within the realm or the
+states that we have observed.
+
+00:32:28.928 --> 00:32:30.470
+But the moment where
+we change and we
+
+00:32:30.470 --> 00:32:34.510
+go outside of the state
+distribution we have covered,
+
+00:32:34.510 --> 00:32:36.270
+this is obviously not the case.
+
+00:32:36.270 --> 00:32:38.750
+And so if you remember
+also our discussions
+
+00:32:38.750 --> 00:32:42.070
+on imitation learning,
+this is another example
+
+00:32:42.070 --> 00:32:46.150
+of covariate shift and
+distribution shift,
+
+00:32:46.150 --> 00:32:50.750
+whereby basically, when we use
+the learned dynamical model
+
+00:32:50.750 --> 00:32:53.690
+as an inner component of
+our planning algorithm,
+
+00:32:53.690 --> 00:32:57.790
+we're then observing a
+different state distribution.
+
+00:32:57.790 --> 00:33:00.030
+And so here generalization
+and extrapolation
+
+00:33:00.030 --> 00:33:03.450
+across these settings is
+actually what matters.
+
+00:33:07.110 --> 00:33:13.530
+So what could be first fairly
+heuristic and empirical way
+
+00:33:13.530 --> 00:33:18.170
+to improve the basic recipe
+we were describing before?
+
+00:33:18.170 --> 00:33:20.690
+So again, let's consider
+our three steps where
+
+00:33:20.690 --> 00:33:23.610
+we take our policy, run
+it in the environment,
+
+00:33:23.610 --> 00:33:27.310
+collect some data, use
+this data to fit a model,
+
+00:33:27.310 --> 00:33:29.890
+and then say that we
+want to use this to plan.
+
+00:33:29.890 --> 00:33:31.990
+Of course, what we
+could do, first of all,
+
+00:33:31.990 --> 00:33:35.850
+is to plan in a receding
+horizon fashion.
+
+00:33:35.850 --> 00:33:41.490
+So we know that the plan might
+be slightly off or at least
+
+00:33:41.490 --> 00:33:44.470
+might be accurate closer
+to our initial time,
+
+00:33:44.470 --> 00:33:48.570
+but then we might want to
+reevaluate where we actually are
+
+00:33:48.570 --> 00:33:50.270
+in the environment and replan.
+
+00:33:50.270 --> 00:33:53.610
+And so in this case, using
+a model predictive control
+
+00:33:53.610 --> 00:33:55.770
+approach might be beneficial.
+
+00:33:55.770 --> 00:33:59.770
+So this is a simple
+improvement here.
+
+00:33:59.770 --> 00:34:03.410
+But also what we could
+do is we could basically
+
+00:34:03.410 --> 00:34:06.120
+use the transitions
+that we are observing
+
+00:34:06.120 --> 00:34:09.600
+while deploying this policy to
+basically add them to the data
+
+00:34:09.600 --> 00:34:12.340
+set and refit our model.
+
+00:34:12.340 --> 00:34:14.679
+So in a way, we are
+gradually closing
+
+00:34:14.679 --> 00:34:17.679
+the gap between the state
+distribution induced
+
+00:34:17.679 --> 00:34:21.679
+by the original policy and
+the state distribution induced
+
+00:34:21.679 --> 00:34:24.179
+by this planning policy,
+if that makes sense.
+
+00:34:30.400 --> 00:34:33.520
+So these are indeed
+two simple steps
+
+00:34:33.520 --> 00:34:39.960
+which can in practice make
+a substantial improvement.
+
+00:34:39.960 --> 00:34:42.000
+However, I would
+say the main focus
+
+00:34:42.000 --> 00:34:44.900
+for today is on
+uncertainty quantification.
+
+00:34:44.900 --> 00:34:49.199
+And we'll see-- we'll
+see why shortly.
+
+00:34:49.199 --> 00:34:57.840
+Specifically, the reason
+why these techniques fail
+
+00:34:57.840 --> 00:35:01.500
+is that in theory, what we
+would like to have is-- well,
+
+00:35:01.500 --> 00:35:03.920
+we have a very complex
+dynamical model or system
+
+00:35:03.920 --> 00:35:05.750
+we're interacting
+with, and we would
+
+00:35:05.750 --> 00:35:08.230
+like to have a high
+capacity model that
+
+00:35:08.230 --> 00:35:11.150
+is able to represent
+these complex dynamics
+
+00:35:11.150 --> 00:35:12.330
+in the high data regime.
+
+00:35:12.330 --> 00:35:14.950
+So we want to have
+high capacity models.
+
+00:35:14.950 --> 00:35:17.310
+However, we also want
+this high capacity model
+
+00:35:17.310 --> 00:35:20.070
+to not overfit to
+the observed data
+
+00:35:20.070 --> 00:35:23.990
+if we only have a
+limited set of that data.
+
+00:35:23.990 --> 00:35:27.190
+The reason why we don't want
+this overfitting problem
+
+00:35:27.190 --> 00:35:33.230
+is because if we then use
+an optimizer or a planning
+
+00:35:33.230 --> 00:35:35.310
+algorithm, for example,
+as we were doing
+
+00:35:35.310 --> 00:35:39.750
+in our previous recipe to
+optimize over our learned model,
+
+00:35:39.750 --> 00:35:45.910
+the optimization will be
+prone to exploiting errors
+
+00:35:45.910 --> 00:35:49.230
+in the positive direction,
+if that makes sense.
+
+00:35:49.230 --> 00:35:55.710
+So visually, say that we
+have only a limited number
+
+00:35:55.710 --> 00:36:01.870
+of data points represented by
+the red dots here on the slide,
+
+00:36:01.870 --> 00:36:06.010
+here we have two equivalent
+functions that fit the data.
+
+00:36:06.010 --> 00:36:08.330
+But the blue one
+here is potentially
+
+00:36:08.330 --> 00:36:11.090
+representing a higher
+capacity model that
+
+00:36:11.090 --> 00:36:12.370
+is overfitting to the data.
+
+00:36:12.370 --> 00:36:14.970
+So it's fitting perfectly
+our observed data,
+
+00:36:14.970 --> 00:36:20.410
+but then it is doing-- it
+is behaving quite wildly
+
+00:36:20.410 --> 00:36:23.090
+outside of the observed data.
+
+00:36:23.090 --> 00:36:25.210
+Now, say that you
+are an optimizer that
+
+00:36:25.210 --> 00:36:29.070
+wants to maximize the
+performance from the blue model,
+
+00:36:29.070 --> 00:36:33.770
+you might be tempted to choose
+behavior that basically leads
+
+00:36:33.770 --> 00:36:36.130
+to exploiting the
+positive reward
+
+00:36:36.130 --> 00:36:37.910
+predictions under our model.
+
+00:36:37.910 --> 00:36:41.870
+And so I think this
+is a key problem here
+
+00:36:41.870 --> 00:36:43.730
+and a key tension
+when you want to use
+
+00:36:43.730 --> 00:36:46.570
+learned models on one hand
+that might not extrapolate
+
+00:36:46.570 --> 00:36:50.090
+or generalize well with
+an optimization that
+
+00:36:50.090 --> 00:36:53.650
+is in a way acting as
+a black box optimizer
+
+00:36:53.650 --> 00:36:56.270
+and could exploit errors
+in the positive direction.
+
+00:37:01.320 --> 00:37:04.280
+So for today, what
+we will be looking
+
+00:37:04.280 --> 00:37:08.120
+at is a possible solution to
+this problem, which is basically
+
+00:37:08.120 --> 00:37:13.040
+considering uncertainty and
+loosely speaking, how certain
+
+00:37:13.040 --> 00:37:16.080
+our model is about its
+prediction as a mechanism
+
+00:37:16.080 --> 00:37:21.700
+to basically push against
+these possible flaws.
+
+00:37:25.585 --> 00:37:26.460
+Does that make sense?
+
+00:37:26.460 --> 00:37:28.700
+Any questions on this?
+
+00:37:35.860 --> 00:37:39.300
+So first of all, we're talking
+about uncertainty estimation
+
+00:37:39.300 --> 00:37:43.320
+and what do we mean by
+uncertainty on the predictions
+
+00:37:43.320 --> 00:37:44.480
+of our model.
+
+00:37:44.480 --> 00:37:47.680
+And specifically, what
+we mean by uncertainty
+
+00:37:47.680 --> 00:37:51.280
+is we mean an expression
+of a distribution
+
+00:37:51.280 --> 00:37:53.320
+over possible outcomes.
+
+00:37:53.320 --> 00:37:58.040
+So for example, instead of
+predicting a single point
+
+00:37:58.040 --> 00:38:02.350
+estimate of what is the
+most likely next best
+
+00:38:02.350 --> 00:38:05.230
+state from given a
+state and a control,
+
+00:38:05.230 --> 00:38:09.390
+we want our system
+models to predict
+
+00:38:09.390 --> 00:38:12.510
+a full distribution and
+associated likelihood
+
+00:38:12.510 --> 00:38:15.290
+of what is most likely
+to happen in the future,
+
+00:38:15.290 --> 00:38:16.130
+if that makes sense.
+
+00:38:16.130 --> 00:38:18.870
+So visually, what we want
+from our dynamical model
+
+00:38:18.870 --> 00:38:22.710
+is something that gives us a
+range of possible scenarios
+
+00:38:22.710 --> 00:38:28.750
+that we could be optimizing for
+with the associated probability.
+
+00:38:28.750 --> 00:38:30.310
+We want this because
+this essentially
+
+00:38:30.310 --> 00:38:34.410
+allows us to reason in terms of
+expectations under our model.
+
+00:38:37.030 --> 00:38:38.990
+So why is this--
+
+00:38:38.990 --> 00:38:41.790
+why can this really
+a form planning?
+
+00:38:41.790 --> 00:38:44.710
+So consider again
+this simple example,
+
+00:38:44.710 --> 00:38:48.310
+where we are the black
+dot on the slide.
+
+00:38:48.310 --> 00:38:51.830
+We want to reach a goal state
+represented by the green star,
+
+00:38:51.830 --> 00:38:56.430
+and we have this cliff-like
+environment where the lines here
+
+00:38:56.430 --> 00:38:58.230
+represent the edge of the cliff.
+
+00:38:58.230 --> 00:39:02.730
+So if we go beyond this,
+episode terminates essentially.
+
+00:39:02.730 --> 00:39:06.210
+Now, say that we have
+two candidate open loop
+
+00:39:06.210 --> 00:39:07.170
+trajectories.
+
+00:39:07.170 --> 00:39:10.690
+So we basically
+assume we have access
+
+00:39:10.690 --> 00:39:23.310
+to U1 to UT prime and U1 double
+prime to UT double prime.
+
+00:39:26.130 --> 00:39:28.890
+And say we want to use
+something along the lines
+
+00:39:28.890 --> 00:39:33.610
+of the model-based algorithms
+we're using before, we would
+
+00:39:33.610 --> 00:39:36.730
+basically be
+simulating in our head
+
+00:39:36.730 --> 00:39:39.570
+these two possible action
+trajectories, open loop
+
+00:39:39.570 --> 00:39:41.970
+trajectories, where
+one would lead
+
+00:39:41.970 --> 00:39:45.570
+us to very close to the
+goal and one would lead us
+
+00:39:45.570 --> 00:39:47.650
+a little bit more further away.
+
+00:39:47.650 --> 00:39:49.850
+In this case, the
+circles represent
+
+00:39:49.850 --> 00:39:54.450
+our estimate of how certain we
+are about where we would end up.
+
+00:39:54.450 --> 00:39:56.350
+In this case, both.
+
+00:39:56.350 --> 00:39:58.800
+In both cases, we are
+fairly certain about where
+
+00:39:58.800 --> 00:40:00.840
+we are ending up,
+and so it is clear
+
+00:40:00.840 --> 00:40:04.000
+that the trajectory associated
+with the yellow circle
+
+00:40:04.000 --> 00:40:09.320
+is better because it allows
+us to be closer to the goal.
+
+00:40:09.320 --> 00:40:14.800
+However, despite having in a
+second case assumed that now we
+
+00:40:14.800 --> 00:40:18.600
+have broader uncertainty bands
+around our terminal point,
+
+00:40:18.600 --> 00:40:22.800
+despite the terminal the
+best-- the expected value
+
+00:40:22.800 --> 00:40:25.080
+being the same in
+both cases, now we
+
+00:40:25.080 --> 00:40:27.280
+have a greater
+uncertainty over those.
+
+00:40:27.280 --> 00:40:32.040
+And so the expected reward under
+this higher variance prediction
+
+00:40:32.040 --> 00:40:34.600
+would be lower for
+the yellow circle.
+
+00:40:34.600 --> 00:40:37.700
+Because under this
+new uncertainty bound,
+
+00:40:37.700 --> 00:40:39.200
+we are actually
+considering the case
+
+00:40:39.200 --> 00:40:41.680
+that in actually the
+majority of the cases
+
+00:40:41.680 --> 00:40:45.340
+we are ending up off the
+cliff, if that makes sense.
+
+00:40:49.480 --> 00:40:51.840
+So the reason why we care
+about uncertainty estimation
+
+00:40:51.840 --> 00:40:54.980
+is because it assuming
+we are able to do this.
+
+00:40:54.980 --> 00:40:56.630
+So we're able to
+learn a model that
+
+00:40:56.630 --> 00:40:58.910
+gives us an estimate
+of how certain
+
+00:40:58.910 --> 00:41:01.070
+we are about our prediction.
+
+00:41:01.070 --> 00:41:04.030
+It gives us a mechanism
+to express performance
+
+00:41:04.030 --> 00:41:07.490
+as expected reward
+under our model.
+
+00:41:22.230 --> 00:41:25.210
+Any questions here?
+
+00:41:25.210 --> 00:41:25.710
+Cool.
+
+00:41:28.890 --> 00:41:32.170
+So the next question is, how
+can we model uncertainty?
+
+00:41:32.170 --> 00:41:33.910
+We say we want to do this.
+
+00:41:33.910 --> 00:41:36.190
+What are different
+ways of doing so?
+
+00:41:36.190 --> 00:41:39.910
+So the first idea is
+we could use the output
+
+00:41:39.910 --> 00:41:43.790
+entropy from our given model.
+
+00:41:43.790 --> 00:41:47.430
+So again, pictorially,
+what we are trying to do
+
+00:41:47.430 --> 00:41:50.350
+is we are trying to learn a
+parametric function, which
+
+00:41:50.350 --> 00:41:56.250
+maps from states and controls to
+probabilities over next state.
+
+00:41:56.250 --> 00:42:00.730
+In order to do this, we
+might be fitting, either--
+
+00:42:00.730 --> 00:42:03.910
+depending on whether the state
+space is discrete or continuous,
+
+00:42:03.910 --> 00:42:06.530
+we might be fitting either
+a categorical distribution
+
+00:42:06.530 --> 00:42:07.550
+over next states.
+
+00:42:07.550 --> 00:42:09.650
+So we're assigning a
+probability to each
+
+00:42:09.650 --> 00:42:11.610
+of our possible next states.
+
+00:42:11.610 --> 00:42:15.130
+Or we might be fitting a
+continuous distribution, say
+
+00:42:15.130 --> 00:42:18.090
+a Gaussian, which
+basically expresses
+
+00:42:18.090 --> 00:42:20.530
+the mean value of
+where we expect to be
+
+00:42:20.530 --> 00:42:25.690
+and our standard deviation and
+the variance of our uncertainty.
+
+00:42:25.690 --> 00:42:28.770
+In this case, of
+course, we could
+
+00:42:28.770 --> 00:42:31.970
+use the entropy that basically
+comes from the definition
+
+00:42:31.970 --> 00:42:33.590
+of the distribution itself.
+
+00:42:33.590 --> 00:42:36.130
+For example, we might be
+using the standard deviation
+
+00:42:36.130 --> 00:42:37.710
+of the fitted Gaussian.
+
+00:42:41.290 --> 00:42:47.970
+However, model entropy
+is different from what
+
+00:42:47.970 --> 00:42:51.700
+is often referred in literature
+as epistemic uncertainty.
+
+00:42:51.700 --> 00:42:54.200
+So you might have heard about
+this distinction before, which
+
+00:42:54.200 --> 00:42:57.460
+is basically the distinction
+between aleatoric uncertainty,
+
+00:42:57.460 --> 00:43:01.320
+that is the noise that
+is intrinsically related
+
+00:43:01.320 --> 00:43:04.360
+with the process that
+we are observing.
+
+00:43:04.360 --> 00:43:09.840
+For example, here on the slide,
+we see this parabolic process.
+
+00:43:09.840 --> 00:43:12.360
+We have some observations
+of this process,
+
+00:43:12.360 --> 00:43:15.400
+and there is some
+inherent noise that might
+
+00:43:15.400 --> 00:43:18.960
+be observed from this process.
+
+00:43:18.960 --> 00:43:21.940
+The other type of uncertainty
+is epistemic uncertainty,
+
+00:43:21.940 --> 00:43:25.880
+whereby we are actually
+uncertain about the model
+
+00:43:25.880 --> 00:43:26.920
+itself.
+
+00:43:26.920 --> 00:43:29.340
+So here we were certain
+about, for example,
+
+00:43:29.340 --> 00:43:32.007
+the specific parameters
+of this parabola.
+
+00:43:32.007 --> 00:43:33.840
+It's just there was
+some inherent noise that
+
+00:43:33.840 --> 00:43:36.600
+is impossible to model.
+
+00:43:36.600 --> 00:43:41.080
+On the other hand, again, using
+this kind of fictitious example
+
+00:43:41.080 --> 00:43:46.060
+over here, we might have two
+possible alternative models,
+
+00:43:46.060 --> 00:43:48.240
+the green one and
+the blue one, which
+
+00:43:48.240 --> 00:43:50.820
+with associated different
+parameters, which
+
+00:43:50.820 --> 00:43:53.940
+fit equally the model, the
+observed data, but are just
+
+00:43:53.940 --> 00:43:56.260
+two different models.
+
+00:43:56.260 --> 00:43:58.300
+So here we will have
+two different values
+
+00:43:58.300 --> 00:44:00.340
+of the parameters theta
+that describe these two
+
+00:44:00.340 --> 00:44:01.300
+different curves.
+
+00:44:01.300 --> 00:44:05.400
+And so this is an uncertainty
+between on the model itself.
+
+00:44:05.400 --> 00:44:08.380
+So which of these two
+realizations of my parameters
+
+00:44:08.380 --> 00:44:13.680
+is actually the one that is
+better representing my data.
+
+00:44:19.180 --> 00:44:24.320
+So using the entropy gets
+us some way along this path.
+
+00:44:24.320 --> 00:44:29.040
+But it clearly does not account
+for what we actually care about,
+
+00:44:29.040 --> 00:44:33.060
+which is the
+potentially mutually
+
+00:44:33.060 --> 00:44:36.260
+coexistent and alternative
+explanations of the data
+
+00:44:36.260 --> 00:44:37.840
+according to different models.
+
+00:44:46.340 --> 00:44:49.730
+So how do we model for this--
+
+00:44:49.730 --> 00:44:52.370
+how do we estimate for
+this model uncertainty?
+
+00:44:52.370 --> 00:44:56.170
+I would say probably
+the most common approach
+
+00:44:56.170 --> 00:44:59.330
+for doing so is leveraging
+Bayesian statistics
+
+00:44:59.330 --> 00:45:05.610
+and Bayesian approaches,
+whereby typically what we are
+
+00:45:05.610 --> 00:45:07.890
+interested in
+doing with Bayesian
+
+00:45:07.890 --> 00:45:12.250
+approaches is that we want to
+basically express this model
+
+00:45:12.250 --> 00:45:16.330
+uncertainty as a distribution
+over parameter values
+
+00:45:16.330 --> 00:45:20.090
+theta given the observed data.
+
+00:45:20.090 --> 00:45:24.610
+So until now, when we were
+discussing fitting a model
+
+00:45:24.610 --> 00:45:26.770
+to our data, we're
+often just saying
+
+00:45:26.770 --> 00:45:31.010
+that we would be converging
+to a specific value
+
+00:45:31.010 --> 00:45:33.450
+of our parameters theta.
+
+00:45:33.450 --> 00:45:36.810
+On the other hand, if we are
+uncertain about the model
+
+00:45:36.810 --> 00:45:39.370
+itself, we might be
+interested in modeling
+
+00:45:39.370 --> 00:45:41.890
+maybe a full distribution
+of how certain
+
+00:45:41.890 --> 00:45:47.400
+we are about what the real value
+of the parameters theta is.
+
+00:45:47.400 --> 00:45:51.840
+And so this is what we mean by
+the distribution over parameters
+
+00:45:51.840 --> 00:45:53.998
+given the data set.
+
+00:45:53.998 --> 00:45:55.540
+That is we are given
+some observation
+
+00:45:55.540 --> 00:45:58.760
+and we want to ideally
+model the full distribution
+
+00:45:58.760 --> 00:46:01.100
+of plausible hypothesis.
+
+00:46:05.920 --> 00:46:06.880
+Why is this useful?
+
+00:46:06.880 --> 00:46:10.200
+Is because once we have
+this full distribution,
+
+00:46:10.200 --> 00:46:14.720
+we could actually predict
+through our learned dynamical
+
+00:46:14.720 --> 00:46:18.080
+model by basically
+averaging out all
+
+00:46:18.080 --> 00:46:20.040
+the possible future
+predictions that
+
+00:46:20.040 --> 00:46:22.880
+would happen if we were
+to basically average out
+
+00:46:22.880 --> 00:46:25.360
+over this full distribution.
+
+00:46:25.360 --> 00:46:29.160
+And so this is referred to
+as the predictive posterior
+
+00:46:29.160 --> 00:46:30.140
+distribution.
+
+00:46:34.400 --> 00:46:37.575
+Formally, this is expressed
+through this integral over here
+
+00:46:37.575 --> 00:46:39.200
+where we're basically
+saying that we're
+
+00:46:39.200 --> 00:46:42.760
+computing the prediction
+of our next state averaged
+
+00:46:42.760 --> 00:46:48.660
+over all possible values
+of my parameters theta.
+
+00:46:48.660 --> 00:46:52.460
+I think as often the
+case, to visualize
+
+00:46:52.460 --> 00:46:55.060
+these integrals is
+often useful to see
+
+00:46:55.060 --> 00:46:56.680
+this in the discrete setting.
+
+00:46:56.680 --> 00:47:00.892
+So say we have only two values
+of our parameters theta.
+
+00:47:00.892 --> 00:47:03.100
+This integral, this predictive
+posterior distribution
+
+00:47:03.100 --> 00:47:06.540
+would essentially entail
+running my predictions
+
+00:47:06.540 --> 00:47:09.620
+for both of my values
+of theta, and then
+
+00:47:09.620 --> 00:47:11.820
+weighting the prediction
+based on the probability
+
+00:47:11.820 --> 00:47:14.060
+of each individual theta.
+
+00:47:14.060 --> 00:47:18.200
+This is the continuous
+expansion of that same idea.
+
+00:47:21.100 --> 00:47:23.620
+How does this look in practice?
+
+00:47:23.620 --> 00:47:26.800
+Well, of course, we won't
+have time to cover this here.
+
+00:47:26.800 --> 00:47:29.980
+But Bayesian statistics
+basically provides
+
+00:47:29.980 --> 00:47:32.940
+and the Bayes' theorem
+provides basically a mechanism
+
+00:47:32.940 --> 00:47:36.220
+to retrieve the posterior
+distribution over parameters
+
+00:47:36.220 --> 00:47:38.860
+from data.
+
+00:47:38.860 --> 00:47:42.140
+But let's look at what
+this means in practice.
+
+00:47:42.140 --> 00:47:46.290
+For example, say we want to
+solve a regression problem where
+
+00:47:46.290 --> 00:47:48.770
+we have some--
+
+00:47:48.770 --> 00:47:50.990
+well, we have an x.
+
+00:47:50.990 --> 00:47:54.610
+So we want to predict
+the value of y given x.
+
+00:47:54.610 --> 00:47:57.790
+We want to fit here just
+a line to this data.
+
+00:47:57.790 --> 00:48:01.050
+So we have two parameters
+that we want to fit.
+
+00:48:01.050 --> 00:48:03.210
+So the intercept and the slope.
+
+00:48:03.210 --> 00:48:07.010
+Say that we have only one
+observation from our ground
+
+00:48:07.010 --> 00:48:11.530
+truth process, which is
+the dashed line over here.
+
+00:48:11.530 --> 00:48:15.650
+If we fit our linear model
+to this data, of course,
+
+00:48:15.650 --> 00:48:17.150
+there could be many
+possible-- well,
+
+00:48:17.150 --> 00:48:19.210
+in principle,
+infinite lines that
+
+00:48:19.210 --> 00:48:22.530
+pass through the point,
+which in practice would mean
+
+00:48:22.530 --> 00:48:26.690
+we would have a very broad
+uncertainty over possible values
+
+00:48:26.690 --> 00:48:29.770
+of our parameters represented
+by this plot over here.
+
+00:48:29.770 --> 00:48:31.830
+So here we're plotting
+the two parameters,
+
+00:48:31.830 --> 00:48:33.850
+say the intercept and the slope.
+
+00:48:33.850 --> 00:48:37.010
+And so we could see that while
+the ground truth parameter is
+
+00:48:37.010 --> 00:48:40.490
+represented here
+by the red cross,
+
+00:48:40.490 --> 00:48:44.187
+our posterior distribution
+is still pretty broad.
+
+00:48:44.187 --> 00:48:45.520
+What does this mean in practice?
+
+00:48:45.520 --> 00:48:50.600
+Is that if we were to sample,
+n, realizations of my posterior
+
+00:48:50.600 --> 00:48:52.720
+distribution and
+plot the line, you
+
+00:48:52.720 --> 00:48:55.080
+would get these
+different red curves.
+
+00:48:55.080 --> 00:48:57.520
+If we would then
+average out according
+
+00:48:57.520 --> 00:48:59.460
+to the predictive
+posterior distribution,
+
+00:48:59.460 --> 00:49:01.160
+we would get these
+confidence bounds
+
+00:49:01.160 --> 00:49:03.640
+that we have on the right.
+
+00:49:03.640 --> 00:49:05.620
+Are the plots clear?
+
+00:49:11.880 --> 00:49:12.760
+Yeah.
+
+00:49:12.760 --> 00:49:15.920
+And so what we're showing
+here is basically progression
+
+00:49:15.920 --> 00:49:17.580
+as we collect more data.
+
+00:49:17.580 --> 00:49:19.600
+So here we were
+looking at the case
+
+00:49:19.600 --> 00:49:21.640
+where we had only
+one data point.
+
+00:49:21.640 --> 00:49:23.180
+Here we have more data points.
+
+00:49:23.180 --> 00:49:25.680
+And so our posterior
+distribution over parameters
+
+00:49:25.680 --> 00:49:28.520
+is more narrow and closer
+to the ground truth.
+
+00:49:28.520 --> 00:49:30.360
+And you see how the
+overall uncertainty
+
+00:49:30.360 --> 00:49:32.320
+bounds that come from
+the posterior predictive
+
+00:49:32.320 --> 00:49:36.360
+are also more
+concentrated, until here we
+
+00:49:36.360 --> 00:49:40.040
+are observing enough data to
+have a pretty reliable estimate
+
+00:49:40.040 --> 00:49:41.920
+of the ground truth model.
+
+00:49:51.820 --> 00:49:56.700
+And so given that this
+is clear, let's briefly
+
+00:49:56.700 --> 00:49:58.800
+mention a couple
+of, I would say,
+
+00:49:58.800 --> 00:50:02.340
+the most popular approaches
+for modeling dynamical
+
+00:50:02.340 --> 00:50:05.880
+systems in a way that we are
+accounting for this uncertainty,
+
+00:50:05.880 --> 00:50:07.320
+and we'll be looking at two.
+
+00:50:07.320 --> 00:50:09.500
+The first one is
+Gaussian processes,
+
+00:50:09.500 --> 00:50:14.380
+and the second one is ensembles.
+
+00:50:14.380 --> 00:50:17.380
+So a Gaussian Process
+loosely speaking
+
+00:50:17.380 --> 00:50:21.700
+is-- basically represents a
+distribution over functions.
+
+00:50:21.700 --> 00:50:26.340
+So you can imagine
+that if we are sampling
+
+00:50:26.340 --> 00:50:29.060
+from a prior distribution
+or functions, that
+
+00:50:29.060 --> 00:50:32.460
+is before observing any
+data, we will be getting
+
+00:50:32.460 --> 00:50:34.980
+pretty different behavior.
+
+00:50:34.980 --> 00:50:38.260
+On the other hand, Gaussian
+processes basically
+
+00:50:38.260 --> 00:50:41.290
+formalize analytically
+our mechanism
+
+00:50:41.290 --> 00:50:44.330
+to go from a prior
+distribution over functions
+
+00:50:44.330 --> 00:50:46.570
+to a posterior
+distribution over function
+
+00:50:46.570 --> 00:50:50.915
+in light of observed data,
+which would basically be still
+
+00:50:50.915 --> 00:50:52.290
+a distribution
+over function that
+
+00:50:52.290 --> 00:50:54.790
+is consistent with
+the data at hand.
+
+00:50:59.770 --> 00:51:02.550
+When I first approach
+also Gaussian processes,
+
+00:51:02.550 --> 00:51:05.050
+I would say one of the
+most confusing aspects
+
+00:51:05.050 --> 00:51:07.930
+to me was this idea of
+distribution over functions
+
+00:51:07.930 --> 00:51:09.450
+and what actually meant.
+
+00:51:09.450 --> 00:51:13.170
+In practice, Gaussian
+processes model data
+
+00:51:13.170 --> 00:51:14.830
+as multivariate Gaussians.
+
+00:51:14.830 --> 00:51:18.330
+So this is why they're referred
+to as Gaussian processes.
+
+00:51:18.330 --> 00:51:25.190
+And basically encode this idea
+that n-dimensional Gaussian,
+
+00:51:25.190 --> 00:51:30.155
+for example a
+two-dimensional Gaussian
+
+00:51:30.155 --> 00:51:34.510
+can be mapped-- so a sample
+from n-dimensional Gaussian
+
+00:51:34.510 --> 00:51:38.190
+can be mapped to basically an
+approximation of a function.
+
+00:51:38.190 --> 00:51:41.530
+So say that we are sampling from
+this two-dimensional Gaussian,
+
+00:51:41.530 --> 00:51:48.350
+say this point over here,
+which could be 5 and 4.
+
+00:51:48.350 --> 00:51:52.510
+Now, we could take this
+two-dimensional basically a
+
+00:51:52.510 --> 00:51:57.310
+vector, which we just sampled,
+and if we plot it still
+
+00:51:57.310 --> 00:51:59.990
+in two dimensions,
+what we could get
+
+00:51:59.990 --> 00:52:06.150
+is that we could get a first
+value of 5, a second value of 4.
+
+00:52:06.150 --> 00:52:07.910
+And by connecting
+this, we're basically
+
+00:52:07.910 --> 00:52:13.230
+getting a discretization of
+a function now described only
+
+00:52:13.230 --> 00:52:15.110
+in this small interval.
+
+00:52:15.110 --> 00:52:17.730
+Now, of course, we can only
+plot things in two dimensions.
+
+00:52:17.730 --> 00:52:20.570
+So maybe this might not yet
+look like a function to you.
+
+00:52:20.570 --> 00:52:23.470
+But now imagine that we're
+sampling an n-dimensional vector
+
+00:52:23.470 --> 00:52:26.270
+from a multivariate Gaussian.
+
+00:52:26.270 --> 00:52:29.790
+Here we would get just a
+vector with more numbers.
+
+00:52:29.790 --> 00:52:31.950
+And if we plot them
+in the same way,
+
+00:52:31.950 --> 00:52:35.470
+we would basically
+get the expression--
+
+00:52:35.470 --> 00:52:37.820
+the approximation of a function.
+
+00:52:43.620 --> 00:52:47.380
+So this is usually how these
+are implemented in practice
+
+00:52:47.380 --> 00:52:51.180
+and why people refer to these
+as distribution over functions.
+
+00:52:51.180 --> 00:52:53.780
+In practice, you can imagine
+that Gaussian processes
+
+00:52:53.780 --> 00:52:57.140
+essentially provide
+a mechanism to update
+
+00:52:57.140 --> 00:53:01.780
+from a prior distribution
+over functions to a posterior
+
+00:53:01.780 --> 00:53:03.880
+distributions once we
+have observed data.
+
+00:53:08.740 --> 00:53:10.520
+Again, we're sticking
+to intuition,
+
+00:53:10.520 --> 00:53:12.080
+but I hope this is making sense.
+
+00:53:12.080 --> 00:53:13.580
+Yeah.
+
+00:53:20.520 --> 00:53:24.860
+So here I was trying
+to provide an intuitive
+
+00:53:24.860 --> 00:53:27.940
+understanding of what
+people refer to as
+
+00:53:27.940 --> 00:53:29.620
+distribution over functions.
+
+00:53:29.620 --> 00:53:32.100
+So a Gaussian process
+is essentially
+
+00:53:32.100 --> 00:53:36.070
+representing multivariate
+Gaussian distribution.
+
+00:53:36.070 --> 00:53:39.210
+So for example here,
+I was representing it
+
+00:53:39.210 --> 00:53:40.850
+in two-dimensional.
+
+00:53:40.850 --> 00:53:43.850
+So if we have this
+two-dimensional Gaussian,
+
+00:53:43.850 --> 00:53:45.890
+a sample from this
+two-dimensional Gaussian
+
+00:53:45.890 --> 00:53:48.410
+could just be this
+point over here.
+
+00:53:48.410 --> 00:53:52.450
+Here I was imagining
+4 or 5 as coordinates.
+
+00:53:52.450 --> 00:53:59.590
+If we would be wanted to plot
+this point as a function,
+
+00:53:59.590 --> 00:54:02.290
+essentially, this
+would essentially
+
+00:54:02.290 --> 00:54:05.490
+be something like this,
+where we are basically
+
+00:54:05.490 --> 00:54:08.550
+mapping this point and these
+coordinates of this point,
+
+00:54:08.550 --> 00:54:12.250
+but just unfolding it into a
+function, if that makes sense.
+
+00:54:12.250 --> 00:54:15.210
+Now, the intuition
+is that what happens
+
+00:54:15.210 --> 00:54:19.930
+if I want to build a full
+continuous function as we were
+
+00:54:19.930 --> 00:54:22.450
+doing before, you could
+imagine that it's basically
+
+00:54:22.450 --> 00:54:25.650
+a more finely discretized
+version of this
+
+00:54:25.650 --> 00:54:27.730
+with an n-dimensional vector.
+
+00:54:27.730 --> 00:54:30.870
+So rather than having
+two-dimensional Gaussians,
+
+00:54:30.870 --> 00:54:34.750
+I would have an n-dimensional
+Gaussian, say 100,
+
+00:54:34.750 --> 00:54:37.310
+then we would be able
+to basically represent
+
+00:54:37.310 --> 00:54:40.430
+points on a very fine grid.
+
+00:54:40.430 --> 00:54:42.330
+And by basically
+plotting these points,
+
+00:54:42.330 --> 00:54:44.470
+you would get a function out.
+
+00:54:44.470 --> 00:54:46.630
+Yeah.
+
+00:54:46.630 --> 00:54:47.170
+Yeah.
+
+00:54:47.170 --> 00:54:50.580
+So is it kind of
+like [INAUDIBLE]
+
+00:54:50.580 --> 00:54:52.710
+the values of the function?
+
+00:54:52.710 --> 00:54:55.510
+Or is it like--
+
+00:54:55.510 --> 00:54:57.430
+does it have to be a
+sequence of numbers
+
+00:54:57.430 --> 00:54:59.610
+that the function would output?
+
+00:54:59.610 --> 00:55:00.110
+Yeah.
+
+00:55:00.110 --> 00:55:01.870
+So maybe to rephrase
+what you're saying.
+
+00:55:01.870 --> 00:55:05.690
+Here we are implicitly assuming
+an order of the dimensions.
+
+00:55:05.690 --> 00:55:07.210
+Yeah.
+
+00:55:07.210 --> 00:55:08.710
+But from the
+perspective of learning
+
+00:55:08.710 --> 00:55:10.870
+this doesn't really
+change anything
+
+00:55:10.870 --> 00:55:15.350
+because we are still fitting the
+Gaussian that we are learning
+
+00:55:15.350 --> 00:55:17.050
+to a high-dimensional object.
+
+00:55:17.050 --> 00:55:21.890
+So for us, data will be living
+in this high-dimensional space.
+
+00:55:21.890 --> 00:55:24.390
+And we're just fitting
+a n-dimensional Gaussian
+
+00:55:24.390 --> 00:55:26.190
+to that data.
+
+00:55:26.190 --> 00:55:28.970
+This is just the way
+we would then plot it.
+
+00:55:28.970 --> 00:55:29.470
+Yeah.
+
+00:55:35.120 --> 00:55:38.820
+So why are Gaussian
+processes popular?
+
+00:55:38.820 --> 00:55:43.860
+First of all, Gaussian processes
+are extremely data efficient,
+
+00:55:43.860 --> 00:55:47.700
+and they provide an
+analytical expression
+
+00:55:47.700 --> 00:55:51.900
+for the exact posterior,
+that is the exact posterior
+
+00:55:51.900 --> 00:55:54.980
+over functions
+described by your data.
+
+00:55:54.980 --> 00:55:58.700
+Meaning, given some data
+points and some assumptions
+
+00:55:58.700 --> 00:56:03.420
+on Gaussianity,
+this distribution
+
+00:56:03.420 --> 00:56:05.140
+is actually the
+exact representation
+
+00:56:05.140 --> 00:56:07.340
+of the posterior
+distribution over functions
+
+00:56:07.340 --> 00:56:09.060
+that explain this data.
+
+00:56:09.060 --> 00:56:14.140
+This is pretty cool, because if
+we wanted to achieve something
+
+00:56:14.140 --> 00:56:16.760
+similar with neural networks,
+this would be very hard,
+
+00:56:16.760 --> 00:56:19.940
+especially with
+this amount of data.
+
+00:56:19.940 --> 00:56:22.360
+Because this is an
+extremely low data regime,
+
+00:56:22.360 --> 00:56:26.380
+and so getting these extremely
+well-behaved confidence bounds
+
+00:56:26.380 --> 00:56:28.180
+is very challenging to have.
+
+00:56:28.180 --> 00:56:33.570
+On the other hand, Gaussian
+processes achieve this
+
+00:56:33.570 --> 00:56:38.970
+by having an exact
+representation of the posterior.
+
+00:56:38.970 --> 00:56:43.010
+On the other hand, I mentioned
+analytical expression
+
+00:56:43.010 --> 00:56:44.330
+of the posterior.
+
+00:56:44.330 --> 00:56:48.970
+This analytical expression,
+at least in the nominal case,
+
+00:56:48.970 --> 00:56:51.870
+entails having to do
+some matrix inversions.
+
+00:56:51.870 --> 00:56:54.730
+And so depending which
+as a function of n, where
+
+00:56:54.730 --> 00:56:57.090
+n is the number of data
+sets of data points,
+
+00:56:57.090 --> 00:56:59.850
+and so scaling
+Gaussian processes
+
+00:56:59.850 --> 00:57:04.230
+to high-dimensional data
+is actually complex.
+
+00:57:04.230 --> 00:57:06.290
+And so there are extensions
+of Gaussian processes
+
+00:57:06.290 --> 00:57:07.310
+that try to do so.
+
+00:57:07.310 --> 00:57:11.190
+But at least in
+their face value,
+
+00:57:11.190 --> 00:57:12.830
+this is definitely a weakness.
+
+00:57:16.650 --> 00:57:20.690
+A second approach for
+estimating uncertainty
+
+00:57:20.690 --> 00:57:23.850
+is referred to as
+bootstrap ensembles.
+
+00:57:23.850 --> 00:57:26.370
+And the idea is that--
+
+00:57:26.370 --> 00:57:28.190
+so we have this
+general mechanism
+
+00:57:28.190 --> 00:57:33.230
+for learning dynamical models
+through supervised learning.
+
+00:57:33.230 --> 00:57:37.990
+That is, we just fit a
+black box model to our data,
+
+00:57:37.990 --> 00:57:43.750
+and we want to have an
+encode an idea of uncertainty
+
+00:57:43.750 --> 00:57:45.750
+in this estimation problem.
+
+00:57:45.750 --> 00:57:49.350
+So what we can do is that
+the idea of ensembles
+
+00:57:49.350 --> 00:57:54.630
+is let's train multiple models
+and see if they agree and where.
+
+00:57:54.630 --> 00:57:58.430
+With the underlying idea that
+these different models will--
+
+00:57:58.430 --> 00:58:00.550
+so different models
+trained independently
+
+00:58:00.550 --> 00:58:03.190
+to fit the same data
+will likely agree
+
+00:58:03.190 --> 00:58:05.630
+when they are certain
+about their predictions,
+
+00:58:05.630 --> 00:58:08.990
+and they will likely disagree
+whenever there is uncertainty.
+
+00:58:08.990 --> 00:58:12.670
+So say you have n versions and
+copies of the models that have
+
+00:58:12.670 --> 00:58:15.270
+been trained independently.
+
+00:58:15.270 --> 00:58:17.230
+If they will be
+probably agreeing
+
+00:58:17.230 --> 00:58:19.630
+close to the regime
+of observed data,
+
+00:58:19.630 --> 00:58:21.590
+and they will potentially
+disagree when we are
+
+00:58:21.590 --> 00:58:25.310
+going far away from our data.
+
+00:58:25.310 --> 00:58:30.860
+And so ensembles basically
+instantiate this idea
+
+00:58:30.860 --> 00:58:35.053
+through an algorithm, which
+is basically saying nothing
+
+00:58:35.053 --> 00:58:36.220
+else that we're saying here.
+
+00:58:36.220 --> 00:58:38.980
+In ensembles, you would just
+train independently and copies
+
+00:58:38.980 --> 00:58:42.540
+of your model, and then
+average the prediction
+
+00:58:42.540 --> 00:58:44.440
+according to these n models.
+
+00:58:47.500 --> 00:58:49.900
+So specifically, what
+you would be doing is
+
+00:58:49.900 --> 00:58:53.740
+we say we have five
+different neural network
+
+00:58:53.740 --> 00:58:56.100
+models, which we train.
+
+00:58:56.100 --> 00:59:01.060
+We could then get five different
+predictions for our next state.
+
+00:59:01.060 --> 00:59:03.060
+And so what we can
+then do is maybe
+
+00:59:03.060 --> 00:59:05.220
+our prediction would be
+the average prediction
+
+00:59:05.220 --> 00:59:06.700
+across these models.
+
+00:59:06.700 --> 00:59:07.840
+This could be one idea.
+
+00:59:15.820 --> 00:59:20.020
+And maybe another way
+to visualize this is
+
+00:59:20.020 --> 00:59:23.420
+say that we have-- so here the
+x-axis represents the parameter
+
+00:59:23.420 --> 00:59:29.960
+space theta, and the y-axis
+represents our-- basically
+
+00:59:29.960 --> 00:59:31.880
+this is the posterior
+distribution
+
+00:59:31.880 --> 00:59:34.080
+over parameters given data.
+
+00:59:34.080 --> 00:59:36.320
+So say that the ground
+truth posterior distribution
+
+00:59:36.320 --> 00:59:42.600
+is represented by the shaded
+multimodal distribution here.
+
+00:59:42.600 --> 00:59:46.680
+And for now disregard
+VI, which stands
+
+00:59:46.680 --> 00:59:50.600
+for variational inference,
+and this multi-SWAG algorithm.
+
+00:59:50.600 --> 00:59:54.680
+The ensembles would
+essentially mean, in this case,
+
+00:59:54.680 --> 01:00:00.600
+fitting for different models,
+the blue ones, independently.
+
+01:00:00.600 --> 01:00:03.400
+Through optimization,
+these four models
+
+01:00:03.400 --> 01:00:07.560
+will converge to for different
+values of the parameters theta.
+
+01:00:07.560 --> 01:00:10.080
+And so these
+parameters theta might
+
+01:00:10.080 --> 01:00:12.120
+converge to different
+local minima,
+
+01:00:12.120 --> 01:00:14.400
+depending on how the
+optimization goes.
+
+01:00:14.400 --> 01:00:17.560
+And so these are essentially
+an empirical approximation
+
+01:00:17.560 --> 01:00:20.560
+of the ground truth
+posterior distribution.
+
+01:00:20.560 --> 01:00:24.270
+Because they will naturally--
+because of the stochasticity
+
+01:00:24.270 --> 01:00:28.450
+of stochastic gradient descent
+and the optimization process,
+
+01:00:28.450 --> 01:00:31.670
+they will converge to
+different local minima.
+
+01:00:31.670 --> 01:00:35.070
+And so these are a way
+of empirically exploring
+
+01:00:35.070 --> 01:00:38.910
+the landscape and approximating
+the ground truth posterior
+
+01:00:38.910 --> 01:00:39.730
+distribution.
+
+01:00:42.990 --> 01:00:44.310
+Yeah.
+
+01:00:44.310 --> 01:00:49.990
+Are you saying the differences
+between the different ones
+
+01:00:49.990 --> 01:00:54.070
+because the goal--
+
+01:00:54.070 --> 01:00:57.470
+here you have a multimodal
+distribution over theta,
+
+01:00:57.470 --> 01:01:02.570
+your goal is to figure out what
+all the modes are by having--
+
+01:01:02.570 --> 01:01:06.150
+these each one of these
+you said neural networks.
+
+01:01:06.150 --> 01:01:10.510
+Each one of these represent
+a different mode that you
+
+01:01:10.510 --> 01:01:12.430
+hopefully get [INAUDIBLE]?
+
+01:01:12.430 --> 01:01:13.290
+Yeah, indeed.
+
+01:01:13.290 --> 01:01:17.670
+So the idea here is that this
+learning problem, very likely
+
+01:01:17.670 --> 01:01:20.890
+has a highly multimodal
+landscape of solutions.
+
+01:01:23.420 --> 01:01:25.640
+The approaches we were
+discussing before,
+
+01:01:25.640 --> 01:01:30.220
+like Gaussian processes, try to
+derive analytical expressions
+
+01:01:30.220 --> 01:01:32.540
+for this exact distributions.
+
+01:01:32.540 --> 01:01:35.260
+Ensembles here,
+on the other hand,
+
+01:01:35.260 --> 01:01:38.780
+disregard any of
+this formal approach
+
+01:01:38.780 --> 01:01:43.500
+and just decide to instantiate
+n copies of these models,
+
+01:01:43.500 --> 01:01:47.020
+maybe initialize
+them differently.
+
+01:01:47.020 --> 01:01:48.700
+The stochasticity
+of gradient descent
+
+01:01:48.700 --> 01:01:54.740
+still will lead them to converge
+to different final solutions.
+
+01:01:54.740 --> 01:01:57.420
+And by doing so, the
+hope is that they
+
+01:01:57.420 --> 01:02:01.620
+will cover meaningful different
+modes of the ground truth
+
+01:02:01.620 --> 01:02:04.525
+posterior distribution.
+
+01:02:04.525 --> 01:02:05.900
+So I think your
+original question
+
+01:02:05.900 --> 01:02:10.460
+is, how do you differentiate
+between these copies?
+
+01:02:10.460 --> 01:02:12.860
+I would say, if you're
+talking about neural networks
+
+01:02:12.860 --> 01:02:16.640
+specifically, typically these
+models are initialized randomly.
+
+01:02:16.640 --> 01:02:19.980
+So the initial values of
+the parameters are random.
+
+01:02:19.980 --> 01:02:23.360
+And also we're optimizing them
+to stochastic gradient descent.
+
+01:02:23.360 --> 01:02:25.360
+So even the directions
+that they're following
+
+01:02:25.360 --> 01:02:27.500
+will be random to some extent.
+
+01:02:27.500 --> 01:02:29.920
+So there is some natural
+stochasticity that comes.
+
+01:02:29.920 --> 01:02:30.800
+[INAUDIBLE]?
+
+01:02:37.700 --> 01:02:39.360
+Yes.
+
+01:02:39.360 --> 01:02:42.540
+And then also, why
+Dirac distributions?
+
+01:02:42.540 --> 01:02:44.960
+This might just be because
+I forgot [INAUDIBLE].
+
+01:02:44.960 --> 01:02:45.820
+Yeah, no, indeed.
+
+01:02:45.820 --> 01:02:48.260
+So this is something
+that I did not discuss.
+
+01:02:48.260 --> 01:02:50.997
+So the idea is that
+formally-- so I
+
+01:02:50.997 --> 01:02:53.580
+think, hopefully in practice,
+it makes sense what we're doing.
+
+01:02:53.580 --> 01:02:55.220
+So we're initializing
+for models,
+
+01:02:55.220 --> 01:02:59.620
+and then we have for different
+converge parameters theta,
+
+01:02:59.620 --> 01:03:01.720
+and then we could
+average over them.
+
+01:03:01.720 --> 01:03:05.680
+What are we doing in practice
+is that we are approximating
+
+01:03:05.680 --> 01:03:09.560
+the ground truth posterior
+distribution by taking
+
+01:03:09.560 --> 01:03:13.280
+the average of what
+is referred to as
+
+01:03:13.280 --> 01:03:17.480
+a Dirac distribution, which
+is essentially saying that--
+
+01:03:17.480 --> 01:03:22.190
+say that I have one
+observation of my theta.
+
+01:03:22.190 --> 01:03:24.910
+The Dirac distribution is
+something that is basically
+
+01:03:24.910 --> 01:03:27.790
+a spiky distribution that
+gives all the probability mass
+
+01:03:27.790 --> 01:03:30.230
+exactly to that point.
+
+01:03:30.230 --> 01:03:35.390
+And so this is, if you
+wish more formally,
+
+01:03:35.390 --> 01:03:37.790
+how this process of
+averaging out predictions
+
+01:03:37.790 --> 01:03:39.750
+from different models
+would translate
+
+01:03:39.750 --> 01:03:44.030
+to the predictive posterior
+that we were describing before
+
+01:03:44.030 --> 01:03:46.210
+through the lens of these
+Dirac distributions.
+
+01:03:53.270 --> 01:03:55.550
+So remember that in the
+predictive posterior, what
+
+01:03:55.550 --> 01:03:57.790
+we are saying is that
+we want to average out
+
+01:03:57.790 --> 01:04:00.830
+over all the different
+models that we're training
+
+01:04:00.830 --> 01:04:03.910
+or specifically average
+out over the posterior
+
+01:04:03.910 --> 01:04:07.150
+distribution of our parameters.
+
+01:04:07.150 --> 01:04:08.990
+So do you remember
+the discussion
+
+01:04:08.990 --> 01:04:12.290
+we were doing on predictive
+posterior and what that means?
+
+01:04:12.290 --> 01:04:14.870
+How do we compute those
+confidence bounds?
+
+01:04:14.870 --> 01:04:18.100
+Is that we were basically--
+
+01:04:18.100 --> 01:04:20.400
+for each aim in
+the discrete case,
+
+01:04:20.400 --> 01:04:22.500
+for each value of
+our parameters,
+
+01:04:22.500 --> 01:04:25.620
+we were basically
+predicting with that value
+
+01:04:25.620 --> 01:04:29.820
+of the parameters, and then
+weighting that probability--
+
+01:04:29.820 --> 01:04:33.820
+that prediction with the
+probability of how certain
+
+01:04:33.820 --> 01:04:37.060
+we were of that specific
+value of the parameters.
+
+01:04:37.060 --> 01:04:41.760
+In this case, we are doing so
+not in the continuous case,
+
+01:04:41.760 --> 01:04:46.780
+but through these
+Dirac approximations.
+
+01:04:46.780 --> 01:04:47.760
+Does that make sense?
+
+01:04:57.580 --> 01:05:02.100
+But so long story short,
+what we've been doing so far
+
+01:05:02.100 --> 01:05:05.780
+is that we introduced
+this basic recipe
+
+01:05:05.780 --> 01:05:08.940
+for model-based
+reinforcement learning,
+
+01:05:08.940 --> 01:05:14.320
+namely some version of run
+a policy in the environment,
+
+01:05:14.320 --> 01:05:18.120
+collect transitions, fit the
+model to those transitions,
+
+01:05:18.120 --> 01:05:20.160
+and then use that
+model for planning.
+
+01:05:20.160 --> 01:05:24.480
+We motivated how uncertainty, or
+at least estimating uncertainty
+
+01:05:24.480 --> 01:05:27.880
+on those predictions is
+likely very important.
+
+01:05:27.880 --> 01:05:31.000
+And now let's look at
+some specific examples
+
+01:05:31.000 --> 01:05:34.840
+and how we could make
+this work in practice.
+
+01:05:34.840 --> 01:05:42.820
+So how can we make use of
+this additional knowledge
+
+01:05:42.820 --> 01:05:45.000
+that we just gained?
+
+01:05:45.000 --> 01:05:48.920
+Specifically, one mechanism to
+do so could be the following.
+
+01:05:48.920 --> 01:05:52.360
+So let's assume that we have a
+candidate action sequence again,
+
+01:05:52.360 --> 01:05:56.560
+some given to us by
+some planning algorithm.
+
+01:05:56.560 --> 01:05:59.480
+And now we have
+approximate model
+
+01:05:59.480 --> 01:06:02.640
+of the posterior distribution
+of the parameters theta, which
+
+01:06:02.640 --> 01:06:05.560
+we learned through, for
+example, one of the methods
+
+01:06:05.560 --> 01:06:09.040
+we discussed today.
+
+01:06:09.040 --> 01:06:14.030
+So we could sample a specific
+value of our parameters theta
+
+01:06:14.030 --> 01:06:16.870
+from this posterior
+distribution.
+
+01:06:16.870 --> 01:06:19.510
+And we could now propagate
+the learned dynamics
+
+01:06:19.510 --> 01:06:22.590
+through this specific
+instantiation
+
+01:06:22.590 --> 01:06:24.010
+of the dynamical model.
+
+01:06:28.270 --> 01:06:31.830
+We could then use this
+propagated trajectory
+
+01:06:31.830 --> 01:06:34.350
+to compute a predicted reward.
+
+01:06:34.350 --> 01:06:37.050
+So we're basically simulating
+in our head what is happening.
+
+01:06:37.050 --> 01:06:39.590
+We are given a candidate
+action sequence.
+
+01:06:39.590 --> 01:06:42.150
+We are sampling
+one of the models
+
+01:06:42.150 --> 01:06:44.910
+from our posterior
+distribution over models.
+
+01:06:44.910 --> 01:06:46.710
+And we're using this
+to propagate forward
+
+01:06:46.710 --> 01:06:48.870
+what is happening, and
+scoring the quality of what
+
+01:06:48.870 --> 01:06:52.590
+is happening.
+
+01:06:52.590 --> 01:06:56.510
+And then we can just
+repeat these three steps
+
+01:06:56.510 --> 01:06:59.990
+to basically compute
+the average reward
+
+01:06:59.990 --> 01:07:06.070
+according to our learned
+posterior distribution.
+
+01:07:06.070 --> 01:07:11.630
+So specifically, we would be--
+so what this algorithm is doing
+
+01:07:11.630 --> 01:07:15.340
+is directly instantiating this
+idea that we were describing
+
+01:07:15.340 --> 01:07:17.020
+pictorially over here.
+
+01:07:17.020 --> 01:07:20.180
+So in the plot there, we are
+saying that uncertainty gives us
+
+01:07:20.180 --> 01:07:24.980
+this mechanism through which we
+can compute the expected reward
+
+01:07:24.980 --> 01:07:26.820
+under our model.
+
+01:07:26.820 --> 01:07:30.900
+And so in this way,
+we could basically
+
+01:07:30.900 --> 01:07:35.660
+approximate the expected reward
+under all of our predicted
+
+01:07:35.660 --> 01:07:36.440
+samples.
+
+01:07:39.165 --> 01:07:40.040
+Does that make sense?
+
+01:07:40.040 --> 01:07:41.873
+Maybe, again, more
+visually what we're doing
+
+01:07:41.873 --> 01:07:49.220
+is that we are given a
+candidate action sequence.
+
+01:07:49.220 --> 01:07:53.780
+We sample maybe one
+version or one parameters
+
+01:07:53.780 --> 01:07:57.500
+from our posterior distribution
+and we propagate the model
+
+01:07:57.500 --> 01:07:58.740
+forward.
+
+01:07:58.740 --> 01:08:02.420
+Here we would be
+reaching a specific sum
+
+01:08:02.420 --> 01:08:07.820
+of rewards over time according
+to this specific model.
+
+01:08:07.820 --> 01:08:11.160
+We could then sample a
+different version of that model,
+
+01:08:11.160 --> 01:08:13.720
+and we could have a different
+propagated trajectory,
+
+01:08:13.720 --> 01:08:15.980
+with a different reward, right?
+
+01:08:18.840 --> 01:08:21.399
+If we repeat this
+multiple times,
+
+01:08:21.399 --> 01:08:25.439
+we would then have n of
+these propagated futures.
+
+01:08:25.439 --> 01:08:28.660
+And so what we could do is
+that if we average them out,
+
+01:08:28.660 --> 01:08:31.520
+we would then be
+computing an approximation
+
+01:08:31.520 --> 01:08:35.260
+of the expected reward under
+the uncertainty of our model.
+
+01:08:46.319 --> 01:08:50.920
+So of course, one
+thing that I really
+
+01:08:50.920 --> 01:08:55.080
+want to make sure to convey
+is that this is obviously
+
+01:08:55.080 --> 01:08:55.880
+just a choice.
+
+01:08:55.880 --> 01:09:00.319
+So we're not takeaway way
+here, I think should not be--
+
+01:09:00.319 --> 01:09:02.878
+this is the best way
+to go for when you're
+
+01:09:02.878 --> 01:09:04.920
+talking about model-based
+reinforcement learning,
+
+01:09:04.920 --> 01:09:07.740
+because ultimately, it depends
+on the problem at hand.
+
+01:09:07.740 --> 01:09:09.750
+So maybe there is
+even no need at all
+
+01:09:09.750 --> 01:09:11.770
+to look at uncertainty
+quantification,
+
+01:09:11.770 --> 01:09:15.630
+because just having your
+linear time invariant model
+
+01:09:15.630 --> 01:09:18.189
+is well-estimated
+enough and so there
+
+01:09:18.189 --> 01:09:20.510
+is no need to do any of this.
+
+01:09:20.510 --> 01:09:25.870
+But in the general case where
+system dynamic approximation is
+
+01:09:25.870 --> 01:09:29.430
+challenging and you want
+to use high capacity
+
+01:09:29.430 --> 01:09:32.510
+models for approximating
+our dynamics,
+
+01:09:32.510 --> 01:09:34.350
+uncertainty plays a big role.
+
+01:09:34.350 --> 01:09:36.430
+And so this could
+be one instantiation
+
+01:09:36.430 --> 01:09:40.310
+of this idea of let's
+use whatever favorite way
+
+01:09:40.310 --> 01:09:44.109
+to estimate a posterior
+distribution over parameters
+
+01:09:44.109 --> 01:09:48.229
+of our model, and then use
+this to meaningfully represent
+
+01:09:48.229 --> 01:09:50.689
+expectation under
+the uncertainty.
+
+01:09:55.510 --> 01:09:59.230
+And so just to repeat myself,
+this is only a choice.
+
+01:09:59.230 --> 01:10:02.250
+But this is one instantiation
+of this more general idea.
+
+01:10:02.250 --> 01:10:05.990
+That is, whenever we want to
+plan through a learned model,
+
+01:10:05.990 --> 01:10:07.930
+we might want to be--
+
+01:10:07.930 --> 01:10:11.050
+we might be interested in
+evaluating the expected reward
+
+01:10:11.050 --> 01:10:12.390
+under the learned model.
+
+01:10:16.810 --> 01:10:22.050
+So a particularly impactful
+paper, now a few years old,
+
+01:10:22.050 --> 01:10:26.330
+but that uses exactly these
+ideas, introduces algorithm
+
+01:10:26.330 --> 01:10:28.450
+called PETS.
+
+01:10:28.450 --> 01:10:30.370
+Whereby the main
+idea is that they
+
+01:10:30.370 --> 01:10:34.090
+were using as a model, basically
+an ensemble of neural networks
+
+01:10:34.090 --> 01:10:38.970
+to approximate the
+posterior over the model.
+
+01:10:38.970 --> 01:10:44.570
+They were then using a sample,
+basically different models
+
+01:10:44.570 --> 01:10:47.170
+from this ensemble, and use
+them to generate predictions
+
+01:10:47.170 --> 01:10:49.170
+of different features,
+exactly as we were
+
+01:10:49.170 --> 01:10:53.010
+saying in the previous slide.
+
+01:10:53.010 --> 01:10:57.090
+And then they
+would be using this
+
+01:10:57.090 --> 01:10:59.470
+in our model predictive
+control fashion.
+
+01:10:59.470 --> 01:11:03.410
+So they would basically
+have a cross-entropy method
+
+01:11:03.410 --> 01:11:09.000
+to generate this
+candidate plans.
+
+01:11:09.000 --> 01:11:12.440
+Through the exact
+same algorithm,
+
+01:11:12.440 --> 01:11:14.600
+which we just described,
+they will basically
+
+01:11:14.600 --> 01:11:16.520
+take these candidate
+plans and score them
+
+01:11:16.520 --> 01:11:20.280
+according to samples from these
+ensemble of neural networks,
+
+01:11:20.280 --> 01:11:23.120
+and then pick the best
+action based on that,
+
+01:11:23.120 --> 01:11:26.100
+and implement this in a
+receding horizon fashion.
+
+01:11:26.100 --> 01:11:29.280
+So you predict
+the full plan, you
+
+01:11:29.280 --> 01:11:31.600
+actuate only the first
+step in the plan,
+
+01:11:31.600 --> 01:11:34.760
+and you repeat this process.
+
+01:11:34.760 --> 01:11:36.218
+And so this is--
+just a quick note,
+
+01:11:36.218 --> 01:11:37.718
+but it's something
+that I think it's
+
+01:11:37.718 --> 01:11:39.800
+a-- this is a nice paper
+if you want to read
+
+01:11:39.800 --> 01:11:41.620
+about these models in practice.
+
+01:11:46.720 --> 01:11:49.640
+Does it make sense how
+this is one instantiation
+
+01:11:49.640 --> 01:11:50.780
+of what we're saying?
+
+01:11:55.280 --> 01:11:58.720
+So in this paper specifically,
+and I'm using this
+
+01:11:58.720 --> 01:12:01.680
+as an example to highlight
+the classical benefits
+
+01:12:01.680 --> 01:12:05.350
+of model-based RL,
+is that here they
+
+01:12:05.350 --> 01:12:09.790
+would be measuring performance
+of-- well, their method in blue,
+
+01:12:09.790 --> 01:12:12.690
+compared to a bunch of
+different baselines.
+
+01:12:12.690 --> 01:12:14.230
+But for example,
+they're comparing
+
+01:12:14.230 --> 01:12:18.070
+against PPO or soft
+actor-critic, which is also
+
+01:12:18.070 --> 01:12:20.230
+a version of the actor-critic
+methods we discussed
+
+01:12:20.230 --> 01:12:24.190
+in class, across a number
+of different tasks.
+
+01:12:24.190 --> 01:12:27.550
+And I would say the most
+interesting result here
+
+01:12:27.550 --> 01:12:31.790
+is that these model-based
+methods, namely the blue curves,
+
+01:12:31.790 --> 01:12:34.690
+generally are much
+more sample efficient.
+
+01:12:34.690 --> 01:12:37.030
+So if you compare
+the performance
+
+01:12:37.030 --> 01:12:39.790
+on the y-axis in
+general, with respect
+
+01:12:39.790 --> 01:12:42.310
+to the number of time
+steps through which they
+
+01:12:42.310 --> 01:12:44.370
+had to interact with
+the environment,
+
+01:12:44.370 --> 01:12:47.190
+you could see that maybe the
+performance at convergence
+
+01:12:47.190 --> 01:12:49.230
+is fairly similar.
+
+01:12:49.230 --> 01:12:54.470
+But the blue curves typically
+tend to converge to this--
+
+01:12:54.470 --> 01:12:56.710
+converge performance
+much faster.
+
+01:12:56.710 --> 01:13:01.110
+And this is because through
+learning the model itself,
+
+01:13:01.110 --> 01:13:04.370
+we can basically circumvent
+a lot of the interactions
+
+01:13:04.370 --> 01:13:05.830
+with the environment.
+
+01:13:09.010 --> 01:13:12.930
+So generally, the
+benefits in model-based RL
+
+01:13:12.930 --> 01:13:15.590
+often relate with
+sample efficiency.
+
+01:13:25.610 --> 01:13:30.310
+So any questions before
+wrapping up the class?
+
+01:13:36.090 --> 01:13:36.810
+Yeah.
+
+01:13:36.810 --> 01:13:38.110
+What's your favorite method?
+
+01:13:38.110 --> 01:13:40.570
+[LAUGHTER]
+
+01:13:40.570 --> 01:13:48.890
+So I like to be fairly agnostic
+and pragmatic, depending
+
+01:13:48.890 --> 01:13:50.810
+on the problem at hand.
+
+01:13:50.810 --> 01:13:53.202
+I would say that--
+
+01:13:53.202 --> 01:13:57.810
+[LAUGHS] you're saying this
+is the diplomatic answer.
+
+01:13:57.810 --> 01:14:00.770
+So I would say that the
+model-free algorithms are
+
+01:14:00.770 --> 01:14:03.540
+definitely more mature
+as a technology,
+
+01:14:03.540 --> 01:14:05.360
+and so I would say
+algorithms such as PPO
+
+01:14:05.360 --> 01:14:07.320
+and soft actor-critic
+are typically the way
+
+01:14:07.320 --> 01:14:10.120
+to go for continuous control.
+
+01:14:10.120 --> 01:14:13.440
+Model-based RL is still very
+active line of research.
+
+01:14:13.440 --> 01:14:16.000
+So if I have to
+pick one, I would go
+
+01:14:16.000 --> 01:14:18.020
+for a soft actor-critic or PPO.
+
+01:14:18.020 --> 01:14:18.520
+Yeah.
+
+01:14:18.520 --> 01:14:21.140
+Well, those are
+two, but those two.
+
+01:14:21.140 --> 01:14:23.600
+Yeah.
+
+01:14:23.600 --> 01:14:26.320
+So I think this is a
+nicely way into-- basically
+
+01:14:26.320 --> 01:14:28.680
+what I wanted to discuss here.
+
+01:14:28.680 --> 01:14:30.640
+Because throughout
+this class, we
+
+01:14:30.640 --> 01:14:35.840
+have been introducing n
+different ways of behaving when
+
+01:14:35.840 --> 01:14:37.180
+looking at optimal control.
+
+01:14:37.180 --> 01:14:39.740
+So ranging from
+open loop methods,
+
+01:14:39.740 --> 01:14:42.160
+it could be indirect and
+direct, closed-loop, dynamic
+
+01:14:42.160 --> 01:14:45.160
+programming, reinforcement
+learning, imitation learning.
+
+01:14:45.160 --> 01:14:47.295
+And so the question
+that you could ask is,
+
+01:14:47.295 --> 01:14:49.420
+I mean this is great, but
+you're just confusing me.
+
+01:14:49.420 --> 01:14:52.380
+Now I have to pick among
+hundreds of these algorithms,
+
+01:14:52.380 --> 01:14:54.120
+how do I navigate this?
+
+01:14:54.120 --> 01:14:59.240
+And the point here is
+that these methods are not
+
+01:14:59.240 --> 01:15:03.370
+in competition with each other,
+but they're actually-- well,
+
+01:15:03.370 --> 01:15:04.830
+different methods
+will be tailored
+
+01:15:04.830 --> 01:15:06.148
+to different applications.
+
+01:15:06.148 --> 01:15:08.190
+And actually most of the
+time, it's these methods
+
+01:15:08.190 --> 01:15:10.270
+are combined with each other.
+
+01:15:10.270 --> 01:15:16.270
+And this is because the
+decision-making pipeline
+
+01:15:16.270 --> 01:15:18.430
+is typically
+organized as through
+
+01:15:18.430 --> 01:15:21.550
+a hierarchical structure.
+
+01:15:21.550 --> 01:15:23.870
+Specifically, if we
+were to decompose
+
+01:15:23.870 --> 01:15:26.630
+this hierarchical
+structure, generally, we
+
+01:15:26.630 --> 01:15:30.190
+would start with having a model
+of the world or a representation
+
+01:15:30.190 --> 01:15:32.750
+of what is interesting for us.
+
+01:15:32.750 --> 01:15:37.150
+For example, take the case
+of autonomous driving.
+
+01:15:37.150 --> 01:15:39.230
+We might have some
+maybe semantic maps
+
+01:15:39.230 --> 01:15:42.590
+of what we are observing
+in our environment.
+
+01:15:42.590 --> 01:15:45.070
+And given whatever
+representation of the world
+
+01:15:45.070 --> 01:15:46.910
+we are interested
+in, we would then
+
+01:15:46.910 --> 01:15:50.550
+have the autonomy
+stack is typically
+
+01:15:50.550 --> 01:15:52.750
+decomposed through
+different modules that
+
+01:15:52.750 --> 01:15:54.230
+interact with each other.
+
+01:15:54.230 --> 01:15:57.190
+So the first kind of decision
+that you have to make
+
+01:15:57.190 --> 01:16:00.180
+is typically some higher
+level goal for our system.
+
+01:16:00.180 --> 01:16:01.930
+So we are perceiving
+the world, and now we
+
+01:16:01.930 --> 01:16:05.170
+have to choose what
+we want to perform.
+
+01:16:05.170 --> 01:16:07.290
+Specifically, these
+high-level decisions
+
+01:16:07.290 --> 01:16:10.950
+might be continuing the
+autonomous driving example,
+
+01:16:10.950 --> 01:16:13.050
+something along the
+lines of picking if I
+
+01:16:13.050 --> 01:16:14.550
+want to change a lane or not.
+
+01:16:14.550 --> 01:16:18.450
+So these very high-level
+actions and decisions
+
+01:16:18.450 --> 01:16:19.890
+that we want to make.
+
+01:16:19.890 --> 01:16:22.290
+At this level of
+the hierarchy, this
+
+01:16:22.290 --> 01:16:24.090
+is typically where
+methods that belong
+
+01:16:24.090 --> 01:16:28.410
+to closed-loop dynamic
+programming like algorithms lie.
+
+01:16:28.410 --> 01:16:30.170
+And this is because
+for these higher
+
+01:16:30.170 --> 01:16:33.530
+level decision-making
+aspects, we typically
+
+01:16:33.530 --> 01:16:36.290
+want to encode stochasticity
+and want to make sure
+
+01:16:36.290 --> 01:16:38.970
+that we are dealing
+with this stochasticity
+
+01:16:38.970 --> 01:16:41.410
+when picking decisions.
+
+01:16:41.410 --> 01:16:45.590
+And the output of this is
+typically in a form of a goal,
+
+01:16:45.590 --> 01:16:48.610
+for example, lane change.
+
+01:16:48.610 --> 01:16:51.690
+Now we have this goal, but we
+have to make it actionable.
+
+01:16:51.690 --> 01:16:53.890
+So we want to make
+this such that we
+
+01:16:53.890 --> 01:16:59.520
+have an actual trajectory which
+we can enact in the world.
+
+01:16:59.520 --> 01:17:01.960
+And so this is something
+that usually is dealt
+
+01:17:01.960 --> 01:17:03.640
+with open-loop techniques.
+
+01:17:03.640 --> 01:17:05.360
+So we would have this
+higher level goal,
+
+01:17:05.360 --> 01:17:06.880
+like a navigation goal.
+
+01:17:06.880 --> 01:17:09.640
+And then we want to translate
+this navigation goal
+
+01:17:09.640 --> 01:17:14.360
+into a finer grained trajectory,
+which we want our car to follow.
+
+01:17:14.360 --> 01:17:17.560
+This trajectory obviously
+encodes some notion
+
+01:17:17.560 --> 01:17:20.400
+of the dynamics of the
+vehicle, despite this
+
+01:17:20.400 --> 01:17:24.700
+might be maybe some lower
+fidelity models of the dynamics.
+
+01:17:24.700 --> 01:17:27.920
+But still we want to
+encode some constraints
+
+01:17:27.920 --> 01:17:30.320
+in terms of safety, some
+constraints in terms
+
+01:17:30.320 --> 01:17:31.500
+of dynamics.
+
+01:17:31.500 --> 01:17:37.240
+And so this is where open-loop
+techniques typically fall.
+
+01:17:37.240 --> 01:17:39.240
+Once we have a
+trajectory, we want
+
+01:17:39.240 --> 01:17:46.600
+to make sure this is physically
+tractable and implemented
+
+01:17:46.600 --> 01:17:47.860
+on the hardware.
+
+01:17:47.860 --> 01:17:54.080
+So this is where usually ideas
+from model predictive control,
+
+01:17:54.080 --> 01:17:58.180
+specifically in its tracking
+instantiations commonplace.
+
+01:17:58.180 --> 01:18:00.500
+So we would have a
+reference trajectory
+
+01:18:00.500 --> 01:18:03.648
+that is given from the
+open-loop algorithm.
+
+01:18:03.648 --> 01:18:05.440
+And now we want to make
+sure, first of all,
+
+01:18:05.440 --> 01:18:07.080
+that we're tracking
+this over time,
+
+01:18:07.080 --> 01:18:11.820
+but also potentially including
+a finer grained dynamical models
+
+01:18:11.820 --> 01:18:18.040
+of the system, maybe some
+safety-oriented constraints,
+
+01:18:18.040 --> 01:18:24.340
+which we were avoiding in the
+open-loop stage, and so forth.
+
+01:18:24.340 --> 01:18:27.780
+So we start from
+representation of the world.
+
+01:18:27.780 --> 01:18:30.220
+We use a higher
+level decision-making
+
+01:18:30.220 --> 01:18:33.020
+to have a high-level
+goal for our system.
+
+01:18:33.020 --> 01:18:36.340
+We compute a trajectory that
+tries to achieve that goal,
+
+01:18:36.340 --> 01:18:38.720
+we then want to implement
+this trajectory in practice,
+
+01:18:38.720 --> 01:18:41.660
+so we want to make sure
+we are tracking it.
+
+01:18:41.660 --> 01:18:43.900
+And obviously last
+but not least, we
+
+01:18:43.900 --> 01:18:46.845
+feed these to the actuators.
+
+01:18:46.845 --> 01:18:48.220
+So at the end of
+the day, we have
+
+01:18:48.220 --> 01:18:51.720
+to make this work on
+the real-world hardware.
+
+01:18:51.720 --> 01:18:55.250
+And so we want to make sure that
+this is actually tracked by what
+
+01:18:55.250 --> 01:18:56.970
+is happening in reality.
+
+01:18:56.970 --> 01:19:00.090
+And so this is usually where
+things like PID controls
+
+01:19:00.090 --> 01:19:02.970
+come in place.
+
+01:19:02.970 --> 01:19:05.250
+Of course throughout
+all of this,
+
+01:19:05.250 --> 01:19:08.510
+we might have some
+safety concerns
+
+01:19:08.510 --> 01:19:12.810
+and we could be dealing with
+safety critical applications.
+
+01:19:12.810 --> 01:19:15.190
+For example, in the
+case of driving,
+
+01:19:15.190 --> 01:19:19.250
+we might have some set
+of states which we do not
+
+01:19:19.250 --> 01:19:22.090
+want to visit because of
+some safety concepts which
+
+01:19:22.090 --> 01:19:23.250
+we care about.
+
+01:19:23.250 --> 01:19:28.610
+And so the safety concepts which
+may be computed through things
+
+01:19:28.610 --> 01:19:30.970
+such Hamilton-Jacobi
+reachability
+
+01:19:30.970 --> 01:19:32.530
+are typically
+mechanism through which
+
+01:19:32.530 --> 01:19:37.890
+we can inform both or either
+or either of open-loop
+
+01:19:37.890 --> 01:19:41.090
+and the tracking module.
+
+01:19:41.090 --> 01:19:45.170
+So in a way, I hope this is
+starting to make a little bit
+
+01:19:45.170 --> 01:19:45.830
+more concrete.
+
+01:19:45.830 --> 01:19:48.490
+What I mean when I say that
+these techniques, which
+
+01:19:48.490 --> 01:19:50.570
+we introduced in this
+class, are definitely not
+
+01:19:50.570 --> 01:19:52.920
+exclusive, but
+actually typically
+
+01:19:52.920 --> 01:19:56.800
+combine in autonomy stack.
+
+01:19:56.800 --> 01:19:58.440
+And the details of
+these algorithms
+
+01:19:58.440 --> 01:20:00.980
+will obviously depend
+on the application.
+
+01:20:00.980 --> 01:20:03.900
+So we hope that with
+this class, we gave you,
+
+01:20:03.900 --> 01:20:06.120
+first of all, a broad
+understanding of all
+
+01:20:06.120 --> 01:20:13.360
+of these concepts, and also
+focused on the higher level
+
+01:20:13.360 --> 01:20:16.320
+understanding of how these
+modules could be combined,
+
+01:20:16.320 --> 01:20:20.480
+and the pros and
+cons of these ideas.
+
+01:20:20.480 --> 01:20:24.520
+All of this is obviously in--
+
+01:20:24.520 --> 01:20:28.080
+we should, I think, concretize
+this in a moment in time
+
+01:20:28.080 --> 01:20:30.880
+where learning-based and
+end-to-end approaches
+
+01:20:30.880 --> 01:20:33.720
+are definitely becoming
+more and more popular.
+
+01:20:33.720 --> 01:20:36.520
+And so I would say that
+historically, learning
+
+01:20:36.520 --> 01:20:40.020
+has started from the higher
+levels of this abstraction.
+
+01:20:40.020 --> 01:20:44.400
+So perception is
+the first situation
+
+01:20:44.400 --> 01:20:48.400
+where learning basically
+became the de facto standard.
+
+01:20:48.400 --> 01:20:52.980
+And I would say that right
+now, end-to-end approaches
+
+01:20:52.980 --> 01:20:57.260
+are more or less starting
+to carve their way down
+
+01:20:57.260 --> 01:20:58.360
+along this hierarchy.
+
+01:20:58.360 --> 01:21:01.320
+I would say right now they are
+basically somewhere over here.
+
+01:21:01.320 --> 01:21:04.980
+So in between the open-loop
+and the closed-loop trajectory
+
+01:21:04.980 --> 01:21:06.820
+tracking stage.
+
+01:21:06.820 --> 01:21:10.500
+I would say even the most
+bullish companies or approaches
+
+01:21:10.500 --> 01:21:13.480
+that claim end-to-end
+approaches,
+
+01:21:13.480 --> 01:21:17.820
+typically they don't mess with
+the lower level components.
+
+01:21:17.820 --> 01:21:19.380
+And this is because
+here it's really
+
+01:21:19.380 --> 01:21:21.180
+where you want to
+make sure you have
+
+01:21:21.180 --> 01:21:24.700
+fine-grained control, your
+encoding hard constraint
+
+01:21:24.700 --> 01:21:28.340
+guarantees, and making sure
+that everything works concretely
+
+01:21:28.340 --> 01:21:29.120
+in practice.
+
+01:21:32.860 --> 01:21:34.938
+So if there are no
+further questions,
+
+01:21:34.938 --> 01:21:36.980
+I want to really thank
+you very much for sticking
+
+01:21:36.980 --> 01:21:40.100
+with us throughout this
+quarter, and wishing you best
+
+01:21:40.100 --> 01:21:41.240
+of luck for the exam.
+
+01:21:41.240 --> 01:21:44.590
+[APPLAUSE]
+

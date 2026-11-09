@@ -1,0 +1,4689 @@
+WEBVTT
+Kind: captions
+Language: en
+
+00:00:05.720 --> 00:00:06.300
+All right.
+
+00:00:06.300 --> 00:00:07.100
+Let's get started.
+
+00:00:07.100 --> 00:00:09.360
+So today, we're going to
+continue our discussion
+
+00:00:09.360 --> 00:00:10.437
+about MPC.
+
+00:00:10.437 --> 00:00:11.020
+In particular.
+
+00:00:11.020 --> 00:00:12.960
+We're going to wrap
+up our discussion
+
+00:00:12.960 --> 00:00:16.280
+about persistent feasibility
+as one of the key properties
+
+00:00:16.280 --> 00:00:20.840
+we want to imbue in our
+MPC control pipeline.
+
+00:00:20.840 --> 00:00:23.620
+And then we'll switch to
+the topic of stability.
+
+00:00:23.620 --> 00:00:28.600
+So not only we want to make sure
+that MPC loop has a feasible
+
+00:00:28.600 --> 00:00:30.640
+solution at each point
+in time, but we also
+
+00:00:30.640 --> 00:00:32.280
+want to make sure
+that whatever action
+
+00:00:32.280 --> 00:00:35.240
+we optimize for does
+something useful.
+
+00:00:35.240 --> 00:00:37.160
+In our problem
+setting, useful means
+
+00:00:37.160 --> 00:00:41.480
+we are stabilizing the system
+that is converging to 0.
+
+00:00:41.480 --> 00:00:43.120
+We'll then wrap
+up the discussion
+
+00:00:43.120 --> 00:00:50.200
+with a couple of topics that
+are of practical relevance,
+
+00:00:50.200 --> 00:00:52.680
+specifically how some
+of the optimization
+
+00:00:52.680 --> 00:00:56.440
+could actually be computed
+offline as opposed to online.
+
+00:00:56.440 --> 00:00:59.830
+That was actually a pretty big
+deal about 10 years ago where
+
+00:00:59.830 --> 00:01:02.550
+hardware was not
+particularly advanced yet,
+
+00:01:02.550 --> 00:01:05.710
+and optimization solvers were
+not particularly advanced yet.
+
+00:01:05.710 --> 00:01:09.350
+So offloading part of
+optimization offline
+
+00:01:09.350 --> 00:01:11.590
+was a big deal
+because it relieved
+
+00:01:11.590 --> 00:01:13.310
+what you had to do online.
+
+00:01:13.310 --> 00:01:15.630
+So basically, you
+minimize delays.
+
+00:01:15.630 --> 00:01:18.750
+And then we're going to talk
+about the application of MPC
+
+00:01:18.750 --> 00:01:20.910
+to a slightly more
+general setting, which is
+
+00:01:20.910 --> 00:01:22.950
+that of a trajectory tracking.
+
+00:01:22.950 --> 00:01:25.630
+And I will show you how
+the MPC formulation has
+
+00:01:25.630 --> 00:01:28.870
+to be modified a little
+bit to ensure that you have
+
+00:01:28.870 --> 00:01:30.450
+a good tracking performance.
+
+00:01:30.450 --> 00:01:33.970
+Interestingly enough, sometimes
+people in industry get it wrong.
+
+00:01:33.970 --> 00:01:37.590
+So I want to make sure that you
+are not one of those people.
+
+00:01:37.590 --> 00:01:38.090
+All right.
+
+00:01:38.090 --> 00:01:42.750
+So last time, we introduced
+the concept of MPC.
+
+00:01:42.750 --> 00:01:46.030
+It's a bit dark here.
+
+00:01:46.030 --> 00:01:50.030
+Let's leave it at this before
+the entire setup explodes.
+
+00:01:50.030 --> 00:01:54.390
+So we talked about MPC.
+
+00:01:54.390 --> 00:01:55.910
+I introduced the concept.
+
+00:01:55.910 --> 00:01:59.870
+I introduced a specific
+problem set up,
+
+00:01:59.870 --> 00:02:03.110
+which is that of controlling
+a linear time varying system.
+
+00:02:03.110 --> 00:02:06.230
+Such were two
+polyhedral constraints.
+
+00:02:06.230 --> 00:02:10.289
+We talked about the problem
+persistent feasibility
+
+00:02:10.289 --> 00:02:11.030
+and stability.
+
+00:02:11.030 --> 00:02:14.650
+We introduced some concepts,
+in particular the concept
+
+00:02:14.650 --> 00:02:17.450
+of a one-step controllable
+set, the concept
+
+00:02:17.450 --> 00:02:19.610
+of controlling variance
+set, the concept
+
+00:02:19.610 --> 00:02:23.930
+of a positive environment set,
+the concept of feasibility set.
+
+00:02:23.930 --> 00:02:25.690
+And then we stated
+the lemma, which
+
+00:02:25.690 --> 00:02:29.050
+reads as if set x1,
+which is essentially
+
+00:02:29.050 --> 00:02:31.690
+truncated feasibility
+set, where we look
+
+00:02:31.690 --> 00:02:38.130
+at feasible state control
+pairs starting from stage
+
+00:02:38.130 --> 00:02:39.930
+1 as opposed to 0.
+
+00:02:39.930 --> 00:02:44.730
+Well, if this set x1 is control
+invariant set for the system
+
+00:02:44.730 --> 00:02:47.690
+under consideration,
+then the MPC law
+
+00:02:47.690 --> 00:02:49.770
+is persistently
+feasible, which means
+
+00:02:49.770 --> 00:02:51.410
+that at each planning
+cycle, we have
+
+00:02:51.410 --> 00:02:53.530
+at least one feasible solution.
+
+00:02:53.530 --> 00:02:56.490
+As I mentioned last
+time, this result per se
+
+00:02:56.490 --> 00:03:00.120
+is not particularly
+useful, because x1 is not
+
+00:03:00.120 --> 00:03:03.520
+one of the tuning knobs that
+you can manipulate in order
+
+00:03:03.520 --> 00:03:04.960
+to tune your MPC.
+
+00:03:04.960 --> 00:03:08.280
+But we'll see it's a stepping
+stone for the theorem
+
+00:03:08.280 --> 00:03:12.840
+that I'm going to state in a few
+minutes that actually relates
+
+00:03:12.840 --> 00:03:14.840
+the concept of
+persistent feasibility
+
+00:03:14.840 --> 00:03:16.640
+to one of our tuning knobs.
+
+00:03:16.640 --> 00:03:20.960
+The t is actually
+the terminal set, xf,
+
+00:03:20.960 --> 00:03:23.880
+that we use as one of the
+constraints in our MPC
+
+00:03:23.880 --> 00:03:26.160
+formulation.
+
+00:03:26.160 --> 00:03:30.920
+With that context, let's
+prove this feasibility lemma.
+
+00:03:30.920 --> 00:03:36.600
+The proof is not
+particularly interesting,
+
+00:03:36.600 --> 00:03:39.440
+but at least it stress
+tests your understanding
+
+00:03:39.440 --> 00:03:45.920
+of some of the concepts
+we have discussed so far.
+
+00:03:45.920 --> 00:03:50.880
+So remember that we
+want to show that--
+
+00:03:50.880 --> 00:03:52.520
+sorry.
+
+00:03:52.520 --> 00:03:57.190
+If x1 is control invariant
+set, then the MPC low
+
+00:03:57.190 --> 00:03:58.690
+is persistently feasible.
+
+00:03:58.690 --> 00:04:01.070
+So once we transition
+to the new state
+
+00:04:01.070 --> 00:04:03.130
+from the perspective
+of the new state x1,
+
+00:04:03.130 --> 00:04:06.990
+we still have a control that is
+feasible over the optimization
+
+00:04:06.990 --> 00:04:08.190
+horizon.
+
+00:04:08.190 --> 00:04:12.070
+So the proof is as follows.
+
+00:04:12.070 --> 00:04:18.230
+Remember the definition of
+a one-step controllable set.
+
+00:04:18.230 --> 00:04:23.790
+So the one-step controllable
+set to x1 or previous of x1
+
+00:04:23.790 --> 00:04:25.783
+is defined as the set of states.
+
+00:04:25.783 --> 00:04:27.950
+That's just the definition
+that we stated last time.
+
+00:04:27.950 --> 00:04:31.150
+It's defined as a set
+of states in Rn, such
+
+00:04:31.150 --> 00:04:34.630
+that there exists a
+control, a feasible control,
+
+00:04:34.630 --> 00:04:40.990
+such that Ax plus Bu
+transitions into the set x1.
+
+00:04:40.990 --> 00:04:46.510
+So that's the definition
+of a one-step control set.
+
+00:04:46.510 --> 00:04:52.110
+Now, since x1 is
+control invariant,
+
+00:04:52.110 --> 00:04:54.150
+again, by definition
+of control invariance
+
+00:04:54.150 --> 00:05:00.010
+for all states within x1, there
+exists a feasible control such
+
+00:05:00.010 --> 00:05:05.810
+that Ax plus Bu is in X1.
+
+00:05:05.810 --> 00:05:10.650
+Now, if we compare
+the two definitions,
+
+00:05:10.650 --> 00:05:18.610
+we see that x1, a point
+that is in x1 also
+
+00:05:18.610 --> 00:05:22.270
+belongs to the previous of x1.
+
+00:05:22.270 --> 00:05:25.150
+So the one-step controllable
+set is the same property.
+
+00:05:27.970 --> 00:05:32.750
+But the point that is in x1
+also has to be in capital X,
+
+00:05:32.750 --> 00:05:36.410
+by the definition of x1.
+
+00:05:36.410 --> 00:05:40.770
+X1 is first of all the set of
+states that are feasible so
+
+00:05:40.770 --> 00:05:49.450
+that are in x, which
+means that the set
+
+00:05:49.450 --> 00:05:55.240
+x1 has to be a subset of the
+intersection between the set x.
+
+00:05:55.240 --> 00:06:01.200
+This is trivial and
+the previous of x1.
+
+00:06:01.200 --> 00:06:02.260
+Does it make sense?
+
+00:06:02.260 --> 00:06:05.240
+It's a bit of a
+mouthful, but it just
+
+00:06:05.240 --> 00:06:08.840
+follows from the definitions.
+
+00:06:08.840 --> 00:06:16.640
+Now, let's go back one step and
+now reason in terms set X of 0.
+
+00:06:16.640 --> 00:06:21.040
+So this is the set
+of states, x of 0,
+
+00:06:21.040 --> 00:06:24.440
+such that there is a
+sequence of controls,
+
+00:06:24.440 --> 00:06:27.400
+such that the states
+generated under the dynamics
+
+00:06:27.400 --> 00:06:33.360
+are produced states
+that are feasible.
+
+00:06:33.360 --> 00:06:35.480
+Remember the definition of X0.
+
+00:06:35.480 --> 00:06:40.040
+X0 is the set of feasible
+states such that there exists
+
+00:06:40.040 --> 00:06:43.480
+a sequence of controls,
+feasible controls,
+
+00:06:43.480 --> 00:06:48.060
+such that under the
+dynamics evolution,
+
+00:06:48.060 --> 00:06:51.120
+the generated states are
+also feasible and satisfy
+
+00:06:51.120 --> 00:06:53.030
+the terminal condition.
+
+00:06:53.030 --> 00:06:56.710
+Now, I can rewrite
+the definition of X0
+
+00:06:56.710 --> 00:07:01.830
+as the set of
+feasible states such
+
+00:07:01.830 --> 00:07:06.310
+that there is a feasible control
+such that X1 belongs to capital
+
+00:07:06.310 --> 00:07:09.830
+X1 because capital X1 subsumes.
+
+00:07:09.830 --> 00:07:11.370
+What is the definition of an x1?
+
+00:07:11.370 --> 00:07:13.718
+Previous slide.
+
+00:07:13.718 --> 00:07:15.510
+The fact that there is
+a truncated sequence
+
+00:07:15.510 --> 00:07:18.410
+of controls that leads to a
+feasible state trajectory.
+
+00:07:33.250 --> 00:07:39.150
+Now, again, let's compare this
+definition to the definition
+
+00:07:39.150 --> 00:07:40.110
+here.
+
+00:07:40.110 --> 00:07:42.270
+So they are identical.
+
+00:07:42.270 --> 00:07:44.830
+The only difference
+is that in here, I'm
+
+00:07:44.830 --> 00:07:47.350
+imposing these additional
+constraints so that the state
+
+00:07:47.350 --> 00:07:49.230
+has to belong to X.
+
+00:07:49.230 --> 00:07:54.010
+So X0 is really the
+intersection of capital X
+
+00:07:54.010 --> 00:07:58.570
+and the one-step
+controllable set to X1.
+
+00:07:58.570 --> 00:08:00.690
+But then we put
+together the two facts,
+
+00:08:00.690 --> 00:08:05.370
+and we see that X1
+is subset of X0.
+
+00:08:05.370 --> 00:08:10.890
+Every state that belongs to X1
+is also a state belongs to X0.
+
+00:08:10.890 --> 00:08:11.950
+Does this make sense?
+
+00:08:11.950 --> 00:08:13.650
+It's mostly basically
+pattern-matching
+
+00:08:13.650 --> 00:08:15.230
+the different definitions.
+
+00:08:15.230 --> 00:08:17.030
+So there is no particular
+cleverness here.
+
+00:08:17.030 --> 00:08:17.770
+Yes.
+
+00:08:17.770 --> 00:08:23.990
+So in the previous example, it's
+not necessarily a subset of X,
+
+00:08:23.990 --> 00:08:24.490
+because--
+
+00:08:24.490 --> 00:08:30.610
+No, no, because of
+how we define it here.
+
+00:08:30.610 --> 00:08:34.690
+It's any state that
+transitions us into X1.
+
+00:08:34.690 --> 00:08:36.770
+It could also be a
+state that is not
+
+00:08:36.770 --> 00:08:44.370
+feasible in terms set
+membership to capital X. OK.
+
+00:08:44.370 --> 00:08:48.070
+So now there is a slightly
+more interesting part.
+
+00:08:48.070 --> 00:08:50.800
+Actually, this entire
+proof is quite boring.
+
+00:08:50.800 --> 00:08:56.560
+Take some state that belongs
+to X of 0, some initial state.
+
+00:08:56.560 --> 00:09:01.160
+And let U star 0 be the solution
+to the finite-time optimization
+
+00:09:01.160 --> 00:09:04.180
+problem, MPC
+optimization problem.
+
+00:09:04.180 --> 00:09:09.320
+Let U star 0 be in the first
+control in this sequence.
+
+00:09:09.320 --> 00:09:11.840
+Then under the
+control, you start 0.
+
+00:09:11.840 --> 00:09:17.480
+Under the MPC control, we
+transition to a new state X1.
+
+00:09:17.480 --> 00:09:19.720
+Since you U star 0
+is clearly feasible,
+
+00:09:19.720 --> 00:09:26.780
+X1 belongs to capital X1 because
+it's part of the MPC trajectory.
+
+00:09:26.780 --> 00:09:28.960
+So by definition, it has
+to satisfy all the state
+
+00:09:28.960 --> 00:09:32.120
+constraints under the
+dynamics evolution.
+
+00:09:32.120 --> 00:09:34.960
+And so it belongs to X1.
+
+00:09:34.960 --> 00:09:38.720
+But we just prove
+that set X1 is subset
+
+00:09:38.720 --> 00:09:42.400
+of X0, which means that
+set X1 belongs actually
+
+00:09:42.400 --> 00:09:47.480
+to set X of 0, which means
+that the new MPC optimization
+
+00:09:47.480 --> 00:09:49.460
+problem is indeed feasible.
+
+00:09:49.460 --> 00:09:51.860
+And then you can recursively
+apply this property
+
+00:09:51.860 --> 00:09:54.540
+through time.
+
+00:09:54.540 --> 00:09:56.780
+So rewinding all
+of this, we wanted
+
+00:09:56.780 --> 00:10:01.180
+to prove that under the MPC
+control law, the new state
+
+00:10:01.180 --> 00:10:09.460
+X of 1, X1 belongs to X0, the
+set of feasible states for MPC.
+
+00:10:09.460 --> 00:10:12.380
+To do so, we
+manipulated a little bit
+
+00:10:12.380 --> 00:10:15.180
+the definition of a
+one-step controllable set
+
+00:10:15.180 --> 00:10:19.360
+and the notion of
+control invariance.
+
+00:10:19.360 --> 00:10:30.060
+And we finally proved
+that if set X1 is
+
+00:10:30.060 --> 00:10:32.100
+control invariant,
+then the problem,
+
+00:10:32.100 --> 00:10:34.860
+the MPC problem is
+persistently feasible.
+
+00:10:34.860 --> 00:10:35.840
+Does it make sense?
+
+00:10:35.840 --> 00:10:38.260
+Again, not a particularly
+exciting result, not
+
+00:10:38.260 --> 00:10:41.380
+also particularly useful, but
+it's a good stress test for you
+
+00:10:41.380 --> 00:10:45.380
+to see whether you
+understand the notion
+
+00:10:45.380 --> 00:10:47.910
+of a one-step controllable
+set, control invariant set,
+
+00:10:47.910 --> 00:10:48.438
+and so on.
+
+00:10:48.438 --> 00:10:50.730
+In the final exam, there will
+be have one question that
+
+00:10:50.730 --> 00:10:55.770
+will-- well, I will ask you what
+is say a control invariant set.
+
+00:10:55.770 --> 00:10:57.270
+OK.
+
+00:10:57.270 --> 00:11:09.530
+Anyway-- so say that the
+horizon is equal to 1.
+
+00:11:09.530 --> 00:11:13.090
+Then we can just
+choose the terminal
+
+00:11:13.090 --> 00:11:14.910
+set to be controlling violence.
+
+00:11:14.910 --> 00:11:18.750
+And by the previous lemma, we
+know that if that is the case,
+
+00:11:18.750 --> 00:11:26.690
+then the MPC problem is feasible
+at all replanning stages.
+
+00:11:26.690 --> 00:11:29.130
+But of course, in general,
+the optimization horizon
+
+00:11:29.130 --> 00:11:30.410
+is greater than 1.
+
+00:11:30.410 --> 00:11:33.210
+So how can we extend
+these results to the cases
+
+00:11:33.210 --> 00:11:37.810
+whereby we have a general
+optimization horizon capital N?
+
+00:11:37.810 --> 00:11:40.310
+So that's what we're
+going to do next.
+
+00:11:43.730 --> 00:11:45.110
+Any questions in the meantime?
+
+00:11:51.320 --> 00:11:53.940
+So now we get to the
+more interesting part.
+
+00:11:58.320 --> 00:12:00.620
+So building on the lemma
+that I just showed,
+
+00:12:00.620 --> 00:12:03.000
+it says that if X1 is
+controlled invariant,
+
+00:12:03.000 --> 00:12:06.120
+then the MPC control law
+is persistently feasible.
+
+00:12:06.120 --> 00:12:09.040
+Now, we can prove a
+more powerful theorem
+
+00:12:09.040 --> 00:12:11.280
+that reads as follows.
+
+00:12:11.280 --> 00:12:14.760
+If the set X of f,
+which is a reminder,
+
+00:12:14.760 --> 00:12:19.640
+is the set through which we
+specify a terminal constraint
+
+00:12:19.640 --> 00:12:21.900
+for the MPC
+optimization problem,
+
+00:12:21.900 --> 00:12:24.160
+it's something that we decide.
+
+00:12:24.160 --> 00:12:29.440
+And if set X of f is a control
+invariant set for the system
+
+00:12:29.440 --> 00:12:35.880
+under study, then the MPC
+law is persistently feasible.
+
+00:12:35.880 --> 00:12:37.160
+That's interesting.
+
+00:12:37.160 --> 00:12:39.400
+Let's try to understand
+what is this saying.
+
+00:12:39.400 --> 00:12:44.120
+What is a trivial control
+invariant set for this system?
+
+00:12:44.120 --> 00:12:46.420
+Meaning a set that
+if you are there,
+
+00:12:46.420 --> 00:12:49.080
+there exists a control that
+allows you to stay there.
+
+00:12:52.980 --> 00:12:56.800
+By any mathematical equation, if
+you are in doubt, always say 0.
+
+00:12:56.800 --> 00:12:59.340
+I mean, typically 0
+is the best guess.
+
+00:12:59.340 --> 00:13:00.520
+In this case, it's correct.
+
+00:13:00.520 --> 00:13:05.020
+So the origin 0 is indeed
+a control invariant set.
+
+00:13:05.020 --> 00:13:09.820
+If your state is X
+equals 0, assuming
+
+00:13:09.820 --> 00:13:13.340
+that U equals 0 is an allowable
+control, which is typically
+
+00:13:13.340 --> 00:13:17.580
+true, I mean, doing nothing
+is typically allowed.
+
+00:13:17.580 --> 00:13:22.180
+Under linear dynamics, if you
+are at 0 and you use Control 0,
+
+00:13:22.180 --> 00:13:26.740
+your next state is 0, which
+means that the origin, you
+
+00:13:26.740 --> 00:13:29.860
+have a set with only one
+point, but still it is a set.
+
+00:13:29.860 --> 00:13:33.220
+The origin is indeed a
+control invariant set.
+
+00:13:33.220 --> 00:13:34.960
+And intuitively,
+what does it say?
+
+00:13:37.860 --> 00:13:43.140
+It's saying that if we just
+target the origin in N steps
+
+00:13:43.140 --> 00:13:46.370
+and then I shrink
+the horizon by 1,
+
+00:13:46.370 --> 00:13:50.810
+there is always an admissible
+control sequence that
+
+00:13:50.810 --> 00:13:53.170
+is the concatenation
+of the previous control
+
+00:13:53.170 --> 00:13:56.250
+sequence and then the fact
+that with the last control
+
+00:13:56.250 --> 00:13:57.230
+we just say at 0.
+
+00:13:57.230 --> 00:14:00.410
+So you can just trivially
+continue your control sequence
+
+00:14:00.410 --> 00:14:03.290
+to have a full and
+step control sequence.
+
+00:14:03.290 --> 00:14:06.030
+So we're going to
+prove the theorem,
+
+00:14:06.030 --> 00:14:09.890
+but the intuition
+is quite obvious.
+
+00:14:09.890 --> 00:14:13.450
+That said, for a
+general system, you
+
+00:14:13.450 --> 00:14:15.770
+might have different
+control invariant set.
+
+00:14:15.770 --> 00:14:17.110
+0 is just an option.
+
+00:14:17.110 --> 00:14:19.530
+But actually, you could
+have a larger set,
+
+00:14:19.530 --> 00:14:21.630
+which is the control
+invariant for the system.
+
+00:14:21.630 --> 00:14:25.490
+We'll see later how to
+compute those larger sets.
+
+00:14:25.490 --> 00:14:31.090
+So do you think that the origin
+is always the best choice?
+
+00:14:31.090 --> 00:14:34.770
+So constraining your system
+to reach the origin in N step
+
+00:14:34.770 --> 00:14:37.530
+as part of your MPC
+control law, you
+
+00:14:37.530 --> 00:14:39.890
+think that this is always
+the smart thing to do?
+
+00:14:39.890 --> 00:14:41.790
+It guarantees you
+persistent feasibility.
+
+00:14:41.790 --> 00:14:42.620
+So that's great.
+
+00:14:47.560 --> 00:14:50.400
+Remember that
+typically, you're not
+
+00:14:50.400 --> 00:14:54.800
+just reasoning in terms of
+controlling the state to 0,
+
+00:14:54.800 --> 00:14:57.520
+but you also want to be
+very parsimonious in terms
+
+00:14:57.520 --> 00:15:00.280
+of how much control you spend.
+
+00:15:00.280 --> 00:15:02.600
+So oftentimes,
+asking your system
+
+00:15:02.600 --> 00:15:07.080
+to reach the origin in N steps
+as part of your MPC optimization
+
+00:15:07.080 --> 00:15:09.060
+problem can be very limiting.
+
+00:15:09.060 --> 00:15:11.160
+So basically, you
+are asking-- so
+
+00:15:11.160 --> 00:15:13.380
+of all the control
+sequences you could apply,
+
+00:15:13.380 --> 00:15:15.280
+you're only optimizing
+over those that
+
+00:15:15.280 --> 00:15:17.160
+in N step new to the origin.
+
+00:15:17.160 --> 00:15:20.120
+It's typically those that
+require a lot of control effort.
+
+00:15:20.120 --> 00:15:23.400
+So yes, you have
+persistent feasibility,
+
+00:15:23.400 --> 00:15:27.000
+but now, you might control
+your system very suboptimally,
+
+00:15:27.000 --> 00:15:30.480
+meaning with a lot of
+control expenditure.
+
+00:15:30.480 --> 00:15:35.140
+So that's why in general,
+the terminal constraint--
+
+00:15:35.140 --> 00:15:37.960
+it is something that you
+artificially add to your MPC
+
+00:15:37.960 --> 00:15:40.160
+problem to ensure
+persistent feasibility--
+
+00:15:40.160 --> 00:15:43.020
+should be as relaxed as possible
+so that you don't overly
+
+00:15:43.020 --> 00:15:44.320
+constrain your system.
+
+00:15:44.320 --> 00:15:46.660
+Does that make sense?
+
+00:15:46.660 --> 00:15:52.220
+Just trying to give you
+both mathematical backing
+
+00:15:52.220 --> 00:15:56.020
+for what I'm saying, but also
+some practical considerations.
+
+00:15:56.020 --> 00:15:58.160
+And this is stuff that
+people do for real.
+
+00:15:58.160 --> 00:16:02.100
+So it's constantly a little
+bit of a design choice
+
+00:16:02.100 --> 00:16:04.540
+how to properly set X of f.
+
+00:16:04.540 --> 00:16:09.740
+So now, let's
+prove this theorem.
+
+00:16:09.740 --> 00:16:13.700
+So the proof is as follows.
+
+00:16:13.700 --> 00:16:18.020
+So we prove that if X of f
+is control invariant, then
+
+00:16:18.020 --> 00:16:24.580
+XN minus 1, the truncated set,
+where your horizon is only 1,
+
+00:16:24.580 --> 00:16:27.860
+is also going to be
+control invariant.
+
+00:16:27.860 --> 00:16:29.820
+And then if XN minus 1
+is control invariant.
+
+00:16:29.820 --> 00:16:31.540
+XN minus 2 is control invariant.
+
+00:16:31.540 --> 00:16:34.920
+All the way to x1,
+and once we hit x1,
+
+00:16:34.920 --> 00:16:37.282
+we know from the
+previous lemma that if x1
+
+00:16:37.282 --> 00:16:39.990
+is controlling violent, then the
+system is persistently feasible.
+
+00:16:39.990 --> 00:16:42.410
+So we can invoke that
+lemma to conclude
+
+00:16:42.410 --> 00:16:45.730
+the proof of the theorem.
+
+00:16:45.730 --> 00:16:47.950
+So let's start with
+the first step.
+
+00:16:47.950 --> 00:16:52.170
+So if Xf-- we want to prove
+that if Xf is control invariant,
+
+00:16:52.170 --> 00:16:56.070
+XN minus 1 is control
+invariant too.
+
+00:16:56.070 --> 00:17:00.410
+XN minus 1 is defined as usual.
+
+00:17:00.410 --> 00:17:04.010
+Now it's just a
+truncated feasibility
+
+00:17:04.010 --> 00:17:07.690
+set where we only reason in
+terms of a one-step horizon.
+
+00:17:07.690 --> 00:17:11.490
+It's the set of states, feasible
+states for which there exists
+
+00:17:11.490 --> 00:17:16.089
+a feasible control such that
+under the system dynamics,
+
+00:17:16.089 --> 00:17:19.609
+we have a sequence of
+states that is feasible.
+
+00:17:19.609 --> 00:17:25.849
+In this case, the last state
+needs to satisfy the terminal
+
+00:17:25.849 --> 00:17:26.589
+constraint.
+
+00:17:32.370 --> 00:17:44.120
+Now, because of the terminal
+constraint, we know that--
+
+00:17:44.120 --> 00:17:47.160
+remember that we want to show
+that this set is controlled
+
+00:17:47.160 --> 00:17:48.200
+invariant.
+
+00:17:48.200 --> 00:17:52.960
+So the question
+is for any state,
+
+00:17:52.960 --> 00:17:56.840
+any vector within
+the state, is there
+
+00:17:56.840 --> 00:18:00.920
+a control input that allows us
+to transition back into this
+
+00:18:00.920 --> 00:18:04.360
+set under the system dynamics?
+
+00:18:04.360 --> 00:18:06.040
+So that's what we want to prove.
+
+00:18:06.040 --> 00:18:15.040
+Now, what we know is that by
+the definition of XN minus 1,
+
+00:18:15.040 --> 00:18:20.960
+there exists a control such
+that XN minus 1 plus B1
+
+00:18:20.960 --> 00:18:24.660
+is equal to XN, which belongs
+to the terminal set X of f.
+
+00:18:24.660 --> 00:18:29.760
+I mean this is by
+essential definition of x1.
+
+00:18:29.760 --> 00:18:36.840
+Now, the question is does
+XN which belongs to Xf also
+
+00:18:36.840 --> 00:18:38.820
+belong to X1?
+
+00:18:38.820 --> 00:18:42.160
+If that is true, that means
+that X1 is control invariant.
+
+00:18:42.160 --> 00:18:44.940
+I found actually a
+control that allows
+
+00:18:44.940 --> 00:18:48.820
+me to transition back into X1.
+
+00:18:48.820 --> 00:18:52.620
+But for now, the only thing
+that I know is that X of N
+
+00:18:52.620 --> 00:18:55.380
+belongs to Xf.
+
+00:18:55.380 --> 00:19:00.900
+But from the assumption of the
+theorem, we do know that X of f
+
+00:19:00.900 --> 00:19:04.260
+is a control
+invariant set, which
+
+00:19:04.260 --> 00:19:11.300
+means that there exists a U
+such that Ax plus Bu belongs
+
+00:19:11.300 --> 00:19:14.940
+to X of f.
+
+00:19:14.940 --> 00:19:17.980
+But isn't that the
+definition of the--
+
+00:19:17.980 --> 00:19:22.540
+defines the membership
+of a point to XN minus 1.
+
+00:19:22.540 --> 00:19:26.140
+So we have just proved
+that XN minus-- that XN
+
+00:19:26.140 --> 00:19:29.940
+indeed belongs to
+capital set XN minus 1.
+
+00:19:29.940 --> 00:19:34.500
+Don't be mixed up
+with the subscript X--
+
+00:19:34.500 --> 00:19:37.430
+XN minus 1 is just a
+definition of a set.
+
+00:19:37.430 --> 00:19:40.010
+Is it a one-step feasible set?
+
+00:19:40.010 --> 00:19:42.450
+So the fact that XN
+belongs to X minus 1
+
+00:19:42.450 --> 00:19:45.170
+doesn't tell you nothing in
+terms of the temporal coherency
+
+00:19:45.170 --> 00:19:47.690
+between the subscripts.
+
+00:19:47.690 --> 00:19:54.810
+So we have just proven that X of
+N belongs to capital XN minus 1.
+
+00:19:54.810 --> 00:19:56.810
+So we have just
+proved that X minus 1
+
+00:19:56.810 --> 00:19:58.730
+is indeed in control invariant.
+
+00:19:58.730 --> 00:20:03.530
+But then you can apply this
+argument recursively until--
+
+00:20:03.530 --> 00:20:06.090
+to prove that X minus 2 is
+control invariant, x minus 3
+
+00:20:06.090 --> 00:20:08.570
+is control invariant,
+all the way to X1.
+
+00:20:08.570 --> 00:20:11.650
+At that point, we invoke
+the feasibility lemma
+
+00:20:11.650 --> 00:20:13.130
+from the previous
+lecture, and then
+
+00:20:13.130 --> 00:20:17.230
+we can state the claim, that
+if Xf is controlled invariant,
+
+00:20:17.230 --> 00:20:21.530
+then MPC is
+specifically feasible.
+
+00:20:21.530 --> 00:20:23.827
+Does this make sense?
+
+00:20:23.827 --> 00:20:25.410
+Again, there's a
+little bit of pattern
+
+00:20:25.410 --> 00:20:28.970
+matching with definitions.
+
+00:20:28.970 --> 00:20:31.610
+Most important thing
+for you to understand
+
+00:20:31.610 --> 00:20:33.730
+is-- and this is a big deal.
+
+00:20:33.730 --> 00:20:39.440
+If the set Xf is chosen
+to be a controlling
+
+00:20:39.440 --> 00:20:43.960
+set for aerodynamics, then set
+your MPC is perfectly feasible.
+
+00:20:43.960 --> 00:20:49.420
+Now, the origin is in general
+a control invariant set.
+
+00:20:49.420 --> 00:20:52.680
+So it's a possible choice
+for your terminal constraint.
+
+00:20:52.680 --> 00:20:54.800
+In general, it's
+a bit suboptimal.
+
+00:20:54.800 --> 00:20:58.120
+So we want to have more
+sophisticated choices
+
+00:20:58.120 --> 00:21:03.320
+for the terminal set within all
+the possible ways of defining
+
+00:21:03.320 --> 00:21:05.120
+a control invariant set.
+
+00:21:05.120 --> 00:21:07.440
+We'll get back.
+
+00:21:07.440 --> 00:21:10.480
+We'll get back to
+this point later along
+
+00:21:10.480 --> 00:21:14.280
+with a pointer to a
+computational tool that
+
+00:21:14.280 --> 00:21:17.200
+allows you to compute
+control invariant sets.
+
+00:21:17.200 --> 00:21:21.520
+And in problem set 3,
+you'll have a few problems
+
+00:21:21.520 --> 00:21:26.720
+that will expose you to how
+to use this toolbox in order
+
+00:21:26.720 --> 00:21:29.740
+to compute control
+invariant sets.
+
+00:21:35.660 --> 00:21:38.380
+I mean, this is my
+son that brings back
+
+00:21:38.380 --> 00:21:40.580
+bugs from a childcare.
+
+00:21:40.580 --> 00:21:44.180
+This is-- the child is
+a biological weapon.
+
+00:21:44.180 --> 00:21:45.643
+This is my fourth or five--
+
+00:21:45.643 --> 00:21:46.560
+I mean, I'm recording.
+
+00:21:46.560 --> 00:21:48.300
+So I'll stop here.
+
+00:21:48.300 --> 00:21:51.660
+So we're just complaining
+about the diseases that
+
+00:21:51.660 --> 00:21:53.500
+go around in the childcare.
+
+00:21:53.500 --> 00:21:56.540
+Anyway, so the
+terminal set X of f
+
+00:21:56.540 --> 00:21:59.900
+is introduced artificially for
+the sole purpose of leading
+
+00:21:59.900 --> 00:22:02.740
+to a sufficient condition
+for persistent feasibility.
+
+00:22:02.740 --> 00:22:04.320
+It's one of the tuning knobs.
+
+00:22:04.320 --> 00:22:07.760
+And now we know that at least
+from an abstract standpoint,
+
+00:22:07.760 --> 00:22:10.400
+if we choose X of f to be
+controlling variance set,
+
+00:22:10.400 --> 00:22:13.780
+persistent feasibility
+is guaranteed.
+
+00:22:13.780 --> 00:22:15.780
+As I said, the
+simplest choice would
+
+00:22:15.780 --> 00:22:18.480
+be to just pick X
+of f as the origin,
+
+00:22:18.480 --> 00:22:20.180
+but this is
+generally undesirable
+
+00:22:20.180 --> 00:22:25.340
+because it excessively restricts
+the space of feasible control
+
+00:22:25.340 --> 00:22:26.580
+sequences.
+
+00:22:26.580 --> 00:22:29.940
+We'll discuss this choice
+later in more detail.
+
+00:22:29.940 --> 00:22:34.330
+Now we switch to the other topic
+which is that of stability.
+
+00:22:34.330 --> 00:22:36.770
+Now we know at least how to
+make the problem persistently
+
+00:22:36.770 --> 00:22:37.430
+feasible.
+
+00:22:37.430 --> 00:22:40.050
+The tuning knob that at least
+for the scope of this class
+
+00:22:40.050 --> 00:22:42.930
+we choose for that
+purpose is the control--
+
+00:22:42.930 --> 00:22:45.410
+the terminal constraints X of f.
+
+00:22:45.410 --> 00:22:50.010
+We have other two tuning knobs,
+how we select the terminal cost
+
+00:22:50.010 --> 00:22:55.050
+P in our MPC formulation and
+how we select the horizon N.
+
+00:22:55.050 --> 00:22:59.210
+So the question now is,
+can we tune those tuning
+
+00:22:59.210 --> 00:23:02.950
+knobs in such a way that
+stability is guaranteed?
+
+00:23:09.490 --> 00:23:12.130
+To prove stability,
+we will leverage
+
+00:23:12.130 --> 00:23:14.490
+the tool of Lyapunov stability.
+
+00:23:14.490 --> 00:23:16.830
+Some of you may already
+be familiar with,
+
+00:23:16.830 --> 00:23:18.190
+but if you are not, no problem.
+
+00:23:18.190 --> 00:23:24.650
+I'll give you a very quick
+intro to Lyapunov stability.
+
+00:23:24.650 --> 00:23:27.130
+So what does Lyapunov
+stability say?
+
+00:23:27.130 --> 00:23:31.880
+I will state in a
+second the full theorem,
+
+00:23:31.880 --> 00:23:34.220
+but first, I want to
+give you intuition.
+
+00:23:34.220 --> 00:23:39.080
+So say that you have
+a dynamical system.
+
+00:23:39.080 --> 00:23:46.440
+SK plus 1 equal F of XK, or
+maybe in continuous time,
+
+00:23:46.440 --> 00:23:50.640
+you also have X
+dot equal F of x.
+
+00:23:50.640 --> 00:23:55.520
+Now, the question is
+is the system stable?
+
+00:23:55.520 --> 00:24:00.600
+Roughly speaking, if you start
+close to an equilibrium point,
+
+00:24:00.600 --> 00:24:05.080
+will you go back to
+that equilibrium point
+
+00:24:05.080 --> 00:24:08.900
+without having trajectories
+that go out of whack?
+
+00:24:12.000 --> 00:24:17.620
+If this is a ball, this is
+a stable equilibrium point,
+
+00:24:17.620 --> 00:24:21.600
+because if you have
+a ball in a ball--
+
+00:24:21.600 --> 00:24:23.260
+I never got the
+pronunciation right.
+
+00:24:23.260 --> 00:24:26.720
+But anyway, so this is a
+ball and this is a ball.
+
+00:24:26.720 --> 00:24:31.435
+And so if you have
+a ball in a ball,
+
+00:24:31.435 --> 00:24:35.820
+you know that if you start this
+ball outside of the equilibrium
+
+00:24:35.820 --> 00:24:38.080
+point, then it will
+start oscillating.
+
+00:24:38.080 --> 00:24:40.540
+And then if you have a
+little bit of friction,
+
+00:24:40.540 --> 00:24:42.020
+you dissipate energy.
+
+00:24:42.020 --> 00:24:46.820
+You will go back to
+the bottom of the ball.
+
+00:24:46.820 --> 00:24:49.540
+So this is the case of a
+stable equilibrium point.
+
+00:24:49.540 --> 00:24:53.140
+If you are here, of
+course, this is unstable.
+
+00:24:53.140 --> 00:24:54.480
+This is an equilibrium point.
+
+00:24:54.480 --> 00:24:56.940
+So if you put the ball
+here, it will stay here.
+
+00:24:56.940 --> 00:24:59.940
+But then if you start a little
+bit farther from equilibrium
+
+00:24:59.940 --> 00:25:04.540
+point, it will go down.
+
+00:25:04.540 --> 00:25:07.260
+So say that you have
+a dynamical system
+
+00:25:07.260 --> 00:25:08.960
+and say that you have
+equilibrium point
+
+00:25:08.960 --> 00:25:11.380
+and you want to understand
+if the dynamics are
+
+00:25:11.380 --> 00:25:13.900
+at least locally stable
+around that equilibrium
+
+00:25:13.900 --> 00:25:17.700
+point, how can you show that?
+
+00:25:17.700 --> 00:25:22.060
+Well, all that you know is that
+you have an equilibrium point,
+
+00:25:22.060 --> 00:25:24.140
+and you have a
+transition dynamics.
+
+00:25:24.140 --> 00:25:25.980
+So in principle, what
+you will need to do
+
+00:25:25.980 --> 00:25:29.450
+is to solve for all
+possible initial conditions
+
+00:25:29.450 --> 00:25:32.930
+around your equilibrium
+point, your discrete time
+
+00:25:32.930 --> 00:25:35.730
+equation, or
+differential equation,
+
+00:25:35.730 --> 00:25:38.170
+and then see what happens.
+
+00:25:38.170 --> 00:25:41.170
+Now, in general, solving
+nonlinear differential equation
+
+00:25:41.170 --> 00:25:47.850
+or also discrete time nonlinear
+update equations is complicated.
+
+00:25:47.850 --> 00:25:51.090
+So for the longest time,
+this was a big problem.
+
+00:25:51.090 --> 00:25:53.250
+Then there was a guy,
+Lyapunov, that came in
+
+00:25:53.250 --> 00:25:55.210
+and saying, well, maybe
+we can say something
+
+00:25:55.210 --> 00:25:56.610
+about the stability
+of the system
+
+00:25:56.610 --> 00:25:58.970
+without reasoning
+directly in terms
+
+00:25:58.970 --> 00:26:03.450
+of the evolution of the state.
+
+00:26:03.450 --> 00:26:08.370
+The idea is if we can say that
+there is some function that,
+
+00:26:08.370 --> 00:26:12.610
+loosely speaking, has a notion
+of an energy function, that
+
+00:26:12.610 --> 00:26:16.770
+decreases over time
+along the system
+
+00:26:16.770 --> 00:26:21.570
+trajectories, that could tell
+me something about the evolution
+
+00:26:21.570 --> 00:26:23.010
+of the underlying system.
+
+00:26:23.010 --> 00:26:26.410
+Think about energy being
+dissipating along the evolution
+
+00:26:26.410 --> 00:26:27.540
+of a system.
+
+00:26:27.540 --> 00:26:30.840
+That means that basically
+the system inherently
+
+00:26:30.840 --> 00:26:35.800
+is constraint to reach a
+point of minimum energy
+
+00:26:35.800 --> 00:26:37.300
+because you are
+dissipating energy.
+
+00:26:37.300 --> 00:26:39.130
+So basically, the
+institution is if I
+
+00:26:39.130 --> 00:26:41.380
+don't need to prove that all
+the trajectory goes to 0.
+
+00:26:41.380 --> 00:26:44.240
+If I can say, tell to the system
+that the system is dissipating
+
+00:26:44.240 --> 00:26:46.760
+energy, then probably,
+it will converge
+
+00:26:46.760 --> 00:26:51.000
+to some state of minimum
+energy, loosely speaking.
+
+00:26:51.000 --> 00:26:54.720
+So that's basically what
+the Lyapunov theorem
+
+00:26:54.720 --> 00:26:57.800
+says, considering the
+equilibrium point for a system
+
+00:26:57.800 --> 00:27:01.640
+XK plus 1 equal of F of XK.
+
+00:27:01.640 --> 00:27:05.320
+Equilibrium point means
+that if you are at 0, F of 0
+
+00:27:05.320 --> 00:27:09.400
+is equal to 0, meaning
+that we stay there.
+
+00:27:09.400 --> 00:27:12.440
+Let's consider a set omega,
+which is closed-bounded
+
+00:27:12.440 --> 00:27:14.180
+and positively invariant set.
+
+00:27:14.180 --> 00:27:16.880
+This is some mathematical
+thing that we
+
+00:27:16.880 --> 00:27:19.240
+need, not super important.
+
+00:27:19.240 --> 00:27:23.760
+Let D refer to it as
+the Lyapunov function,
+
+00:27:23.760 --> 00:27:26.100
+be a function that has
+the following property.
+
+00:27:26.100 --> 00:27:28.260
+It's a Z origin.
+
+00:27:28.260 --> 00:27:31.520
+It's a positive
+outside of the origin.
+
+00:27:31.520 --> 00:27:36.380
+And for the evolution
+of system trajectories
+
+00:27:36.380 --> 00:27:40.380
+starting from omega,
+then this function
+
+00:27:40.380 --> 00:27:45.500
+decreases along
+the trajectories.
+
+00:27:45.500 --> 00:27:51.380
+Then X equals 0 is
+asymptotically stable.
+
+00:27:51.380 --> 00:27:54.360
+So essentially, you have--
+
+00:28:03.940 --> 00:28:08.460
+this is your V
+function, V of X. This
+
+00:28:08.460 --> 00:28:12.220
+is a two-dimensional
+state space.
+
+00:28:12.220 --> 00:28:19.660
+If I can say that along all
+possible system trajectories
+
+00:28:19.660 --> 00:28:25.490
+V decreases in value, it means
+that the state trajectory
+
+00:28:25.490 --> 00:28:30.250
+is going to the bottom, which is
+the equilibrium point, since V0
+
+00:28:30.250 --> 00:28:35.170
+is equal to 0, which in give
+means including this notion
+
+00:28:35.170 --> 00:28:41.530
+that you are trying to show that
+your system is losing energy
+
+00:28:41.530 --> 00:28:44.480
+along the system trajectory.
+
+00:28:44.480 --> 00:28:46.730
+Note how with this theorem--
+that's the most important
+
+00:28:46.730 --> 00:28:47.890
+thing--
+
+00:28:47.890 --> 00:28:51.930
+we can claim
+stability properties
+
+00:28:51.930 --> 00:28:56.850
+without having to solve
+explicitly the state transition
+
+00:28:56.850 --> 00:28:59.130
+equations or a system of
+differential equations
+
+00:28:59.130 --> 00:29:01.690
+if we are in continuous time.
+
+00:29:01.690 --> 00:29:04.630
+So that's the main
+thing about Lyapunov.
+
+00:29:04.630 --> 00:29:08.050
+As long as we can find a
+function with such a property,
+
+00:29:08.050 --> 00:29:10.370
+then--
+
+00:29:10.370 --> 00:29:15.130
+so we can argue about stability.
+
+00:29:15.130 --> 00:29:19.290
+Now, you might say, how do we
+find such Lyapunov function V?
+
+00:29:19.290 --> 00:29:20.190
+I mean that's hard.
+
+00:29:20.190 --> 00:29:22.210
+That's actually the hard part.
+
+00:29:22.210 --> 00:29:30.550
+So in some cases, there
+are some physical arguments
+
+00:29:30.550 --> 00:29:33.410
+that allow you to construct a
+Lyapunov function, for example,
+
+00:29:33.410 --> 00:29:34.990
+energy arguments.
+
+00:29:34.990 --> 00:29:37.810
+But in many cases, you
+can use other arguments,
+
+00:29:37.810 --> 00:29:41.230
+and this is the case that
+will be considered for MPC.
+
+00:29:41.230 --> 00:29:44.110
+Now, if you're interested
+in Lyapunov theory,
+
+00:29:44.110 --> 00:29:45.890
+it has a very rich theory.
+
+00:29:45.890 --> 00:29:49.310
+So I would do recommend to have
+a look at some of the references
+
+00:29:49.310 --> 00:29:51.408
+that I provided.
+
+00:29:51.408 --> 00:29:53.950
+For the sake of this class, the
+only thing that I want to say
+
+00:29:53.950 --> 00:29:57.110
+is that there is a tool that
+allows us to infer stability
+
+00:29:57.110 --> 00:30:02.110
+properties for a closed-loop
+system that entails
+
+00:30:02.110 --> 00:30:06.090
+using an auxiliary function
+referred to as Lyapunov function
+
+00:30:06.090 --> 00:30:10.070
+and show that under the system
+trajectories that Lyapunov
+
+00:30:10.070 --> 00:30:13.870
+function has a non-decreasing
+property, namely
+
+00:30:13.870 --> 00:30:15.688
+this property here.
+
+00:30:15.688 --> 00:30:17.230
+So what we're going
+to do now to show
+
+00:30:17.230 --> 00:30:22.580
+stability is to show that
+for the closed-loop MPC law,
+
+00:30:22.580 --> 00:30:26.500
+we can't find a
+Lyapunov function
+
+00:30:26.500 --> 00:30:28.300
+so that we can then
+claim stability
+
+00:30:28.300 --> 00:30:31.980
+for the MPC controller.
+
+00:30:31.980 --> 00:30:36.342
+So the question is, what
+is this Lyapunov function?
+
+00:30:36.342 --> 00:30:37.800
+And here, there is
+another theorem.
+
+00:30:37.800 --> 00:30:40.180
+What is the last one for MPC?
+
+00:30:40.180 --> 00:30:43.120
+So any questions so far?
+
+00:30:45.940 --> 00:30:48.920
+How many of you heard of
+Lyapunov stability before?
+
+00:30:52.420 --> 00:30:53.020
+Uf!
+
+00:30:53.020 --> 00:30:54.100
+OK.
+
+00:30:54.100 --> 00:30:56.000
+Well, in that case,
+read about it.
+
+00:30:56.000 --> 00:31:00.180
+It's a useful and
+interesting tool also with--
+
+00:31:00.180 --> 00:31:03.740
+of course, I present
+it here quite quickly
+
+00:31:03.740 --> 00:31:11.205
+but also with a rich
+physical interpretation.
+
+00:31:11.205 --> 00:31:13.580
+Again, main thing that I want
+to make sure you understand
+
+00:31:13.580 --> 00:31:16.140
+is that it's essentially
+a tool that you
+
+00:31:16.140 --> 00:31:17.820
+have to infer
+stability properties
+
+00:31:17.820 --> 00:31:19.940
+about dynamical
+system without having
+
+00:31:19.940 --> 00:31:23.810
+to resort to
+explicit integration
+
+00:31:23.810 --> 00:31:27.610
+of the underlying
+system equations.
+
+00:31:27.610 --> 00:31:29.810
+It boils down to show
+that for some choice
+
+00:31:29.810 --> 00:31:32.890
+that you had to come up
+with of a function V,
+
+00:31:32.890 --> 00:31:38.850
+you have a non-increasing
+property of the function
+
+00:31:38.850 --> 00:31:42.130
+V. If you do that, then
+you can infer stability.
+
+00:31:42.130 --> 00:31:44.850
+So we're going to use
+that Lyapunov theorem
+
+00:31:44.850 --> 00:31:47.810
+a little bit in a mechanical way
+without spending additional time
+
+00:31:47.810 --> 00:31:49.890
+in explaining its
+origin, but I do
+
+00:31:49.890 --> 00:31:53.490
+encourage you to do a little bit
+of reading on Lyapunov stability
+
+00:31:53.490 --> 00:31:55.190
+because it's an
+interesting topic.
+
+00:32:02.290 --> 00:32:03.410
+OK.
+
+00:32:03.410 --> 00:32:09.130
+So let me state now the
+celebrated stability theorem.
+
+00:32:09.130 --> 00:32:11.830
+This is an interesting case
+whereby for 20 years or so,
+
+00:32:11.830 --> 00:32:14.610
+people applied MPC
+without any theory.
+
+00:32:14.610 --> 00:32:17.610
+And then in the '90s people
+started to develop theory
+
+00:32:17.610 --> 00:32:18.690
+to more--
+
+00:32:18.690 --> 00:32:22.685
+to tune the algorithm in
+a more principled way.
+
+00:32:22.685 --> 00:32:24.310
+Do you know something
+that is happening
+
+00:32:24.310 --> 00:32:27.310
+right now with no theory?
+
+00:32:27.310 --> 00:32:28.090
+Deep learning.
+
+00:32:28.090 --> 00:32:30.190
+I mean, nobody knows
+exactly why it works,
+
+00:32:30.190 --> 00:32:31.570
+but people use it all the time.
+
+00:32:31.570 --> 00:32:32.070
+Who knows?
+
+00:32:32.070 --> 00:32:34.870
+Maybe in 10 years, there
+will be the analog of--
+
+00:32:34.870 --> 00:32:37.150
+I mean, there is some
+theory behind deep learning.
+
+00:32:37.150 --> 00:32:41.030
+But it's typically
+for settings that
+
+00:32:41.030 --> 00:32:45.890
+are not really reflective of
+what people do in practice.
+
+00:32:48.910 --> 00:32:51.370
+So same here, MPC, for 20
+years, people applied it.
+
+00:32:51.370 --> 00:32:52.367
+It just worked well.
+
+00:32:52.367 --> 00:32:53.950
+And then people said,
+no, actually, we
+
+00:32:53.950 --> 00:32:55.390
+can add some theory.
+
+00:32:55.390 --> 00:32:57.970
+There is one of the celebrated
+theorems within this theory.
+
+00:32:57.970 --> 00:32:59.310
+It says the following.
+
+00:32:59.310 --> 00:33:05.770
+Let's assume that we are
+in a LQR type of setting.
+
+00:33:05.770 --> 00:33:11.230
+So the cost is a two norm
+cost, so X transpose QX plus U
+
+00:33:11.230 --> 00:33:12.290
+transpose RU.
+
+00:33:12.290 --> 00:33:14.030
+So we have a quadratic cost.
+
+00:33:14.030 --> 00:33:17.750
+Let's assume that the control
+penalty is positive definite.
+
+00:33:17.750 --> 00:33:19.980
+We also assume that
+the state variant
+
+00:33:19.980 --> 00:33:23.140
+is positive definite
+and the terminal penalty
+
+00:33:23.140 --> 00:33:24.900
+is positive definite.
+
+00:33:24.900 --> 00:33:29.300
+We assume that in sets X,
+Xf, and U contain the origin
+
+00:33:29.300 --> 00:33:30.400
+and are closed.
+
+00:33:30.400 --> 00:33:34.520
+These are just to make
+the math be super solid,
+
+00:33:34.520 --> 00:33:37.380
+but it's not the most
+critical assumption.
+
+00:33:37.380 --> 00:33:40.900
+Let's assume that Xf
+is control invariant.
+
+00:33:40.900 --> 00:33:42.640
+Why do you think we
+make this assumption?
+
+00:33:49.032 --> 00:33:50.020
+MPC is feasible.
+
+00:33:50.020 --> 00:33:51.340
+Exactly.
+
+00:33:51.340 --> 00:33:54.980
+This is to ensure that
+at least MPC is feasible.
+
+00:33:54.980 --> 00:33:56.940
+So we got that covered.
+
+00:33:56.940 --> 00:34:00.340
+And let's assume this
+fourth assumption here
+
+00:34:00.340 --> 00:34:01.520
+that looks very weird.
+
+00:34:01.520 --> 00:34:07.500
+So basically, it's saying
+that there exists a U such
+
+00:34:07.500 --> 00:34:14.900
+that AX plus BU belongs to
+the terminal set and such that
+
+00:34:14.900 --> 00:34:20.810
+under this U, cxu plus p of
+x, u minus p of x is less than
+
+00:34:20.810 --> 00:34:22.170
+or equal to 0.
+
+00:34:22.170 --> 00:34:26.330
+And this has to be
+true for all X in Xf.
+
+00:34:26.330 --> 00:34:32.389
+That's weird but-- and we'll
+see how we use this result.
+
+00:34:32.389 --> 00:34:35.449
+But just to gain a
+sort of intuition,
+
+00:34:35.449 --> 00:34:38.070
+remember the Lyapunov theorem
+that I showed you before.
+
+00:34:38.070 --> 00:34:39.969
+We want to show that
+along the trajectory,
+
+00:34:39.969 --> 00:34:42.650
+something has to
+become negative.
+
+00:34:42.650 --> 00:34:44.610
+Here, basically
+what we want to say
+
+00:34:44.610 --> 00:34:48.650
+is that there exists a U such
+that c plus p at the next state
+
+00:34:48.650 --> 00:34:50.290
+is less than--
+
+00:34:50.290 --> 00:34:51.889
+or actually, let's
+put it this way.
+
+00:34:51.889 --> 00:34:55.570
+P at the next state minus p at
+the current state is less than
+
+00:34:55.570 --> 00:34:57.730
+or equal to minus c.
+
+00:34:57.730 --> 00:34:59.110
+And c is a positive thing.
+
+00:34:59.110 --> 00:35:04.310
+So it's a sort of reminiscent
+of [CLEARS THROAT]
+
+00:35:04.310 --> 00:35:07.370
+a Lyapunov-like condition.
+
+00:35:07.370 --> 00:35:08.510
+We'll see how we apply it.
+
+00:35:08.510 --> 00:35:10.885
+I just wanted to give a little
+bit of intuition about why
+
+00:35:10.885 --> 00:35:11.430
+this way--
+
+00:35:11.430 --> 00:35:13.110
+I mean, the first time
+that I saw it as a student,
+
+00:35:13.110 --> 00:35:15.050
+I said, well, where
+is this coming from?
+
+00:35:15.050 --> 00:35:18.750
+It's like some nightmare
+of a mathematician.
+
+00:35:18.750 --> 00:35:21.630
+So if all of this
+is satisfied, then
+
+00:35:21.630 --> 00:35:25.150
+the origin of the
+closed-loop system
+
+00:35:25.150 --> 00:35:28.450
+is asymptotically stable with
+domain of attraction X of 0,
+
+00:35:28.450 --> 00:35:37.030
+namely, your MPC controller
+if started within capital X0
+
+00:35:37.030 --> 00:35:40.610
+is going to asymptotically
+converge to the origin.
+
+00:35:40.610 --> 00:35:42.130
+So it works.
+
+00:35:46.230 --> 00:35:48.950
+We'll see after I prove this
+theorem how this actually
+
+00:35:48.950 --> 00:35:53.590
+leads to an actionable
+recipe to select the tuning
+
+00:35:53.590 --> 00:35:58.950
+knobs for your MPC, meaning how
+to select X of f, how to pick
+
+00:35:58.950 --> 00:36:01.910
+p, which is your terminal cost.
+
+00:36:01.910 --> 00:36:04.070
+But let's first
+prove the theorem.
+
+00:36:04.070 --> 00:36:07.350
+And the idea here is to
+come up with a Lyapunov
+
+00:36:07.350 --> 00:36:12.950
+function for the MPC
+controller and show
+
+00:36:12.950 --> 00:36:15.360
+that the Lyapunov function is
+indeed a Lyapunov function.
+
+00:36:15.360 --> 00:36:17.180
+So you have this
+decreasing property,
+
+00:36:17.180 --> 00:36:20.220
+which allows us to
+invoke the Lyapunov
+
+00:36:20.220 --> 00:36:25.420
+theorem to claim stability
+of the MPC controller.
+
+00:36:25.420 --> 00:36:26.560
+So the proof is as follows.
+
+00:36:26.560 --> 00:36:29.540
+Let's look at-- this
+proof is quite cute.
+
+00:36:29.540 --> 00:36:32.860
+It's more interesting than
+the persistent feasibility
+
+00:36:32.860 --> 00:36:35.540
+proofs that personally,
+I do not really like.
+
+00:36:35.540 --> 00:36:36.080
+All right.
+
+00:36:36.080 --> 00:36:42.460
+So as your colleague said,
+because of assumption A2,
+
+00:36:42.460 --> 00:36:45.680
+namely that the terminal
+set is control invariant,
+
+00:36:45.680 --> 00:36:48.040
+then MPC is guaranteed to
+be persistently feasible.
+
+00:36:48.040 --> 00:36:49.380
+We already proved that.
+
+00:36:49.380 --> 00:36:51.370
+OK.
+
+00:36:51.370 --> 00:36:58.300
+Now, what I want
+to show is that J 0
+
+00:36:58.300 --> 00:37:07.340
+star x, which is the optimal
+cost of the MPC problem
+
+00:37:07.340 --> 00:37:11.140
+when initialized at x
+is just a function that
+
+00:37:11.140 --> 00:37:13.570
+maps x into a number.
+
+00:37:13.570 --> 00:37:16.690
+That function is indeed
+a Lyapunov function
+
+00:37:16.690 --> 00:37:21.650
+for-- valid Lyapunov function
+for the MPC control law.
+
+00:37:21.650 --> 00:37:23.670
+So that's our Lyap.
+
+00:37:28.490 --> 00:37:31.730
+If that is true, then we can
+invoke the Lyapunov theorem
+
+00:37:31.730 --> 00:37:34.730
+and then show stability.
+
+00:37:34.730 --> 00:37:38.770
+So essentially, what we're
+going to do next is then go step
+
+00:37:38.770 --> 00:37:40.890
+by step through
+Lyapunov theorem,
+
+00:37:40.890 --> 00:37:45.450
+show that all its assumptions
+are verified, most importantly,
+
+00:37:45.450 --> 00:37:48.610
+the decrease in property
+of Lyapunov function
+
+00:37:48.610 --> 00:37:53.530
+for this very specific choice
+and then invoke Lyapunov theorem
+
+00:37:53.530 --> 00:37:55.490
+to claim stability.
+
+00:37:55.490 --> 00:37:57.970
+So let's do it step by step.
+
+00:37:57.970 --> 00:38:09.340
+First of all, let's write the
+closed loop dynamics as x.
+
+00:38:09.340 --> 00:38:15.710
+We will use their
+Xt plus 1 equal f
+
+00:38:15.710 --> 00:38:17.810
+of closed loop of x of t.
+
+00:38:20.390 --> 00:38:24.070
+Remember that f of
+closed loop of x of t
+
+00:38:24.070 --> 00:38:40.150
+is f of x comma the MPC loop.
+
+00:38:40.150 --> 00:38:46.690
+Once I write u as a function of
+x through the MPC optimization,
+
+00:38:46.690 --> 00:38:49.750
+then I get a system that
+is just a function of x.
+
+00:38:49.750 --> 00:38:51.070
+Does that make sense?
+
+00:38:51.070 --> 00:38:53.190
+Once u is written
+as a function of x,
+
+00:38:53.190 --> 00:38:55.350
+I can then write f
+as a function of x.
+
+00:38:55.350 --> 00:38:59.318
+That function, I just
+call it f closed loop.
+
+00:38:59.318 --> 00:39:01.110
+So first of all, we
+have to be disciplined.
+
+00:39:01.110 --> 00:39:06.030
+Is the origin and
+equilibrium point
+
+00:39:06.030 --> 00:39:09.090
+for the closed-loop system?
+
+00:39:09.090 --> 00:39:14.260
+Closed loop meaning once
+we use the MPC controller
+
+00:39:14.260 --> 00:39:16.555
+as our control signal.
+
+00:39:16.555 --> 00:39:18.680
+Well, what does it mean to
+be an equilibrium point?
+
+00:39:18.680 --> 00:39:23.100
+It means that if you are at
+state 0, I solve my MPC problem,
+
+00:39:23.100 --> 00:39:25.900
+I get the optimal
+control, and then
+
+00:39:25.900 --> 00:39:29.980
+I transitioned into a new
+state that is equal to 0.
+
+00:39:29.980 --> 00:39:37.380
+Well, if I start at 0,
+assuming that u equals 0
+
+00:39:37.380 --> 00:39:42.740
+is a feasible control,
+and remembering
+
+00:39:42.740 --> 00:39:50.580
+that our cost is a summation
+of quadratic terms, where
+
+00:39:50.580 --> 00:39:53.420
+Q and R are positive
+definite, what
+
+00:39:53.420 --> 00:39:58.300
+do you think the
+optimal sequence
+
+00:39:58.300 --> 00:40:05.700
+is that the MPC is
+going to optimize for?
+
+00:40:05.700 --> 00:40:09.504
+What is the result of an
+MPC optimization problem?
+
+00:40:09.504 --> 00:40:10.970
+It's supposed to stay at 0.
+
+00:40:10.970 --> 00:40:15.930
+0, because the cost is
+greater than or equal to 0.
+
+00:40:15.930 --> 00:40:20.010
+And if you start at
+0 and use equal to 0,
+
+00:40:20.010 --> 00:40:22.270
+all this cost is going
+to be equal to 0.
+
+00:40:22.270 --> 00:40:24.570
+So 0 is a lower bound,
+and there is this actually
+
+00:40:24.570 --> 00:40:27.070
+you such that you achieve 0.
+
+00:40:27.070 --> 00:40:30.890
+So that's the optimal
+control sequence.
+
+00:40:30.890 --> 00:40:34.370
+But if you start at 0 and
+use control u equal 0,
+
+00:40:34.370 --> 00:40:35.730
+what is your next control?
+
+00:40:35.730 --> 00:40:38.050
+Sorry, your next state.
+
+00:40:38.050 --> 00:40:42.530
+0, because our dynamics
+are AX plus BU.
+
+00:40:42.530 --> 00:40:45.930
+So we just proved at the
+minimum that the origin
+
+00:40:45.930 --> 00:40:50.610
+is an equilibrium point
+for the closed-loop system.
+
+00:40:50.610 --> 00:40:51.850
+Great.
+
+00:40:51.850 --> 00:40:54.190
+Then X0 is bounded and closed.
+
+00:40:54.190 --> 00:40:58.130
+That's a bit of a mathematical
+thing, not too important here.
+
+00:40:58.130 --> 00:41:04.570
+Now, what I want to claim is
+that the optimal cost, which
+
+00:41:04.570 --> 00:41:08.910
+is a legitimate function from
+the state to the real numbers
+
+00:41:08.910 --> 00:41:10.570
+is indeed a Lyapunov function.
+
+00:41:10.570 --> 00:41:15.730
+So now, we have to show all of
+the different criteria for J
+
+00:41:15.730 --> 00:41:17.600
+star to be a Lyapunov
+function, meaning
+
+00:41:17.600 --> 00:41:22.470
+it has to be 0 the origin,
+has to be positive elsewhere,
+
+00:41:22.470 --> 00:41:26.710
+and it has to decrease along
+the system trajectories.
+
+00:41:26.710 --> 00:41:29.830
+So let's start with
+the easiest one.
+
+00:41:29.830 --> 00:41:32.230
+So what is J0 of 0?
+
+00:41:32.230 --> 00:41:34.990
+So if you're at 0,
+we already shown
+
+00:41:34.990 --> 00:41:40.030
+that the optimal solution is u
+equals 0 throughout the horizon.
+
+00:41:40.030 --> 00:41:43.150
+With corresponding
+cost, equal to 0.
+
+00:41:43.150 --> 00:41:43.950
+OK.
+
+00:41:43.950 --> 00:41:45.950
+That's an easy one.
+
+00:41:45.950 --> 00:41:50.870
+Also quite easy is to show
+that if you start at a state
+
+00:41:50.870 --> 00:41:55.690
+x different from 0, then the
+cost is going to be positive,
+
+00:41:55.690 --> 00:42:02.670
+because remember that in your
+cost, you start from k equals 0.
+
+00:42:02.670 --> 00:42:08.300
+You go to n minus
+1 of xk, k, k, k.
+
+00:42:08.300 --> 00:42:13.860
+So you have at least the
+term X0 transpose Q x0.
+
+00:42:13.860 --> 00:42:17.180
+Since X0 is different
+from 0 and q
+
+00:42:17.180 --> 00:42:19.700
+is positive definite,
+at least the first term
+
+00:42:19.700 --> 00:42:21.860
+is going to be
+positive, which means
+
+00:42:21.860 --> 00:42:24.320
+that if you start from a state
+that is different from 0,
+
+00:42:24.320 --> 00:42:26.180
+your optimal cost is positive.
+
+00:42:26.180 --> 00:42:27.900
+OK.
+
+00:42:27.900 --> 00:42:30.700
+So to me, that's the easy
+part of Lyapunov function.
+
+00:42:30.700 --> 00:42:36.780
+The harder part is to show that
+along the system trajectories,
+
+00:42:36.780 --> 00:42:38.640
+this function is
+decreasing over time.
+
+00:42:38.640 --> 00:42:40.440
+So basically, you are
+dissipating energy.
+
+00:42:40.440 --> 00:42:43.540
+You're dissipating cost, which
+means that over time, you'll
+
+00:42:43.540 --> 00:42:48.660
+get the lower bound,
+which is your equilibrium.
+
+00:42:48.660 --> 00:42:49.680
+How do you show that?
+
+00:42:49.680 --> 00:42:56.160
+So let's consider an initial
+condition that is feasible,
+
+00:42:56.160 --> 00:42:59.460
+meaning that there exists a
+feasible solution to the MPC
+
+00:42:59.460 --> 00:43:00.940
+problem.
+
+00:43:00.940 --> 00:43:04.980
+Now, the terminology here
+is a little bit clumsy,
+
+00:43:04.980 --> 00:43:07.030
+but just follow me.
+
+00:43:07.030 --> 00:43:12.090
+So let u subscript
+0 of superscript 0
+
+00:43:12.090 --> 00:43:18.690
+being the optimal
+control sequence
+
+00:43:18.690 --> 00:43:23.510
+computed at the first
+iteration of MPC, iteration 0.
+
+00:43:26.850 --> 00:43:30.490
+And let denote the
+corresponding state trajectory
+
+00:43:30.490 --> 00:43:37.890
+as X of 0, which was our initial
+condition, X10, XN0, and so on.
+
+00:43:37.890 --> 00:43:42.650
+After we apply the first
+control in the control sequence,
+
+00:43:42.650 --> 00:43:45.570
+according to MPC, we
+transition into a new state
+
+00:43:45.570 --> 00:43:48.070
+X1 that, according
+to our dynamics,
+
+00:43:48.070 --> 00:43:52.690
+is simply Ax0 plus
+Bu0 superscript 0.
+
+00:43:52.690 --> 00:43:56.650
+So far, no surprises.
+
+00:43:56.650 --> 00:44:00.010
+Now, let's see what happens
+now that we have transitioned
+
+00:44:00.010 --> 00:44:04.170
+into step one.
+
+00:44:04.170 --> 00:44:09.110
+Let's consider a sequence of
+controls obtained as follows.
+
+00:44:09.110 --> 00:44:14.470
+I take the tail of the
+previous control sequence,
+
+00:44:14.470 --> 00:44:22.350
+and then I append a
+control V that is chosen
+
+00:44:22.350 --> 00:44:26.510
+to be a feasible control.
+
+00:44:26.510 --> 00:44:29.910
+And let's denote this
+corresponding state trajectory.
+
+00:44:29.910 --> 00:44:32.110
+The corresponding
+state trajectory as x1
+
+00:44:32.110 --> 00:44:34.310
+is the point we're
+starting from.
+
+00:44:34.310 --> 00:44:38.110
+Look how the subsequent
+states are essentially
+
+00:44:38.110 --> 00:44:42.870
+the states that would
+have been predicted
+
+00:44:42.870 --> 00:44:48.230
+from a perspective of
+the first planning cycle
+
+00:44:48.230 --> 00:44:51.070
+but starting from time 2.
+
+00:44:51.070 --> 00:44:56.310
+And the last state is
+simply given by AXN plus Bv.
+
+00:44:56.310 --> 00:44:57.070
+Do you see this?
+
+00:44:57.070 --> 00:44:58.487
+This is the part
+where terminology
+
+00:44:58.487 --> 00:44:59.870
+gets a little bit mixed up.
+
+00:44:59.870 --> 00:45:02.250
+Not mixed up, it gets
+a little bit confused.
+
+00:45:02.250 --> 00:45:04.800
+So basically, you have--
+
+00:45:13.620 --> 00:45:25.540
+so at the first computation
+cycle, you have u0, 0, u1, 0....
+
+00:45:25.540 --> 00:45:28.980
+Un0.
+
+00:45:28.980 --> 00:45:32.700
+And then you have minus 1.
+
+00:45:32.700 --> 00:45:37.060
+And then correspondingly,
+you start from state x0.
+
+00:45:37.060 --> 00:45:42.940
+You go into state x10......
+
+00:45:42.940 --> 00:45:46.360
+XN minus 1, XN0.
+
+00:45:49.220 --> 00:45:50.720
+OK.
+
+00:45:50.720 --> 00:45:56.460
+So now, let's assume that we
+transition into the new state
+
+00:45:56.460 --> 00:46:07.315
+X1 equal to of A of
+X0 plus Bu 0 0, which
+
+00:46:07.315 --> 00:46:09.690
+means that basically, you are
+transitioning to this state
+
+00:46:09.690 --> 00:46:10.930
+here.
+
+00:46:10.930 --> 00:46:16.150
+So if you now start applying
+the state controlled sequence,
+
+00:46:16.150 --> 00:46:19.545
+you will transition
+along the same states
+
+00:46:19.545 --> 00:46:21.170
+that you predicted
+from the perspective
+
+00:46:21.170 --> 00:46:23.290
+of the previous planning cycle.
+
+00:46:23.290 --> 00:46:26.410
+So that's what I'm
+trying to say here.
+
+00:46:26.410 --> 00:46:32.010
+And the last state, so the state
+that is one-time step after
+
+00:46:32.010 --> 00:46:34.690
+is AXN plus Bv.
+
+00:46:34.690 --> 00:46:36.310
+So nothing
+particularly deep here.
+
+00:46:36.310 --> 00:46:38.130
+You just-- a little
+bit of bookkeeping
+
+00:46:38.130 --> 00:46:41.930
+in terms of terminology.
+
+00:46:41.930 --> 00:46:45.090
+Any questions here?
+
+00:46:45.090 --> 00:46:46.690
+Yeah.
+
+00:46:46.690 --> 00:46:49.170
+I guess one is doing
+four basically.
+
+00:46:49.170 --> 00:46:51.750
+I mean the quadratic
+cost is convex, right?
+
+00:46:51.750 --> 00:46:53.710
+Can't we just argue
+that it's decreasing.
+
+00:46:53.710 --> 00:46:55.130
+So it's like a missed one.
+
+00:46:55.130 --> 00:46:58.650
+Well, we have to show
+that it decreases
+
+00:46:58.650 --> 00:47:05.890
+along the trajectories generated
+by the closed-loop system.
+
+00:47:05.890 --> 00:47:09.310
+So it's not entirely
+obvious that when
+
+00:47:09.310 --> 00:47:13.270
+you evaluate the cost
+along those trajectories,
+
+00:47:13.270 --> 00:47:16.270
+the cost necessarily
+is going to decrease.
+
+00:47:16.270 --> 00:47:18.910
+Because our figure is
+basically this two or--
+
+00:47:18.910 --> 00:47:19.450
+Yeah.
+
+00:47:19.450 --> 00:47:20.390
+All right.
+
+00:47:20.390 --> 00:47:25.090
+Actually, it's you wouldn't
+know a priori that is the case.
+
+00:47:25.090 --> 00:47:27.810
+Do we have all four
+of all free points
+
+00:47:27.810 --> 00:47:30.270
+is calculated based off
+of your initial state.
+
+00:47:30.270 --> 00:47:30.770
+Yes.
+
+00:47:30.770 --> 00:47:35.110
+But then that final control that
+you're implementing v, is that--
+
+00:47:35.110 --> 00:47:37.350
+For now, this is just
+a v. The only thing
+
+00:47:37.350 --> 00:47:39.390
+that I'm saying is that
+this feasible q now
+
+00:47:39.390 --> 00:47:44.150
+will show that for a more
+sophisticated choice of v,
+
+00:47:44.150 --> 00:47:47.710
+I can find a control sequence
+that allows me to tell something
+
+00:47:47.710 --> 00:47:51.030
+about the decreasing properties
+of the Lyapunov function.
+
+00:47:51.030 --> 00:47:58.790
+For now, it's just a
+dumb control sequence
+
+00:47:58.790 --> 00:48:01.940
+that I want to consider.
+
+00:48:01.940 --> 00:48:07.340
+On this note, let's be a bit
+smarter and let's-- we know that
+
+00:48:07.340 --> 00:48:09.860
+X and 0 belongs to Xf.
+
+00:48:09.860 --> 00:48:12.440
+This is the terminal
+constraint for the MPC
+
+00:48:12.440 --> 00:48:17.020
+problem solved at step 0.
+
+00:48:17.020 --> 00:48:20.100
+Since Xf is control
+invariant, I know
+
+00:48:20.100 --> 00:48:22.820
+that there exists a
+feasible control that allows
+
+00:48:22.820 --> 00:48:25.740
+me to transition back into Xf.
+
+00:48:25.740 --> 00:48:29.420
+So now, I'm refining
+the selection of v
+
+00:48:29.420 --> 00:48:34.700
+into the selection of a
+specific v that allows me to--
+
+00:48:34.700 --> 00:48:44.400
+for AX plus Bv to stay in the
+control invariant set X of f.
+
+00:48:47.180 --> 00:48:51.420
+That means that this
+control sequence is now
+
+00:48:51.420 --> 00:48:55.860
+a feasible sequence for the MPC
+problem starting at step one.
+
+00:48:55.860 --> 00:48:56.380
+Why?
+
+00:48:56.380 --> 00:49:00.840
+Because v satisfies the
+control constraints,
+
+00:49:00.840 --> 00:49:06.880
+and the state trajectory
+is a feasible in the sense
+
+00:49:06.880 --> 00:49:14.520
+that all of the
+states X to 0, X and 0
+
+00:49:14.520 --> 00:49:18.520
+are going to satisfy the
+state constraints because
+
+00:49:18.520 --> 00:49:22.280
+of how the trajectory
+of step 0 was computed.
+
+00:49:22.280 --> 00:49:25.120
+And the terminal
+constraint is also
+
+00:49:25.120 --> 00:49:28.600
+satisfied because a
+chosen v in such a way
+
+00:49:28.600 --> 00:49:32.760
+that the final state is in Xf.
+
+00:49:32.760 --> 00:49:35.080
+So we satisfy the
+terminal constraint.
+
+00:49:35.080 --> 00:49:39.080
+So all of this to say that this
+specific choice of a control
+
+00:49:39.080 --> 00:49:44.000
+sequence is feasible control
+sequence for the MPC problem
+
+00:49:44.000 --> 00:49:47.280
+at step one.
+
+00:49:47.280 --> 00:49:49.640
+So now, what we're
+trying to see is
+
+00:49:49.640 --> 00:49:53.760
+whether we can use this control
+sequence to say something
+
+00:49:53.760 --> 00:49:59.690
+about the evolution of the
+cast J0 along the trajectory.
+
+00:49:59.690 --> 00:50:05.150
+So essentially, we want
+to say is a J star of X1
+
+00:50:05.150 --> 00:50:07.070
+less than J star of X0?
+
+00:50:07.070 --> 00:50:09.252
+That's what we're trying
+to get to the point.
+
+00:50:09.252 --> 00:50:10.710
+Because if we can
+say that, then we
+
+00:50:10.710 --> 00:50:13.517
+can invoke the Lyapunov theorem.
+
+00:50:13.517 --> 00:50:15.350
+Now, for now, the only
+thing that we can say
+
+00:50:15.350 --> 00:50:19.870
+is that the J star
+0 of X1 is less than
+
+00:50:19.870 --> 00:50:29.670
+or equal to the cost related to
+applying this candidate control
+
+00:50:29.670 --> 00:50:30.630
+sequence.
+
+00:50:30.630 --> 00:50:34.390
+Why less than or equal
+to as opposed to equal?
+
+00:50:34.390 --> 00:50:38.270
+Because for now, all we know is
+that this is a feasible control
+
+00:50:38.270 --> 00:50:40.870
+sequence, but it's not
+necessarily optimal.
+
+00:50:40.870 --> 00:50:42.470
+So the only thing
+that we can say
+
+00:50:42.470 --> 00:50:44.950
+is that the optimal
+cost is upper
+
+00:50:44.950 --> 00:50:49.590
+bounded by a cost of a
+feasible control sequence.
+
+00:50:49.590 --> 00:50:51.090
+OK.
+
+00:50:54.590 --> 00:50:59.960
+Now, let's add and
+subtract a couple of terms.
+
+00:50:59.960 --> 00:51:02.280
+So we add the p of x and 0.
+
+00:51:02.280 --> 00:51:03.120
+We subtract it.
+
+00:51:03.120 --> 00:51:07.700
+We add the C of x0,
+u0, and we subtract it.
+
+00:51:07.700 --> 00:51:12.300
+Look at these
+three terms in red.
+
+00:51:12.300 --> 00:51:14.760
+When you sum them,
+what do you get?
+
+00:51:18.260 --> 00:51:28.060
+Remember that uk superscript
+0 was the optimal control
+
+00:51:28.060 --> 00:51:32.420
+sequence for the MPC problem
+from the perspective of stage 0.
+
+00:51:32.420 --> 00:51:34.480
+So when you sum those
+terms, what do you get?
+
+00:51:41.100 --> 00:51:44.720
+So it's the summation
+of the stage-wise cost.
+
+00:51:44.720 --> 00:51:46.467
+This is a terminal cost.
+
+00:51:46.467 --> 00:51:48.800
+So it looks like the cost of
+an optimal control problem,
+
+00:51:48.800 --> 00:51:49.300
+which one?
+
+00:51:49.300 --> 00:51:51.100
+The xn0 or X of f.
+
+00:51:51.100 --> 00:51:51.900
+Exactly.
+
+00:51:51.900 --> 00:51:55.200
+Plus 1 for your grade.
+
+00:51:55.200 --> 00:51:55.700
+Yes.
+
+00:51:55.700 --> 00:51:57.240
+The two and--
+
+00:51:57.240 --> 00:51:58.340
+That's exactly right.
+
+00:51:58.340 --> 00:52:06.480
+So all of these terms really
+correspond to the optimal cost,
+
+00:52:06.480 --> 00:52:10.240
+because we're using the optimal
+control sequence of MPC problems
+
+00:52:10.240 --> 00:52:13.600
+solved from the
+perspective of step 0.
+
+00:52:13.600 --> 00:52:16.200
+So I can substitute from that.
+
+00:52:16.200 --> 00:52:19.300
+So those three terms are
+now encapsulated here.
+
+00:52:19.300 --> 00:52:20.840
+And then I have the
+remaining terms.
+
+00:52:24.440 --> 00:52:29.340
+Now we play assumption 3,
+that Lyapunov-like assumption.
+
+00:52:32.480 --> 00:52:37.800
+Assumption 3 says that
+for all states in X of f,
+
+00:52:37.800 --> 00:52:40.840
+there exists a control.
+
+00:52:40.840 --> 00:52:46.440
+Let's call it v
+star with a property
+
+00:52:46.440 --> 00:52:50.000
+that AX plus Bv
+star is in X of f.
+
+00:52:50.000 --> 00:52:56.870
+That's what v star
+does, such that--
+
+00:52:56.870 --> 00:52:57.910
+let's go back.
+
+00:52:57.910 --> 00:52:58.890
+Let me write it here.
+
+00:52:58.890 --> 00:52:59.570
+I think it's--
+
+00:53:06.910 --> 00:53:09.410
+So we keep it here.
+
+00:53:09.410 --> 00:53:11.910
+It will also be useful later.
+
+00:53:11.910 --> 00:53:27.750
+So the minimum over
+u, minimum over u
+
+00:53:27.750 --> 00:53:39.830
+in u such that the Ax plus
+Bu is in Xf of minus px
+
+00:53:39.830 --> 00:53:46.290
+plus a C of x, u
+plus p of Ax plus Bu.
+
+00:53:49.550 --> 00:53:55.100
+All of this is less than or
+equal to 0 for all X in Xf.
+
+00:53:55.100 --> 00:53:56.600
+So that's assumption 3.
+
+00:54:03.060 --> 00:54:07.100
+So now what I'm saying
+is that among all those
+
+00:54:07.100 --> 00:54:15.220
+the upper bar that allow me
+to transition into the control
+
+00:54:15.220 --> 00:54:18.540
+invariant set X of
+f, I pick the one
+
+00:54:18.540 --> 00:54:20.560
+that minimizes this quantity.
+
+00:54:20.560 --> 00:54:24.540
+And I know that the one that
+minimizes this quantity has
+
+00:54:24.540 --> 00:54:28.620
+the property that
+the p of ax plus b
+
+00:54:28.620 --> 00:54:44.700
+bar minus p of x plus c of
+x v bar, all of that stuff
+
+00:54:44.700 --> 00:54:47.500
+is greater than or equal to 0.
+
+00:54:47.500 --> 00:54:53.160
+So for that specific
+choice of the upper bar,
+
+00:54:53.160 --> 00:54:56.560
+the three quantities in
+blue sum up to something
+
+00:54:56.560 --> 00:54:59.040
+that is less than
+or equal to 0, which
+
+00:54:59.040 --> 00:55:02.680
+allows me to derive the
+key inequality whereby
+
+00:55:02.680 --> 00:55:09.120
+J star 0 of x1 is less than J
+star 0 of x0 minus this term
+
+00:55:09.120 --> 00:55:09.620
+here.
+
+00:55:15.480 --> 00:55:23.680
+So basically, I have J star
+x0 is equal to-- is less than
+
+00:55:23.680 --> 00:55:25.760
+or equal to--
+
+00:55:25.760 --> 00:55:28.480
+oops, sorry.
+
+00:55:28.480 --> 00:55:43.140
+J star of x1 is 0
+plus c minus c of x0.
+
+00:55:50.550 --> 00:55:54.150
+Oh, sorry, minus c is 0.
+
+00:55:54.150 --> 00:56:08.790
+U, 0, 0 plus a term, and
+then note that the term
+
+00:56:08.790 --> 00:56:11.190
+is less than or equal to 0.
+
+00:56:11.190 --> 00:56:16.090
+So that implies that the J star
+x1 is less than just J star 0
+
+00:56:16.090 --> 00:56:18.310
+x0 minus this quantity here.
+
+00:56:22.710 --> 00:56:23.610
+Does it make sense?
+
+00:56:26.190 --> 00:56:29.070
+Please, this term by
+assumption 3, I know
+
+00:56:29.070 --> 00:56:31.270
+is less than or equal to 0.
+
+00:56:31.270 --> 00:56:35.110
+Well, but c of x0
+u0 is greater than 0
+
+00:56:35.110 --> 00:56:38.250
+for all initial states that
+are not the origin, again,
+
+00:56:38.250 --> 00:56:42.230
+because the cost is a
+positive for all states that
+
+00:56:42.230 --> 00:56:44.790
+are not equal to the
+origin because of--
+
+00:56:44.790 --> 00:56:46.550
+is a quadratic cost.
+
+00:56:46.550 --> 00:56:52.940
+So we have just shown that
+the J star x1 is strictly
+
+00:56:52.940 --> 00:56:57.860
+less than the J star x0,
+meaning that the cost is indeed
+
+00:56:57.860 --> 00:57:01.660
+guaranteed to decrease along
+the system trajectories.
+
+00:57:01.660 --> 00:57:05.400
+So then, we can invoke the
+Lyapunov stability theory,
+
+00:57:05.400 --> 00:57:09.780
+and then claim that indeed,
+the MPC control law leads
+
+00:57:09.780 --> 00:57:12.407
+to closed-loop dynamics that
+are asymptotically stable,
+
+00:57:12.407 --> 00:57:14.240
+so are guaranteed to
+converge to the origin,
+
+00:57:14.240 --> 00:57:16.620
+assuming the assumptions
+are verified with domain
+
+00:57:16.620 --> 00:57:20.820
+of attraction x and 0.
+
+00:57:20.820 --> 00:57:22.815
+Any questions here?
+
+00:57:22.815 --> 00:57:25.980
+Is it an interesting proof?
+
+00:57:25.980 --> 00:57:27.480
+I think that's an
+interesting proof.
+
+00:57:27.480 --> 00:57:29.060
+It's actually quite powerful.
+
+00:57:29.060 --> 00:57:32.580
+So try to go through it a few
+times just to internalize it.
+
+00:57:32.580 --> 00:57:35.760
+This is a very important proof.
+
+00:57:35.760 --> 00:57:36.260
+OK.
+
+00:57:36.260 --> 00:57:38.500
+So now, we have a
+theorem that allow
+
+00:57:38.500 --> 00:57:41.380
+us to reason in terms of
+persistent feasibility,
+
+00:57:41.380 --> 00:57:44.540
+a theorem that allow us to
+reason in terms of stability.
+
+00:57:44.540 --> 00:57:46.600
+How do we make those
+theorems actionable?
+
+00:57:46.600 --> 00:57:48.840
+Meaning how do we
+link those theorems
+
+00:57:48.840 --> 00:57:53.600
+to specific selections for x
+of f and the terminal cost?
+
+00:57:53.600 --> 00:57:57.280
+Which in our case, we assume
+the terminal cost is quadratic.
+
+00:57:57.280 --> 00:58:01.200
+So we want to understand
+what this theorem tells us
+
+00:58:01.200 --> 00:58:05.067
+in terms of how we
+choose a capital P.
+
+00:58:05.067 --> 00:58:06.900
+And we're going to see
+a couple of settings.
+
+00:58:06.900 --> 00:58:10.580
+So the first setting is
+we're given linear dynamics.
+
+00:58:10.580 --> 00:58:13.000
+But now, A is
+asymptotically stable,
+
+00:58:13.000 --> 00:58:20.000
+meaning that all eigenvalues of
+A lie within the unit circle.
+
+00:58:20.000 --> 00:58:26.480
+So let's define Xf as the
+maximally positive invariant
+
+00:58:26.480 --> 00:58:30.520
+set for the system xt
+plus 1 equals A of xt.
+
+00:58:30.520 --> 00:58:33.260
+How do we compute this
+positive invariant set?
+
+00:58:33.260 --> 00:58:35.200
+I'll show you in
+a couple of slides
+
+00:58:35.200 --> 00:58:39.720
+the link to a very handy
+toolbox to compute these sets
+
+00:58:39.720 --> 00:58:41.200
+numerically.
+
+00:58:41.200 --> 00:58:43.560
+So you just use
+this Matlab toolbox,
+
+00:58:43.560 --> 00:58:48.270
+write down a couple of commands,
+and you will get this set.
+
+00:58:48.270 --> 00:58:53.030
+Now, X of f as defined
+is a control invariant
+
+00:58:53.030 --> 00:58:58.550
+set since once you
+are in this set,
+
+00:58:58.550 --> 00:59:04.030
+since u equals 0 is a feasible
+set, then A of 0 is 0.
+
+00:59:04.030 --> 00:59:05.210
+So you stay there.
+
+00:59:14.030 --> 00:59:16.190
+So the persistent
+feasibility part
+
+00:59:16.190 --> 00:59:18.130
+is relatively straightforward.
+
+00:59:18.130 --> 00:59:19.550
+Now, how do we prove--
+
+00:59:19.550 --> 00:59:22.750
+actually, how do we use
+the stability theorem?
+
+00:59:22.750 --> 00:59:28.350
+Remember what the stability
+theorem is asking us.
+
+00:59:28.350 --> 00:59:31.930
+Actually, let me write it in
+terms of a quadratic cost.
+
+00:59:41.190 --> 00:59:50.660
+So minus x transpose Px plus x
+transpose qx plus u transpose Ru
+
+00:59:50.660 --> 01:00:00.380
+plus Ax plus Bu
+transpose P Ax plus Bu.
+
+01:00:00.380 --> 01:00:03.980
+So we want this stuff to
+be less than or equal to 0
+
+01:00:03.980 --> 01:00:05.880
+for all x in Xf.
+
+01:00:13.140 --> 01:00:18.340
+So let's consider the
+specific control u equal to 0.
+
+01:00:18.340 --> 01:00:21.460
+The question is for
+this specific control u,
+
+01:00:21.460 --> 01:00:23.740
+is this inequality satisfied?
+
+01:00:23.740 --> 01:00:25.360
+If that is the
+case, that's great.
+
+01:00:25.360 --> 01:00:31.580
+Then we can [CLEARS THROAT]
+infer stability.
+
+01:00:31.580 --> 01:00:36.940
+Now, if you set u equal
+to 0, this term goes away.
+
+01:00:36.940 --> 01:00:38.660
+It's equal to 0.
+
+01:00:38.660 --> 01:00:39.720
+This term goes away.
+
+01:00:39.720 --> 01:00:40.760
+This term goes away.
+
+01:00:40.760 --> 01:00:45.360
+So essentially, we are left with
+the inequality minus x transpose
+
+01:00:45.360 --> 01:00:52.200
+Px plus x transpose
+Qx plus x transpose,
+
+01:00:52.200 --> 01:00:58.680
+A transpose PAx less
+than or equal to 0.
+
+01:00:58.680 --> 01:01:02.980
+It just so happens that this is
+not a random matrix equation.
+
+01:01:02.980 --> 01:01:05.080
+It's actually a very
+famous equation referred to
+
+01:01:05.080 --> 01:01:07.400
+as the Lyapunov equation.
+
+01:01:07.400 --> 01:01:14.520
+And it turns out that if Q is
+positive definite and IA is
+
+01:01:14.520 --> 01:01:18.760
+a statically stable, there
+exists a positive definite P
+
+01:01:18.760 --> 01:01:22.920
+such that all this quantity
+is equal to 0, which
+
+01:01:22.920 --> 01:01:25.920
+satisfies this condition here.
+
+01:01:25.920 --> 01:01:26.960
+So what does that mean?
+
+01:01:26.960 --> 01:01:30.600
+That if you choose
+P as the solution
+
+01:01:30.600 --> 01:01:32.160
+to the Lyapunov
+equation, you are
+
+01:01:32.160 --> 01:01:35.020
+guaranteed that such a solution
+exists and is positive definite.
+
+01:01:35.020 --> 01:01:37.720
+So it satisfy all our
+stability assumptions.
+
+01:01:37.720 --> 01:01:41.080
+With that selection of
+P as a terminal cost,
+
+01:01:41.080 --> 01:01:46.590
+MPC is going to be
+asymptotically stable.
+
+01:01:46.590 --> 01:01:50.950
+So what's the intuition here?
+
+01:01:50.950 --> 01:01:55.230
+The intuition here is
+that basically, you
+
+01:01:55.230 --> 01:02:03.350
+optimize MPC in such a way
+that after n steps, you end up,
+
+01:02:03.350 --> 01:02:11.630
+if you do nothing afterwards,
+into these all infinity set.
+
+01:02:11.630 --> 01:02:13.430
+And then you will let
+your natural dynamics
+
+01:02:13.430 --> 01:02:16.470
+that are stable to
+drive you to the origin.
+
+01:02:16.470 --> 01:02:19.750
+In reality, you won't do that,
+because by re-optimizing,
+
+01:02:19.750 --> 01:02:24.050
+you're always going to find
+some different control sequence.
+
+01:02:24.050 --> 01:02:27.070
+But basically, that
+set serves as an anchor
+
+01:02:27.070 --> 01:02:31.670
+to make sure that
+you stay grounded
+
+01:02:31.670 --> 01:02:34.150
+into desirable behavior.
+
+01:02:34.150 --> 01:02:35.810
+Mechanically, what do you do?
+
+01:02:35.810 --> 01:02:37.510
+You call a computational
+tool, that I'm
+
+01:02:37.510 --> 01:02:40.030
+going to mention in
+a second, to compute
+
+01:02:40.030 --> 01:02:42.200
+such a maximal
+positive invariant set,
+
+01:02:42.200 --> 01:02:45.780
+and then we choose a P in order
+to solve the Lyapunov equation.
+
+01:02:45.780 --> 01:02:48.260
+It's another one-line
+command in Matlab.
+
+01:02:48.260 --> 01:02:50.028
+You plug those
+numbers into your MPC.
+
+01:02:50.028 --> 01:02:52.320
+You're guaranteed persistent
+feasibility and stability.
+
+01:02:56.700 --> 01:03:06.723
+So what if A is not stable?
+
+01:03:06.723 --> 01:03:08.140
+Meaning that your
+natural dynamics
+
+01:03:08.140 --> 01:03:11.117
+don't help you with going to
+the origin without control.
+
+01:03:11.117 --> 01:03:13.700
+What that means is that you have
+to do active control in order
+
+01:03:13.700 --> 01:03:16.140
+to make sure that
+you go to the origin.
+
+01:03:16.140 --> 01:03:22.100
+So in this case, you still have
+a similar procedure in order
+
+01:03:22.100 --> 01:03:26.860
+to tune your parameters.
+
+01:03:26.860 --> 01:03:31.060
+But you now use
+LQR active control
+
+01:03:31.060 --> 01:03:35.140
+as basically your
+controller that
+
+01:03:35.140 --> 01:03:39.600
+allows you to anchor your future
+dynamics into some dynamics that
+
+01:03:39.600 --> 01:03:41.520
+will lead you to the origin.
+
+01:03:41.520 --> 01:03:45.040
+Specifically, let f
+infinity be the optimal gain
+
+01:03:45.040 --> 01:03:47.680
+for the infinite
+horizon LQR controller.
+
+01:03:47.680 --> 01:03:51.440
+Set X of f as the maximum
+positive invariant set
+
+01:03:51.440 --> 01:03:55.580
+with respect to the LQR
+closed-loop dynamics,
+
+01:03:55.580 --> 01:04:03.800
+which means that after n
+steps, when you hit set X of f,
+
+01:04:03.800 --> 01:04:05.220
+if X of f.
+
+01:04:05.220 --> 01:04:07.600
+If you don't do any
+replanning, at least
+
+01:04:07.600 --> 01:04:10.880
+you have a feasible LQR
+controller that allows you
+
+01:04:10.880 --> 01:04:15.160
+to stay within a set X of f.
+
+01:04:15.160 --> 01:04:19.200
+But then, if you choose
+the terminal cost
+
+01:04:19.200 --> 01:04:24.240
+p in such a way that
+your LQR controller
+
+01:04:24.240 --> 01:04:26.640
+which essentially brings
+you to the origin,
+
+01:04:26.640 --> 01:04:29.445
+then you are guaranteed
+to be stable.
+
+01:04:29.445 --> 01:04:31.320
+Now, here the derivation
+is a little bit more
+
+01:04:31.320 --> 01:04:32.820
+convoluted algebraically.
+
+01:04:32.820 --> 01:04:35.000
+So I'm not going to show it.
+
+01:04:35.000 --> 01:04:38.850
+But essentially, the style of
+reasoning would be the same.
+
+01:04:38.850 --> 01:04:44.470
+We plug the controller, the LQR
+controller, u equal f infinity x
+
+01:04:44.470 --> 01:04:46.550
+into this inequality.
+
+01:04:46.550 --> 01:04:51.670
+And then we will show
+that if we pick p
+
+01:04:51.670 --> 01:04:54.910
+as the solution of
+this equation, then
+
+01:04:54.910 --> 01:04:56.090
+we will have equality.
+
+01:04:56.090 --> 01:04:59.750
+So we will satisfy the
+stability condition.
+
+01:04:59.750 --> 01:05:03.010
+And this equation, again,
+is not a random equation.
+
+01:05:03.010 --> 01:05:06.030
+This is the Riccati
+equation, and it's
+
+01:05:06.030 --> 01:05:08.310
+guaranteed to have a solution.
+
+01:05:08.310 --> 01:05:12.550
+So bottom line, if you
+have an unstable system,
+
+01:05:12.550 --> 01:05:16.910
+you pick your terminal set as
+the maximum positive invariant
+
+01:05:16.910 --> 01:05:20.950
+set for the closed-loop
+LQR dynamics.
+
+01:05:20.950 --> 01:05:24.410
+You pick p as a solution to the
+discrete time Riccati equation.
+
+01:05:24.410 --> 01:05:26.410
+You plug those numbers
+into your MPC controller,
+
+01:05:26.410 --> 01:05:28.785
+and then you're guaranteed to
+have persistent feasibility
+
+01:05:28.785 --> 01:05:29.430
+and stability.
+
+01:05:29.430 --> 01:05:33.430
+And you will have a couple
+of problems in your present.
+
+01:05:33.430 --> 01:05:35.970
+Now, these are not necessarily
+the best possible choices,
+
+01:05:35.970 --> 01:05:40.060
+but just some choices
+are very procedural.
+
+01:05:40.060 --> 01:05:44.500
+So if A is stable maximally
+positive invariant set
+
+01:05:44.500 --> 01:05:46.980
+with respect to the
+uncontrolled dynamics,
+
+01:05:46.980 --> 01:05:49.900
+choose p as the solution
+to Lyapunov equation.
+
+01:05:49.900 --> 01:05:54.140
+A is unstable,
+choose your terminal
+
+01:05:54.140 --> 01:05:59.320
+set as the positive invariant
+set for your LQR closed-loop
+
+01:05:59.320 --> 01:05:59.820
+dynamics.
+
+01:05:59.820 --> 01:06:07.777
+And choose p as a solution
+to the Riccati equation,
+
+01:06:07.777 --> 01:06:09.860
+with the idea, again, that
+you basically carve out
+
+01:06:09.860 --> 01:06:13.660
+a region X of f where the
+optimal unconstrained controller
+
+01:06:13.660 --> 01:06:15.540
+is constrained to
+be feasible, and it
+
+01:06:15.540 --> 01:06:19.120
+is used as a value function
+to guarantee stability.
+
+01:06:22.460 --> 01:06:22.960
+Well.
+
+01:06:22.960 --> 01:06:24.740
+That was quite a bit.
+
+01:06:24.740 --> 01:06:29.340
+Let me conclude with
+two very quick things.
+
+01:06:29.340 --> 01:06:31.980
+So the first one is
+that so far, we've
+
+01:06:31.980 --> 01:06:36.060
+been looking at MPC through the
+lens of online optimization.
+
+01:06:36.060 --> 01:06:39.620
+So in measuring your state, you
+solving an optimization problem
+
+01:06:39.620 --> 01:06:41.560
+online, basically
+on your device.
+
+01:06:41.560 --> 01:06:42.700
+Get the control sequence.
+
+01:06:42.700 --> 01:06:46.520
+You apply the first control
+input, and then you reoptimize.
+
+01:06:46.520 --> 01:06:51.960
+Now, it turns out that there
+is also an explicit offline
+
+01:06:51.960 --> 01:06:58.040
+version of MPC that allow you to
+pre-compute MPC controller such
+
+01:06:58.040 --> 01:07:03.360
+that you don't have to do
+any optimization online.
+
+01:07:03.360 --> 01:07:07.360
+To appreciate that, let's
+go back to our usual setup.
+
+01:07:07.360 --> 01:07:09.200
+By the way, MPC can
+be generalized also
+
+01:07:09.200 --> 01:07:12.080
+to nonlinear systems.
+
+01:07:12.080 --> 01:07:14.240
+But here, the goal
+of this class is
+
+01:07:14.240 --> 01:07:16.820
+to give a broad overview of
+different control techniques.
+
+01:07:16.820 --> 01:07:19.445
+So we'll only discuss it in the
+context of linear system, which
+
+01:07:19.445 --> 01:07:21.000
+is already quite interesting.
+
+01:07:21.000 --> 01:07:21.920
+So we're back to--
+
+01:07:21.920 --> 01:07:26.360
+I mean, usual setup linear
+dynamics quadratic cost.
+
+01:07:26.360 --> 01:07:31.800
+So it turns out that the
+solution to the constraint LQR
+
+01:07:31.800 --> 01:07:36.070
+problem is a control, which is
+a continuous piecewise affine
+
+01:07:36.070 --> 01:07:39.230
+function and a polyhedral
+partition of the state space
+
+01:07:39.230 --> 01:07:42.190
+that is--
+
+01:07:42.190 --> 01:07:44.450
+There exists a partition,
+the state space,
+
+01:07:44.450 --> 01:07:50.710
+so that if say, in 1,
+2, 3, 4, 5 regions such
+
+01:07:50.710 --> 01:07:57.110
+that if your initial state for
+your MPC computation is here,
+
+01:07:57.110 --> 01:08:00.010
+you can just look
+at a lookup table.
+
+01:08:00.010 --> 01:08:04.270
+And then the optimal control
+policy is simply F of x plus g,
+
+01:08:04.270 --> 01:08:09.550
+where the F, K, J and G,
+K, J are gains associated
+
+01:08:09.550 --> 01:08:11.110
+with this specific region.
+
+01:08:11.110 --> 01:08:13.790
+So basically, the
+solution to LQR
+
+01:08:13.790 --> 01:08:22.750
+is just a piecewise
+affine control,
+
+01:08:22.750 --> 01:08:27.630
+which allows you to basically
+do a lookup table search online,
+
+01:08:27.630 --> 01:08:29.990
+meaning that you
+measure the state.
+
+01:08:29.990 --> 01:08:33.689
+You see in which
+region the state falls.
+
+01:08:33.689 --> 01:08:38.998
+You pull out the gains
+corresponding to that region,
+
+01:08:38.998 --> 01:08:40.790
+and then you have your
+optimal control law.
+
+01:08:40.790 --> 01:08:42.957
+There is no optimization
+that you have to do online.
+
+01:08:46.770 --> 01:08:50.649
+And these terms F and G and the
+partition of the state space
+
+01:08:50.649 --> 01:08:52.694
+is all computed offline.
+
+01:08:52.694 --> 01:08:54.069
+I'm not telling
+you how to do it.
+
+01:08:54.069 --> 01:08:56.729
+I'm just saying that
+this can be done.
+
+01:08:56.729 --> 01:08:58.109
+So you say, great.
+
+01:08:58.109 --> 01:09:01.370
+Why don't you do
+it all the time?
+
+01:09:01.370 --> 01:09:03.310
+I mean, this is great
+for a number of reasons.
+
+01:09:03.310 --> 01:09:06.250
+Basically, it avoids you to
+solve an optimization problem
+
+01:09:06.250 --> 01:09:07.410
+online.
+
+01:09:07.410 --> 01:09:09.090
+Solving optimization
+problem also
+
+01:09:09.090 --> 01:09:13.010
+has its own challenges beyond
+just how quickly an optimization
+
+01:09:13.010 --> 01:09:13.990
+problem can be solved.
+
+01:09:13.990 --> 01:09:16.890
+For example, you have
+to show that you are
+
+01:09:16.890 --> 01:09:18.670
+in a safety critical situation.
+
+01:09:18.670 --> 01:09:20.885
+You want to land
+a rocket on Earth.
+
+01:09:20.885 --> 01:09:23.010
+Well, it means that you
+really trust your optimizer
+
+01:09:23.010 --> 01:09:24.250
+not to have bugs.
+
+01:09:24.250 --> 01:09:27.312
+So from a development problem
+standpoint, it has costs.
+
+01:09:27.312 --> 01:09:28.770
+You need to have
+additional people.
+
+01:09:28.770 --> 01:09:30.450
+They had the right optimizer.
+
+01:09:30.450 --> 01:09:31.710
+They had to customize it.
+
+01:09:31.710 --> 01:09:34.220
+They had to code it into
+an embedded environment.
+
+01:09:34.220 --> 01:09:35.680
+You had to validate it.
+
+01:09:35.680 --> 01:09:37.140
+Here, everything is explicit.
+
+01:09:37.140 --> 01:09:40.240
+So the validation
+step is much easier.
+
+01:09:40.240 --> 01:09:43.319
+On the other hand, it
+turns out that oftentimes,
+
+01:09:43.319 --> 01:09:45.560
+these polyhedral
+partitions of the space
+
+01:09:45.560 --> 01:09:48.160
+takes very weird shapes.
+
+01:09:48.160 --> 01:09:51.399
+I mean, meaning that
+you have a lot of cells.
+
+01:09:51.399 --> 01:09:55.360
+And today, the optimizer,
+such as the convex optimizers
+
+01:09:55.360 --> 01:09:58.080
+have become so good
+that oftentimes, it's
+
+01:09:58.080 --> 01:10:00.280
+faster to just solve
+the optimization problem
+
+01:10:00.280 --> 01:10:04.200
+rather than just doing a lookup
+table in a gigantic table.
+
+01:10:04.200 --> 01:10:09.760
+So explicit MPC has a
+good concept for you
+
+01:10:09.760 --> 01:10:13.040
+to know with understanding
+that oftentimes, you just use
+
+01:10:13.040 --> 01:10:14.740
+online optimization these days.
+
+01:10:17.720 --> 01:10:25.720
+So we essentially discussed the
+famous multi-step design process
+
+01:10:25.720 --> 01:10:28.620
+for MPC where we choose.
+
+01:10:28.620 --> 01:10:31.170
+You can also play a little
+bit with the horizon length.
+
+01:10:31.170 --> 01:10:33.630
+In this class, we
+focus primarily on Xf
+
+01:10:33.630 --> 01:10:37.450
+as your tuning knob for
+persistent feasibility.
+
+01:10:37.450 --> 01:10:40.270
+So you tune Xf to be controlled
+environment so that you
+
+01:10:40.270 --> 01:10:41.830
+have persistent feasibility.
+
+01:10:41.830 --> 01:10:44.030
+You choose the
+parameters Q and R
+
+01:10:44.030 --> 01:10:46.310
+freely to affect the
+control performance.
+
+01:10:46.310 --> 01:10:49.330
+You adjust capital P as
+per the stability theorem,
+
+01:10:49.330 --> 01:10:53.230
+and then you have an automated
+way to tune your MPC algorithm.
+
+01:10:53.230 --> 01:10:56.830
+To compute these
+control invariant
+
+01:10:56.830 --> 01:11:00.670
+sets and so on, this is a very
+handy toolbox, which is MT3,
+
+01:11:00.670 --> 01:11:04.570
+and that's what you will
+work with in your P set 3.
+
+01:11:08.710 --> 01:11:12.990
+One last thing in the
+last four minutes--
+
+01:11:12.990 --> 01:11:16.910
+so far, we have looked
+at MPC as a tool in order
+
+01:11:16.910 --> 01:11:19.773
+to achieve stability.
+
+01:11:19.773 --> 01:11:21.190
+So basically, we
+want to make sure
+
+01:11:21.190 --> 01:11:23.070
+that the state converges to 0.
+
+01:11:23.070 --> 01:11:27.810
+But oftentimes, you want
+to use MPC for tracking.
+
+01:11:27.810 --> 01:11:30.090
+So basically, you're giving
+a reference trajectory,
+
+01:11:30.090 --> 01:11:32.570
+for example, computed
+through a direct method,
+
+01:11:32.570 --> 01:11:35.530
+and then you want to use an MPC
+wrapper that basically allows
+
+01:11:35.530 --> 01:11:39.010
+you to counteract
+any disturbances
+
+01:11:39.010 --> 01:11:41.250
+and make sure that your
+actual trajectory stays
+
+01:11:41.250 --> 01:11:44.770
+close to the
+reference trajectory.
+
+01:11:44.770 --> 01:11:49.130
+So the most naive way of
+setting up the tracking problem
+
+01:11:49.130 --> 01:11:51.970
+is to have a cost where
+you penalize deviations
+
+01:11:51.970 --> 01:11:56.890
+from your reference trajectory
+plus a quadratic penalty
+
+01:11:56.890 --> 01:11:58.970
+for the control effort.
+
+01:11:58.970 --> 01:12:01.890
+So this formulation
+does not work.
+
+01:12:01.890 --> 01:12:07.690
+The reason why it doesn't
+work is that oftentimes,
+
+01:12:07.690 --> 01:12:12.570
+to track a reference trajectory,
+you need a non-zero control.
+
+01:12:12.570 --> 01:12:15.970
+So say that you have an aircraft
+and you want to track a constant
+
+01:12:15.970 --> 01:12:19.190
+altitude profile, you cannot
+switch off the engine.
+
+01:12:19.190 --> 01:12:21.850
+You still need a
+constant thrust.
+
+01:12:21.850 --> 01:12:24.050
+So what happens if you
+use this formulation is
+
+01:12:24.050 --> 01:12:29.920
+that at the moment your
+tracking error goes to 0,
+
+01:12:29.920 --> 01:12:32.300
+now the cost is dominated
+by your control effort.
+
+01:12:32.300 --> 01:12:35.020
+So now, MPC is trying to
+minimize the control effort.
+
+01:12:35.020 --> 01:12:39.640
+So basically, you reduce thrust,
+and then your tracking cost
+
+01:12:39.640 --> 01:12:40.140
+goes up.
+
+01:12:40.140 --> 01:12:42.098
+So you start going to
+this kind of oscillations
+
+01:12:42.098 --> 01:12:47.600
+in between control effort
+and tracking error cost.
+
+01:12:47.600 --> 01:12:49.520
+So what's the solution?
+
+01:12:49.520 --> 01:12:53.980
+You reframe the problem in
+terms of delta controls.
+
+01:12:53.980 --> 01:12:58.440
+So basically, how you change
+controls with respect to time
+
+01:12:58.440 --> 01:13:00.460
+steps as opposed to
+absolute control.
+
+01:13:00.460 --> 01:13:03.240
+So you frame the
+tracking problem
+
+01:13:03.240 --> 01:13:06.860
+as a problem of
+minimizing tracking error.
+
+01:13:06.860 --> 01:13:10.320
+So y is C of xx.
+
+01:13:10.320 --> 01:13:14.240
+I mean, C could be also the
+identity, could be just xk
+
+01:13:14.240 --> 01:13:19.360
+minus rk, where r is your
+reference, plus a penalty
+
+01:13:19.360 --> 01:13:23.000
+term with respect to
+the deviation control
+
+01:13:23.000 --> 01:13:25.640
+variables, where the
+delta Us are defined
+
+01:13:25.640 --> 01:13:29.150
+as the uk minus uk minus 1.
+
+01:13:29.150 --> 01:13:33.870
+So that in perfect tracking
+what you have is a 0 tracking
+
+01:13:33.870 --> 01:13:38.630
+error and a constant control,
+meaning constant thrust, which
+
+01:13:38.630 --> 01:13:40.550
+means delta u equals
+0, which corresponds
+
+01:13:40.550 --> 01:13:45.230
+to what MPC really wants
+to do in this formulation.
+
+01:13:45.230 --> 01:13:48.573
+So all of this to say that
+this is a better version,
+
+01:13:48.573 --> 01:13:49.990
+and there are other
+considerations
+
+01:13:49.990 --> 01:13:51.407
+to take into account
+for tracking.
+
+01:13:51.407 --> 01:13:54.550
+But just to give you some
+intuition about how for tracking
+
+01:13:54.550 --> 01:13:56.710
+want to be a bit
+more sophisticated
+
+01:13:56.710 --> 01:13:58.470
+in how you set up MPC problem.
+
+01:13:58.470 --> 01:14:01.030
+In particular, typically,
+you want to use reason
+
+01:14:01.030 --> 01:14:03.930
+in terms of delta controls.
+
+01:14:03.930 --> 01:14:06.270
+So the optimization
+variables that are delta
+
+01:14:06.270 --> 01:14:09.710
+use that are defined
+as uk minus uk minus 1,
+
+01:14:09.710 --> 01:14:13.490
+you are given the u
+at time t minus 1,
+
+01:14:13.490 --> 01:14:15.950
+and then you obtain
+all the Us recursively
+
+01:14:15.950 --> 01:14:21.070
+by adding the delta Us that
+are really the optimization
+
+01:14:21.070 --> 01:14:21.615
+variables.
+
+01:14:21.615 --> 01:14:22.490
+Does that make sense?
+
+01:14:28.130 --> 01:14:28.710
+All right.
+
+01:14:28.710 --> 01:14:30.150
+So we did quite a bit.
+
+01:14:30.150 --> 01:14:33.650
+So this lecture
+essentially wraps up
+
+01:14:33.650 --> 01:14:35.090
+the first part of
+the class, where
+
+01:14:35.090 --> 01:14:39.450
+we assume that everything
+about the model is known.
+
+01:14:39.450 --> 01:14:41.450
+Starting from next
+week, we'll go
+
+01:14:41.450 --> 01:14:47.570
+into the new setting,
+whereby the model may not
+
+01:14:47.570 --> 01:14:49.670
+be completely known anymore.
+
+01:14:49.670 --> 01:14:53.050
+So either, you have to adapt
+to the part of the model that
+
+01:14:53.050 --> 01:14:57.050
+is unknown or learn
+what you do not
+
+01:14:57.050 --> 01:15:00.170
+know in order to still act
+optimally or very close
+
+01:15:00.170 --> 01:15:02.370
+to optimally.
+
+01:15:02.370 --> 01:15:04.150
+So P3 will be an
+interesting one.
+
+01:15:04.150 --> 01:15:08.010
+So it will expose you to
+a lot of these MPC ideas
+
+01:15:08.010 --> 01:15:15.810
+and will also force you to work
+with the MPT3 toolbox, which
+
+01:15:15.810 --> 01:15:18.170
+is kind of neat.
+
+01:15:18.170 --> 01:15:18.750
+All right.
+
+01:15:18.750 --> 01:15:21.080
+So see you next week.
+

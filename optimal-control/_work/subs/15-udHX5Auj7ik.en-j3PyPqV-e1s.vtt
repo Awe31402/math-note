@@ -1,0 +1,5445 @@
+WEBVTT
+Kind: captions
+Language: en
+
+00:00:05.800 --> 00:00:11.160
+OK, so welcome to
+another week of AA203.
+
+00:00:11.160 --> 00:00:15.860
+So starting from our usual
+roadmap, in the last week or so,
+
+00:00:15.860 --> 00:00:21.200
+we have started-- basically,
+we finished the optimal control
+
+00:00:21.200 --> 00:00:24.525
+part of the class, and we
+moved into the top half, which
+
+00:00:24.525 --> 00:00:26.400
+basically relates with
+learning-based methods
+
+00:00:26.400 --> 00:00:28.320
+for optimal control.
+
+00:00:28.320 --> 00:00:30.780
+Last week we focused
+a lot on-- well,
+
+00:00:30.780 --> 00:00:33.200
+on Monday we focused on
+more classical methods
+
+00:00:33.200 --> 00:00:34.340
+to learning based control.
+
+00:00:34.340 --> 00:00:36.600
+So we looked at things such
+as system identification
+
+00:00:36.600 --> 00:00:38.160
+and adaptive control.
+
+00:00:38.160 --> 00:00:41.080
+And then on last
+week, Wednesday, we
+
+00:00:41.080 --> 00:00:43.400
+started to introduce
+the general framework
+
+00:00:43.400 --> 00:00:46.320
+and terminology for imitation
+learning and reinforcement
+
+00:00:46.320 --> 00:00:49.880
+learning and starting to
+build a bit of a mental model
+
+00:00:49.880 --> 00:00:52.720
+about how to see different
+methods and different algorithms
+
+00:00:52.720 --> 00:00:55.040
+within these two subclasses.
+
+00:00:55.040 --> 00:00:57.120
+And so, specifically,
+today, we'll
+
+00:00:57.120 --> 00:01:00.410
+then zoom into the
+specifically imitation learning
+
+00:01:00.410 --> 00:01:05.209
+section of what we
+discussed on Wednesday.
+
+00:01:05.209 --> 00:01:06.930
+And so if you
+remember, we basically
+
+00:01:06.930 --> 00:01:12.650
+introduced imitation learning as
+basically an umbrella term that
+
+00:01:12.650 --> 00:01:16.670
+encompasses, broadly speaking,
+two main classes of approaches.
+
+00:01:16.670 --> 00:01:21.890
+We started from behavior cloning
+as essentially a mechanism where
+
+00:01:21.890 --> 00:01:24.310
+we want to have access.
+
+00:01:24.310 --> 00:01:26.010
+So we always assume
+we have access
+
+00:01:26.010 --> 00:01:30.990
+to a data set of couples
+of states and controls,
+
+00:01:30.990 --> 00:01:34.530
+which we collected by
+observing some expert executing
+
+00:01:34.530 --> 00:01:38.130
+some demonstrations in the
+real world, for example.
+
+00:01:38.130 --> 00:01:40.010
+And then in behavior
+cloning, we want
+
+00:01:40.010 --> 00:01:44.570
+to use this data set to
+directly learn a policy
+
+00:01:44.570 --> 00:01:48.970
+or approximate the policy that
+is being used by the expert.
+
+00:01:48.970 --> 00:01:51.490
+Concretely, the object
+that we wish to learn
+
+00:01:51.490 --> 00:01:55.810
+will be something along the
+lines of policy pi of theta.
+
+00:01:55.810 --> 00:01:57.780
+For example, a
+parameterized policy
+
+00:01:57.780 --> 00:01:59.940
+with some parameters of
+theta that is essentially
+
+00:01:59.940 --> 00:02:02.840
+representing a distribution
+over controls given states.
+
+00:02:02.840 --> 00:02:05.100
+And we want to approximate
+this from the examples
+
+00:02:05.100 --> 00:02:07.420
+that we get in our
+demonstrations.
+
+00:02:07.420 --> 00:02:10.840
+We then also loosely introduced
+inverse reinforcement learning,
+
+00:02:10.840 --> 00:02:12.780
+whereby in this
+case, the objective
+
+00:02:12.780 --> 00:02:16.220
+is to approximate the reward
+function or objective that
+
+00:02:16.220 --> 00:02:19.380
+is optimized that we think it is
+being optimized under the hood
+
+00:02:19.380 --> 00:02:22.060
+by the expert itself.
+
+00:02:22.060 --> 00:02:24.500
+And specifically, here
+the object of learning
+
+00:02:24.500 --> 00:02:27.760
+will be to approximate or
+estimate our reward function, r,
+
+00:02:27.760 --> 00:02:30.860
+that is basically
+a measure that maps
+
+00:02:30.860 --> 00:02:34.920
+couples of states and controls
+to a scalar measure of success.
+
+00:02:39.020 --> 00:02:42.020
+And so, for today,
+a kind of coherent
+
+00:02:42.020 --> 00:02:45.260
+with this general roadmap
+will be discussing
+
+00:02:45.260 --> 00:02:46.680
+behavior cloning first.
+
+00:02:46.680 --> 00:02:50.020
+We'll be introducing a number
+of common pitfalls, which
+
+00:02:50.020 --> 00:02:53.840
+we already slightly hinted to in
+our last lecture on Wednesday.
+
+00:02:53.840 --> 00:02:56.180
+And specifically, I
+would say starting
+
+00:02:56.180 --> 00:02:57.660
+to look at
+traditional mechanisms
+
+00:02:57.660 --> 00:03:01.580
+for which these pitfalls
+are being addressed.
+
+00:03:01.580 --> 00:03:03.980
+And then we'll have a brief
+mention on other paradigms
+
+00:03:03.980 --> 00:03:07.740
+that fall within the
+behavioral cloning hat.
+
+00:03:07.740 --> 00:03:10.820
+And then we'll look at
+inverse enforcement learning.
+
+00:03:10.820 --> 00:03:13.700
+So just to briefly
+recap in one slide
+
+00:03:13.700 --> 00:03:15.500
+the lecture from
+Wednesday, we started
+
+00:03:15.500 --> 00:03:17.340
+by seeing behavioral
+cloning essentially
+
+00:03:17.340 --> 00:03:19.560
+as supervised
+learning of behavior.
+
+00:03:19.560 --> 00:03:21.740
+So we introduced
+the general notation
+
+00:03:21.740 --> 00:03:24.860
+of supervised learning,
+whereby we essentially
+
+00:03:24.860 --> 00:03:28.020
+want to learn a parametric
+mapping that maps some inputs,
+
+00:03:28.020 --> 00:03:30.260
+x, to some outputs, y.
+
+00:03:30.260 --> 00:03:33.620
+Prototypical example would
+be the classification problem
+
+00:03:33.620 --> 00:03:36.740
+where we want to map some
+image representation,
+
+00:03:36.740 --> 00:03:39.380
+for example, an RGB
+image, an RGB that
+
+00:03:39.380 --> 00:03:42.940
+represents the image
+of a cat to its label
+
+00:03:42.940 --> 00:03:46.420
+with of the respective object
+or thing that is actually being
+
+00:03:46.420 --> 00:03:48.300
+represented in that image.
+
+00:03:48.300 --> 00:03:50.860
+And the way to do
+this is by taking
+
+00:03:50.860 --> 00:03:53.710
+a data set of pairs
+of this mapping
+
+00:03:53.710 --> 00:03:55.870
+that we want to estimate
+and then learn it
+
+00:03:55.870 --> 00:04:00.670
+through some sort of
+loss minimization.
+
+00:04:00.670 --> 00:04:03.590
+In behavioral cloning, we want
+to do something very similar,
+
+00:04:03.590 --> 00:04:06.110
+to some extent, because we
+want to collect a data set
+
+00:04:06.110 --> 00:04:07.830
+of these expert demonstrations.
+
+00:04:07.830 --> 00:04:10.570
+And exactly as we would be
+doing in supervised learning,
+
+00:04:10.570 --> 00:04:12.070
+we would want to
+train a policy that
+
+00:04:12.070 --> 00:04:18.029
+is this mapping that optimizes
+some metric of performance.
+
+00:04:18.029 --> 00:04:21.589
+And so we saw how the general
+skeleton of behavior cloning
+
+00:04:21.589 --> 00:04:23.590
+algorithm, loosely
+speaking, really looks
+
+00:04:23.590 --> 00:04:25.930
+like something like
+supervised learning
+
+00:04:25.930 --> 00:04:30.750
+and now apply it to trying
+to estimate behavior.
+
+00:04:30.750 --> 00:04:33.810
+But the question here
+is, is this really it?
+
+00:04:33.810 --> 00:04:34.650
+Does this work?
+
+00:04:34.650 --> 00:04:35.530
+And are we done?
+
+00:04:35.530 --> 00:04:38.430
+And, in practice, as you can
+imagine, most of the times this
+
+00:04:38.430 --> 00:04:40.228
+is not it, in the
+sense that there
+
+00:04:40.228 --> 00:04:42.270
+are a number of common
+pitfalls and failure modes
+
+00:04:42.270 --> 00:04:43.290
+that could happen.
+
+00:04:43.290 --> 00:04:45.670
+And so today we'll basically
+be looking at strategies
+
+00:04:45.670 --> 00:04:47.490
+to address these failure modes.
+
+00:04:47.490 --> 00:04:49.590
+And I would say look
+at different techniques
+
+00:04:49.590 --> 00:04:53.160
+that frontier your approaches,
+specifically in learning based
+
+00:04:53.160 --> 00:04:55.600
+control and robotics
+are currently doing
+
+00:04:55.600 --> 00:04:58.020
+to make these techniques work.
+
+00:05:02.000 --> 00:05:05.640
+And so let us start from
+introducing the common pitfalls
+
+00:05:05.640 --> 00:05:06.800
+that could emerge.
+
+00:05:06.800 --> 00:05:10.680
+And the first one is one
+of compounding errors.
+
+00:05:10.680 --> 00:05:13.320
+Specifically, we
+mentioned multiple times
+
+00:05:13.320 --> 00:05:15.480
+how in statistical
+learning theory
+
+00:05:15.480 --> 00:05:17.200
+a classical assumption
+that is made
+
+00:05:17.200 --> 00:05:21.080
+is that data is Independent and
+Identically Distributed, or IID,
+
+00:05:21.080 --> 00:05:22.080
+for short.
+
+00:05:22.080 --> 00:05:24.080
+Loosely speaking,
+this means that we
+
+00:05:24.080 --> 00:05:27.920
+are taking some
+distribution of p of x,
+
+00:05:27.920 --> 00:05:29.880
+which we wish to approximate.
+
+00:05:29.880 --> 00:05:33.200
+To do this, we only have access
+to samples or realizations
+
+00:05:33.200 --> 00:05:36.900
+of that distributions, x1
+to x3 here on the slide.
+
+00:05:36.900 --> 00:05:39.800
+And we want to learn typically
+a parametric model that
+
+00:05:39.800 --> 00:05:43.280
+approximates this p of x
+that we care in learning.
+
+00:05:43.280 --> 00:05:45.560
+And we saw that, again,
+generally speaking,
+
+00:05:45.560 --> 00:05:47.200
+in statistical
+learning theory, we
+
+00:05:47.200 --> 00:05:50.210
+assume that the samples and
+realization that we observe
+
+00:05:50.210 --> 00:05:54.390
+are IID from the distribution
+that we care about.
+
+00:05:54.390 --> 00:05:56.750
+When trying to learn
+behaviors, however,
+
+00:05:56.750 --> 00:05:59.850
+kind of predictive controls
+influence the future state
+
+00:05:59.850 --> 00:06:01.250
+that we observe.
+
+00:06:01.250 --> 00:06:05.450
+And we loosely and briefly
+discussed this idea of the fact
+
+00:06:05.450 --> 00:06:09.190
+that since we are agents
+within our environment,
+
+00:06:09.190 --> 00:06:12.430
+there could be this problem and
+issue of compounding errors,
+
+00:06:12.430 --> 00:06:15.990
+whereby if our policy is
+making even very small errors
+
+00:06:15.990 --> 00:06:21.210
+it could compound over time that
+is throughout the temporal kind
+
+00:06:21.210 --> 00:06:24.690
+of unrolling of our trajectory,
+which lead to making bigger
+
+00:06:24.690 --> 00:06:28.130
+and bigger errors over time.
+
+00:06:28.130 --> 00:06:32.410
+Slightly more formally, theory
+here formalizes this problem
+
+00:06:32.410 --> 00:06:35.650
+as the fact that the
+state distribution induced
+
+00:06:35.650 --> 00:06:39.130
+by the expert policy and the
+state distribution induced
+
+00:06:39.130 --> 00:06:41.810
+by the learner, that
+is, the policy that we
+
+00:06:41.810 --> 00:06:45.250
+wish to learn essentially
+diverge and are not the same.
+
+00:06:45.250 --> 00:06:48.900
+And this is, in theory, referred
+to as the covariate shift
+
+00:06:48.900 --> 00:06:50.380
+problem.
+
+00:06:50.380 --> 00:06:53.420
+So to make the notation on
+the slide more concrete, when
+
+00:06:53.420 --> 00:06:58.180
+we say the state distribution
+under the expert, that
+
+00:06:58.180 --> 00:07:03.260
+is p of expert of x, what
+we're essentially saying
+
+00:07:03.260 --> 00:07:08.020
+is, for example, the
+probability of the initial state
+
+00:07:08.020 --> 00:07:11.780
+times the product, p
+that goes from 1 to t
+
+00:07:11.780 --> 00:07:13.860
+of the expert policy--
+
+00:07:19.940 --> 00:07:22.720
+so the probability of the action
+induced by the expert policy,
+
+00:07:22.720 --> 00:07:26.540
+given the state xt
+times the transition
+
+00:07:26.540 --> 00:07:28.760
+function of our environment.
+
+00:07:36.540 --> 00:07:39.780
+So this is basically encodes
+the probability distribution
+
+00:07:39.780 --> 00:07:42.020
+of all the states
+that we could observe
+
+00:07:42.020 --> 00:07:44.940
+by following the policy
+or the distribution
+
+00:07:44.940 --> 00:07:49.110
+over actions induced
+by the expert.
+
+00:07:49.110 --> 00:07:55.350
+Very similarly, the state
+distribution under our policy,
+
+00:07:55.350 --> 00:07:58.790
+p of pi theta,
+would essentially be
+
+00:07:58.790 --> 00:08:02.430
+designed defined exactly the
+same where here we just used
+
+00:08:02.430 --> 00:08:05.710
+the distribution over
+controls induced by the policy
+
+00:08:05.710 --> 00:08:07.890
+that we're currently learning.
+
+00:08:13.670 --> 00:08:15.727
+And there is--
+
+00:08:15.727 --> 00:08:18.310
+I would definitely advise you
+to check out this reference here
+
+00:08:18.310 --> 00:08:21.630
+on the slide because there is
+theory that basically shows
+
+00:08:21.630 --> 00:08:28.350
+that the probability of making
+mistakes under our policy
+
+00:08:28.350 --> 00:08:30.870
+essentially grows
+quadratically with the length
+
+00:08:30.870 --> 00:08:32.190
+of the trajectory.
+
+00:08:32.190 --> 00:08:34.750
+So here assuming that there
+is a probability epsilon
+
+00:08:34.750 --> 00:08:39.470
+to make a mistake in our
+prediction from our policy,
+
+00:08:39.470 --> 00:08:42.350
+then the probability
+of making mistakes
+
+00:08:42.350 --> 00:08:47.310
+grows quadratically with the
+length, t, of our trajectory.
+
+00:08:47.310 --> 00:08:49.510
+Of course, here
+the error assumes
+
+00:08:49.510 --> 00:08:51.430
+that we are working
+in a discrete world
+
+00:08:51.430 --> 00:08:55.130
+where we have to pick between
+1 of n possible actions
+
+00:08:55.130 --> 00:08:57.070
+and epsilon is the
+probability of making
+
+00:08:57.070 --> 00:08:58.610
+an error in that prediction.
+
+00:08:58.610 --> 00:09:00.110
+But there is a
+lot of theory that
+
+00:09:00.110 --> 00:09:02.830
+goes about formulating
+this covariate shift
+
+00:09:02.830 --> 00:09:05.430
+problem more theoretically.
+
+00:09:05.430 --> 00:09:07.670
+But I hope the
+intuition here is clear.
+
+00:09:07.670 --> 00:09:09.594
+Yes.
+
+00:09:09.594 --> 00:09:10.578
+[INAUDIBLE]
+
+00:09:15.990 --> 00:09:19.310
+The trajectory itself
+are independent, yes.
+
+00:09:19.310 --> 00:09:20.230
+[INAUDIBLE]
+
+00:09:22.970 --> 00:09:23.970
+This is a good question.
+
+00:09:23.970 --> 00:09:25.990
+So, in general, for
+now, and I would
+
+00:09:25.990 --> 00:09:27.948
+say throughout the
+rest of this lecture,
+
+00:09:27.948 --> 00:09:29.990
+we're assuming that you're
+interested in learning
+
+00:09:29.990 --> 00:09:31.410
+the feedback policy.
+
+00:09:31.410 --> 00:09:36.110
+So there is a mapping from
+the instantaneous state, xt,
+
+00:09:36.110 --> 00:09:38.670
+to the instantaneous
+control, ut.
+
+00:09:38.670 --> 00:09:41.110
+And our data set,
+therefore, is just
+
+00:09:41.110 --> 00:09:44.620
+a collection of two poles
+of this realization.
+
+00:09:56.000 --> 00:09:58.700
+And so this is for the
+compounding error problem.
+
+00:09:58.700 --> 00:10:01.440
+A second problem is the
+one that here I refer
+
+00:10:01.440 --> 00:10:03.480
+to as multimodal behavior.
+
+00:10:03.480 --> 00:10:09.120
+And specifically,
+in many tasks, there
+
+00:10:09.120 --> 00:10:11.520
+is this characteristic
+whereby there
+
+00:10:11.520 --> 00:10:14.240
+could exist multiple
+and equivalent solutions
+
+00:10:14.240 --> 00:10:16.100
+to solving a control task.
+
+00:10:16.100 --> 00:10:19.680
+So take the pictorial example
+of flying a drone past
+
+00:10:19.680 --> 00:10:21.840
+a tree here on the slide.
+
+00:10:21.840 --> 00:10:24.720
+If we were to be
+human experts or human
+
+00:10:24.720 --> 00:10:28.120
+that are kind of joysticking
+this drone around,
+
+00:10:28.120 --> 00:10:31.400
+we would be in a situation
+where flying to the right
+
+00:10:31.400 --> 00:10:33.680
+or to the left of the
+tree would be equivalently
+
+00:10:33.680 --> 00:10:35.800
+good to some extent.
+
+00:10:35.800 --> 00:10:40.320
+And the problem
+here arises when we
+
+00:10:40.320 --> 00:10:43.090
+want to take this data set
+of collected demonstrations
+
+00:10:43.090 --> 00:10:46.330
+from, for example,
+human rollouts
+
+00:10:46.330 --> 00:10:50.370
+and use these data sets
+to compile or learn
+
+00:10:50.370 --> 00:10:54.850
+a policy that tries to
+approximate this behavior.
+
+00:10:54.850 --> 00:10:56.650
+Slightly more
+formally, the problem
+
+00:10:56.650 --> 00:11:00.370
+here is that we find ourselves
+in our situation, whereby
+
+00:11:00.370 --> 00:11:03.250
+the policy that we
+wish to estimate
+
+00:11:03.250 --> 00:11:06.210
+is actually representing
+a multi-modal distribution
+
+00:11:06.210 --> 00:11:09.810
+over controls given states.
+
+00:11:09.810 --> 00:11:11.330
+For example, like
+in this case, we
+
+00:11:11.330 --> 00:11:13.450
+might want our
+policy pi of theta
+
+00:11:13.450 --> 00:11:18.810
+to perfectly approximate this
+bimodal distribution over here.
+
+00:11:18.810 --> 00:11:20.570
+And the problem here
+emerges in the moment
+
+00:11:20.570 --> 00:11:24.570
+where we, for example, try
+to estimate things or fit
+
+00:11:24.570 --> 00:11:27.550
+this distribution through
+pretty standard metrics,
+
+00:11:27.550 --> 00:11:30.170
+for example, mean squared
+error or minimization.
+
+00:11:30.170 --> 00:11:34.010
+And the point is that if we were
+to take, say, a neural network
+
+00:11:34.010 --> 00:11:37.190
+and try to fit our data through
+mean squared error minimization,
+
+00:11:37.190 --> 00:11:39.540
+we would be essentially
+learning a policy that
+
+00:11:39.540 --> 00:11:44.740
+tries to predict exactly the
+mean of our distributions.
+
+00:11:44.740 --> 00:11:49.300
+So what we're saying
+is that we are
+
+00:11:49.300 --> 00:11:53.340
+in a situation where we would
+like to approximate ground truth
+
+00:11:53.340 --> 00:11:57.400
+behavior distribution that
+looks something like this.
+
+00:11:57.400 --> 00:11:58.380
+That is my model.
+
+00:11:58.380 --> 00:12:01.300
+But if we were to use
+mean squared error
+
+00:12:01.300 --> 00:12:05.340
+as our loss for model
+for data fitting,
+
+00:12:05.340 --> 00:12:09.500
+our policy would
+then be incentivized
+
+00:12:09.500 --> 00:12:11.060
+to learn something
+that correctly
+
+00:12:11.060 --> 00:12:14.145
+predicts the mean of this
+multimodal distribution.
+
+00:12:14.145 --> 00:12:16.020
+And you see how in this
+case this is actually
+
+00:12:16.020 --> 00:12:19.060
+probably the worst thing that we
+could do because it fits exactly
+
+00:12:19.060 --> 00:12:22.020
+in the middle because
+it tries to balance out
+
+00:12:22.020 --> 00:12:25.957
+errors between both modes.
+
+00:12:25.957 --> 00:12:27.540
+And this is actually
+a problem that is
+
+00:12:27.540 --> 00:12:29.140
+extremely common in practice.
+
+00:12:29.140 --> 00:12:31.700
+For example, just consider
+where we are collecting data
+
+00:12:31.700 --> 00:12:34.700
+from multiple experts which
+might behave differently
+
+00:12:34.700 --> 00:12:36.500
+in the same condition.
+
+00:12:36.500 --> 00:12:41.830
+And so this is something that
+we will have to take care of.
+
+00:12:41.830 --> 00:12:42.770
+Does this make sense?
+
+00:12:42.770 --> 00:12:44.130
+Any questions on this?
+
+00:12:49.870 --> 00:12:51.990
+So for the rest of
+today, we will basically
+
+00:12:51.990 --> 00:12:55.750
+be building what I'm calling
+here a useful mental model
+
+00:12:55.750 --> 00:12:59.710
+for basically developing
+techniques that
+
+00:12:59.710 --> 00:13:02.670
+are remedies for these issues.
+
+00:13:02.670 --> 00:13:06.630
+Specifically, we'll be looking
+at algorithms which basically
+
+00:13:06.630 --> 00:13:09.130
+try to address these
+problems specifically,
+
+00:13:09.130 --> 00:13:11.510
+or at least from an
+algorithmic standpoint.
+
+00:13:11.510 --> 00:13:14.150
+We'll be looking
+at ways in which we
+
+00:13:14.150 --> 00:13:16.710
+could address these problems
+from a data collection
+
+00:13:16.710 --> 00:13:17.670
+perspective.
+
+00:13:17.670 --> 00:13:20.870
+And then we'll be seeing how
+we can use expressive model
+
+00:13:20.870 --> 00:13:24.430
+classes to better represent
+the distribution of our data.
+
+00:13:24.430 --> 00:13:26.430
+And so, specifically,
+the first two bullet
+
+00:13:26.430 --> 00:13:29.830
+points here on the slide that
+is targeted algorithms and data
+
+00:13:29.830 --> 00:13:34.910
+collection will be focusing
+on the compounding errors
+
+00:13:34.910 --> 00:13:37.350
+kind of issue, while
+the third one will
+
+00:13:37.350 --> 00:13:41.090
+focus on the multimodality
+of our policy in our data.
+
+00:13:43.630 --> 00:13:46.370
+OK, so let us start
+from the first one.
+
+00:13:46.370 --> 00:13:49.790
+So algorithms that try
+to specifically devise
+
+00:13:49.790 --> 00:13:53.390
+methods to target these issues.
+
+00:13:53.390 --> 00:13:58.270
+And very important aspect
+which I want to highlight
+
+00:13:58.270 --> 00:14:04.390
+is essentially the value that
+there is in corrective data.
+
+00:14:04.390 --> 00:14:06.830
+So until now, we're basically
+discussing a situation
+
+00:14:06.830 --> 00:14:09.550
+where we are collecting
+data from an expert, which
+
+00:14:09.550 --> 00:14:12.590
+and we always kind of
+hinted at this fact
+
+00:14:12.590 --> 00:14:15.470
+where we basically
+want to compile
+
+00:14:15.470 --> 00:14:18.330
+the performance of our
+expert into a learned model,
+
+00:14:18.330 --> 00:14:19.750
+a parametric function.
+
+00:14:19.750 --> 00:14:23.750
+And we always said that the
+performance of our model
+
+00:14:23.750 --> 00:14:29.590
+is at least at the ideally as
+good as the quality in our data.
+
+00:14:29.590 --> 00:14:34.220
+And so it probably came
+as a following thought.
+
+00:14:34.220 --> 00:14:37.600
+The fact is that we want to
+keep our data the best possible,
+
+00:14:37.600 --> 00:14:39.680
+so we want to collect
+demonstrations
+
+00:14:39.680 --> 00:14:43.360
+that are exceptionally
+good in solving the task.
+
+00:14:43.360 --> 00:14:45.600
+The problem is that if
+we do so, most likely
+
+00:14:45.600 --> 00:14:48.080
+we'll be ending up
+with a data set that
+
+00:14:48.080 --> 00:14:52.200
+is extremely narrow around
+a specific kind of behavior
+
+00:14:52.200 --> 00:14:54.640
+in solving that task.
+
+00:14:54.640 --> 00:15:04.120
+And if you wish, this leads to
+kind of a counterintuitive fact.
+
+00:15:04.120 --> 00:15:09.160
+Because, in general, if we
+want to apply behavior cloning
+
+00:15:09.160 --> 00:15:12.880
+to our learning-based
+control problem,
+
+00:15:12.880 --> 00:15:18.440
+there is a lot of value in
+leveraging examples of errors
+
+00:15:18.440 --> 00:15:20.360
+that have been taken
+by the experts and ways
+
+00:15:20.360 --> 00:15:23.720
+to recover from those errors
+because in practice, whenever we
+
+00:15:23.720 --> 00:15:26.500
+deploy our policies
+in the real world,
+
+00:15:26.500 --> 00:15:28.400
+the policy will be
+making some errors.
+
+00:15:28.400 --> 00:15:31.650
+And so if we have an extremely
+perfect data with no errors
+
+00:15:31.650 --> 00:15:34.850
+whatsoever, in those states
+where the policy actually
+
+00:15:34.850 --> 00:15:36.770
+makes errors, it will
+have no clue of how
+
+00:15:36.770 --> 00:15:38.930
+to recover from those errors.
+
+00:15:38.930 --> 00:15:40.930
+And so there is
+this paradox whereby
+
+00:15:40.930 --> 00:15:43.410
+learning from a broader
+set of trajectories that
+
+00:15:43.410 --> 00:15:45.690
+makes some mistakes
+but also shows
+
+00:15:45.690 --> 00:15:47.930
+ways to correct
+from these mistakes
+
+00:15:47.930 --> 00:15:51.330
+is, in general, more valuable
+than learning from a narrow set
+
+00:15:51.330 --> 00:15:52.790
+of perfect demonstrations.
+
+00:15:58.210 --> 00:16:03.370
+And one way to automate
+this labeling and collection
+
+00:16:03.370 --> 00:16:09.690
+of corrective data is through an
+algorithm is known as a DAgger.
+
+00:16:09.690 --> 00:16:13.330
+And specifically, DAgger
+is a well-known method
+
+00:16:13.330 --> 00:16:15.770
+to address this covariate
+shift problem through what
+
+00:16:15.770 --> 00:16:18.250
+are called data aggregation
+techniques, which is also
+
+00:16:18.250 --> 00:16:21.130
+where the name comes from.
+
+00:16:21.130 --> 00:16:24.090
+And I think it's
+probably useful to go
+
+00:16:24.090 --> 00:16:30.020
+through a pseudocode of how
+at least the plain version
+
+00:16:30.020 --> 00:16:33.740
+of DAgger looks like and then we
+discussed this a little bit more
+
+00:16:33.740 --> 00:16:35.100
+in detail.
+
+00:16:35.100 --> 00:16:38.700
+And specifically, in DAgger, we
+start from an initial data set
+
+00:16:38.700 --> 00:16:40.778
+of expert demonstrations,
+things that we
+
+00:16:40.778 --> 00:16:42.820
+have collected by running
+some policy in the wild
+
+00:16:42.820 --> 00:16:44.820
+or observing some human.
+
+00:16:44.820 --> 00:16:49.700
+We will have an initial
+policy, pi theta superscript 1,
+
+00:16:49.700 --> 00:16:51.580
+where here the
+superscript refers
+
+00:16:51.580 --> 00:16:55.440
+to the number of iterations
+of the DAgger algorithm.
+
+00:16:55.440 --> 00:16:58.940
+So DAgger will be an iterative
+algorithm where we are iterating
+
+00:16:58.940 --> 00:17:01.920
+from 1 to n iterations.
+
+00:17:01.920 --> 00:17:03.900
+And so here the subscript
+refers to the policy
+
+00:17:03.900 --> 00:17:08.220
+that is derived at iteration i.
+
+00:17:08.220 --> 00:17:13.780
+So what DAgger does is
+we start our iterations.
+
+00:17:13.780 --> 00:17:15.900
+And for each of
+these iterations we
+
+00:17:15.900 --> 00:17:19.720
+will be collecting
+some trajectories, tau,
+
+00:17:19.720 --> 00:17:23.619
+which basically represent the
+couples of states and controls
+
+00:17:23.619 --> 00:17:26.500
+which we observe by
+letting the learner policy
+
+00:17:26.500 --> 00:17:28.490
+interact with our environment.
+
+00:17:28.490 --> 00:17:29.930
+So we have a given policy.
+
+00:17:29.930 --> 00:17:31.950
+We let it interact
+with the environment,
+
+00:17:31.950 --> 00:17:34.090
+and we collect data
+from these rollouts.
+
+00:17:38.110 --> 00:17:39.710
+What we want to
+do is then we want
+
+00:17:39.710 --> 00:17:41.590
+to take these
+states that we have
+
+00:17:41.590 --> 00:17:43.950
+visited during our rollouts.
+
+00:17:43.950 --> 00:17:46.710
+And in these states, we
+want to query our experts
+
+00:17:46.710 --> 00:17:48.070
+for relabeling.
+
+00:17:48.070 --> 00:17:51.070
+That is, we want to take
+those same states, xt.
+
+00:17:51.070 --> 00:17:54.230
+And for those states, we want
+to relabel the control that
+
+00:17:54.230 --> 00:17:58.150
+was originally taken from
+the learner with the control
+
+00:17:58.150 --> 00:17:59.410
+from the expert.
+
+00:18:02.630 --> 00:18:04.350
+Once this is done,
+we have a new version
+
+00:18:04.350 --> 00:18:06.270
+of our data set,
+the superscript i,
+
+00:18:06.270 --> 00:18:09.930
+and we aggregate it
+with the original data
+
+00:18:09.930 --> 00:18:12.830
+set which we had for learning.
+
+00:18:12.830 --> 00:18:15.670
+And so this is where the
+aggregation part comes from.
+
+00:18:15.670 --> 00:18:17.830
+We then take this
+aggregated data set, d,
+
+00:18:17.830 --> 00:18:22.110
+and use this to train a
+new version of our policy.
+
+00:18:22.110 --> 00:18:24.230
+So maybe slightly
+more visually, we
+
+00:18:24.230 --> 00:18:29.240
+are saying that we have
+a policy, pi of theta 1
+
+00:18:29.240 --> 00:18:30.220
+given to us.
+
+00:18:30.220 --> 00:18:33.680
+This could have been given to us
+by an offline data set that we
+
+00:18:33.680 --> 00:18:35.920
+have and trained on this.
+
+00:18:35.920 --> 00:18:39.600
+We then have our environment,
+which might look like something
+
+00:18:39.600 --> 00:18:41.920
+where we want to go from
+some starting points
+
+00:18:41.920 --> 00:18:46.440
+to some goal points, where
+we are seeing examples
+
+00:18:46.440 --> 00:18:50.240
+of rollouts of our policy.
+
+00:18:50.240 --> 00:18:59.440
+And this leads to a data
+set of states and controls
+
+00:18:59.440 --> 00:19:03.880
+where the controls are the
+ones that the learner executed.
+
+00:19:03.880 --> 00:19:06.760
+So we can then use this data
+set to basically relabel
+
+00:19:06.760 --> 00:19:11.220
+those controls with controls
+given by the expert.
+
+00:19:15.000 --> 00:19:16.840
+This creates a new
+data set, d superscript
+
+00:19:16.840 --> 00:19:19.720
+i, which we aggregated
+to the previous one
+
+00:19:19.720 --> 00:19:23.040
+and train on the
+updated data set.
+
+00:19:23.040 --> 00:19:25.920
+So why is this useful?
+
+00:19:25.920 --> 00:19:29.360
+The point here is
+that by doing so,
+
+00:19:29.360 --> 00:19:35.520
+we are directly querying the
+expert to relabel states exactly
+
+00:19:35.520 --> 00:19:38.800
+in those states that
+are currently being
+
+00:19:38.800 --> 00:19:41.380
+visited by the learner itself.
+
+00:19:41.380 --> 00:19:43.560
+So we were talking
+about this discrepancy
+
+00:19:43.560 --> 00:19:45.880
+between the
+distribution of states
+
+00:19:45.880 --> 00:19:49.880
+induced by the learner and
+the one induced by the expert.
+
+00:19:49.880 --> 00:19:53.400
+In this case, we are
+explicitly querying the expert
+
+00:19:53.400 --> 00:19:57.280
+in those states that
+would be followed
+
+00:19:57.280 --> 00:20:00.120
+and are essentially drawn
+from the state distribution
+
+00:20:00.120 --> 00:20:02.720
+under the learner.
+
+00:20:02.720 --> 00:20:05.480
+Yeah.
+
+00:20:05.480 --> 00:20:07.280
+Are you just relabeling?
+
+00:20:07.280 --> 00:20:10.880
+There as a successful control
+and then relabeling it
+
+00:20:10.880 --> 00:20:13.920
+as an expert and retraining
+that now that [INAUDIBLE] expert
+
+00:20:13.920 --> 00:20:18.920
+or training it from
+your original expert?
+
+00:20:18.920 --> 00:20:21.640
+So here we are assuming we
+have access to an expert
+
+00:20:21.640 --> 00:20:22.870
+that we can query.
+
+00:20:22.870 --> 00:20:25.210
+This could be any policy
+that we think is good enough
+
+00:20:25.210 --> 00:20:26.770
+for us to be an expert.
+
+00:20:26.770 --> 00:20:30.210
+And we are using this
+to basically generate
+
+00:20:30.210 --> 00:20:33.650
+new labeled data
+for us in some way.
+
+00:20:33.650 --> 00:20:35.770
+Does it answer your question?
+
+00:20:35.770 --> 00:20:38.030
+Yeah.
+
+00:20:38.030 --> 00:20:43.410
+In practice, if the source of
+the expert policy is a human,
+
+00:20:43.410 --> 00:20:46.790
+is this a discrete process where
+you would have to step through?
+
+00:20:46.790 --> 00:20:48.830
+Because if you want
+the exact same states,
+
+00:20:48.830 --> 00:20:52.510
+you have to step through and
+not continuously provide input
+
+00:20:52.510 --> 00:20:54.890
+but go state to state
+to state and provide
+
+00:20:54.890 --> 00:20:57.430
+a discrete input and then that
+is the relabeling process?
+
+00:20:57.430 --> 00:20:58.847
+It's a great
+question because this
+
+00:20:58.847 --> 00:21:00.810
+is if you wish one version--
+
+00:21:00.810 --> 00:21:03.770
+this is like you
+would see DAgger v0.
+
+00:21:03.770 --> 00:21:05.430
+So this is the base
+version of DAgger.
+
+00:21:05.430 --> 00:21:06.930
+There is an extension
+to this, which
+
+00:21:06.930 --> 00:21:10.130
+is referred to as human
+gated DAgger, whereby
+
+00:21:10.130 --> 00:21:13.030
+which will be in the next slide,
+which we're basically here,
+
+00:21:13.030 --> 00:21:16.410
+we would be picking a specific
+point in our trajectory
+
+00:21:16.410 --> 00:21:19.210
+where we think maybe the
+learner made a mistake.
+
+00:21:19.210 --> 00:21:22.420
+And here we assume we have a
+human that basically intervenes
+
+00:21:22.420 --> 00:21:27.100
+and generates a new, full
+continuation of that trajectory.
+
+00:21:27.100 --> 00:21:31.540
+Concretely, you have a robot
+arm that is doing some task.
+
+00:21:31.540 --> 00:21:35.240
+You're physically looking at
+the arm while it's doing things,
+
+00:21:35.240 --> 00:21:37.180
+but here you're
+seeing that maybe it's
+
+00:21:37.180 --> 00:21:38.760
+spilled over something.
+
+00:21:38.760 --> 00:21:39.857
+And so you're taking over.
+
+00:21:39.857 --> 00:21:41.940
+And from there, you're
+maybe teleoperating the arm
+
+00:21:41.940 --> 00:21:43.320
+to generate the new trajectory.
+
+00:21:43.320 --> 00:21:46.700
+And in that case, you would
+be limiting the augmented data
+
+00:21:46.700 --> 00:21:50.040
+set to have the exact same
+states as the original one.
+
+00:21:50.040 --> 00:21:52.780
+You would allow yourself
+to explore a different part
+
+00:21:52.780 --> 00:21:54.820
+after the mistake?
+
+00:21:54.820 --> 00:21:55.660
+Yeah.
+
+00:21:55.660 --> 00:21:58.482
+Which, in a way,
+this is a nice segue,
+
+00:21:58.482 --> 00:21:59.940
+because if you
+think about it, this
+
+00:21:59.940 --> 00:22:02.440
+is only one iteration
+of the algorithm.
+
+00:22:02.440 --> 00:22:05.220
+But if you repeat
+this, then you're
+
+00:22:05.220 --> 00:22:07.380
+basically you will
+be having rollouts
+
+00:22:07.380 --> 00:22:12.120
+of a new policy, pi 2, which has
+a different state distribution.
+
+00:22:12.120 --> 00:22:16.060
+And so here you will be
+covering new set of states.
+
+00:22:16.060 --> 00:22:18.710
+So very high level.
+
+00:22:18.710 --> 00:22:22.050
+DAgger is an automated way
+to take your given policy.
+
+00:22:22.050 --> 00:22:24.790
+You let it interact
+in your environment,
+
+00:22:24.790 --> 00:22:28.030
+and you basically expose
+failure modes in some sense.
+
+00:22:28.030 --> 00:22:30.390
+You basically follow what
+the policy will be doing
+
+00:22:30.390 --> 00:22:32.390
+and you correct
+those failure modes.
+
+00:22:32.390 --> 00:22:35.510
+Once you've done this, you might
+be maybe creating new failure
+
+00:22:35.510 --> 00:22:37.970
+modes, or you might be just
+observing new failure modes,
+
+00:22:37.970 --> 00:22:39.730
+and you keep iterating
+this process.
+
+00:22:50.950 --> 00:22:53.910
+And so, essentially,
+DAgger really
+
+00:22:53.910 --> 00:22:56.670
+operates as a form of
+iterative supervised
+
+00:22:56.670 --> 00:22:58.870
+learning because we're
+using supervised learning
+
+00:22:58.870 --> 00:23:01.250
+as this inner
+learning component.
+
+00:23:01.250 --> 00:23:03.470
+But we're really creating
+this iterative scheme
+
+00:23:03.470 --> 00:23:07.950
+where we query the
+expert in order
+
+00:23:07.950 --> 00:23:11.590
+to relabel states that
+are visited under evolving
+
+00:23:11.590 --> 00:23:13.410
+versions of the policy itself.
+
+00:23:16.390 --> 00:23:20.160
+And if you think about
+it at a high level, what
+
+00:23:20.160 --> 00:23:23.360
+we're saying here is
+that we can see DAgger
+
+00:23:23.360 --> 00:23:26.280
+as a data efficient
+way of querying
+
+00:23:26.280 --> 00:23:28.920
+the expert because
+we're saying we want
+
+00:23:28.920 --> 00:23:34.280
+to use the expert as a mechanism
+to generate corrective behavior
+
+00:23:34.280 --> 00:23:36.760
+when the policy fails.
+
+00:23:36.760 --> 00:23:41.080
+And, in this way, we are
+directly probing the expert
+
+00:23:41.080 --> 00:23:43.040
+exactly on those
+states that are visited
+
+00:23:43.040 --> 00:23:45.300
+by the policy where it fails.
+
+00:23:45.300 --> 00:23:48.520
+So here we are basically
+following the state distribution
+
+00:23:48.520 --> 00:23:51.600
+under the policy,
+seeing where it fails
+
+00:23:51.600 --> 00:23:55.880
+and relabeling, which is a
+pretty data-efficient way
+
+00:23:55.880 --> 00:23:59.520
+of collecting these
+corrective behaviors.
+
+00:23:59.520 --> 00:24:01.600
+The other extreme
+would be that in order
+
+00:24:01.600 --> 00:24:04.760
+to collect all the
+corrective behaviors that you
+
+00:24:04.760 --> 00:24:07.200
+care about you would
+have to run this maybe
+
+00:24:07.200 --> 00:24:11.280
+on all the possible states
+that your policy would ever
+
+00:24:11.280 --> 00:24:12.980
+encounter and
+relabel everything,
+
+00:24:12.980 --> 00:24:16.120
+which is extremely expensive.
+
+00:24:16.120 --> 00:24:18.220
+So this is, in a way,
+pretty data efficient.
+
+00:24:18.220 --> 00:24:20.720
+But querying the expert
+depending on your scenario
+
+00:24:20.720 --> 00:24:22.920
+is, in general,
+something very expensive.
+
+00:24:22.920 --> 00:24:26.360
+So again, depending on the
+task, DAgger might or might not
+
+00:24:26.360 --> 00:24:27.540
+be something feasible.
+
+00:24:30.160 --> 00:24:33.000
+And so here we looked at
+the naive version of DAgger.
+
+00:24:33.000 --> 00:24:36.120
+But there are different
+ways that you can maybe
+
+00:24:36.120 --> 00:24:38.240
+modify the basic algorithm.
+
+00:24:38.240 --> 00:24:42.480
+One could be confidence-based
+methods whereby here we
+
+00:24:42.480 --> 00:24:46.160
+are querying the expert on
+basically all the states
+
+00:24:46.160 --> 00:24:48.600
+that the policy visits
+during those rollouts.
+
+00:24:48.600 --> 00:24:52.160
+But we could maybe select
+some metric of uncertainty
+
+00:24:52.160 --> 00:24:56.440
+from the learner itself and only
+query the expert on those states
+
+00:24:56.440 --> 00:24:58.920
+where the learner was
+particularly uncertain
+
+00:24:58.920 --> 00:25:00.880
+about its answer.
+
+00:25:00.880 --> 00:25:02.840
+The other mechanism is
+also, as your colleague
+
+00:25:02.840 --> 00:25:05.100
+was referring to, is
+this human-gated DAgger
+
+00:25:05.100 --> 00:25:06.880
+where we have some
+humans that are kind
+
+00:25:06.880 --> 00:25:10.560
+of supervising the
+operation of our learner
+
+00:25:10.560 --> 00:25:14.010
+and directly intervening
+when there is a mistake.
+
+00:25:14.010 --> 00:25:15.070
+Yes.
+
+00:25:15.070 --> 00:25:17.290
+So if you don't
+[INAUDIBLE], is the benefit
+
+00:25:17.290 --> 00:25:19.290
+of this trying to
+make a lighter weight
+
+00:25:19.290 --> 00:25:21.830
+policy because you have
+an expert policy already,
+
+00:25:21.830 --> 00:25:23.450
+but you're not using it.
+
+00:25:23.450 --> 00:25:25.650
+So is this something
+that runs faster online?
+
+00:25:25.650 --> 00:25:27.410
+For example, that
+could be one way.
+
+00:25:27.410 --> 00:25:33.010
+So I would say in general, if
+you zoom out in all the methods
+
+00:25:33.010 --> 00:25:36.370
+that we're seeing in this
+class, I would say all of these
+
+00:25:36.370 --> 00:25:39.010
+are irrelevant although
+definitely there
+
+00:25:39.010 --> 00:25:42.090
+is being a shift towards
+learning based or more
+
+00:25:42.090 --> 00:25:45.170
+end to end architectures.
+
+00:25:45.170 --> 00:25:49.090
+The point is that getting
+reliable data for these end
+
+00:25:49.090 --> 00:25:52.050
+to end architecture nowadays,
+I would say, even in frontier
+
+00:25:52.050 --> 00:25:55.250
+models, typically relies on
+some more classical approach
+
+00:25:55.250 --> 00:25:56.670
+to generate labels for those.
+
+00:25:56.670 --> 00:25:58.610
+And so in some way,
+you could see this
+
+00:25:58.610 --> 00:26:01.930
+as a way of distilling some
+maybe extremely expensive
+
+00:26:01.930 --> 00:26:04.930
+indirect method
+for optimal control
+
+00:26:04.930 --> 00:26:08.030
+into a fast neural network
+that can approximate it.
+
+00:26:16.660 --> 00:26:20.680
+OK, any questions on
+DAgger before we move on?
+
+00:26:26.580 --> 00:26:32.260
+So we saw how DAgger is one
+example of an algorithm that
+
+00:26:32.260 --> 00:26:36.500
+directly tries to target
+these covariate shift issues.
+
+00:26:36.500 --> 00:26:39.660
+Let us look at how we could do
+this through data collection.
+
+00:26:39.660 --> 00:26:42.340
+And I want to do this
+through two case studies
+
+00:26:42.340 --> 00:26:44.860
+and going through
+two examples of this.
+
+00:26:44.860 --> 00:26:46.840
+So, in this case,
+this was, I think,
+
+00:26:46.840 --> 00:26:49.920
+one of the early works from
+NVIDIA on autonomous driving.
+
+00:26:49.920 --> 00:26:54.420
+I think it dates
+back around 2016.
+
+00:26:54.420 --> 00:27:00.980
+What they basically tried to
+do is learn a neural network
+
+00:27:00.980 --> 00:27:07.700
+for basically deciding the
+steering angle of the car
+
+00:27:07.700 --> 00:27:11.030
+while receiving as
+input some images coming
+
+00:27:11.030 --> 00:27:15.610
+from some cameras that were
+mounted on board the car.
+
+00:27:22.070 --> 00:27:22.910
+Let's see.
+
+00:27:22.910 --> 00:27:26.950
+So basically, in this study,
+which again was now more or less
+
+00:27:26.950 --> 00:27:28.710
+10 years ago, what
+you would see is
+
+00:27:28.710 --> 00:27:30.270
+that you started
+from something which
+
+00:27:30.270 --> 00:27:33.630
+was clearly not
+working also maybe
+
+00:27:33.630 --> 00:27:34.933
+being a little bit dangerous.
+
+00:27:34.933 --> 00:27:36.350
+But then the point
+of this work is
+
+00:27:36.350 --> 00:27:39.070
+that they started
+collecting more data
+
+00:27:39.070 --> 00:27:42.430
+for basically more
+demonstrations of humans driving
+
+00:27:42.430 --> 00:27:46.070
+cars and recording
+these tuples of images
+
+00:27:46.070 --> 00:27:48.150
+and steering angle decisions.
+
+00:27:48.150 --> 00:27:50.910
+And they at the end, they
+reached a performance
+
+00:27:50.910 --> 00:27:53.610
+that was to some
+extent impressive,
+
+00:27:53.610 --> 00:27:57.190
+especially at the time, and
+showed some pretty consistent
+
+00:27:57.190 --> 00:27:58.910
+behavior.
+
+00:27:58.910 --> 00:28:02.270
+The point is that, of course,
+this was pretty exciting
+
+00:28:02.270 --> 00:28:03.090
+at the time.
+
+00:28:03.090 --> 00:28:06.630
+Nowadays, we have made
+clearly some leaps from this.
+
+00:28:06.630 --> 00:28:09.440
+But one thing that I want
+to highlight from this work
+
+00:28:09.440 --> 00:28:12.140
+is something that
+you will observe
+
+00:28:12.140 --> 00:28:14.360
+if you read through
+that paper and look
+
+00:28:14.360 --> 00:28:19.000
+at the specific framework and
+architecture that they designed.
+
+00:28:19.000 --> 00:28:20.700
+Specifically, again,
+as we were saying,
+
+00:28:20.700 --> 00:28:23.760
+the overall problem was
+taking some camera images.
+
+00:28:23.760 --> 00:28:25.920
+Here they had three,
+kind of a center,
+
+00:28:25.920 --> 00:28:28.040
+left, and a right camera.
+
+00:28:28.040 --> 00:28:31.880
+They have some recorded steering
+wheel angles from human drivers.
+
+00:28:31.880 --> 00:28:34.280
+And the overall
+goal was to learn
+
+00:28:34.280 --> 00:28:38.880
+convolutional neural network to
+basically learn to approximate
+
+00:28:38.880 --> 00:28:43.200
+and predict those steering
+wheel angles from the images.
+
+00:28:43.200 --> 00:28:46.840
+Here I'm glossing over this
+box because this is exactly,
+
+00:28:46.840 --> 00:28:49.480
+I think, interesting
+part from data
+
+00:28:49.480 --> 00:28:51.880
+collection technique
+and specifically
+
+00:28:51.880 --> 00:28:53.920
+data augmentation technique.
+
+00:28:53.920 --> 00:28:58.140
+So again, pictorially, this is
+the kind of situation we are in.
+
+00:28:58.140 --> 00:28:58.740
+We have a car.
+
+00:28:58.740 --> 00:29:01.520
+We have our three
+cameras, and we
+
+00:29:01.520 --> 00:29:04.840
+have one recording of our
+steering wheel angle, so the one
+
+00:29:04.840 --> 00:29:08.930
+that the human
+actually executed.
+
+00:29:08.930 --> 00:29:12.390
+However, if we think about
+it a little bit more closely,
+
+00:29:12.390 --> 00:29:16.490
+the two side cameras could be
+used as an example of the car
+
+00:29:16.490 --> 00:29:20.170
+slightly drifting off
+the center of the lane.
+
+00:29:20.170 --> 00:29:23.530
+And we could use these
+observations to fictitiously
+
+00:29:23.530 --> 00:29:27.770
+augment the data set with
+some steering angles that
+
+00:29:27.770 --> 00:29:31.910
+are actually seeing
+this camera image,
+
+00:29:31.910 --> 00:29:33.890
+and then correcting
+from this camera image
+
+00:29:33.890 --> 00:29:37.650
+to recenter itself in
+the middle of the lane.
+
+00:29:37.650 --> 00:29:42.570
+So, in general, collecting
+data set of driving mistakes
+
+00:29:42.570 --> 00:29:44.670
+is something that is very
+dangerous and expensive.
+
+00:29:44.670 --> 00:29:48.130
+You don't want to be collecting
+on purpose corrective data
+
+00:29:48.130 --> 00:29:49.650
+where you're
+driving off the road
+
+00:29:49.650 --> 00:29:51.890
+and then going back
+again on the road.
+
+00:29:51.890 --> 00:29:54.450
+And so in this
+work, they actually
+
+00:29:54.450 --> 00:29:56.370
+came up with this
+pretty neat trick
+
+00:29:56.370 --> 00:29:59.690
+whereby they are augmenting
+the data they collect
+
+00:29:59.690 --> 00:30:04.730
+from human drivers to
+fictitiously generate
+
+00:30:04.730 --> 00:30:09.970
+these corrective data by taking
+the side cameras as if they were
+
+00:30:09.970 --> 00:30:14.450
+front cameras and manually
+adjusting the steering
+
+00:30:14.450 --> 00:30:16.590
+angle for that camera.
+
+00:30:19.690 --> 00:30:21.770
+And so this is, I
+think, an example
+
+00:30:21.770 --> 00:30:27.690
+of how you could try to embed
+this corrective behavior not
+
+00:30:27.690 --> 00:30:29.310
+from a perspective
+of the algorithm,
+
+00:30:29.310 --> 00:30:32.870
+but from the perspective of data
+collection and augmentation.
+
+00:30:35.890 --> 00:30:40.250
+A very similar idea
+was also presented
+
+00:30:40.250 --> 00:30:42.810
+in this work from the
+University of Zurich,
+
+00:30:42.810 --> 00:30:47.650
+where here the goal was
+controlling some quadrotors
+
+00:30:47.650 --> 00:30:52.230
+to indeed navigate
+some hiking trails,
+
+00:30:52.230 --> 00:30:57.730
+I think, in the Swiss Alps or
+mountains from camera images.
+
+00:30:57.730 --> 00:31:01.210
+The setting is very
+similar to some extent.
+
+00:31:01.210 --> 00:31:04.420
+We have some image camera,
+specifically a front camera
+
+00:31:04.420 --> 00:31:06.900
+view, and we want
+to output this time
+
+00:31:06.900 --> 00:31:09.460
+a discrete distribution
+over actions.
+
+00:31:09.460 --> 00:31:13.980
+That is, go straight,
+turn left, turn right.
+
+00:31:13.980 --> 00:31:20.660
+And once again, very similarly,
+what you see in this work
+
+00:31:20.660 --> 00:31:23.140
+is something that really
+resembles the previous work
+
+00:31:23.140 --> 00:31:26.740
+from NVIDIA, where here you
+had the researchers actually
+
+00:31:26.740 --> 00:31:29.360
+wearing this fancy
+headband with, I think,
+
+00:31:29.360 --> 00:31:32.740
+three GoPros mounted on
+it and collecting data
+
+00:31:32.740 --> 00:31:37.260
+by literally walking
+over hiking trails
+
+00:31:37.260 --> 00:31:42.420
+and specifically labeling
+the actions according
+
+00:31:42.420 --> 00:31:44.160
+to those same augmentations.
+
+00:31:44.160 --> 00:31:46.140
+So here for the
+frontal camera, they
+
+00:31:46.140 --> 00:31:48.940
+were labeling it as
+a go straight action.
+
+00:31:48.940 --> 00:31:51.900
+For the left one, they were
+labeling it as a turn right.
+
+00:31:51.900 --> 00:31:55.280
+And on the right one, they were
+labeling as a turn left action.
+
+00:31:59.980 --> 00:32:02.230
+Indeed, here's the
+fancy headline.
+
+00:32:02.230 --> 00:32:07.110
+And so you would see that this
+kind of works in practice.
+
+00:32:07.110 --> 00:32:09.110
+And so they got something
+that was, at the time,
+
+00:32:09.110 --> 00:32:12.810
+pretty reliable in navigating
+those hiking trails.
+
+00:32:18.270 --> 00:32:21.050
+And so here we saw two examples.
+
+00:32:21.050 --> 00:32:24.510
+But I think the main message
+that I'm trying to bring along
+
+00:32:24.510 --> 00:32:28.390
+is this idea that we, in trying
+to address covariate shift
+
+00:32:28.390 --> 00:32:31.830
+from a data perspective, we
+want to be intentional with data
+
+00:32:31.830 --> 00:32:33.170
+collection.
+
+00:32:33.170 --> 00:32:35.510
+And specifically, we
+want to intentionally add
+
+00:32:35.510 --> 00:32:40.950
+mistakes and correction for
+those mistakes in our data.
+
+00:32:40.950 --> 00:32:44.430
+So this could be as, in
+these examples, where
+
+00:32:44.430 --> 00:32:48.690
+we want to add some fake
+demonstration of corrections
+
+00:32:48.690 --> 00:32:51.030
+this example of
+the side cameras or
+
+00:32:51.030 --> 00:32:52.670
+from an algorithmic
+perspective, we
+
+00:32:52.670 --> 00:32:55.350
+want to use algorithms
+that automate
+
+00:32:55.350 --> 00:32:59.400
+the collection of this
+corrected data as in DAgger.
+
+00:32:59.400 --> 00:33:00.680
+Yes.
+
+00:33:00.680 --> 00:33:04.640
+On the prior example,
+the drone, made
+
+00:33:04.640 --> 00:33:11.560
+me wonder when you collecting
+this data to train models,
+
+00:33:11.560 --> 00:33:16.760
+is it possible
+[INAUDIBLE] to train
+
+00:33:16.760 --> 00:33:19.320
+in the case of the
+drone moving, train it
+
+00:33:19.320 --> 00:33:21.920
+based on the decisions
+that are being made?
+
+00:33:21.920 --> 00:33:26.200
+This is why you go left and
+not the tree, while also having
+
+00:33:26.200 --> 00:33:29.040
+it not be reliant on
+the dynamics that are
+
+00:33:29.040 --> 00:33:30.750
+inherent to the training data.
+
+00:33:30.750 --> 00:33:34.500
+Like the way that a human
+moves something on their head
+
+00:33:34.500 --> 00:33:39.400
+[INAUDIBLE], you
+can't suddenly fly up
+
+00:33:39.400 --> 00:33:42.595
+two feet higher
+than you are, which
+
+00:33:42.595 --> 00:33:44.720
+for a drone that might be
+advantageous for the tree
+
+00:33:44.720 --> 00:33:47.480
+[INAUDIBLE] take
+advantage of it.
+
+00:33:47.480 --> 00:33:50.240
+But if they're trained on the
+data that comes from something
+
+00:33:50.240 --> 00:33:52.800
+that's constrained
+to human dynamics,
+
+00:33:52.800 --> 00:33:58.330
+is there a way to detach the
+behavior control of the drone
+
+00:33:58.330 --> 00:34:02.570
+from the dynamics they are
+built into the data to train on?
+
+00:34:02.570 --> 00:34:05.450
+I would say not
+from the perspective
+
+00:34:05.450 --> 00:34:06.670
+of imitation learning.
+
+00:34:06.670 --> 00:34:11.310
+So in imitation learning, we
+are, again, at face value,
+
+00:34:11.310 --> 00:34:13.610
+we are trying to
+approximate and imitate
+
+00:34:13.610 --> 00:34:16.409
+the behavior of some expert.
+
+00:34:16.409 --> 00:34:17.270
+And that's about it.
+
+00:34:17.270 --> 00:34:20.370
+So we don't really
+want to go beyond what
+
+00:34:20.370 --> 00:34:22.730
+the expert is able to do.
+
+00:34:22.730 --> 00:34:26.050
+And we typically
+won't have access
+
+00:34:26.050 --> 00:34:31.590
+to data that is beyond what the
+expert is able to experience.
+
+00:34:31.590 --> 00:34:33.130
+So, in general, I would say no.
+
+00:34:33.130 --> 00:34:35.570
+This will probably
+be something that
+
+00:34:35.570 --> 00:34:38.530
+will be extremely relevant from
+the perspective of reinforcement
+
+00:34:38.530 --> 00:34:41.090
+training, where there
+we are not trying
+
+00:34:41.090 --> 00:34:44.090
+to approximate some
+behavior that is being shown
+
+00:34:44.090 --> 00:34:45.969
+to us by some
+experts, but we want
+
+00:34:45.969 --> 00:34:47.510
+to interact with
+that environment,
+
+00:34:47.510 --> 00:34:51.090
+maybe a simulator
+of the real world
+
+00:34:51.090 --> 00:34:53.730
+and experiment with
+different strategies.
+
+00:34:53.730 --> 00:34:54.650
+Yeah.
+
+00:35:03.410 --> 00:35:07.910
+And so we covered algorithms.
+
+00:35:07.910 --> 00:35:09.910
+We covered data collection.
+
+00:35:09.910 --> 00:35:14.530
+Let us look at using
+expressive models to address
+
+00:35:14.530 --> 00:35:17.530
+or partially solve
+the issue that
+
+00:35:17.530 --> 00:35:20.673
+comes with multimodal behavior.
+
+00:35:20.673 --> 00:35:22.090
+And specifically,
+we'll be looking
+
+00:35:22.090 --> 00:35:24.290
+at two main classes of methods.
+
+00:35:24.290 --> 00:35:28.690
+The first one will be including
+history of observations.
+
+00:35:28.690 --> 00:35:32.110
+We'll see shortly
+in the next slide
+
+00:35:32.110 --> 00:35:35.730
+or using expressive function
+classes to better approximate
+
+00:35:35.730 --> 00:35:39.650
+and capture the
+multimodality in our data.
+
+00:35:39.650 --> 00:35:44.730
+So a brief mention on using
+history of observations
+
+00:35:44.730 --> 00:35:49.050
+is that until now, and whenever
+we are reframed the MDP
+
+00:35:49.050 --> 00:35:52.290
+problem theoretically,
+we always assume
+
+00:35:52.290 --> 00:35:56.940
+that the state is a perfect
+representation and capturing
+
+00:35:56.940 --> 00:36:01.580
+all previous history
+in our system.
+
+00:36:01.580 --> 00:36:05.980
+In reality, especially if
+we are working with images,
+
+00:36:05.980 --> 00:36:09.260
+we won't be dealing with
+the ground truth full state
+
+00:36:09.260 --> 00:36:12.180
+representation of our system,
+but we will most likely
+
+00:36:12.180 --> 00:36:15.620
+be dealing with observations
+of that system, which are only
+
+00:36:15.620 --> 00:36:18.140
+partial informations
+or partial observations
+
+00:36:18.140 --> 00:36:19.780
+of the actual system.
+
+00:36:19.780 --> 00:36:25.580
+And so, in this case,
+there is benefit sometimes
+
+00:36:25.580 --> 00:36:30.460
+depending on the applications
+on rather than defining a policy
+
+00:36:30.460 --> 00:36:32.980
+as a distribution
+over actions given
+
+00:36:32.980 --> 00:36:36.900
+the instantaneous
+observation xt,
+
+00:36:36.900 --> 00:36:41.880
+in adding a sequence of past
+observations to our context,
+
+00:36:41.880 --> 00:36:44.340
+essentially.
+
+00:36:44.340 --> 00:36:46.160
+In the case of
+behavioral cloning,
+
+00:36:46.160 --> 00:36:49.260
+this is particularly
+relevant in the case
+
+00:36:49.260 --> 00:36:52.870
+where we're maybe
+collecting data
+
+00:36:52.870 --> 00:36:56.590
+of these tuples,
+states, controls
+
+00:36:56.590 --> 00:36:58.570
+from humans' demonstrations.
+
+00:36:58.570 --> 00:37:00.750
+Because if you
+think about it, here
+
+00:37:00.750 --> 00:37:03.910
+if we try to learn
+this policy from data,
+
+00:37:03.910 --> 00:37:06.590
+we are basically assuming
+that the human that
+
+00:37:06.590 --> 00:37:11.010
+has been collecting data for
+us, given the same observation,
+
+00:37:11.010 --> 00:37:14.630
+will always behave
+in the same way.
+
+00:37:14.630 --> 00:37:16.670
+On the other hand,
+history could be
+
+00:37:16.670 --> 00:37:18.590
+an interesting
+confounding factor
+
+00:37:18.590 --> 00:37:21.710
+to basically add to our
+context to differentiate
+
+00:37:21.710 --> 00:37:24.390
+between different observations.
+
+00:37:24.390 --> 00:37:26.330
+Again, let's make
+a concrete example.
+
+00:37:26.330 --> 00:37:30.310
+Say that we are x for us is
+just the front camera of our car
+
+00:37:30.310 --> 00:37:32.790
+and you as our steering angle.
+
+00:37:32.790 --> 00:37:36.490
+Then if x is only one snapshot
+of the current history,
+
+00:37:36.490 --> 00:37:40.030
+we basically have no idea of
+maybe the speed of our car
+
+00:37:40.030 --> 00:37:43.430
+or any other relevant
+measure that could
+
+00:37:43.430 --> 00:37:45.910
+be useful for decision-making.
+
+00:37:45.910 --> 00:37:51.440
+And we are implicitly assuming
+that given the same front car
+
+00:37:51.440 --> 00:37:54.600
+camera image, we would be
+always behaving in the same way.
+
+00:37:54.600 --> 00:37:58.160
+On the other hand,
+if we assume to have
+
+00:37:58.160 --> 00:38:00.620
+a history of previous
+camera images,
+
+00:38:00.620 --> 00:38:02.960
+then we might be capturing
+more useful information
+
+00:38:02.960 --> 00:38:05.600
+for decision-making.
+
+00:38:05.600 --> 00:38:10.040
+In practice, this is typically
+handled through basically
+
+00:38:10.040 --> 00:38:13.260
+your favorite sequence model
+where it could be transformers,
+
+00:38:13.260 --> 00:38:16.600
+could be recurrent neural
+nets, or something of the sort
+
+00:38:16.600 --> 00:38:19.600
+where the policy then
+basically becomes
+
+00:38:19.600 --> 00:38:23.040
+something that takes a sequence
+of states or observations
+
+00:38:23.040 --> 00:38:25.640
+and outputs the next action.
+
+00:38:25.640 --> 00:38:29.380
+So again, pretty high
+level discussion,
+
+00:38:29.380 --> 00:38:31.400
+but I think it's
+worth mentioning.
+
+00:38:31.400 --> 00:38:33.840
+In practice, I would
+say also my experience
+
+00:38:33.840 --> 00:38:39.480
+with including history in
+defining the behavior policies
+
+00:38:39.480 --> 00:38:41.060
+is usually very empirical.
+
+00:38:41.060 --> 00:38:43.560
+So you will be doing
+some sort of ablation
+
+00:38:43.560 --> 00:38:47.770
+where you're maybe trying
+out the training, your policy
+
+00:38:47.770 --> 00:38:54.390
+on your same data set with
+varying number of history time
+
+00:38:54.390 --> 00:38:56.870
+steps in the past and
+seeing what works best.
+
+00:39:03.890 --> 00:39:07.610
+OK, but let us move
+to, I think, something
+
+00:39:07.610 --> 00:39:10.490
+that is more
+fundamental, which is
+
+00:39:10.490 --> 00:39:15.370
+this issue of wanting to capture
+the full data distribution.
+
+00:39:15.370 --> 00:39:17.970
+So we made before this
+example of the drone flying
+
+00:39:17.970 --> 00:39:18.850
+past the tree.
+
+00:39:18.850 --> 00:39:21.850
+And we could have these two
+equivalent solution modes
+
+00:39:21.850 --> 00:39:25.730
+or behavior modes
+for our policy.
+
+00:39:25.730 --> 00:39:28.890
+And so the goal for
+us rather than fitting
+
+00:39:28.890 --> 00:39:33.090
+this mean value of this
+potentially multi-modal
+
+00:39:33.090 --> 00:39:35.490
+distribution, what we
+want to do is represent
+
+00:39:35.490 --> 00:39:38.610
+the entire distribution.
+
+00:39:38.610 --> 00:39:41.890
+And to do so, let us briefly
+revisit what it actually
+
+00:39:41.890 --> 00:39:47.610
+means for us to parameterize
+or devise a parametric function
+
+00:39:47.610 --> 00:39:49.690
+to express full distributions.
+
+00:39:49.690 --> 00:39:53.090
+And this will loosely depend on
+whether the distribution that we
+
+00:39:53.090 --> 00:39:56.890
+want to output is
+discrete, so something
+
+00:39:56.890 --> 00:40:00.330
+like categorical distribution
+over a finite set
+
+00:40:00.330 --> 00:40:04.050
+of possible actions, say the
+four cardinal directions moving
+
+00:40:04.050 --> 00:40:05.850
+up, down, left, or right.
+
+00:40:05.850 --> 00:40:08.170
+Or if this is
+continuous, it could
+
+00:40:08.170 --> 00:40:12.450
+be something like capturing the
+mean and the standard deviation
+
+00:40:12.450 --> 00:40:15.570
+of what our desired
+steering angle is.
+
+00:40:15.570 --> 00:40:17.730
+In practice, how
+we do this is we
+
+00:40:17.730 --> 00:40:20.610
+would say that we wish to
+define a neural network that
+
+00:40:20.610 --> 00:40:23.310
+outputs these parameters
+of our distributions.
+
+00:40:23.310 --> 00:40:27.030
+We could either have a
+neural net output the logits
+
+00:40:27.030 --> 00:40:29.530
+or the individual
+probabilities for each
+
+00:40:29.530 --> 00:40:31.210
+of our discrete actions.
+
+00:40:31.210 --> 00:40:34.010
+Or we could have a neural
+net that basically represents
+
+00:40:34.010 --> 00:40:36.170
+the mean and standard
+deviation of a candidate
+
+00:40:36.170 --> 00:40:39.350
+Gaussian over possible
+steering angle commands.
+
+00:40:43.610 --> 00:40:46.660
+The benefit of the
+discrete distribution
+
+00:40:46.660 --> 00:40:50.780
+is that it naturally
+handles multi-modality.
+
+00:40:50.780 --> 00:40:56.060
+So say that, again, this
+is the distribution that we
+
+00:40:56.060 --> 00:41:00.400
+wish to have our model output.
+
+00:41:00.400 --> 00:41:06.580
+If we discretize this naturally
+continuous state into bins
+
+00:41:06.580 --> 00:41:09.760
+and then assign a probability
+to each of those bins,
+
+00:41:09.760 --> 00:41:11.100
+that sums up to 1.
+
+00:41:11.100 --> 00:41:15.980
+We might be very well able to
+capture this multi-modality
+
+00:41:15.980 --> 00:41:18.920
+by learning something
+of the sort.
+
+00:41:21.860 --> 00:41:24.780
+So this discretized
+representations
+
+00:41:24.780 --> 00:41:27.660
+are actually very
+powerful because it's
+
+00:41:27.660 --> 00:41:29.320
+something we can do very well.
+
+00:41:29.320 --> 00:41:31.780
+So we could just learn this
+through cross entropy, which
+
+00:41:31.780 --> 00:41:33.940
+is pretty standard in
+supervised learning
+
+00:41:33.940 --> 00:41:36.860
+and get out of this something
+that naturally represents
+
+00:41:36.860 --> 00:41:40.060
+multimodal distributions.
+
+00:41:40.060 --> 00:41:44.030
+At the same time, I think
+pretty obvious downside
+
+00:41:44.030 --> 00:41:47.590
+is that depending on the
+dimensionality of our output
+
+00:41:47.590 --> 00:41:49.850
+and the discretization
+that we are interested in,
+
+00:41:49.850 --> 00:41:52.550
+and that is maybe relevant
+for our application,
+
+00:41:52.550 --> 00:41:55.710
+we could have a lot
+of bins to-- learn
+
+00:41:55.710 --> 00:42:00.290
+and a lot of probability
+kind of logits to estimate.
+
+00:42:00.290 --> 00:42:03.550
+And so this scales poorly with
+the dimensionality of our action
+
+00:42:03.550 --> 00:42:04.930
+space, in this case.
+
+00:42:07.630 --> 00:42:11.910
+The pro of using a continuous
+distribution as our output
+
+00:42:11.910 --> 00:42:14.350
+representation is obviously
+that this naturally
+
+00:42:14.350 --> 00:42:17.490
+captures the continuous
+nature of our actions,
+
+00:42:17.490 --> 00:42:20.470
+so no discretization required.
+
+00:42:20.470 --> 00:42:22.710
+But this might not
+be very expressive.
+
+00:42:22.710 --> 00:42:25.390
+So if we wish to use
+a Gaussian and we
+
+00:42:25.390 --> 00:42:31.310
+want to fit a Gaussian to
+this real underlying bimodal
+
+00:42:31.310 --> 00:42:34.430
+distribution, then
+probably what we will learn
+
+00:42:34.430 --> 00:42:39.310
+is something like this.
+
+00:42:39.310 --> 00:42:40.840
+And this is because
+we are trying
+
+00:42:40.840 --> 00:42:42.880
+to represent a
+bimodal distribution
+
+00:42:42.880 --> 00:42:45.060
+through a unimodal distribution.
+
+00:42:50.240 --> 00:42:51.140
+Does this make sense?
+
+00:42:51.140 --> 00:42:55.760
+Any questions or doubts here?
+
+00:42:55.760 --> 00:42:56.580
+Yes.
+
+00:42:56.580 --> 00:43:01.960
+Is the right scaling [INAUDIBLE]
+distribution as well?
+
+00:43:01.960 --> 00:43:03.000
+Sorry, can you repeat?
+
+00:43:03.000 --> 00:43:05.440
+For higher dimensional
+[INAUDIBLE] distributions,
+
+00:43:05.440 --> 00:43:09.600
+does it also not
+scale [INAUDIBLE]?
+
+00:43:09.600 --> 00:43:11.140
+The continuous distribution?
+
+00:43:11.140 --> 00:43:14.480
+Of course, depending
+on the distribution
+
+00:43:14.480 --> 00:43:18.080
+that you care about, this
+might or might not scale well.
+
+00:43:18.080 --> 00:43:21.120
+In general, like say we are
+just looking at an n dimensional
+
+00:43:21.120 --> 00:43:22.000
+Gaussian.
+
+00:43:22.000 --> 00:43:23.840
+This is pretty
+compactly represented
+
+00:43:23.840 --> 00:43:27.560
+by a mean vector and a
+covariance matrix, which
+
+00:43:27.560 --> 00:43:30.760
+might be much cheaper
+compared to having
+
+00:43:30.760 --> 00:43:34.100
+a binning in n
+dimensional space.
+
+00:43:36.680 --> 00:43:39.290
+Could you also account
+for different modes
+
+00:43:39.290 --> 00:43:41.330
+by just adding one [INAUDIBLE]?
+
+00:43:43.010 --> 00:43:44.030
+Yes, exactly.
+
+00:43:44.030 --> 00:43:48.342
+So this is a great
+segue to the next slide.
+
+00:43:48.342 --> 00:43:51.744
+I'm not even [INAUDIBLE]
+
+00:43:53.690 --> 00:43:58.530
+And so, indeed, the point
+is so these are ways
+
+00:43:58.530 --> 00:44:01.850
+of representing distributions.
+
+00:44:01.850 --> 00:44:04.090
+How can we be more
+expressive in representing
+
+00:44:04.090 --> 00:44:06.050
+multimodal distributions?
+
+00:44:06.050 --> 00:44:09.610
+One example could be, as
+you were exactly saying,
+
+00:44:09.610 --> 00:44:13.010
+let's fit a Gaussian
+mixture model to our data.
+
+00:44:13.010 --> 00:44:16.570
+What is a Gaussian Mixture
+Model or GMM for short?
+
+00:44:16.570 --> 00:44:18.730
+Is that we're basically
+defining rather
+
+00:44:18.730 --> 00:44:20.610
+than a single
+unimodal Gaussian, we
+
+00:44:20.610 --> 00:44:23.010
+want to learn the
+parameters of a mixture
+
+00:44:23.010 --> 00:44:25.690
+of Gaussian distributions,
+which is usually
+
+00:44:25.690 --> 00:44:28.250
+comprised by k Gaussians.
+
+00:44:28.250 --> 00:44:34.690
+So we will be defining the mean
+and covariance matrix for each
+
+00:44:34.690 --> 00:44:39.020
+of those k Gaussians together
+with a weighting factor
+
+00:44:39.020 --> 00:44:43.900
+or at least k weighting factors
+w1 to wk, which basically
+
+00:44:43.900 --> 00:44:49.620
+define the weighted average
+of these individual Gaussians.
+
+00:44:49.620 --> 00:44:51.940
+So, in practice, the Gaussian
+mixture distributions
+
+00:44:51.940 --> 00:44:55.420
+are quite powerful
+and expressive
+
+00:44:55.420 --> 00:45:00.340
+because through Gaussians,
+we can easily approximate
+
+00:45:00.340 --> 00:45:02.640
+potentially complex functions.
+
+00:45:02.640 --> 00:45:09.500
+So we could have, indeed,
+these three Gaussians
+
+00:45:09.500 --> 00:45:13.060
+being somehow combined
+through appropriate choice
+
+00:45:13.060 --> 00:45:17.180
+of the weights to maybe measure
+to represent a distribution that
+
+00:45:17.180 --> 00:45:19.180
+is extremely non-unimodal.
+
+00:45:24.184 --> 00:45:26.660
+A caveat, of course, in
+Gaussian mixture models
+
+00:45:26.660 --> 00:45:29.220
+is that the choice of
+k is a hyperparameter
+
+00:45:29.220 --> 00:45:32.620
+and has to be chosen in advance.
+
+00:45:32.620 --> 00:45:35.200
+Again, this is usually
+something pretty empirical.
+
+00:45:35.200 --> 00:45:37.100
+That is just try
+different numbers of k
+
+00:45:37.100 --> 00:45:39.380
+and see what works best.
+
+00:45:39.380 --> 00:45:42.180
+The trade-offs here
+could be the usual ones
+
+00:45:42.180 --> 00:45:45.340
+that come with respect to
+overfitting and underfitting
+
+00:45:45.340 --> 00:45:46.220
+of data.
+
+00:45:46.220 --> 00:45:49.340
+If I have very high k, I might
+be fitting very well my training
+
+00:45:49.340 --> 00:45:53.180
+data, but this doesn't really
+generalize to my testing data
+
+00:45:53.180 --> 00:45:55.580
+or inference.
+
+00:45:55.580 --> 00:45:58.940
+Or we could define k based
+on some domain knowledge.
+
+00:45:58.940 --> 00:46:00.860
+So we may know that
+the policy actually
+
+00:46:00.860 --> 00:46:02.680
+has three distinct modes.
+
+00:46:02.680 --> 00:46:04.840
+And so we might
+just pick that as k.
+
+00:46:04.840 --> 00:46:06.880
+But, in general, it's
+a hyperparameter.
+
+00:46:12.260 --> 00:46:18.140
+A second class of approaches
+to represent or expressive
+
+00:46:18.140 --> 00:46:20.900
+ways of representing
+multi-modal distributions
+
+00:46:20.900 --> 00:46:23.700
+is what I'm referring to
+here as the discretized plus
+
+00:46:23.700 --> 00:46:25.780
+autoregressive approach.
+
+00:46:25.780 --> 00:46:30.380
+So we introduced before
+this idea of discretization
+
+00:46:30.380 --> 00:46:32.760
+to represent multi-modal
+distributions.
+
+00:46:32.760 --> 00:46:36.270
+But we mentioned that scaling
+this to high dimensional actions
+
+00:46:36.270 --> 00:46:39.030
+for us, or in general, high
+dimensional distributions,
+
+00:46:39.030 --> 00:46:41.630
+could be expensive.
+
+00:46:41.630 --> 00:46:45.430
+Again, I think a nice
+visualization could be something
+
+00:46:45.430 --> 00:46:52.830
+where say that we have our
+two dimensional distribution
+
+00:46:52.830 --> 00:46:54.550
+that we wish to estimate.
+
+00:46:54.550 --> 00:46:57.590
+The discretization in this
+case would essentially
+
+00:46:57.590 --> 00:47:01.430
+be equivalent to picking a
+discretization in our two
+
+00:47:01.430 --> 00:47:05.750
+dimensional space and having to
+pick a specific value for each
+
+00:47:05.750 --> 00:47:08.150
+of these grid cells.
+
+00:47:08.150 --> 00:47:10.933
+You see how this
+scales very badly.
+
+00:47:10.933 --> 00:47:12.350
+And specifically,
+not only does it
+
+00:47:12.350 --> 00:47:15.510
+scale badly in the sense
+of number of parameters
+
+00:47:15.510 --> 00:47:19.310
+that we want to
+estimate, it also
+
+00:47:19.310 --> 00:47:21.830
+clearly suffers from the
+curse of dimensionality
+
+00:47:21.830 --> 00:47:24.550
+when we look at model learning.
+
+00:47:24.550 --> 00:47:26.790
+And this is because
+in reality, we only
+
+00:47:26.790 --> 00:47:31.120
+be estimating our
+distribution from samples
+
+00:47:31.120 --> 00:47:33.540
+from our underlying
+distribution.
+
+00:47:33.540 --> 00:47:37.640
+And so in order to populate
+all of the grid cells,
+
+00:47:37.640 --> 00:47:40.520
+you see how we would need an
+exponentially large number
+
+00:47:40.520 --> 00:47:43.480
+of samples from
+our distribution.
+
+00:47:43.480 --> 00:47:47.440
+So a neat trick is one
+of basically decomposing
+
+00:47:47.440 --> 00:47:52.020
+autoregressively this
+two-dimensional distribution.
+
+00:47:56.080 --> 00:47:57.080
+What does this mean?
+
+00:47:57.080 --> 00:48:03.120
+In general, we could represent
+exactly a joint distribution
+
+00:48:03.120 --> 00:48:15.990
+over x1 and x2 as
+basically the product
+
+00:48:15.990 --> 00:48:20.580
+of the conditional
+distribution, x1 times--
+
+00:48:20.580 --> 00:48:24.780
+so the probability of x1 times
+the probability of x2 given x1.
+
+00:48:27.520 --> 00:48:30.930
+And this is an
+exact reformulation.
+
+00:48:30.930 --> 00:48:33.010
+So we're not losing anything.
+
+00:48:33.010 --> 00:48:35.690
+But what we're
+gaining is that rather
+
+00:48:35.690 --> 00:48:40.770
+than having to discretize
+n dimensional space,
+
+00:48:40.770 --> 00:48:43.810
+we only do one dimensional
+discretization.
+
+00:48:43.810 --> 00:48:45.970
+So, in practice, this
+would mean something
+
+00:48:45.970 --> 00:48:53.490
+like we only need to discretize
+the one dimensional vector.
+
+00:48:53.490 --> 00:48:55.770
+So this would be like p of x1.
+
+00:48:55.770 --> 00:49:00.970
+And this would be
+p of x2 given x1.
+
+00:49:00.970 --> 00:49:04.730
+And only have to learn these
+two one-dimensional discretized
+
+00:49:04.730 --> 00:49:05.830
+representations.
+
+00:49:10.610 --> 00:49:13.170
+And here not only this is more
+efficient from the perspective
+
+00:49:13.170 --> 00:49:16.570
+of total parameter count, it is
+also more efficient with respect
+
+00:49:16.570 --> 00:49:18.650
+to the course of
+dimensionality issue
+
+00:49:18.650 --> 00:49:20.850
+that we were describing
+because here.
+
+00:49:20.850 --> 00:49:24.970
+While this the samples in this
+2D grid are pretty sparse,
+
+00:49:24.970 --> 00:49:29.660
+the same four samples would
+be clearly denser in these one
+
+00:49:29.660 --> 00:49:35.580
+dimensional vectors because we
+would be using the same four
+
+00:49:35.580 --> 00:49:37.240
+samples, something like that.
+
+00:49:46.055 --> 00:49:48.540
+In practice, this is
+exactly what people
+
+00:49:48.540 --> 00:49:52.900
+do when using transformer
+models for robot policies.
+
+00:49:52.900 --> 00:49:58.820
+So in this case, you would
+be your one step probability
+
+00:49:58.820 --> 00:50:01.420
+distribution would just
+be the transformer.
+
+00:50:01.420 --> 00:50:04.220
+You would have some context
+which could be maybe some camera
+
+00:50:04.220 --> 00:50:06.500
+image, maybe some
+natural language
+
+00:50:06.500 --> 00:50:08.460
+prompts that describe your task.
+
+00:50:08.460 --> 00:50:10.540
+And your learning,
+your distribution
+
+00:50:10.540 --> 00:50:14.620
+over next element in
+that sequence where
+
+00:50:14.620 --> 00:50:18.340
+this could
+essentially be, again,
+
+00:50:18.340 --> 00:50:20.820
+let us look at
+this more visually.
+
+00:50:20.820 --> 00:50:25.180
+So, in natural language,
+in LLMs, you typically
+
+00:50:25.180 --> 00:50:36.940
+have some transformer block
+that takes an input like a token
+
+00:50:36.940 --> 00:50:41.100
+here, maybe a sequence of
+those, and basically predicts
+
+00:50:41.100 --> 00:50:44.100
+the next token in that sequence.
+
+00:50:44.100 --> 00:50:47.620
+We can just call it maybe xt.
+
+00:50:47.620 --> 00:50:49.140
+In order to predict
+this, then you
+
+00:50:49.140 --> 00:50:53.660
+would be autoregressively
+introducing the predicted xt
+
+00:50:53.660 --> 00:50:58.080
+here, predict xt
+plus 1, and so forth,
+
+00:50:58.080 --> 00:51:01.740
+kind of doing this
+autoregressive prediction.
+
+00:51:01.740 --> 00:51:05.260
+Here we would be taking
+this exact framework.
+
+00:51:05.260 --> 00:51:08.860
+That is, we only learn this
+one step prediction rule
+
+00:51:08.860 --> 00:51:13.500
+where xt, rather than being
+tokens or words as you would
+
+00:51:13.500 --> 00:51:18.220
+do in LLMs, here, the xt could
+be one dimension of our action.
+
+00:51:18.220 --> 00:51:23.300
+So if we have an
+action vector u that
+
+00:51:23.300 --> 00:51:31.310
+is comprised of like a steering
+angle and an acceleration,
+
+00:51:31.310 --> 00:51:35.510
+we might have this
+decomposed such that we first
+
+00:51:35.510 --> 00:51:37.150
+predict the steering
+angle and then
+
+00:51:37.150 --> 00:51:39.590
+we feed the steering
+angle back to our model
+
+00:51:39.590 --> 00:51:41.790
+and predict the acceleration.
+
+00:51:41.790 --> 00:51:43.990
+Does that make sense?
+
+00:51:43.990 --> 00:51:45.270
+Yes.
+
+00:51:45.270 --> 00:51:50.158
+[INAUDIBLE] you have a lot of
+stuff like that dimensionality.
+
+00:51:50.158 --> 00:51:51.950
+You still have to go
+through and understand
+
+00:51:51.950 --> 00:51:54.990
+why everything [INAUDIBLE]
+to everything else before you
+
+00:51:54.990 --> 00:51:59.248
+can run this [INAUDIBLE]
+and narrow things down?
+
+00:51:59.248 --> 00:52:01.290
+Yeah, I would say in terms
+of dimensionality, no.
+
+00:52:01.290 --> 00:52:04.510
+But here basically
+trading off ease
+
+00:52:04.510 --> 00:52:07.710
+of representation with compute
+because now you would not
+
+00:52:07.710 --> 00:52:09.710
+be sampling all at
+once, but you're
+
+00:52:09.710 --> 00:52:11.530
+sampling autoregressively.
+
+00:52:11.530 --> 00:52:14.110
+So in order to generate
+the full vector, which
+
+00:52:14.110 --> 00:52:17.990
+might be n dimensional, you
+would have to do n steps,
+
+00:52:17.990 --> 00:52:21.010
+n calls to, in this
+case, transformer block.
+
+00:52:29.880 --> 00:52:34.960
+Again, so this is a very,
+very popular practice.
+
+00:52:34.960 --> 00:52:39.420
+Another class of models,
+also very popular,
+
+00:52:39.420 --> 00:52:41.800
+especially over the
+last couple of years,
+
+00:52:41.800 --> 00:52:44.480
+is basically relates
+with diffusion processes
+
+00:52:44.480 --> 00:52:45.800
+and diffusion models.
+
+00:52:45.800 --> 00:52:48.280
+And even more recently, I
+would say over the last couple
+
+00:52:48.280 --> 00:52:50.960
+of years, flow matching.
+
+00:52:50.960 --> 00:52:56.880
+And the idea of diffusion
+in general is that--
+
+00:52:56.880 --> 00:53:00.840
+so we're saying we want to
+sample from a potentially
+
+00:53:00.840 --> 00:53:06.640
+complex distribution
+but obviously, we
+
+00:53:06.640 --> 00:53:10.320
+don't know how to sample
+from this potentially wild
+
+00:53:10.320 --> 00:53:12.120
+distribution.
+
+00:53:12.120 --> 00:53:14.860
+But, in general, we might
+have some easy distribution,
+
+00:53:14.860 --> 00:53:23.110
+say a Gaussian from which we
+know exactly how to sample.
+
+00:53:23.110 --> 00:53:24.210
+And this is easy.
+
+00:53:24.210 --> 00:53:28.690
+And so in the diffusion
+processes in general cast
+
+00:53:28.690 --> 00:53:32.770
+the problem as wanting
+to transform a sample
+
+00:53:32.770 --> 00:53:34.530
+from a simple
+distribution, which
+
+00:53:34.530 --> 00:53:37.130
+we know how to sample
+from, and then transform
+
+00:53:37.130 --> 00:53:40.490
+these samples such that they
+match the target distribution
+
+00:53:40.490 --> 00:53:42.730
+that we care about learning.
+
+00:53:42.730 --> 00:53:48.090
+And so, in practice,
+what diffusion typically
+
+00:53:48.090 --> 00:53:52.950
+defines is a process
+whereby we at sampling time
+
+00:53:52.950 --> 00:53:56.890
+we would go from noise
+to the actual realization
+
+00:53:56.890 --> 00:53:58.230
+that we care about.
+
+00:53:58.230 --> 00:54:02.770
+So we want to learn
+this transformation.
+
+00:54:02.770 --> 00:54:07.550
+Diffusion models were originally
+introduced for generating images
+
+00:54:07.550 --> 00:54:10.130
+so we would say
+nowadays, basically,
+
+00:54:10.130 --> 00:54:11.930
+any image generation
+out there is
+
+00:54:11.930 --> 00:54:14.890
+using some form of diffusion
+model or a flow matching
+
+00:54:14.890 --> 00:54:16.850
+representation.
+
+00:54:16.850 --> 00:54:20.900
+And the goal here is
+to map from pure noise
+
+00:54:20.900 --> 00:54:23.780
+given some conditioning,
+for example, generate
+
+00:54:23.780 --> 00:54:27.980
+an image of a cat
+to the actual image
+
+00:54:27.980 --> 00:54:29.620
+that we care about generating.
+
+00:54:29.620 --> 00:54:32.800
+So the sampling direction
+is pretty straightforward.
+
+00:54:32.800 --> 00:54:33.920
+We want to take noise.
+
+00:54:33.920 --> 00:54:39.160
+We have a learned kind
+of transformation.
+
+00:54:39.160 --> 00:54:43.180
+And we use this to gradually
+and iteratively denoise going
+
+00:54:43.180 --> 00:54:45.020
+from noise to actual image.
+
+00:54:45.020 --> 00:54:47.240
+The tricky one and
+interesting is, of course,
+
+00:54:47.240 --> 00:54:49.220
+the backward direction.
+
+00:54:49.220 --> 00:54:52.260
+So how do we learn this mapping?
+
+00:54:52.260 --> 00:54:54.720
+In practice, for
+diffusion models,
+
+00:54:54.720 --> 00:54:59.380
+this is done by learning this
+individual denoising step.
+
+00:54:59.380 --> 00:55:00.900
+So what you would
+do is you would
+
+00:55:00.900 --> 00:55:05.940
+take your data set of images
+and define gradually more noisy
+
+00:55:05.940 --> 00:55:07.780
+versions of those images.
+
+00:55:07.780 --> 00:55:14.700
+So we would take x0 and then
+define x0 plus some noise
+
+00:55:14.700 --> 00:55:18.310
+and then define--
+and this would be x1.
+
+00:55:18.310 --> 00:55:20.870
+And then we define
+x1 plus some noise.
+
+00:55:20.870 --> 00:55:22.270
+This would be x2.
+
+00:55:22.270 --> 00:55:25.030
+And so we gradually
+generate more and more noisy
+
+00:55:25.030 --> 00:55:29.150
+versions of this image
+until we get pure noise.
+
+00:55:29.150 --> 00:55:31.070
+And the goal in
+diffusion models we then
+
+00:55:31.070 --> 00:55:35.110
+want to approximate
+this noise term to
+
+00:55:35.110 --> 00:55:38.670
+basically being able
+to reverse the process.
+
+00:55:38.670 --> 00:55:42.555
+So at data generation time we
+basically have the forward,
+
+00:55:42.555 --> 00:55:44.430
+generate the forward
+generation where we just
+
+00:55:44.430 --> 00:55:45.990
+add noise to our image.
+
+00:55:45.990 --> 00:55:49.350
+And then we want to
+approximate this noise
+
+00:55:49.350 --> 00:55:52.890
+through a learned parametric
+mapping, f of theta,
+
+00:55:52.890 --> 00:55:57.190
+which then allows us to go
+in the reverse direction.
+
+00:55:57.190 --> 00:56:00.070
+Again, I'm aware this is
+pretty hand-wavy description,
+
+00:56:00.070 --> 00:56:01.830
+but I'm happy to
+provide references
+
+00:56:01.830 --> 00:56:03.730
+for diffusion
+models in practice.
+
+00:56:03.730 --> 00:56:06.590
+But the bottom line here is
+that diffusion models and flow
+
+00:56:06.590 --> 00:56:09.070
+matching models are
+extremely powerful ways
+
+00:56:09.070 --> 00:56:13.990
+of representing these
+multi-modal distributions.
+
+00:56:13.990 --> 00:56:18.430
+But let us look a little bit
+more closely into flow matching.
+
+00:56:18.430 --> 00:56:21.390
+And the idea is that
+if in diffusion models
+
+00:56:21.390 --> 00:56:25.730
+we are interested in learning
+this error term epsilon,
+
+00:56:25.730 --> 00:56:32.350
+this noise term epsilon to be
+able to reverse the denoising
+
+00:56:32.350 --> 00:56:35.870
+process, in flow matching, what
+we want to learn essentially
+
+00:56:35.870 --> 00:56:39.090
+is a vector field to do
+this iterative denoising.
+
+00:56:39.090 --> 00:56:43.030
+So we're basically describing
+this statistical transport
+
+00:56:43.030 --> 00:56:47.310
+problem where we want to move
+samples from a simple noise
+
+00:56:47.310 --> 00:56:50.150
+distribution into samples
+from a potentially
+
+00:56:50.150 --> 00:56:53.190
+complex distribution.
+
+00:56:53.190 --> 00:56:55.710
+So, in practice, at
+inference the way this goes
+
+00:56:55.710 --> 00:57:00.990
+is that assume we have learned
+a vector field v of theta.
+
+00:57:00.990 --> 00:57:04.870
+At inference, we would
+be sampling point x0
+
+00:57:04.870 --> 00:57:06.870
+from our noise distribution.
+
+00:57:06.870 --> 00:57:11.430
+And then we would generating
+a data point from our target
+
+00:57:11.430 --> 00:57:15.240
+distribution essentially entails
+integrating forward this vector
+
+00:57:15.240 --> 00:57:17.400
+field.
+
+00:57:17.400 --> 00:57:22.280
+And we can do this through
+Euler integration, for example.
+
+00:57:22.280 --> 00:57:25.360
+Again, the caveat here
+is how do we train
+
+00:57:25.360 --> 00:57:27.680
+and how do we learn
+this vector field?
+
+00:57:27.680 --> 00:57:30.240
+And at training time,
+what we would be doing
+
+00:57:30.240 --> 00:57:32.540
+is that we sample a couple.
+
+00:57:32.540 --> 00:57:37.440
+So we would sample a
+sample x0 from a candidate
+
+00:57:37.440 --> 00:57:39.680
+initial distribution,
+say a Gaussian.
+
+00:57:39.680 --> 00:57:43.260
+We would sample a point, x1,
+from our data set, that is,
+
+00:57:43.260 --> 00:57:45.040
+a sample from the
+target distribution
+
+00:57:45.040 --> 00:57:46.920
+that we care about learning.
+
+00:57:46.920 --> 00:57:50.280
+We would sample a
+time step, t, usually
+
+00:57:50.280 --> 00:57:53.700
+from a uniform distribution
+between 0 and 1
+
+00:57:53.700 --> 00:57:58.720
+because we are assuming that our
+denoising step goes from time 0
+
+00:57:58.720 --> 00:58:01.080
+to time 1.
+
+00:58:01.080 --> 00:58:04.440
+And then in flow
+matching, we basically
+
+00:58:04.440 --> 00:58:07.240
+linearly interpolate
+between these two points.
+
+00:58:07.240 --> 00:58:10.320
+This would essentially mean
+drawing a straight line
+
+00:58:10.320 --> 00:58:13.970
+from our sample to the
+target sample from the target
+
+00:58:13.970 --> 00:58:15.250
+distribution.
+
+00:58:15.250 --> 00:58:20.970
+And we basically update the
+parameters of our learned vector
+
+00:58:20.970 --> 00:58:26.570
+field, such as to minimize the
+distance between our prediction
+
+00:58:26.570 --> 00:58:28.930
+of the velocity,
+essentially, with the target
+
+00:58:28.930 --> 00:58:30.930
+velocity between
+those two points
+
+00:58:30.930 --> 00:58:35.090
+because x1 minus x0 is
+essentially the target velocity.
+
+00:58:39.010 --> 00:58:49.850
+And so, in practice,
+what this would
+
+00:58:49.850 --> 00:58:53.950
+look like is something where
+we have our easy distribution,
+
+00:58:53.950 --> 00:58:56.170
+say a normal distribution here.
+
+00:58:56.170 --> 00:58:59.850
+We have our complex
+distribution here.
+
+00:58:59.850 --> 00:59:02.490
+And what we would
+do is we essentially
+
+00:59:02.490 --> 00:59:09.340
+learn a vector field that kind
+of guides us from every point
+
+00:59:09.340 --> 00:59:13.040
+into sampling from
+this distribution.
+
+00:59:13.040 --> 00:59:15.900
+Of course, imagine this
+vector field to be complete.
+
+00:59:15.900 --> 00:59:17.620
+But then, in
+practice, we would be
+
+00:59:17.620 --> 00:59:21.540
+sampling from our distribution
+and just integrating forward,
+
+00:59:21.540 --> 00:59:24.820
+for example, through
+Euler integration
+
+00:59:24.820 --> 00:59:28.720
+our samples to generate samples
+from this other distribution.
+
+00:59:34.220 --> 00:59:37.300
+And I would say flow matching
+is very popular these days
+
+00:59:37.300 --> 00:59:40.460
+because it's extremely
+powerful at representing
+
+00:59:40.460 --> 00:59:43.020
+continuous distributions,
+which are ultimately
+
+00:59:43.020 --> 00:59:47.040
+what we care about in
+robot control, for example.
+
+00:59:53.340 --> 00:59:54.400
+Any questions here?
+
+00:59:59.380 --> 01:00:05.580
+OK, our last trick that I
+wanted to make sure we covered
+
+01:00:05.580 --> 01:00:07.770
+is the one of action chunking.
+
+01:00:07.770 --> 01:00:12.530
+So up until now and
+throughout this course,
+
+01:00:12.530 --> 01:00:16.590
+we've always been
+discussing feedback policy
+
+01:00:16.590 --> 01:00:24.190
+in the form of a distribution
+over next controls given states.
+
+01:00:24.190 --> 01:00:26.270
+And so, in general,
+the framework
+
+01:00:26.270 --> 01:00:28.990
+is something where we
+observe some state xt.
+
+01:00:28.990 --> 01:00:31.190
+We had some policy
+from which allows
+
+01:00:31.190 --> 01:00:35.790
+us to basically sample an
+action in that specific state.
+
+01:00:35.790 --> 01:00:38.410
+We would be executing this
+action in the environment,
+
+01:00:38.410 --> 01:00:42.390
+and then we would observe a new
+state and repeat this process.
+
+01:00:42.390 --> 01:00:43.950
+And so, visually,
+this would look
+
+01:00:43.950 --> 01:00:47.930
+like at all time
+steps from 0 to 7,
+
+01:00:47.930 --> 01:00:50.630
+we would be
+generating one action,
+
+01:00:50.630 --> 01:00:53.230
+executing that in that
+respective time steps
+
+01:00:53.230 --> 01:00:56.310
+and moving forward over time.
+
+01:00:56.310 --> 01:00:58.950
+Action chunking, over
+which I would say right now
+
+01:00:58.950 --> 01:01:02.750
+is the most popular
+way of parameterizing,
+
+01:01:02.750 --> 01:01:05.230
+kind of robot learning
+policies is something
+
+01:01:05.230 --> 01:01:08.170
+where rather than
+predicting a single action.
+
+01:01:08.170 --> 01:01:11.790
+We are basically predicting
+actions over a specific planning
+
+01:01:11.790 --> 01:01:13.950
+horizon of length, k.
+
+01:01:13.950 --> 01:01:16.470
+So, if you wish, this
+looks like something
+
+01:01:16.470 --> 01:01:18.470
+like a model predictive control.
+
+01:01:18.470 --> 01:01:21.790
+So we're basically predicting
+k actions in the future
+
+01:01:21.790 --> 01:01:27.210
+and executing those k
+actions in our environment.
+
+01:01:30.390 --> 01:01:32.910
+So this became pretty
+popular, first of all,
+
+01:01:32.910 --> 01:01:34.610
+because it tends
+to work quite well.
+
+01:01:34.610 --> 01:01:36.190
+So people just adopted it.
+
+01:01:36.190 --> 01:01:39.750
+In general, I would say that
+a clear benefit is that this
+
+01:01:39.750 --> 01:01:42.070
+allows more time for inference.
+
+01:01:42.070 --> 01:01:45.830
+So if we have pre-computed the
+actions for the next k time
+
+01:01:45.830 --> 01:01:49.670
+steps, then we can just trust
+our predictions for the next k
+
+01:01:49.670 --> 01:01:53.330
+steps and only have to
+recompute new ones after k.
+
+01:01:56.470 --> 01:01:59.910
+Another more subtle
+motivation for which
+
+01:01:59.910 --> 01:02:02.990
+it is believed that these models
+perform, and it has been shown
+
+01:02:02.990 --> 01:02:04.600
+that these models
+perform better,
+
+01:02:04.600 --> 01:02:07.360
+is that in general,
+this leads to smoother
+
+01:02:07.360 --> 01:02:09.600
+controls trajectories.
+
+01:02:09.600 --> 01:02:13.300
+So if you look again at
+what we're doing here,
+
+01:02:13.300 --> 01:02:17.560
+typically our policy, pi, would
+be a learned object pi of theta.
+
+01:02:17.560 --> 01:02:20.200
+And we would be calling
+this object, essentially,
+
+01:02:20.200 --> 01:02:21.840
+at each time step.
+
+01:02:21.840 --> 01:02:25.840
+And since this learned
+policy might not be perfect,
+
+01:02:25.840 --> 01:02:28.580
+the learning signal might
+be a little bit jittery
+
+01:02:28.580 --> 01:02:30.040
+because we might be--
+
+01:02:30.040 --> 01:02:34.480
+we are basically introducing
+some randomness at every call.
+
+01:02:34.480 --> 01:02:38.960
+If we, however, predict a
+full prediction sequence,
+
+01:02:38.960 --> 01:02:42.900
+then within this short
+horizon sequence,
+
+01:02:42.900 --> 01:02:44.320
+typically the
+generations are more
+
+01:02:44.320 --> 01:02:47.480
+coherent between each other.
+
+01:02:47.480 --> 01:02:49.720
+And so this leads
+to smoother controls
+
+01:02:49.720 --> 01:02:56.080
+which typically are deployed
+with better performance.
+
+01:02:56.080 --> 01:03:00.520
+But this is definitely another
+trick of the trade, if you wish,
+
+01:03:00.520 --> 01:03:04.730
+that is worth knowing about.
+
+01:03:04.730 --> 01:03:06.970
+And so some examples.
+
+01:03:06.970 --> 01:03:10.970
+This work, diffusion policy
+was pretty popular probably
+
+01:03:10.970 --> 01:03:13.850
+now dating back three
+or four years ago.
+
+01:03:13.850 --> 01:03:18.370
+It was one of the first examples
+of leveraging diffusion models
+
+01:03:18.370 --> 01:03:21.130
+and diffusion policies at scale.
+
+01:03:21.130 --> 01:03:26.130
+So, in general, here we're going
+from an image representation
+
+01:03:26.130 --> 01:03:29.450
+observation of our state
+and using diffusion models
+
+01:03:29.450 --> 01:03:36.970
+to generate a full trajectory
+of behavior for our robotic arm.
+
+01:03:36.970 --> 01:03:40.650
+And it was shown to be able to
+do extremely challenging tasks
+
+01:03:40.650 --> 01:03:42.990
+generalize across
+different conditions.
+
+01:03:42.990 --> 01:03:47.250
+And so the results here
+were very good and exciting
+
+01:03:47.250 --> 01:03:48.920
+at the time.
+
+01:03:48.920 --> 01:03:50.670
+So not only are we
+using diffusion models,
+
+01:03:50.670 --> 01:03:53.350
+you also notice that here we're
+using this action chunking idea.
+
+01:03:53.350 --> 01:03:55.650
+So we're generating a full
+trajectory rather than
+
+01:03:55.650 --> 01:03:58.370
+a single action.
+
+01:03:58.370 --> 01:04:05.940
+And so this is definitely a work
+that I suggest you go check out.
+
+01:04:05.940 --> 01:04:09.100
+Another example would be the
+kind of robotics transformer
+
+01:04:09.100 --> 01:04:11.060
+series of works.
+
+01:04:11.060 --> 01:04:13.420
+There have been follow
+ups to this work.
+
+01:04:13.420 --> 01:04:15.260
+But at the high
+level here, I wanted
+
+01:04:15.260 --> 01:04:18.660
+to show the case
+where in general, you
+
+01:04:18.660 --> 01:04:22.140
+are learning a mapping in the
+form of a transformer model
+
+01:04:22.140 --> 01:04:26.020
+that maps from a
+history of images.
+
+01:04:26.020 --> 01:04:30.000
+So again, if you think back
+about our multiple time step,
+
+01:04:30.000 --> 01:04:33.860
+multiple observations of
+history and a language
+
+01:04:33.860 --> 01:04:35.540
+description of the
+task that we wish
+
+01:04:35.540 --> 01:04:41.700
+to execute to discretized
+representation of our action
+
+01:04:41.700 --> 01:04:43.980
+where we have been
+essentially doing
+
+01:04:43.980 --> 01:04:47.720
+this discretization plus
+autoregressive generation.
+
+01:04:47.720 --> 01:04:54.600
+So here the arm had different
+actions that it had to execute.
+
+01:04:54.600 --> 01:04:57.580
+And we are basically in
+this work they basically
+
+01:04:57.580 --> 01:05:00.430
+generated each of these
+dimensions individually
+
+01:05:00.430 --> 01:05:04.070
+and conditioning on the
+previous one to do so.
+
+01:05:04.070 --> 01:05:06.432
+So these are just
+examples of the topics
+
+01:05:06.432 --> 01:05:07.890
+that we have been
+discussing today.
+
+01:05:10.790 --> 01:05:14.430
+And so at a high
+level, I would say
+
+01:05:14.430 --> 01:05:17.870
+that we have been touching
+these common pitfalls
+
+01:05:17.870 --> 01:05:21.470
+and possible strategies to
+remedy for these pitfalls that
+
+01:05:21.470 --> 01:05:25.450
+range from algorithms that
+are targeting those pitfalls,
+
+01:05:25.450 --> 01:05:28.350
+for example, DAgger, we looked
+at SMART data collection
+
+01:05:28.350 --> 01:05:30.990
+and augmentations,
+take the three
+
+01:05:30.990 --> 01:05:34.350
+cameras and the
+fictitious augmentations.
+
+01:05:34.350 --> 01:05:38.110
+And we had a big
+parenthesis on, how can we
+
+01:05:38.110 --> 01:05:40.650
+represent the full
+distribution of our data?
+
+01:05:40.650 --> 01:05:42.230
+Because this is
+ultimately what we
+
+01:05:42.230 --> 01:05:44.610
+care about when learning
+from demonstrations.
+
+01:05:48.310 --> 01:05:50.510
+And so I would say
+that we have seen
+
+01:05:50.510 --> 01:05:56.560
+behavior cloning and a usual,
+a classical benefit and pro
+
+01:05:56.560 --> 01:06:00.300
+of behavior cloning
+is that at its core,
+
+01:06:00.300 --> 01:06:03.120
+it's essentially supervised
+learning plus or minus some kind
+
+01:06:03.120 --> 01:06:04.000
+of deltas.
+
+01:06:04.000 --> 01:06:06.400
+And I would say supervised
+learning is definitely
+
+01:06:06.400 --> 01:06:07.980
+easy to implement and monitor.
+
+01:06:07.980 --> 01:06:08.980
+We have good metrics.
+
+01:06:08.980 --> 01:06:11.560
+We know it's usually well
+behaved from the perspective
+
+01:06:11.560 --> 01:06:13.000
+of gradient descent.
+
+01:06:13.000 --> 01:06:17.120
+And so this is usually
+pretty simple to implement.
+
+01:06:17.120 --> 01:06:18.580
+It's also pretty efficient.
+
+01:06:18.580 --> 01:06:21.300
+So there is no need for
+trial and error learning,
+
+01:06:21.300 --> 01:06:22.720
+as we will see
+starting Wednesday
+
+01:06:22.720 --> 01:06:24.960
+in reinforcement learning.
+
+01:06:24.960 --> 01:06:27.540
+And there is no need for
+an explicit reward signal.
+
+01:06:27.540 --> 01:06:30.360
+So in some cases,
+defining a reward
+
+01:06:30.360 --> 01:06:35.840
+might be harder than learning
+to devising a policy itself.
+
+01:06:35.840 --> 01:06:37.680
+Take the case of driving.
+
+01:06:37.680 --> 01:06:40.680
+How do we quantify numerically
+what good driving is?
+
+01:06:40.680 --> 01:06:42.880
+On the other hand,
+learning a policy
+
+01:06:42.880 --> 01:06:44.800
+to mimic expert
+demonstrations of driving
+
+01:06:44.800 --> 01:06:48.840
+is actually much more tractable.
+
+01:06:48.840 --> 01:06:53.080
+On the cons side, of
+course, all of this
+
+01:06:53.080 --> 01:06:56.840
+assumes that we have a strong
+dependency on the quality
+
+01:06:56.840 --> 01:06:58.020
+of the demonstrations.
+
+01:06:58.020 --> 01:07:00.000
+So if the
+demonstrations are bad,
+
+01:07:00.000 --> 01:07:05.080
+then there is no way that the
+learned policy will be good.
+
+01:07:05.080 --> 01:07:08.200
+Of course, these strategies
+that we discussed today
+
+01:07:08.200 --> 01:07:12.220
+are ways of addressing the
+compounding errors problems.
+
+01:07:12.220 --> 01:07:14.560
+But these problems remain.
+
+01:07:14.560 --> 01:07:17.600
+And, in general, generalization
+of learned policies
+
+01:07:17.600 --> 01:07:20.000
+is a big topic.
+
+01:07:20.000 --> 01:07:24.500
+And linked with the first
+one, in behavior cloning,
+
+01:07:24.500 --> 01:07:26.760
+there is no
+exploration whatsoever.
+
+01:07:26.760 --> 01:07:31.080
+So we will have no way of
+discovering new solutions
+
+01:07:31.080 --> 01:07:37.440
+for the task that have not been
+demonstrated from an expert.
+
+01:07:37.440 --> 01:07:39.520
+And so this is where
+reinforcement learning
+
+01:07:39.520 --> 01:07:43.280
+will come in the picture.
+
+01:07:43.280 --> 01:07:45.980
+Any questions on
+behavior cloning?
+
+01:07:51.400 --> 01:07:55.850
+So I want to quickly touch
+on a couple of actually one
+
+01:07:55.850 --> 01:07:57.610
+other paradigm for
+behavioral cloning
+
+01:07:57.610 --> 01:08:00.250
+and then give some pointers
+to inverse reinforcement
+
+01:08:00.250 --> 01:08:03.290
+learning methods.
+
+01:08:03.290 --> 01:08:09.810
+So one interesting
+idea is that, can we
+
+01:08:09.810 --> 01:08:14.810
+use ideas from
+behavior cloning to try
+
+01:08:14.810 --> 01:08:18.370
+to approximate the objective
+of reinforcement learning?
+
+01:08:18.370 --> 01:08:21.850
+That is, can we go
+beyond or at least
+
+01:08:21.850 --> 01:08:26.210
+filter out the performance
+of demonstrations
+
+01:08:26.210 --> 01:08:30.529
+in our data set such that we
+are able to get as close as
+
+01:08:30.529 --> 01:08:33.410
+possible to the best
+kind of performance that
+
+01:08:33.410 --> 01:08:38.010
+has been shown in the data set
+and potentially improve on it?
+
+01:08:38.010 --> 01:08:41.410
+And so the idea
+here is that rather
+
+01:08:41.410 --> 01:08:49.090
+than relying on solely
+optimal demonstrations
+
+01:08:49.090 --> 01:08:52.140
+for a specific task, we may
+want to leverage a broader
+
+01:08:52.140 --> 01:08:55.080
+set of demonstrations,
+for example,
+
+01:08:55.080 --> 01:08:58.819
+from suboptimal policies
+or related tasks
+
+01:08:58.819 --> 01:09:04.060
+or things of the sort and
+slightly shift the learning
+
+01:09:04.060 --> 01:09:07.020
+problem that we are
+positing in order
+
+01:09:07.020 --> 01:09:09.819
+to get the best from our data.
+
+01:09:09.819 --> 01:09:11.740
+And I would say two
+main classes of methods
+
+01:09:11.740 --> 01:09:14.700
+are the filtering or
+weighting of demonstrations
+
+01:09:14.700 --> 01:09:19.075
+or devising different
+conditionings for our policy.
+
+01:09:19.075 --> 01:09:20.700
+So let us go into
+the details because I
+
+01:09:20.700 --> 01:09:24.340
+think this will be clearer.
+
+01:09:24.340 --> 01:09:26.220
+So, in general, we
+have been discussing
+
+01:09:26.220 --> 01:09:28.340
+the idea of behavioral
+cloning completely detached
+
+01:09:28.340 --> 01:09:29.439
+from performance.
+
+01:09:29.439 --> 01:09:32.300
+We had no measure of
+reward that was scoring
+
+01:09:32.300 --> 01:09:34.859
+how good the trajectory was
+with respect to another.
+
+01:09:34.859 --> 01:09:37.960
+And so a kind of
+very simple idea is,
+
+01:09:37.960 --> 01:09:41.740
+can we introduce some
+of these considerations
+
+01:09:41.740 --> 01:09:47.819
+by essentially reintroducing
+the reward function
+
+01:09:47.819 --> 01:09:50.310
+as a player in this game?
+
+01:09:50.310 --> 01:09:54.830
+Whereby we might, for
+example, a simple idea
+
+01:09:54.830 --> 01:09:56.450
+would just be doing filtering.
+
+01:09:56.450 --> 01:09:59.270
+So say we have a reward
+function that is able to score
+
+01:09:59.270 --> 01:10:02.390
+a specific action in a
+how good was an action
+
+01:10:02.390 --> 01:10:04.870
+ut in a specific state.
+
+01:10:04.870 --> 01:10:08.470
+This may allow us to score the
+quality of entire trajectories
+
+01:10:08.470 --> 01:10:10.430
+because we could just score.
+
+01:10:10.430 --> 01:10:12.610
+We have a rollout
+in our data set.
+
+01:10:12.610 --> 01:10:16.350
+We might just be summing
+up the reward accumulated
+
+01:10:16.350 --> 01:10:17.870
+over this trajectory.
+
+01:10:17.870 --> 01:10:19.950
+And then we could
+basically filter out
+
+01:10:19.950 --> 01:10:24.230
+our data set such to only
+keep the trajectories that
+
+01:10:24.230 --> 01:10:29.230
+are better than some
+value, r bar, that we fix.
+
+01:10:29.230 --> 01:10:33.590
+So here is a very
+simple example in which
+
+01:10:33.590 --> 01:10:35.410
+we know that there is
+performance in place.
+
+01:10:35.410 --> 01:10:39.550
+Let us just focus ourselves on
+the good ones-- on the ones that
+
+01:10:39.550 --> 01:10:42.110
+are exceeding some threshold.
+
+01:10:42.110 --> 01:10:44.410
+Another mechanism could
+be to do weighting.
+
+01:10:44.410 --> 01:10:46.710
+So we have, again,
+some mechanism
+
+01:10:46.710 --> 01:10:52.580
+of scoring our transitions and
+trajectories through our reward.
+
+01:10:52.580 --> 01:10:54.940
+So let us modify the
+learning problem.
+
+01:10:54.940 --> 01:10:57.280
+For example, the
+maximum likelihood
+
+01:10:57.280 --> 01:11:02.120
+estimation objective such that
+it becomes a weighted version
+
+01:11:02.120 --> 01:11:05.200
+of the original objective
+where the weights come
+
+01:11:05.200 --> 01:11:07.480
+from the performance itself.
+
+01:11:07.480 --> 01:11:11.340
+So we don't want to mimic
+all trajectories blindly.
+
+01:11:11.340 --> 01:11:14.240
+So maximize the probability
+of all trajectories blindly.
+
+01:11:14.240 --> 01:11:16.360
+But what we want
+to do is maximize
+
+01:11:16.360 --> 01:11:19.680
+the weighted probability where
+the weight is essentially
+
+01:11:19.680 --> 01:11:21.600
+the performance.
+
+01:11:21.600 --> 01:11:22.923
+Yes.
+
+01:11:22.923 --> 01:11:26.420
+[INAUDIBLE] distinguish this
+process of filtering the quote
+
+01:11:26.420 --> 01:11:28.920
+unquote, "best trajectories"
+from what we were talking about
+
+01:11:28.920 --> 01:11:32.200
+before, where we want to
+augment purposefully all those
+
+01:11:32.200 --> 01:11:34.360
+suboptimal trainings?
+
+01:11:34.360 --> 01:11:36.260
+Yeah, it's a very good question.
+
+01:11:36.260 --> 01:11:40.420
+And I would say that the answer
+here is very case-dependent.
+
+01:11:40.420 --> 01:11:43.600
+So it will really depend
+on the application
+
+01:11:43.600 --> 01:11:45.340
+that you're working with.
+
+01:11:48.040 --> 01:11:54.080
+I would say that these filtering
+techniques are particularly
+
+01:11:54.080 --> 01:11:58.600
+good in the case where you
+have a very narrow task
+
+01:11:58.600 --> 01:12:00.360
+and where you don't
+need to collect
+
+01:12:00.360 --> 01:12:02.100
+this corrective behavior.
+
+01:12:02.100 --> 01:12:05.905
+But well, here what you care
+about is really focusing on I
+
+01:12:05.905 --> 01:12:07.280
+have these very
+good trajectories
+
+01:12:07.280 --> 01:12:10.240
+that I want to learn
+to exploit them.
+
+01:12:10.240 --> 01:12:12.640
+This could also be
+very good if your data
+
+01:12:12.640 --> 01:12:14.800
+set quality is just very broad.
+
+01:12:14.800 --> 01:12:16.880
+So maybe I just
+have trajectories
+
+01:12:16.880 --> 01:12:18.880
+that are extremely bad in here.
+
+01:12:18.880 --> 01:12:22.320
+And maybe my data set
+is also extremely large.
+
+01:12:22.320 --> 01:12:26.520
+And so you have no ways
+of manually annotating
+
+01:12:26.520 --> 01:12:28.100
+what is useful and what is not.
+
+01:12:28.100 --> 01:12:30.000
+And so you devise
+some simple strategy
+
+01:12:30.000 --> 01:12:33.800
+to filter out bad things.
+
+01:12:33.800 --> 01:12:37.920
+So I would say it's
+kind of parallel axis
+
+01:12:37.920 --> 01:12:41.020
+in devising towards
+your solution.
+
+01:12:45.890 --> 01:12:50.170
+OK, and another idea
+is that we might
+
+01:12:50.170 --> 01:12:53.370
+want to enrich the
+kind of conditioning
+
+01:12:53.370 --> 01:12:56.090
+that we have in our policy.
+
+01:12:56.090 --> 01:12:59.370
+So until now, the policy
+for us was distribution
+
+01:12:59.370 --> 01:13:03.610
+over controls given states.
+
+01:13:03.610 --> 01:13:07.730
+But I think two particularly
+popular approaches
+
+01:13:07.730 --> 01:13:11.730
+are to condition the policy
+on maybe a candidate goal
+
+01:13:11.730 --> 01:13:15.330
+state for goal
+condition policies
+
+01:13:15.330 --> 01:13:17.690
+or a candidate
+performance that we
+
+01:13:17.690 --> 01:13:19.470
+wish we'd have from our model.
+
+01:13:19.470 --> 01:13:22.850
+So something where we might
+condition it on a candidate
+
+01:13:22.850 --> 01:13:26.090
+total reward for our trajectory.
+
+01:13:26.090 --> 01:13:29.410
+Why are these
+reformulations useful?
+
+01:13:29.410 --> 01:13:31.130
+And I think this can
+be easily observed
+
+01:13:31.130 --> 01:13:33.810
+from the goal conditioned one.
+
+01:13:33.810 --> 01:13:44.340
+So say that we
+have some data set
+
+01:13:44.340 --> 01:13:47.980
+where we have a
+number of trajectories
+
+01:13:47.980 --> 01:13:52.140
+that go from some x1
+to some candidate, xt.
+
+01:13:52.140 --> 01:13:55.300
+Now, maybe from the
+perspective of the task,
+
+01:13:55.300 --> 01:13:58.060
+this trajectory is very
+bad because maybe xt
+
+01:13:58.060 --> 01:14:00.460
+is very different
+from the actual goal
+
+01:14:00.460 --> 01:14:02.780
+that we had over here.
+
+01:14:02.780 --> 01:14:06.300
+However, this is
+a good trajectory
+
+01:14:06.300 --> 01:14:11.900
+for showing how we are
+reaching maybe state, xi.
+
+01:14:11.900 --> 01:14:15.420
+So if the goal is not to solve
+a task but to reach a state,
+
+01:14:15.420 --> 01:14:18.380
+then every trajectory
+is a valid trajectory
+
+01:14:18.380 --> 01:14:23.540
+for showing an example of how we
+are reaching a candidate goal.
+
+01:14:23.540 --> 01:14:26.600
+So, in our case,
+this trajectory here,
+
+01:14:26.600 --> 01:14:31.300
+despite being bad for the task
+of reaching this goal state,
+
+01:14:31.300 --> 01:14:35.180
+learning from this trajectory
+as a means of having
+
+01:14:35.180 --> 01:14:38.120
+a general trajectory that
+could reach any candidate goal
+
+01:14:38.120 --> 01:14:40.670
+this is actually a
+good thing to do.
+
+01:14:40.670 --> 01:14:45.150
+So in some way, once we
+have learned this goal
+
+01:14:45.150 --> 01:14:49.810
+reaching policy, then the
+problem becomes at inference,
+
+01:14:49.810 --> 01:14:52.510
+I want to query
+my policy to reach
+
+01:14:52.510 --> 01:14:54.670
+a state that is good for me.
+
+01:14:54.670 --> 01:14:57.950
+So I'm basically learning
+a general mechanism
+
+01:14:57.950 --> 01:15:02.790
+to reach any candidate goal
+point goal state from my state.
+
+01:15:02.790 --> 01:15:05.390
+And then at test time,
+I want to condition
+
+01:15:05.390 --> 01:15:11.030
+this policy on reaching a
+state that is good for me.
+
+01:15:11.030 --> 01:15:12.710
+But, in this case,
+all trajectories
+
+01:15:12.710 --> 01:15:16.470
+are useful with this regard
+because all trajectories
+
+01:15:16.470 --> 01:15:19.510
+are good realizations of
+reaching all the states
+
+01:15:19.510 --> 01:15:20.730
+along that trajectory.
+
+01:15:28.390 --> 01:15:30.970
+And same thing for
+reward conditioning.
+
+01:15:34.390 --> 01:15:37.082
+So just a quick mention on
+inverse reinforcement learning
+
+01:15:37.082 --> 01:15:38.540
+more than I mentioned,
+I would say,
+
+01:15:38.540 --> 01:15:42.840
+pointers for you to dive
+deeper if you're interested.
+
+01:15:42.840 --> 01:15:45.900
+Remember that in
+behavior cloning,
+
+01:15:45.900 --> 01:15:49.560
+we wish to estimate the policy
+that approximates or mimics
+
+01:15:49.560 --> 01:15:51.120
+the behavior of an expert.
+
+01:15:51.120 --> 01:15:52.860
+In inverse
+reinforcement learning
+
+01:15:52.860 --> 01:15:54.800
+we care about learning
+the objective that is
+
+01:15:54.800 --> 01:15:58.440
+being optimized by the expert.
+
+01:15:58.440 --> 01:16:01.023
+And, in general, I would
+say that-- so more formally,
+
+01:16:01.023 --> 01:16:02.440
+the goal of
+reinforcement learning
+
+01:16:02.440 --> 01:16:04.400
+is to recover the
+reward function, which
+
+01:16:04.400 --> 01:16:08.360
+we think is being
+optimized by the expert.
+
+01:16:08.360 --> 01:16:12.000
+In practice, this means that
+we will be often parameterizing
+
+01:16:12.000 --> 01:16:15.520
+our reward by some
+parameters, w,
+
+01:16:15.520 --> 01:16:19.040
+and the goal is to find the
+values of those parameters that
+
+01:16:19.040 --> 01:16:22.400
+better explain the
+expert demonstrations.
+
+01:16:22.400 --> 01:16:26.160
+There are a number of inverse
+reinforcement learning
+
+01:16:26.160 --> 01:16:27.820
+algorithms, as you can imagine.
+
+01:16:27.820 --> 01:16:29.400
+But I would say
+that a high level
+
+01:16:29.400 --> 01:16:31.640
+the skeleton of most
+of these algorithms
+
+01:16:31.640 --> 01:16:33.480
+is something like
+the pseudocode here
+
+01:16:33.480 --> 01:16:37.770
+on the slide, whereby we will
+start from a data set of expert
+
+01:16:37.770 --> 01:16:41.370
+demonstrations, and we will
+have some initialized reward
+
+01:16:41.370 --> 01:16:46.090
+function parameters, w, and
+policy parameters, theta.
+
+01:16:46.090 --> 01:16:47.970
+And then most
+algorithms typically
+
+01:16:47.970 --> 01:16:50.870
+alternate between two
+separate processes.
+
+01:16:50.870 --> 01:16:53.170
+We'll have a first
+process whereby
+
+01:16:53.170 --> 01:16:56.170
+we update the reward
+function parameters according
+
+01:16:56.170 --> 01:16:58.010
+to some objective.
+
+01:16:58.010 --> 01:17:02.890
+And then we will use these
+newly computed parameters, w,
+
+01:17:02.890 --> 01:17:05.650
+to optimize for the
+parameters of the policy.
+
+01:17:05.650 --> 01:17:07.770
+So we will have
+an estimate of w.
+
+01:17:07.770 --> 01:17:11.050
+We will use this estimate to
+basically maximize the policy
+
+01:17:11.050 --> 01:17:14.210
+with respect to that objective.
+
+01:17:14.210 --> 01:17:17.490
+And then use this
+policy to increase,
+
+01:17:17.490 --> 01:17:21.570
+to improve the estimate of w.
+
+01:17:21.570 --> 01:17:23.640
+Again, so this is very
+high level discussion.
+
+01:17:23.640 --> 01:17:25.890
+But just to let you know
+that most of these algorithms
+
+01:17:25.890 --> 01:17:29.530
+should be seen from this lens.
+
+01:17:29.530 --> 01:17:33.410
+And popular algorithms are
+apprenticeship learning,
+
+01:17:33.410 --> 01:17:36.350
+maximum margin planning,
+and maximum entropy IRL.
+
+01:17:36.350 --> 01:17:38.650
+So we definitely
+start from those.
+
+01:17:38.650 --> 01:17:42.410
+And these algorithms
+are, to some extent,
+
+01:17:42.410 --> 01:17:46.810
+all try to address the challenge
+or one of the key challenges
+
+01:17:46.810 --> 01:17:49.290
+for inverse reinforcement
+learning, which
+
+01:17:49.290 --> 01:17:51.810
+is one of reward ambiguity.
+
+01:17:51.810 --> 01:17:53.330
+And this is
+basically the problem
+
+01:17:53.330 --> 01:17:57.290
+where there could be many
+reward functions that
+
+01:17:57.290 --> 01:17:58.850
+explain the same data.
+
+01:17:58.850 --> 01:18:02.130
+And so these
+mechanisms really try
+
+01:18:02.130 --> 01:18:04.890
+to design these two
+individual processes
+
+01:18:04.890 --> 01:18:09.030
+such that we don't fall
+in this reward ambiguity.
+
+01:18:14.838 --> 01:18:20.290
+So, just to conclude, we have
+been introducing, I would say,
+
+01:18:20.290 --> 01:18:23.370
+most of the techniques
+to basically build
+
+01:18:23.370 --> 01:18:25.170
+a mental model, I would
+say, of how to deal
+
+01:18:25.170 --> 01:18:26.470
+with imitation learning.
+
+01:18:26.470 --> 01:18:29.410
+We focus most of our
+narrative on behavior cloning
+
+01:18:29.410 --> 01:18:34.780
+where the v0 kind of naive
+formalism of behavior cloning
+
+01:18:34.780 --> 01:18:37.360
+is that we have a data set
+of expert demonstrations,
+
+01:18:37.360 --> 01:18:41.260
+and we want to learn a
+mapping that approximates
+
+01:18:41.260 --> 01:18:43.580
+the behaviors in our data.
+
+01:18:43.580 --> 01:18:48.180
+We saw how this naive version
+is basically prone to suffering
+
+01:18:48.180 --> 01:18:50.780
+from two main
+challenges, compounding
+
+01:18:50.780 --> 01:18:54.780
+errors and the multi-modality
+of behavior data.
+
+01:18:54.780 --> 01:18:56.380
+And we saw how we
+could tackle this
+
+01:18:56.380 --> 01:18:59.340
+from a perspective
+of data collection
+
+01:18:59.340 --> 01:19:02.640
+through smart augmentations,
+a perspective of algorithms,
+
+01:19:02.640 --> 01:19:04.860
+say DAgger, and
+expressive models that
+
+01:19:04.860 --> 01:19:07.380
+try to capture the
+multi-modality of the data
+
+01:19:07.380 --> 01:19:10.060
+itself and then
+briefly mentioned
+
+01:19:10.060 --> 01:19:13.980
+two alternative formulations,
+such as reinforcement learning
+
+01:19:13.980 --> 01:19:17.320
+through via supervised
+learning and inverse RL.
+
+01:19:21.140 --> 01:19:24.500
+Any questions on this?
+
+01:19:24.500 --> 01:19:27.350
+All right, then see
+you on Wednesday.
+
