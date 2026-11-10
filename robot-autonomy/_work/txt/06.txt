@@ -1,0 +1,1327 @@
+[00:00] Right, so also good news for you.
+[00:08] The hardest part of this course is over.
+[00:10] The hardest parts of this course are the first two weeks for two reasons.
+[00:14] One because the topic of trajectory optimization easily be complicated
+[00:18] because it entails quite sophisticated concepts in mathematics, differential equations, and
+[00:25] so on.
+[00:26] From now on, the difficulty of the class is going to stay at the same level or lower.
+[00:31] Second of all, another reason why typically the first two weeks are the hardest for this
+[00:36] course is that at the same time you also need to get used to the tools of the trade.
+[00:42] So basically how to use a terminal, how to revisit your knowledge of Python, and so on.
+[00:52] So expected by now you have done all of that.
+[00:55] So that is also going to be settled for the rest of the quarter.
+[00:59] So if you've been fine for the first couple of weeks, you'll be enjoying the rest of this
+[01:03] class for sure.
+[01:05] Any questions or concerns?
+[01:08] Any questions about the midterm?
+[01:14] All right.
+[01:16] So today we're going to start the first lecture of two lectures on the topic of motion planning.
+[01:24] As I referred to and mentioned many times, motion planning can be seen as an instantiation
+[01:32] of optimal control problem whereby we account for state constraints, complicated state constraints.
+[01:38] In particular state constraints are in general non-convex constraints.
+[01:42] Motion planning problem at a high level can be defined as a problem of computing a sequence
+[01:48] of actions that drive a robot from an initial condition to a terminal condition while avoiding
+[01:57] obstacles, respecting motion constraints, and possibly optimizing a cost function.
+[02:01] We have already seen techniques that aim at planning motions to respect motion constraints,
+[02:08] possibly optimizing a cost function.
+[02:10] But so far we have not really dealt with the topic of how to handle state constraints.
+[02:16] In particular, as I said, obstacle avoidance constraints that clearly for robotic systems
+[02:20] are of pivotal importance.
+[02:22] So today and on Thursday, we're going to do exactly that.
+[02:26] In particular, the goal of today is to give an introduction to the topic of motion planning,
+[02:31] also with a little bit of historical context, and then to learn about the most basic techniques
+[02:37] in motion planning that are rooted in the notion of discretization and graph search.
+[02:44] These are the very first algorithms that were introduced and are widely used in practice.
+[02:49] For example, Mars rovers use a variant of graph search algorithms to plan the motion
+[02:56] on the surface of Mars, a variant of D star algorithm that we will see later on.
+[03:02] Readings for today.
+[03:05] One of the main references for motion planning is a book by Steve LaValle, a little bit dated
+[03:09] by now.
+[03:10] It's from 2006, but there has been a lot of progress in the past 10 years.
+[03:15] But still a very good reference.
+[03:16] In particular, the material covered today is taken from chapter 6.
+[03:21] Another very good reference is a book from Dimitri Bersekas on dynamic programming and
+[03:25] optimal control.
+[03:26] In particular, this book has a chapter, chapter 2, that does a very good job at covering search
+[03:31] algorithms.
+[03:32] In particular, the class of search algorithms is referred to as label correcting methods.
+[03:38] It is the class that we're going to cover today.
+[03:44] Motion planning obviously is a big deal in robotics.
+[03:46] Just to give you some context and some excitement, here I'm showing one of my students testing
+[03:53] his motion planning algorithms against a quadrotor.
+[03:59] Suspense with the quadrotor.
+[04:00] The quadrotor is trying to plan its motion, obviously by avoiding a state constraint presented
+[04:05] by this word.
+[04:07] So that's what I really mean by motion planning, trying to reason about motion constraints
+[04:12] and at the same time constraints in the environment that can be even time-varying, adversarial
+[04:18] in this case, uncertain and so on.
+[04:21] Motion planning, as I said, is ubiquitous.
+[04:23] For the sake of this class, our key application domain will be the application of trying to
+[04:28] find a path for the wheeled vehicle that avoids obstacles, but can be used in many other settings.
+[04:36] For example, in order to control a humanoid robot that is trying to grasp a cup, but it
+[04:41] has to account for the fact that the cup might be in a drawer.
+[04:45] So it has to be very carefully not hitting the walls of the drawer.
+[04:49] Another exciting application of motion planning is how to carefully maneuver robotic probes
+[04:56] in order to perform surgeries.
+[04:59] For example, how to maneuver the probe in order to get into the blood vessels and then
+[05:03] deliver a medicine at a very specific target location.
+[05:07] Or it can even be applied to domains that have very little to do with robotics, like
+[05:11] for example, protein folding.
+[05:14] You can think of the problem of protein folding as a problem of sequencing a number of maneuvers
+[05:20] in order to get to the desired protein.
+[05:23] That can be cast, believe it or not, as a motion planning problem.
+[05:26] It's a very general problem, very important.
+[05:29] Not surprisingly, people have been working on it for the past several decades.
+[05:34] The problem was first formulated in the 70s.
+[05:39] And the first exact algorithms, we'll discuss a bit better what I mean by exact algorithms
+[05:45] later on, were developed in the 80s.
+[05:49] The problem with the exact algorithms is that in general they do not scale well to high
+[05:55] dimensional spaces.
+[05:56] By high dimensional, I mean to robots, whereby the configuration factor has a number of dimensions
+[06:04] that is, say, larger than four or five.
+[06:08] So as long as you have a unicycle, you have x, y, theta, three dimensional, it's fine.
+[06:13] But you have kinematics, so it's a little bit more complicated.
+[06:16] Four is fine.
+[06:17] Five tend to be already complicated.
+[06:19] Unfortunately, this problem has inevitably an exponential scaling with respect to the
+[06:25] configuration factor in terms of complexity.
+[06:28] This prompted people in the 90s to look at approximation algorithms.
+[06:33] So algorithms that deliver a solution that is good enough, but the advantage is that
+[06:39] that can be done very quickly.
+[06:41] And this is a recurrent theme in robotics, since real time implementation is of such
+[06:47] an importance, oftentimes they're willing to sacrifice a little bit of the correctness
+[06:51] of the algorithm, or the quality of the output, in favor of real time computation.
+[06:58] 2000s have seen widespread application of these methodologies on real systems.
+[07:03] I already mentioned mass rovers, but obviously self-driving cars, drones, you name it.
+[07:11] Basically every robot that moves around has to reason about environment, meaning that
+[07:17] the environment cannot be completely predicted at the design stage, has to run in the form
+[07:22] of another motion planning algorithm.
+[07:26] If you already know exactly what the environment that the robot is going to operate in, then
+[07:32] in principle you can pre-script the trajectory of every configuration, and you don't have
+[07:36] to run a motion planning algorithm.
+[07:38] But in general, that is not possible, so you have to do it.
+[07:40] And in particular, each one of you, every day, runs a motion planning algorithm in your
+[07:44] brain.
+[07:46] This is a very active field of research.
+[07:49] Here is a very partial list of the topics people are currently working on.
+[07:54] For example, inclusion of increasingly sophisticated motion constraints in a motion planning process,
+[07:59] even logical constraints.
+[08:01] What I mean by logical constraints is that as you plan the trajectory for your robot,
+[08:07] you account for logical constraints, like for example, rules of the road.
+[08:12] Think of a self-driving car, that as it plans its maneuver, not only has to obey collision
+[08:18] constraints, but also has to obey rules of the road, cannot move laterally if there is
+[08:23] a solid lane.
+[08:26] Planning under uncertainty, in many applications you have imperfect state information, so you
+[08:31] don't measure directly for the case of unicycle what x, y, and theta are, but you have a noisy
+[08:37] version of x, y, and theta.
+[08:39] So how do you plan your trajectory if, for example, you don't know exactly what your
+[08:42] configuration is?
+[08:43] For example, you don't know exactly what your position is.
+[08:47] Parallel implementation, of course, there has been a lot of development from the hardware
+[08:52] side, for example, with the advent of GPUs.
+[08:56] So one active research topic is how do you design algorithms that are specifically targeting
+[09:02] the platform over which these algorithms will be from?
+[09:08] Which means thinking about parallel versions of the algorithms that can be actively implemented,
+[09:15] for example, in GPUs.
+[09:17] And finally, motion planning, as in general trajectory optimization, is going to deliver
+[09:22] you an open-loop trajectory.
+[09:25] So the question is how do you endow that open-loop trajectory with a feedback tracking, a feedback
+[09:31] correction term, very similar to what we already did in the context of trajectory optimization
+[09:36] through the lens of differential flatness.
+[09:39] Okay, so let's dig a little bit deeper into the problem of motion planning in the simplest
+[09:46] possible setup.
+[09:47] So assume that we have a two-dimensional environment, and then we have a Lego block that we have
+[09:53] to move from an initial condition to a final condition.
+[09:57] So the motion planning problem entails finding a sequence of maneuvers, like, for example,
+[10:04] rotations and rotations that deliver your Lego block at the final destination.
+[10:10] This is a simple problem because it's in 2D, and because you don't have complicated motion
+[10:17] constraints.
+[10:18] You can move the Lego block laterally, you can rotate it as you want, and so on.
+[10:25] Now there are several approaches to motion planning.
+[10:31] The very first one is referred to as potential fields.
+[10:36] The idea is to create potentials whose derivative give forces on the robot, these are vehicle
+[10:44] forces on the robot, that pull it toward the goal and repel it from the obstacles.
+[10:51] So think of creating, let's assume that this is your 2D environment.
+[11:01] So this is an obstacle, this is the goal.
+[11:06] So think about, actually, let me turn the perspective, maybe like this.
+[11:16] So this is your obstacle, this is your goal.
+[11:20] So the idea is to create artificial potentials, so basically hills around the obstacles, and
+[11:26] the valleys around the goal.
+[11:31] So that you can think then of a robot as a sort of a ball that is moving in this kind
+[11:37] of a hill-shaped environment.
+[11:39] It is repelled from the obstacles and is attracted toward the goal.
+[11:45] Now the problem is that if you don't design these hills well, there is a danger that your
+[11:49] ball gets stuck in a local minimap and never reaches the goal.
+[11:53] So that's one of the main difficulties with the potential field motion planning.
+[11:59] The advantage is that it is very intuitive, and there are different ways of setting the
+[12:03] hills, but usually that is very intuitive design, so this is good.
+[12:08] It's extremely fast, the only thing that you have to do in order to control the robot is
+[12:13] at each point in the state space, you look at where you are, you compute the gradient
+[12:21] of your potential, that basically gives you the direction with respect to which your motion
+[12:25] should go, and then you just follow it for a couple of, for a one-time step.
+[12:30] So from a computational standpoint, it is extremely effective.
+[12:33] On the other hand, it's prone to this issue of getting stuck in a local minimap, so designing
+[12:40] potential so that you don't have this issue is extremely tricky.
+[12:45] This has prompted the design of other classes of planning algorithms.
+[12:50] Another approach, and this approach is extremely popular, is to take the problem that is naturally
+[12:56] defined in a continuous space, and then discretize the environment, and turn the problem of motion
+[13:03] planning in the problem of searching on a graph, whereby the graph represents the underlying
+[13:11] discretization of your environment.
+[13:14] And this is something that we're going to look into in more detail.
+[13:17] So this class of algorithms belong to the Jackson algorithm for motion planning, A-star,
+[13:23] D-star, and so on.
+[13:25] Very popular in robotics.
+[13:27] The third class is referred to as combinatorial planning.
+[13:32] So here the idea is to construct structures that allow you to discretize the problem,
+[13:39] yet retain all the information that is needed in order to solve the motion planning problem.
+[13:44] So basically, the idea is to have a discretization that is lossless.
+[13:47] If you're able to solve the discretized problem, the solution that you get will be the same
+[13:52] as if you were solving the continuous problem, different from the grid planning approach,
+[13:59] whereby you have some approximation in the output that you compute.
+[14:07] Now this is great, because basically you're turning a problem into something you can do
+[14:12] computation with, without losing any information that stems from the continuous formulation
+[14:17] of the problem.
+[14:19] The disadvantage is that the computation of the data structures is in general complicated.
+[14:28] It doesn't scale well with the dimension of the problem.
+[14:32] So this is the reason why actually this approach is not very widely used in practice.
+[14:37] It doesn't really scale to most of the problems that are of practical interest.
+[14:41] But in some cases, it's still useful.
+[14:43] And finally, a fourth class of motion planning is represented by simply-based planning, which
+[14:51] tries to somehow merge the advantages of combinatorial planning with grid-based planning.
+[14:59] So the idea is to still try to reason about the continuous problem, but do computation
+[15:06] with respect to a discretization that is a little bit more adaptive than what you would
+[15:10] do with a standard grid-based approach.
+[15:12] And we'll see this in much more detail.
+[15:14] In particular, in this class, we're going to focus on these three classes of planning
+[15:20] algorithms, grid-based, combinatorial, and sampling-based.
+[15:24] In particular today, we're going to talk about grid-based and combinatorial.
+[15:27] And on Thursday, we're going to talk about sampling-based, and then going to summarize
+[15:33] all of them and draw a conclusion about the relative advantages and disadvantages.
+[15:38] So that's a plan.
+[15:43] All right, so let's start with the grid-based approaches.
+[15:47] Grid-based approaches are arguably the most natural one.
+[15:52] So what you do is you have a motion planning problem that
+[15:58] is defined over a continuous space, say for example, a square.
+[16:06] And then you have obstacles here and there, something like that.
+[16:14] So this is your start point.
+[16:17] This is your goal region.
+[16:19] So what you do is just to discretize the problem.
+[16:23] So you just grid your environment.
+[16:34] You put a representative point within each cell.
+[16:49] And so on.
+[16:50] You connect these points, for example,
+[16:54] by using four neighbors or maybe eight neighbors.
+[17:05] And then you clip your goal and your start position
+[17:10] to the closest point on the grid.
+[17:15] So having done that, what you're left with
+[17:18] is a graph, meaning a set of vertices, these points over here,
+[17:25] and a set of edges, the links between these points.
+[17:33] So now the motion planning problem.
+[17:35] Yes?
+[17:36] What do you discretize to?
+[17:40] So that's one of the pain points of grid-based approaches,
+[17:45] is that the quality of the solution in general
+[17:48] depends on the resolution.
+[17:50] You have to be a little bit careful with,
+[17:53] I'll come back to this in a second,
+[17:55] on how you choose your neighbors.
+[17:57] But in general, as the resolution gets smaller
+[18:00] and smaller, then the solution that you compute
+[18:03] is going to converge to the one that you will compute
+[18:06] in a continuous problem.
+[18:07] The question is that as the resolution gets smaller,
+[18:10] then the number of vertices gets larger, which basically means
+[18:14] you run more computation, which basically means
+[18:16] that this becomes more compute intense.
+[18:20] So there is a trade-off.
+[18:21] Nobody tells you what the trade-off is there.
+[18:24] It really also depends on the obstacle space.
+[18:27] So indeed, the resolution is something
+[18:29] that is very difficult to tune.
+[18:31] So what people do is a little bit of trial and error,
+[18:35] even if you have time, and also try to do adaptive grids,
+[18:41] whereby you have a finer discretization
+[18:44] in regions of the environment when you think
+[18:46] it's more promising to do motion planning and coarser
+[18:49] discretization.
+[18:50] So there is a lot of work on dealing with that issue.
+[18:53] But in general, there is not an exact answer.
+[18:56] It is one of the difficulties and disadvantages
+[18:58] of grid-based approaches.
+[19:00] What I was saying is that you have
+[19:01] to be careful with the neighbors,
+[19:03] is that consider this example, whereby we
+[19:09] start on a square, discretize, so you start here
+[19:19] and you want to get here.
+[19:20] So this is the goal.
+[19:21] This is the start.
+[19:23] And so we consider as the points in the vertices
+[19:27] these points here.
+[19:29] And we only connect them by looking at the four neighbors.
+[19:33] So essentially, we consider this connection, this connection,
+[19:35] and this connection.
+[19:37] We don't consider the diagonal connections.
+[19:41] So we want to get from here to here.
+[19:44] And we assume that each edge is of length 1.
+[19:50] So the optimal path, meaning this path,
+[19:55] has length square root of 2.
+[19:58] But the problem is that any path that I consider in this grid
+[20:04] to go to the goal has length what?
+[20:08] What's that?
+[20:09] 2, because at least I have to go one up and one right.
+[20:14] And this doesn't really depend on the resolution.
+[20:17] If I make the resolution finer and finer,
+[20:29] so now these will be my connections.
+[20:32] I still have this issue that at the very least I
+[20:34] have to go one up and one right.
+[20:36] So basically, the length of the optimal solution
+[20:39] that I get by optimizing over this graph
+[20:43] is going to be equal to 2, no matter
+[20:45] how small the resolution is.
+[20:50] But you will say, OK, so then the right way to do it
+[20:53] is actually to also include for the diagonal motions, which
+[20:57] is what people typically do.
+[20:59] The point of this example is to tell you
+[21:00] that some care has to be taken in order to come up
+[21:06] with the right neighborhood.
+[21:10] Having said that, then the resolution
+[21:11] is really a trade-off between the quality of the solution
+[21:14] and computation time.
+[21:15] What is the right solution is experience,
+[21:19] and there are some guidelines out there as well.
+[21:22] The key point is that the resolution problem
+[21:27] notwithstanding, we have translated the motion planning
+[21:30] into the problem of searching a path over a grid, so something
+[21:34] that is a typical problem in the field of computer science.
+[21:40] So in other words, we have turned
+[21:42] a problem of motion planning into a graph search problem.
+[21:46] So then the next logical question
+[21:47] is, how do we best search a path over this graph?
+[21:53] So the class of algorithms that we're
+[21:55] going to consider in this class is a very broad class
+[21:57] of algorithms referred to as label-correcting algorithms.
+[22:02] Where the idea is to label each node in the graph
+[22:10] with a function, so this is the node q,
+[22:14] with a function c of q that represents the cost to arrive
+[22:20] to this node from the origin, meaning
+[22:24] from the start point of your motion planning problem.
+[22:27] We refer to the best path that we have found so far.
+[22:32] And the idea is to iteratively improve over these levels
+[22:37] until we find an optimal path to the goal.
+[22:39] In particular, the way it works is relatively simple.
+[22:45] So this is also referred to as a cost to arrive.
+[22:48] As I said, is the cost to arrive to node q
+[23:01] with respect to the best path that we've found so far,
+[23:04] which is not necessarily the optimal one.
+[23:05] This is something that we're going to iteratively improve
+[23:08] along the algorithm, but it's the best one
+[23:11] that we have found so far.
+[23:12] If we haven't found any path to a given node, say q prime,
+[23:17] then the algorithm is simply initialized
+[23:19] with the cq prime equal infinity.
+[23:23] And then progressively, this level goes down.
+[23:26] Of course, in practice, you cannot code infinity
+[23:28] in the computer.
+[23:29] It will be a very large number, so say one trillion.
+[23:33] So the way these algorithms work is
+[23:35] that we maintain a list of nodes or vertices.
+[23:42] I'm going to use the words nodes or vertices equivalently.
+[23:46] Into a queue, depends everything in the community
+[23:49] as either frontier queue, allowed queue, priority queue.
+[23:53] These are all synonyms.
+[23:54] So this is a list of nodes that we are currently considering
+[24:02] as milestones, meaning as nodes that are included
+[24:07] in the optimal path to the goal.
+[24:10] So I currently note that we are considering
+[24:13] for further exploration in order to see whether they
+[24:15] should belong or not to the optimal path to the goal.
+[24:19] And the idea of level-correcting algorithms then is as follows.
+[24:22] Is to iterate on the nodes, and in particular, at each step,
+[24:27] we extract a node q, or vertex q, as I said.
+[24:31] Node and vertices are the same.
+[24:33] We extract the vertex from the frontier queue,
+[24:38] and we look at all its neighbors.
+[24:41] So assume...
+[24:54] So we extract node q, for which we have a label Cq,
+[25:02] and we look at all its neighbors, q prime.
+[25:06] q prime 1, q prime 2, q prime 3, and so on.
+[25:12] These are nodes that can be reached from the origin
+[25:16] by going through q first, and then in one step to q prime.
+[25:22] And then we ask the following question.
+[25:26] Is it possible to get to q prime?
+[25:30] So now we focus on a specific neighbor.
+[25:43] That will be q prime.
+[25:44] So is it possible to get to q prime through q in a way
+[25:49] that is cheaper than the current path that I currently
+[25:52] have found for q prime?
+[25:54] Meaning, is c of q plus the cost of going from q to q prime
+[26:01] directly less than c of q prime?
+[26:10] Again, what this means, don't consider for now upper.
+[26:15] Consider just this.
+[26:17] So what this is saying is, can I get to q prime
+[26:24] by going through q and then directly to q prime
+[26:27] with a cost that is less than the cost of the path
+[26:30] that I have found in some previous iteration?
+[26:34] If yes, let's revise the path to q prime with this new path
+[26:40] that we have just found.
+[26:42] Does it make sense?
+[26:43] That's one of the core routines in the label-correcting
+[26:48] algorithms.
+[26:50] Any questions about this?
+[26:54] So the notation cqq prime is from q to q prime?
+[26:57] In one step.
+[26:59] So in the case of the graph, we'll
+[27:01] be going diagonal one step.
+[27:09] I have a question about the grid formation stuff.
+[27:11] What's the rule of the outer boundary of your robot
+[27:15] when you're forming this grid?
+[27:16] Are you assuming it's just a point moving along?
+[27:18] Yeah, no, very good question.
+[27:20] So typically, once we discretize the problem this way,
+[27:26] we are essentially viewing the robot as a point.
+[27:30] But in general, the robot is not a point.
+[27:34] So for example, a typical thing to do
+[27:37] is that if you're a robot with some weird shape,
+[27:40] say with six wheels, like a Mars rover, then what you do,
+[27:46] you be like a circle, so an over-approximating object.
+[27:51] And then you inflate all obstacles
+[27:54] by the radius of the circle.
+[27:56] And then you shrink the robot to a point.
+[27:59] Does it make sense?
+[28:00] This is basically what is done on the Mars rovers.
+[28:04] I can't tell you the radius.
+[28:05] For whatever reason, that is considered a script.
+[28:08] So but you can assume what the radius could be, right?
+[28:12] Yeah?
+[28:13] In the practice, what is your cost of arrival?
+[28:15] Is that like path length?
+[28:17] Yeah, typically it's path length in the setting of.
+[28:21] So there are versions of grid-based algorithms
+[28:23] that also account for motion constraints.
+[28:27] Here, we're not accounting for any dynamics and so on.
+[28:30] This is a purely geometric setting
+[28:32] in which a typical cost is just the path length.
+[28:34] OK, so then when you're doing this algorithm,
+[28:37] is the robot actually going down that path
+[28:40] and just going back and forth?
+[28:42] Or how is it?
+[28:43] Right.
+[28:44] How can it know ahead of time without traveling there?
+[28:48] So you have found a path like this one.
+[28:50] You've already found that, right?
+[28:52] Oh, yes.
+[28:52] So we're assuming that we have already
+[28:57] found another path to q prime.
+[28:59] If we have not, remember that we initialized all nodes
+[29:03] with infinity?
+[29:04] It means that this is certainly the best-found path
+[29:08] that we've found so far, since there is no other paths.
+[29:10] So we just consider this one.
+[29:12] Does it make sense?
+[29:14] So at the beginning, we initialized the cost to arrive
+[29:17] for all nodes as infinity.
+[29:18] Yeah, so then you just full pick a node and travel there?
+[29:22] No, we don't.
+[29:25] So the way that it works is that you start from,
+[29:28] so this is an iterative algorithm.
+[29:30] So we start from the start, and we put the start node
+[29:35] into the open list.
+[29:37] At the beginning, there is only one.
+[29:39] We pull it out, and we look at all its neighbors.
+[29:44] And then we say, for all its neighbors,
+[29:46] is the cost to arrive to this node,
+[29:50] the current cost to arrive to this node,
+[29:52] less or larger than the cost to arrive to this node
+[29:54] by going to start and then doing this one step?
+[29:57] The answer is yes, because we're internationalizing all the costs
+[30:00] to arrive with infinity.
+[30:01] So we start building a tentative path, this path.
+[30:04] And then we put this node into the open list.
+[30:06] We do the same for this one and the same for this one.
+[30:09] So at the end of the first iteration,
+[30:11] we have these three nodes in the open list.
+[30:13] And then we start extracting from the open list this one,
+[30:17] and then we look at its neighbors.
+[30:19] Look at it now and considering for the second time this node.
+[30:24] My last question is, how can you know the cost of arrival
+[30:27] to the neighbors without going in there?
+[30:30] How will people know what the cost of arrival
+[30:33] is when it's sitting at that node?
+[30:35] So this is the start position for your problem.
+[30:41] And this is the goal position for your problem.
+[30:44] And you have a map on environment,
+[30:46] so you have a notion of learning.
+[30:47] Oh, you have a map.
+[30:49] Oh, yes.
+[30:49] Oh, it's a known environment.
+[30:51] Oh, yeah.
+[30:51] So maybe this was not here.
+[30:54] So thank you for the question.
+[30:55] Yeah, absolutely.
+[30:57] I thought it was an unknown environment.
+[30:58] No, no, no.
+[30:59] That's a very good point.
+[31:01] And thank you very much for that question.
+[31:03] So now let's take a question, which is a very good one.
+[31:05] So here, so this is your start position.
+[31:10] This is your goal position.
+[31:12] So from here, it seems that you don't have the visibility
+[31:18] for what you have here.
+[31:20] So how do you know if you can travel this corridor or not?
+[31:23] So in the standard motion planning formulation,
+[31:25] we're assuming that we have a static formulation.
+[31:28] So the map of the environment is known.
+[31:29] So the input to the algorithm is the full specification
+[31:32] of the problem.
+[31:34] So the full specification of obstacles and so on.
+[31:38] That's a standard setting.
+[31:39] Now, which, for example, in some applications
+[31:46] like warehousing robotics and so on is a very good one.
+[31:49] But say that you have a robot that is exploring an environment.
+[31:53] Obviously, that robot does not have information
+[31:56] beyond its visibility core, which means that now you're
+[32:02] planning under occlusions.
+[32:04] That's the term.
+[32:05] Which is very much still a state-of-the-art topic.
+[32:08] So in that case, what you do is you plan a trajectory
+[32:10] within the known or observed space.
+[32:13] So this will be the environment with respect
+[32:16] to which you do motion planning.
+[32:18] And then you are careful in putting some intermediate goals
+[32:23] at the frontier of the environment.
+[32:25] The frontier of the environment is what divides what is seen
+[32:28] from what is unknown.
+[32:29] And there are different ways of doing it.
+[32:31] And that gives rise to different algorithms.
+[32:33] This is a very different problem.
+[32:34] For example, when a self-driving car approaches
+[32:37] an intersection, part of the scene might be occluded.
+[32:40] For example, so this is an intersection.
+[32:49] So this is your car.
+[32:50] Your car is not seeing what is here.
+[32:54] So that's what it means to be planning under occlusions.
+[32:57] So this is beyond the scope of this class.
+[32:59] But this is, in many ways, still a research problem
+[33:02] and a very valuable problem.
+[33:05] Is there anything else here?
+[33:08] All right, cool.
+[33:09] Yeah, so please ask questions.
+[33:11] Because sometimes I take things for granted,
+[33:14] having done this stuff for several years.
+[33:16] But I acknowledge that sometimes things cannot solve this.
+[33:19] All right, so we take a note.
+[33:23] We said there's not Q prime.
+[33:25] We may have a path that we have already completed
+[33:28] to this note.
+[33:29] In this case, we refer to the cost of the path as CQ prime.
+[33:33] If you don't have that, CQ prime is set to infinity.
+[33:36] And then we ask the question,
+[33:38] is the cost of the path Q prime through Q lower
+[33:42] than the cost of the path we currently have?
+[33:44] If you don't have it, there will be infinity.
+[33:46] If yes, then we update the level of node Q prime
+[33:52] with the cost of the path that we have just found.
+[33:57] And then we put Q prime into the open list
+[34:02] unless Q prime is the gold node,
+[34:04] in which case we have found the path to the gold.
+[34:09] And we just iterate.
+[34:09] So we start with the start node,
+[34:12] we expand to its neighbors,
+[34:14] and then we keep essentially moving upwards.
+[34:17] So it's a sort of a wave front.
+[34:21] So I would claim it's a very intuitive
+[34:22] and reasonable algorithm.
+[34:24] Any other questions?
+[34:28] So why I refer to the level correcting algorithms
+[34:32] as a class of algorithms instead of a single algorithm?
+[34:35] Because indeed, there are a number of degrees of freedom
+[34:38] in how you select the node
+[34:42] that you extract from the open list.
+[34:45] In general, you may have many.
+[34:46] Which one do you pick?
+[34:48] Randomly, with some more clever strategy, and some.
+[34:52] And how you strengthen some steps.
+[34:55] For example, here, upper is an additional variable
+[35:00] that encodes a notion of the cost of the best path
+[35:04] that we've found so far to the goal.
+[35:08] Initially, upper is set to equal to infinity.
+[35:11] But then as we progress, we may find a path to the goal.
+[35:16] We don't know yet if that is the optimal path.
+[35:18] But say that we find a path to the goal.
+[35:21] So then the idea is that there is no reason
+[35:25] to further considering a node Q prime
+[35:28] if you already know that the cost to arrive to Q prime
+[35:31] is larger than the cost of a path to arrive to the goal
+[35:36] that we have already found.
+[35:37] Simply because we're assuming that the cost is not negative.
+[35:39] So if the cost to arrive to Q prime is already larger
+[35:43] than the cost of a path to the goal that we already found,
+[35:46] there is no hope that an optimal path
+[35:48] is going to go to that node Q prime.
+[35:51] Make sense?
+[35:54] An equation or you want a drawing?
+[35:59] Upper is basically an upper bound on the optimal cost.
+[36:03] Initially set to infinity.
+[36:05] As soon as we find the path to the goal,
+[36:08] we set it to the cost of that path.
+[36:13] And then we discard the nodes whose cost to arrive
+[36:16] is greater than an upper bound on cost.
+[36:19] Because there is no point in considering those paths
+[36:21] because it's guaranteed that an optimal path
+[36:23] is not going to go through that point or node of vertex.
+[36:29] All right.
+[36:31] So this is how it works.
+[36:35] This is the start position, this is the goal.
+[36:37] The blue nodes are the ones that are currently
+[36:41] in the open list and are considered for further evaluation.
+[36:44] And you see how this algorithm basically expand upward.
+[36:49] Keeping evaluating new neighbors at each stage.
+[36:54] The color basically denotes the cost.
+[36:58] Red means highest, green means lower.
+[37:04] Meaning that we are very close to the goal.
+[37:07] Does it require that you complete the entire path
+[37:09] before you start a movement,
+[37:11] or you can do this as you're moving through the world?
+[37:14] Oh yeah, you can do it.
+[37:18] But the danger is that you may not find
+[37:22] that the a priori optimal path.
+[37:24] But certainly.
+[37:26] And as I said, most likely instead of doing that,
+[37:29] what you would do is to have a final discretization here,
+[37:34] and then a coarser discretization here,
+[37:36] and then move a little bit and then recompute.
+[37:39] With the idea that what matters is that
+[37:42] you're very careful about what is around you.
+[37:44] So yes, there are a lot of variations,
+[37:45] but here in the philosophy of this class
+[37:48] I want to give you the main concepts.
+[37:49] Yeah.
+[37:51] When do you know when to stop picking up notes?
+[37:55] Right, so let me first summarize the algorithm,
+[38:02] and then I'll come back to that question.
+[38:04] So this is just a summary of what I've just discussed so far
+[38:07] is mostly for such consistency of the slides.
+[38:10] The way the algorithm works is that
+[38:11] we remove a note from the frontier queue,
+[38:14] and for each child or neighbor,
+[38:16] child or neighbor are synonyms,
+[38:18] we execute the step two,
+[38:20] which is whether we see if we've found
+[38:22] a better path to Q prime than what we had before.
+[38:28] At some point, the frontier is going to become depleted
+[38:32] of notes, so it's empty.
+[38:36] At that point we terminate the algorithm.
+[38:39] So then the natural equation is
+[38:40] once the frontier queue is empty,
+[38:43] and we have terminated the algorithm,
+[38:47] are we guaranteed to have a path?
+[38:48] In particular, are we guaranteed to have the optimal path
+[38:50] with respect to the vertex,
+[38:52] with respect to the discretization?
+[38:55] And the answer is, oops, here.
+[38:58] The answer is yes.
+[39:00] Actually you can prove, we're not going to do a proof,
+[39:02] that once, if a feasible path exists
+[39:07] between the start and goal notes,
+[39:09] here the start note is referred to as QI,
+[39:12] Q init, Q initial, and Q goal,
+[39:15] then the algorithm terminates in finite time,
+[39:18] so it does not start oscillating or doing weird stuff,
+[39:21] and the cost of the path that you find to the goal
+[39:24] is indeed the optimal cost to the goal.
+[39:27] That's a correctness that applies
+[39:29] to all variations of the level-correcting algorithms.
+[39:33] But there are several variations,
+[39:35] depending on how you pull nodes out of the queue.
+[39:38] You had a question?
+[39:39] I'm trying to find them, but it seems pretty terrible.
+[39:42] They guarantee you.
+[39:44] Well, no, I mean, because some algorithms
+[39:46] could be actually guaranteed to converge
+[39:48] only in infinite time, only syntactically.
+[39:50] Yeah, we see that, for example, sampling-based algorithms
+[39:53] are guaranteed to find a solution that is feasible
+[39:56] or that is optimal only when the number of steps
+[39:59] goes to infinity.
+[40:01] No, actually these algorithms are incredibly fast,
+[40:05] super fast.
+[40:06] So, running the algorithm per se
+[40:09] is not what consumes time.
+[40:11] What consumes time is to build the discretization
+[40:13] and represent the obstacles.
+[40:15] But let me talk a little bit about the differences
+[40:18] about the implementation of level-correcting algorithms.
+[40:23] As I said, there are many different ways
+[40:24] you can pull over the way.
+[40:27] As already mentioned, but let me re-mention it,
+[40:31] is to initialize the algorithm,
+[40:33] we set the levels of all nodes to infinity
+[40:36] except for the start vertex or origin vertex,
+[40:40] whereby the level is set to zero
+[40:41] and that vertex is placed into the open list
+[40:45] or frontier list.
+[40:52] Typically, in this setting, it's just a path length,
+[40:54] so it would be just Euclidean distance
+[40:55] between the two points.
+[40:58] Or, in some cases, could be the Manhattan distance,
+[41:01] so basically the path distance
+[41:03] as you go through the edges of the grid.
+[41:17] Yeah, so if you have that knowledge,
+[41:20] it can be included into your discretization
+[41:23] and that leads to multi-resolution discretization schemes
+[41:28] that I mentioned before, whereby you discretize more finally
+[41:34] in regions around the obstacles
+[41:35] and you discretize less finally in open space.
+[41:38] Yeah, absolutely.
+[41:39] This is really the most basic version of the algorithm.
+[41:44] So different ways of implementing the algorithm.
+[41:47] How do we pull the nodes from the frontier list?
+[41:52] One way, obviously, is to do it randomly,
+[41:54] but there are better ways.
+[41:55] So one way is to implement the strategy
+[41:58] of last in, first out,
+[42:02] which means that the last node
+[42:03] that we have put in the frontier list
+[42:06] is the first one that is going to be retrieved
+[42:08] from the frontier list.
+[42:10] This corresponds to a depth-first search strategy,
+[42:14] whereby if we have a graph that looks like a tree,
+[42:18] we first go deep into a branch
+[42:21] before moving into the other branches.
+[42:26] This is opposite to what bad-first search does.
+[42:30] The idea is to keep Q as a list,
+[42:33] whereby we apply the strategy first in, first out,
+[42:39] which means that basically if we have a graph
+[42:41] that looks like here as a tree,
+[42:46] we first explore all the vertices at one level
+[42:51] before going to the next level,
+[42:52] because the first one that is going to be expanded
+[43:00] is the first one that was put into the frontier list.
+[43:06] So these two strategies are really orthogonal
+[43:08] to each other.
+[43:11] By the way, the bad-first search applied
+[43:13] to level-correcting methods is also referred to
+[43:15] as the Bellman-Ford algorithm for graph search.
+[43:18] The last one, very popular,
+[43:23] is to pick the node in the frontier Q
+[43:27] that has the lowest cost to arrive,
+[43:29] which arguably is the most natural.
+[43:32] Since we're trying to find an optimal path,
+[43:35] it's natural to consider as the candidate
+[43:40] as the most promising node along the optimal path,
+[43:43] the one that has the lowest cost to arrive.
+[43:46] The downside of this approach, though,
+[43:49] is that performing this operation can be expensive.
+[43:54] So there are specialized data structures
+[43:56] that allow you to perform this operation fairly efficiently,
+[43:59] but in general, it takes a little bit longer.
+[44:03] So for problems where you have several nodes,
+[44:08] this could, so this operation could be time-consuming,
+[44:14] but the advantage is that actually,
+[44:16] the JAXA performs a number of steps
+[44:18] that is lower in general than the other algorithms.
+[44:22] And one of the key properties of the JAXA
+[44:24] that is intuitive but not straightforward,
+[44:28] you will need a proof that we're not going to do,
+[44:30] is that under this exploration scheme,
+[44:33] each node enters the frontier Q only once.
+[44:36] In general, it might enter multiple times.
+[44:38] We are guaranteed by the theorem that I stated before
+[44:41] that these algorithms eventually will converge,
+[44:44] but a node in general might enter
+[44:46] the frontier Q many times.
+[44:47] With the JAXA algorithm, it enters only once.
+[44:52] Again, this would require proof.
+[44:54] It's not entirely straightforward.
+[44:58] Any question about a different,
+[45:01] for your P-set, you're going to implement
+[45:05] a variant of the JAXA algorithm.
+[45:07] What are used in robotics?
+[45:10] What do you mean about depth-first search?
+[45:12] Usually it's not finding optimal path, right?
+[45:15] Or unless you're exhausted researching the entire problem.
+[45:20] When depth-first is executed
+[45:23] within the level-correcting framework,
+[45:25] it indeed finds the optimal path.
+[45:27] But yes, it might eventually have to search
+[45:29] the entire space absolutely.
+[45:32] Otherwise, yes, you wouldn't find the optimal path.
+[45:34] One advantage of the depth-first search
+[45:37] is that you, at any point in time,
+[45:40] you only need to store in memory a part of the graph
+[45:42] because you go deep into a branch.
+[45:44] Well, with depth-first, you may need to store
+[45:47] the entire graph as you keep exploring.
+[45:51] Okay, so this is again how,
+[45:54] in particular, this is the JAXA algorithm,
+[45:55] how it looks like.
+[45:57] So you expand almost uniformly as a wavefront
+[46:01] on the way to the goal.
+[46:02] This is fine, but for example,
+[46:07] assume that you had actually an environment
+[46:12] that looked more like a circle.
+[46:14] The expansion will be isotropic,
+[46:17] which means that you will expand in this direction
+[46:19] toward the goal, but also in the opposite direction.
+[46:21] The reason is that in the level-correcting algorithm,
+[46:25] even with the JAXA strategy for node selection,
+[46:30] you only look at the cost to arrive,
+[46:33] but you don't have any biasing term
+[46:35] that tries to favor nodes that are closer to the goal.
+[46:40] So that's why you have a wavefront
+[46:42] that expands isotropically.
+[46:44] You're only capturing the notion of cost to arrive,
+[46:47] which does not capture any notion of where the goal is,
+[46:50] where it's with your start region.
+[46:52] So the point is that by running the JAXA,
+[46:58] the JAXA, also referred to as uninformed search,
+[47:02] because you don't use the information
+[47:03] of where the goal is with respect to the start,
+[47:06] you may be wasting some computation
+[47:07] because you are searching in a region
+[47:09] where probably you shouldn't search,
+[47:13] which motivates the topic of informed search,
+[47:18] how to bias the search toward those nodes
+[47:22] that have more potential to lead you to the goal
+[47:25] in a minimum cost.
+[47:27] So as I said, by only account for uninformed,
+[47:35] by only account for cost to arrive,
+[47:41] we said that the search is uninformed.
+[47:44] Now we're trying to include some information
+[47:46] about where the goal is with respect to the start vertex
+[47:51] in order to inform the search, bias it more toward the goal
+[47:54] so that you don't waste effort in regions
+[47:56] where you know that basically an optimal path
+[48:00] is not going to go through.
+[48:03] The idea, one of the key ideas is to order the nodes
+[48:08] not only by cost to arrive, that is what the JAXA does,
+[48:11] but by cost to arrive plus an approximation
+[48:16] of the cost to go.
+[48:19] In particular, that approximation has to be a lower bound
+[48:23] for the cost of the path between the node Q and the goal.
+[48:31] More specifically,
+[48:40] let this be the goal, this is your start node,
+[48:46] this is Q, you have found a path to Q,
+[48:53] this is CQ, in standard JAXA nodes are ordered by CQ,
+[48:59] and you pick from the frontier Q
+[49:01] the node that has lowest CQ.
+[49:04] The idea is to look at CQ plus an approximation
+[49:09] of the cost to go.
+[49:13] The cost to go is the cost of the path
+[49:17] from node Q to the goal.
+[49:21] You don't know the cost exactly
+[49:23] because you haven't computed any paths yet.
+[49:26] But in many cases, you have an approximation
+[49:29] of that cost to go.
+[49:31] For example, a very simple approximation
+[49:33] is just a straight line that neglects all obstacles,
+[49:38] so basically just Euclidean distance.
+[49:47] Euclidean distance.
+[49:51] So the idea then is to order the nodes
+[49:58] by cost to arrive plus approximation of the cost to go.
+[50:03] In particular, for this procedure to be well posed,
+[50:07] the approximation of the cost to go, referred to as HQ,
+[50:12] has to be a lower bound of the actual cost to go.
+[50:17] Otherwise, you might not include nodes in your search
+[50:24] that actually could be part of the optimal path.
+[50:27] As I said, from all practical purposes,
+[50:30] very common choice is just the Euclidean length
+[50:33] of a straight line neglecting all obstacles.
+[50:36] What really matters is that in this approximation,
+[50:38] you have a lower bound, so this is lower
+[50:40] than the actual optimal path from node Q to the goal.
+[50:44] Second of all, it has to be something very quick to compute.
+[50:48] Usually, straight line works very well.
+[50:50] So then what you do is to order the nodes
+[50:52] by cost arrival plus approximation of cost to go,
+[50:55] so the function HQ, and if you're doing the test
+[50:59] with respect to the upper bound,
+[51:01] to speed up the algorithm even further,
+[51:03] you strengthen the test by adding also the cost to go.
+[51:08] The idea again is that if you have a node Q prime
+[51:14] for which the cost to arrive plus the underestimate
+[51:17] is larger than the best path that you have found so far
+[51:21] to the goal, then it's worthless to consider it any longer.
+[51:26] Key point is that in this way,
+[51:28] fewer nodes are placed in the priority queue,
+[51:32] and in particular, your P set,
+[51:34] so this strategy is referred to as the A star algorithm,
+[51:37] one of the main algorithms for graph search,
+[51:40] and in your P set, you will implement it,
+[51:42] you will be implementing exactly A star,
+[51:45] and A star will be your reference planner
+[51:48] for the rest of the quarter.
+[51:52] So this is again the jextra.
+[51:54] As you see, uniform search, you expand as a boyfriend.
+[51:58] This will be the implementation with A star.
+[52:01] You see how now you are favoring those nodes
+[52:05] that are closer to the goal,
+[52:08] so it's much more direct way of searching.
+[52:11] The reason being that we include this approximate notion
+[52:15] of how far we are from the goal
+[52:17] in order to bias our search,
+[52:19] so we don't waste effort around here or around here,
+[52:23] because we already know that an optimal path
+[52:24] wouldn't go through there.
+[52:27] Yeah.
+[52:28] Is this also outside the most optimal path?
+[52:31] Yeah, by the way, there is no notion of most optimal path,
+[52:33] the optimal path, yeah.
+[52:36] All right, so to sum up,
+[52:40] the advantage of grid-based approaches
+[52:42] is that they are simple to use,
+[52:44] and in general, very fast.
+[52:46] The disadvantage is that since you rely on discretization,
+[52:49] as you pointed out,
+[52:51] there is the issue of how to select that discretization,
+[52:54] that oftentimes is not very clear,
+[52:57] and moreover, since you are discretizing an environment,
+[53:00] the number of vertices scale exponentially
+[53:03] with the number of dimensions.
+[53:06] If you have a three-dimension,
+[53:08] then the number of vertices will scale
+[53:11] with two to the power of the dimensions.
+[53:13] So three is fine, four is fine, five becomes a problem.
+[53:18] Having said that, very useful approach,
+[53:20] so make sure that you familiarize yourself with a star.
+[53:24] And the first problem in the pset will help you to do so.
+[53:29] All right, so this is a grid-based approach.
+[53:33] Another approach is the one where we try
+[53:35] to solve the problem directly in the continuous space
+[53:39] by using data structures that retain all the information
+[53:42] from the continuous formulation on the problem.
+[53:44] I'll be a little bit faster here
+[53:45] because this class of algorithms is useful conceptually,
+[53:48] but is much less useful from a practical standpoint.
+[53:53] So as we already said, the problem of motion planning
+[53:56] is to plan the motion for a robot from initial configuration
+[53:59] to a final configuration in a continuous space.
+[54:03] Let's look again at the setup that we looked before.
+[54:08] So for example, in this case, the problem is to find
+[54:11] a sequence of translations and notations
+[54:13] that deliver us to the goal region.
+[54:16] This actually
+[54:22] allow us to reinterpret the motion of planning,
+[54:25] the problem of motion planning in a more unified way
+[54:28] of what we've done so far.
+[54:29] And this goes also back to the previous question
+[54:31] about how do we account for the dimension of the robot.
+[54:34] The problem of motion planning is really to find
+[54:37] a sequence, a trajectory basically
+[54:39] for your configuration variables.
+[54:41] Once you've done that identification,
+[54:43] the problem of motion planning reduces to the problem
+[54:46] of planning the motion of a point in configuration space.
+[54:50] So in general, the motion planning problem is defined
+[54:53] with respect to the configuration space,
+[54:55] meaning the set of all the configurations
+[54:57] that the robot can assume.
+[54:59] To be specific, in the case of two-dimensional robots,
+[55:03] like for example a triangle, its configuration will be
+[55:07] its Cartesian position x, y and its heading.
+[55:11] So the problem of motion planning is to find a sequence
+[55:14] for the x, y and theta so that the real robot
+[55:19] do not collide with obstacles and reaches the goal.
+[55:25] Now in the case, so the configuration in this case
+[55:28] is a subset of R3.
+[55:30] In reality, there is a nuance due to the fact
+[55:32] that the theta is an angle and theta plus two pi
+[55:36] is the same.
+[55:37] So in reality, the correct way of representing this
+[55:39] mathematically is a subset of R2.
+[55:42] This is the Cartesian space for the position
+[55:45] times the space for the rotation, so basically a circle.
+[55:50] Why you have to account for the fact that theta plus two pi
+[55:55] is equal to theta?
+[56:01] Let's assume that,
+[56:08] let's assume that, so this is zero and this is two pi
+[56:11] and you do not recognize that zero is equal to two pi.
+[56:15] So you may think that going in this direction
+[56:19] is not possible, so basically swinging around from two pi
+[56:22] to zero is not possible.
+[56:24] So let's assume that this is your origin
+[56:28] and this is your goal.
+[56:30] So if you don't identify two pi with zero,
+[56:33] then the motion that you will plan is something like this
+[56:35] which is very long.
+[56:36] If indeed you identify two pi with zero,
+[56:38] then the motion that you will plan is this one
+[56:40] that is much shorter.
+[56:45] But so anyway, the point here is that in general,
+[56:49] the motion planning problem and its full generality
+[56:52] can be considered as a problem of finding a path
+[56:55] in the configuration space, whereby the robot
+[56:58] has been shrunk to a point and accordingly,
+[57:02] the obstacles have been enlarged in order to account
+[57:05] for the fact that the robot has been shrunk to a point.
+[57:10] Like for example here, if we have a triangular,
+[57:14] yeah, so we have a triangular obstacle and a circular robot
+[57:18] in the configuration space, so in the space
+[57:20] of xy positions, the obstacle will be represented
+[57:25] as this inflated set, with the idea that if the xy position,
+[57:31] so the center of your robot is here,
+[57:33] then the true robot will collide with the obstacle.
+[57:36] If it is outside, then the robot does not collide
+[57:38] with the obstacle.
+[57:40] So this goes back to the discussion we had before
+[57:43] about the need to inflate the obstacles
+[57:46] and basically represent, or more technically,
+[57:48] to represent the obstacles in the configuration space
+[57:51] in order to do motion planning, whereby we interpret
+[57:54] the robot as a point, in particular, its configuration.
+[58:00] It's a little subtle point, but something important
+[58:02] to keep in mind.
+[58:03] Is there any non-circular robots that are efficient
+[58:07] possible ways to account for the robot's geometry
+[58:10] when inflating the obstacles?
+[58:11] Right, and the answer is no.
+[58:13] That's why motion planning is a hard problem.
+[58:16] Very good point.
+[58:17] In general, how do we represent the obstacles
+[58:21] that are in the workspace, so in the three dimensions,
+[58:24] into the configuration space,
+[58:26] which might be much higher dimensional?
+[58:28] For example, if you have a robot with a manipulator,
+[58:31] the configuration space accounts for the joint angles
+[58:33] of your arm, plus the Cartesian position of the base
+[58:37] of your manipulator, plus the heading,
+[58:39] so the space could be like 10 dimensional.
+[58:42] So now you have an obstacle in the workspace,
+[58:45] so in the real world, you have to inflate it
+[58:49] in the configuration space that has a different number
+[58:53] of dimensions, in particular, much larger.
+[58:55] How you do that, extremely complicated.
+[58:57] That's exactly the reason why these combinatorial algorithms
+[59:00] do not work in practice.
+[59:02] Because they require an explicit representation
+[59:04] of the obstacles in the configuration space
+[59:06] that oftentimes, I'll say, almost always is not available,
+[59:10] which motivates the sampling-based algorithms
+[59:12] that we're going to discuss on Thursday.
+[59:15] But yes, that's the entire point of these slides,
+[59:17] to show that conceptually, if you can represent obstacles
+[59:21] from the real world into the configuration space,
+[59:23] where the motion planning problem really lives,
+[59:26] then you can apply the algorithm that I'm going to mention
+[59:29] in a second, and everything is easy.
+[59:31] But in reality, this translation is very difficult.
+[59:34] That's what motivates the sampling-based algorithms
+[59:36] that we're going to discuss on Thursday.
+[59:40] So this point here is a bit subtle.
+[59:42] I would say that a good fraction of roboticists
+[59:45] missed this point.
+[59:46] I routinely review papers where this point is missed,
+[59:49] and the claims that people make are completely nonsensical.
+[59:54] So as I said, the conceptually, the problem, again,
+[59:57] for the 10th time, is to shrink the point,
+[60:01] the robot to a point, its configuration,
+[60:03] which might be a high-dimensional object.
+[60:06] The heading, the position, possibly the joints
+[60:08] for the manipulator on top of your robot, and so on.
+[60:11] But accordingly, you have to represent the obstacles
+[60:16] from the real world, referred to as workspace,
+[60:20] into the configuration space.
+[60:23] This mapping, in general, is complicated.
+[60:26] In this case, whereby the dimension of the configuration
+[60:28] space and the dimension of the workspace are the same,
+[60:31] is very easy to understand.
+[60:33] But in general, it is very difficult
+[60:35] to represent explicitly.
+[60:37] Yes?
+[60:38] And what is the robot, like, modern robot?
+[60:41] The robot arm can change shape, so potentially,
+[60:45] in a string, the obstacles differently based on how you're,
+[60:49] how the pose of the robot is.
+[60:51] It can change shape in a sense that it's not a rigid body,
+[60:53] it's a soft robot?
+[60:55] No, but like, for example, if the arm is extended this way,
+[60:58] then it's gonna have a larger kind of radius,
+[61:00] but if the arm kind of contracts back to the body,
+[61:03] then it's gonna be, it's gonna be smaller.
+[61:06] So how do you account for that when you are inflating
+[61:09] the obstacles, do you think?
+[61:11] Right, so in general, representing explicitly
+[61:15] obstacles from the workspace into configuration space
+[61:19] of robot manipulator with multiple joints
+[61:21] is extremely difficult.
+[61:23] That's why this is basically never done explicitly
+[61:26] like here, but it's done implicitly
+[61:29] through the notion of sampling-based algorithms
+[61:30] that we're going to see next time.
+[61:32] But again, very good point, that's why these algorithms,
+[61:35] even though we're going to spend 50 minutes on them,
+[61:38] more for self consistency of this class,
+[61:39] are not really that useful in practice,
+[61:42] because of, for example, this problem.
+[61:46] Okay, having said that, in the context of planning
+[61:51] configuration space, then the problem formally becomes
+[61:55] the problem finding a continuous path
+[61:58] for your configuration vector that maps the interval zero,
+[62:04] one into a trajectory that does not intersect
+[62:08] with any obstacle, so it belongs to the free portion
+[62:11] of the configuration space, with a property that at zero,
+[62:15] we are at the initial node, at the end,
+[62:17] we are at the goal node.
+[62:18] The free portion of the configuration space
+[62:20] is the set of configuration such that when the robot
+[62:25] in the workspace is at that configuration,
+[62:28] it does not intersect with an obstacle.
+[62:33] Does that make sense?
+[62:36] So that's really the link between configuration space
+[62:39] and workspace.
+[62:40] The collision checking is done obviously in the workspace,
+[62:43] and this is the formula that allows you to translate
+[62:46] conceptually obstacles in the configuration space
+[62:50] into constraints, sorry, obstacles in the workspace
+[62:53] into constraints in the configuration space.
+[62:56] Unfortunately, there is no general algorithm
+[62:58] that will allow you to do that explicitly and efficiently.
+[63:01] Does that mean that the free space is different
+[63:03] for different orientations of the robot?
+[63:05] Or for different configurations of the robot?
+[63:07] So the free space is the set of all configurations
+[63:10] such that the robot does not intersect an obstacle
+[63:14] in the workspace.
+[63:15] So the configuration space is a space,
+[63:17] so it's a set of an uncountable number of configurations.
+[63:20] All right, so having said that,
+[63:23] the idea of combinatorial planning is to steal
+[63:27] a computer roadmap, so basically a graph,
+[63:31] similar to grid-based search,
+[63:33] but in a way that we are not losing any information
+[63:37] with respect to the underlying continuous problem.
+[63:41] This means that this roadmap needs to have
+[63:44] two key properties.
+[63:45] Accessibility, which means that for every configuration,
+[63:52] QI, so initial configuration,
+[63:54] and the final configuration of Q goal,
+[63:57] there is a way to connect this configuration
+[63:59] to at least a node in the roadmap.
+[64:02] So you don't end up in situations whereby, say,
+[64:07] where is it?
+[64:23] So there's an obstacle, this is your QI,
+[64:27] and this is your roadmap, so basically this is the graph
+[64:32] that you use to represent your continuous space.
+[64:35] So this is a case whereby you would like to solve
+[64:37] the motion planning problem from here,
+[64:39] but you don't have an easy way to connect QI
+[64:44] to any node in the roadmap, so there will be a bad roadmap.
+[64:48] And connectivity, if there exists a path from QI to QG,
+[64:52] there exists a path on the roadmap from S1 to S2.
+[64:56] This basically means that you're not losing any information
+[64:59] by having discrete representation
+[65:01] of your underlying continuous space.
+[65:05] Because given QI and QG, I can always connect those
+[65:10] to at least a node in the roadmap,
+[65:12] and there is always a path in the roadmap
+[65:14] that brings me to the node S2 that I can connect to QG.
+[65:22] Does that make sense?
+[65:24] So the question, of course, is how do you compute
+[65:26] a roadmap with these two properties?
+[65:29] If you have these two properties,
+[65:31] then you're guaranteed that the roadmap provides
+[65:34] discrete representation of the continuous motion planning
+[65:36] problem without losing any of the original
+[65:39] connectivity information needed to solve it.
+[65:41] The question now, of course, is how do you compute
+[65:44] such a roadmap?
+[65:47] So in the case of 2D, and again, the reason why I use
+[65:50] the 2D case is A, because it's easy to visualize,
+[65:53] two, because this class of algorithm work well
+[65:56] for the simple problems that don't really work well
+[65:59] for more complicated problems.
+[66:00] A simple way to compute such a roadmap
+[66:03] is to use the notion of self-decomposition,
+[66:07] whereby the environment is decomposing to cells
+[66:10] that are easy to compute, and then connectivity
+[66:15] within each cell is straightforward.
+[66:18] For example, you consider cells that are convex,
+[66:20] which means that between any two nodes,
+[66:22] you have an interpolating line that belongs
+[66:24] to that set as well.
+[66:27] And finally, the adiancy between the cells
+[66:30] is also straightforward.
+[66:33] So a simple way to compute a cell decomposition
+[66:36] is by computing a trapezoidal cell decomposition.
+[66:39] Trapezoidal cell decomposition works as follows.
+[66:42] You start from each vertex of the forbidden space
+[66:48] of obstacle space, like for example here or here,
+[66:52] and you start shooting rays downward and upward
+[66:56] until you intersect the boundary of the feasible space.
+[67:01] Okay?
+[67:03] Every time you have an intersection, you build a cell.
+[67:07] And then you place a representative point in,
+[67:11] for example, at the center, at the centroid of that cell.
+[67:14] In this way, you're guaranteed that each cell
+[67:16] is indeed convex, so you have the first accessibility
+[67:21] property, and also due to the adiancy with which
+[67:24] you compute these trapezoidal cell decomposition,
+[67:27] you also have the connectivity property.
+[67:30] So then the way that motion planning would work
+[67:32] is that if you're given a QI here,
+[67:35] you connect it to the closest,
+[67:38] well, you connect it to the centroid of the cell
+[67:42] where QI lies, then you do planning by using,
+[67:45] for example, A star on the roadmap,
+[67:48] and then you connect the QG to the node
+[67:52] that is representative in the same cell.
+[67:54] This is a purely geometric formulation
+[67:59] of motion planning problem.
+[68:04] Yep?
+[68:04] So the vertices are not necessarily all sharp points,
+[68:08] but on the space, there's some curves,
+[68:11] so you can't necessarily draw a streamline trapezoid.
+[68:15] Yeah, so these algorithms are simple to explain
+[68:21] and to visualize, to implement, are really a pain,
+[68:24] because of basically doing these geometric constructions,
+[68:29] like computation is not easy.
+[68:30] There is a tool that I'm going to mention in a second,
+[68:34] but in general, coding this stuff is not easy,
+[68:37] and then if you start having curves,
+[68:39] then you have to do some polygonal approximation
+[68:41] in order to run the scheme.
+[68:44] So these algorithms are easy to explain
+[68:47] and easy to understand, but they're difficult
+[68:49] to implement and not very practical.
+[68:52] So again, this is just, I'm talking about these algorithms
+[68:55] more for your knowledge, but what you really need to learn
+[68:59] from this class is the A star search algorithm,
+[69:02] from this lecture, the A star search algorithm.
+[69:04] There are other ways to build the roadmap,
+[69:07] so like for example, visibility graphs
+[69:10] that allow you to reason about optimality,
+[69:13] basically beyond the scope of this class.
+[69:18] As we already mentioned, a key difficulty
+[69:20] with these algorithms is that we are assuming
+[69:22] that we can represent in the computational space
+[69:25] the set of configurations that are obstacle-free.
+[69:28] In general, this is very hard to do.
+[69:31] Going back to your question,
+[69:36] there are actually computational procedures to do it,
+[69:39] but they have a terrible scaling,
+[69:41] like double exponential and these kind of things.
+[69:44] So conceptually, it's possible,
+[69:47] practically, it's not possible.
+[69:50] And by stretching my drawing skills,
+[69:52] I want to give you yet another explanation
+[69:57] about why it's so hard to go from the world space
+[70:02] to the representation of the obstacles in the world space
+[70:06] into a representation of the obstacles
+[70:08] in the configuration space.
+[70:09] Let's go back to the previous example,
+[70:11] so moving in triangles from initial position
+[70:13] to the goal position.
+[70:15] The configuration space is three-dimensional.
+[70:16] You have translations, X, Y, and the theta, the heading.
+[70:22] So for example, we can take any point on the triangle
+[70:26] to be our representative point,
+[70:28] like for example, this vertex.
+[70:31] So the first thing to do is to, as we did say before,
+[70:34] to enlarge the obstacles by using the geometry
+[70:37] of the robots.
+[70:39] So if your vertex, upper left vertex is here,
+[70:42] then, so okay, so here I'm only considering translation,
+[70:45] sorry, so in this problem,
+[70:46] the configuration is two-dimensional.
+[70:49] So if my upper vertex is here,
+[70:52] two robots will be in collision, otherwise it is not.
+[70:55] So it slides this robot along the shape of the obstacle,
+[70:58] and this will be the enlarged version of the obstacle
+[71:01] in the configuration space that will lead it to a collision
+[71:04] for the two robots in the world space.
+[71:07] Same for the other obstacle.
+[71:09] Then I have to trim the environment,
+[71:12] and having done that, then in the configuration space,
+[71:16] which is just X, Y for the triangular robot,
+[71:18] we are not allowing for now rotation,
+[71:20] the problem is just to find a path for a point.
+[71:23] By using, for example, either a star,
+[71:25] or the trapezoidal side of the composition, and so on.
+[71:28] But let's now put the heading
+[71:30] as an additional degree of freedom.
+[71:31] So now the robot can also rotate.
+[71:33] So now the world space is two-dimensional,
+[71:36] but the configuration space is three-dimensional.
+[71:39] You have X, Y, and theta,
+[71:40] which means that you have to do that sliding procedure
+[71:43] to increase the obstacles for each fixed value of theta,
+[71:48] which will give rise to this very weird shape
+[71:51] in three dimensions.
+[71:52] So those two seemingly benign obstacles in 2D
+[71:56] becomes these two horrible things
+[71:58] in the configuration space.
+[72:01] And this is just to go from a two-dimensional world space
+[72:04] into a three-dimensional configuration space.
+[72:06] Think about six-dimensional configuration spaces
+[72:10] with dynamics.
+[72:12] No way you can do it.
+[72:13] Which motivates the algorithm I'm going to discuss
+[72:17] on Thursday, which is the class of sampling-based algorithms.
+[72:20] Before leaving, though, so there was a question about
+[72:23] if you really want to apply combinatorial algorithms,
+[72:25] how you do it.
+[72:27] So dealing with the geometric construction
+[72:30] is actually not easy.
+[72:32] Part of my PhD was in doing so,
+[72:35] and it was really pain in the neck.
+[72:36] Fortunately, there is a library called SIGAL,
+[72:40] the computational geometry algorithm library
+[72:42] that I extensively leveraged for my PhD
+[72:45] that allows you to do a number of primitive
+[72:49] geometric computation, like computing Boronoi diagrams
+[72:52] and a lot of things.
+[72:54] Taffy-Seidel set the composition and so on
+[72:56] in a very simple way.
+[72:58] So if you want to use combinatorial algorithms
+[73:01] and in particular geometry computation,
+[73:04] I strongly encourage you to look at the SIGAL.
+[73:08] This link, you can find, you should click on it.
+[73:11] You can find an interesting visualization
+[73:13] of the computational space for a polygonal robot.
+[73:15] This gives you yet more insight
+[73:18] on the challenge of motion planning,
+[73:19] which is again this translation from the workspace
+[73:21] to the computational space.
+[73:23] And finally, some additional readings if you're interested.
+[73:26] So to sum up, for combinatorial planning algorithms,
+[73:29] the advantage is that these approaches are complete.
+[73:32] If there is a feasible path, they will find it,
+[73:35] and they also have better guarantees on the running time.
+[73:38] Unfortunately, due to this complication
+[73:42] of translating obstacles from the workspace
+[73:45] to the computational space in explicit manner,
+[73:48] as required by combinatorial algorithms,
+[73:50] running these algorithms on problems
+[73:53] with more than three or four degrees of freedom
+[73:57] is not really practical.
+[73:59] And also, they're difficult to implement.
+[74:03] I gave you a reference for a library
+[74:05] that would ease the implementation,
+[74:07] but they're still very tricky to implement.
+[74:08] The algorithms that I'm going to discuss on Thursday
+[74:12] actually are much simpler to implement
+[74:14] and scale much better with respect
+[74:16] to the number of dimensions.
+[74:18] And in particular, we look at those algorithms on Thursday.
+[74:22] So to sum up this lecture,
+[74:23] I talked about grid-based approaches to motion planning.
+[74:26] This is really what you have to remember from this lecture.
+[74:29] It's going to, it's a very important tool
+[74:31] in the field of robotics, and you're going to use
+[74:33] in particular A star for the rest of the quarter.
+[74:36] As a bonus material, I talked a little bit
+[74:39] about combinatorial planning,
+[74:41] with the idea that conceptually this is
+[74:44] a very interesting approach to motion planning,
+[74:46] practically not that useful.
+[74:48] For your midterm, I will ask you conceptual questions
+[74:51] about grid-based approaches, like for example,
+[74:54] what's the difference between Dijkstra
+[74:56] and the breadth-first search,
+[74:58] and questions about sampling-based algorithms
+[75:01] that I will explain on Thursday.
+[75:02] I won't ask questions about combinatorial planning
+[75:05] since, as I said, it was more like a bonus introduction
+[75:08] to this material, but I really didn't go into the details.
+[75:12] Okay?
+[75:13] So I'll see you on Thursday.

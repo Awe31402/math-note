@@ -1,0 +1,531 @@
+[00:00] All right. So today we have a makeup lecture about particle filter SLAM. As you remember,
+[00:11] when we talked about the filtering, we said that there are two main ways to do filtering
+[00:17] in a practical sense. The first way is by relying on parametric approximation for the
+[00:24] belief, for example, in terms of Gaussian distribution. And the other approach is to
+[00:29] rely on a particle representation of the belief. The key advantage of a particle non-parametric
+[00:36] representation of a belief is that it can be applied more broadly to situations where
+[00:41] the underlying belief has multiple modes, for example, or the state transition model
+[00:48] and the measurement models are hard nonlinear. Now, we saw in the context of bias filtering
+[00:57] how to implement the notion of particle filtering. We saw in the context of robot localization
+[01:04] how to implement the particle filter approach. Today we're going to see how to implement
+[01:10] the particle filter approach in the context of SLAM, simultaneous localization mapping.
+[01:16] So far what we covered is the application of a parametric approach to SLAM in the form
+[01:22] of EKF filtering, EKF SLAM. Today we're going to talk about particle filter SLAM. The material
+[01:29] from this lecture is taken primarily from the Sran-Borger Fox book, which is the book
+[01:36] that we have been using all along regarding the topic of filtering and localization and
+[01:43] SLAM. Now, as I said, the key idea of a particle filter SLAM is to use a particle representation
+[01:53] for the underlying belief. In particular, just to make sure that everyone is on the
+[01:59] same page, the problem that we're trying to solve is given a history of a measurement
+[02:06] and the controls, how to estimate probabilistically the history of our trajectory, so the sequence
+[02:12] of states from the start time until the current time, along with an estimation about the environment,
+[02:20] about the map, represented as a set of features compactly represented by the symbol M. Note
+[02:28] that as defined, this is the full SLAM problem, whereby we want to estimate on top of a map
+[02:34] the full trajectory of the robot. When we talk about the EKF SLAM, we formulated the
+[02:39] problem in a slightly different way, whereby we were finding a posterior only with respect
+[02:44] to the current state, and we refer to that as the online SLAM problem. So the problem
+[02:49] that we're going to look at today is indeed more general, and it's referred to as a full-scale
+[02:54] SLAM problem, whereby we're trying to infer the full trajectory. Now, the naive implementation
+[03:01] of a particle filter would be to consider a particle representation for the full posterior.
+[03:07] I mean the posterior with respect to both the robot trajectory and all the features
+[03:12] in our map. Now, do you see a problem with this approach? It worked well when we talked
+[03:19] about localization. But in this case, it doesn't work so well. And the problem is that now
+[03:27] we want to compute a posterior not only with respect to the trajectory of the robot, but
+[03:34] also with respect to the positions of all the features in our map, which means that
+[03:40] the posterior is extremely high dimensional, meaning the posterior might be over, say,
+[03:47] 1,000 dimensions if we have hundreds of features. Now, if you consider a particle representation,
+[03:54] the number of particles increases exponentially with the number of dimensions, which means
+[03:59] that to carefully represent such a posterior, we will need hundreds of thousands of particles,
+[04:05] if not more, which means that the algorithm will not scale to any meaningful SLAM problem.
+[04:11] So the naive implementation of a particle filtering for SLAM does not really work due
+[04:19] to the curse of dimensionality, basically the explosion of the number of particles that
+[04:25] will be needed. On the other hand, the SLAM problem has an intrinsic property that we
+[04:31] have not been discussing so far that makes the application of particle filtering to SLAM
+[04:38] possible. And in particular, the key insight is that the knowledge of the robot's true
+[04:45] path renders features conditionally independent. This, and we're going to see these more mathematically
+[04:53] in a second. But what this really implies is that the mapping problem can be factored
+[04:58] into subproblems, each one of lower dimensionality. And for each of those problems, we can build
+[05:06] a filter that is of much lower dimensionality. In particular, the idea of a particle filter
+[05:12] SLAM, and we're going to spend an entire lecture on it, is to represent the posterior with
+[05:20] respect to the state of the robots through particles, and then conditioning on a robot
+[05:26] path, meaning on a particle representing the robot path, represent the posterior with respect
+[05:33] to the future positions by using EKF filters. So the particle filter SLAM is a sort of hybrid
+[05:40] filter that uses particle filters in order to approximate some part of the posterior,
+[05:47] and then EKF filters to approximate some other parts of the posterior. We're going
+[05:54] to see this in much more detail in a second. So let's get a little bit more rigorous in
+[06:00] what I mean by factoring the posterior. We're going to show, and this is not too difficult,
+[06:09] but it will require a little bit of manipulation in terms of using bias rule, the notion of
+[06:16] conditional probability, and so on. We will show that the full posterior, remember that
+[06:21] the Y in our notation is the vector that concatenates the state X of the robot, actually the full
+[06:31] trajectory, along with the positions of the features. M itself is a vector that contains
+[06:43] the estimated position for each feature, and we assume that we have N of them, actually
+[06:51] capital N. So we're going to show that the full posterior can be factored in terms of
+[07:00] a posterior with respect to the robot trajectory. Remember that the X subscript 1 t is a compact
+[07:07] representation for the vector x1, x2, dot, dot, dot, dot, xt. So it can be factored,
+[07:17] meaning it can be represented as the multiplication of a posterior with respect to the robot trajectory
+[07:24] times the product of the posterior with respect to each feature. This is not obvious. We're
+[07:33] going to see it in a second. And the reason why we can do this, as we will see more clearly
+[07:42] in a second, is that conditioning on the true robot path, then the estimation of the position
+[07:50] of the features become condition independent. And hence, we can express the posterior over
+[07:57] the features as a multiplication of individual posteriors. So basically, we're breaking the
+[08:06] posterior over the full trajectory and the position of all the measurements. We're factoring
+[08:13] that as the multiplication of N, capital N. Capital N is the number of features. Capital
+[08:19] N plus 1 posteriors. So the idea of particle filter SLAM is to represent the posterior
+[08:29] with respect to the robot trajectory by using a particle filter. So basically, by using
+[08:35] a particle representation. And then represent the posterior with respect to each feature
+[08:42] by using an EKF filter. So it's a sort of hybrid algorithm whereby part of it considered
+[08:50] a particle filter representation and another part of it represents the posterior by using
+[08:56] Gaussian approximation. Note that we're going to have a particle representing each robot
+[09:04] trajectory. So since we are representing the filter for the features by using an EKF, it
+[09:12] is going to be conditioned on the state of the robot. And since the state of the robot
+[09:17] is represented by a particle, and we assume that we have capital M particles, how many
+[09:24] EKF filters we're going to have? We will see this more clearly, but just as an intuition.
+[09:37] Because for each particle, I have capital N EKF filters, one per each feature. And since
+[09:45] we have N particles, we have capital...
+[09:47] Does that represent part of X1 to T represent, it's not only like the M particles, or sorry,
+[09:54] the M particles, but it's also the path of those particles, previously, like where those
+[09:58] particles, like which particles those new particles came from.
+[10:01] Of course, we will be building this particle representation incrementally, but the answer
+[10:06] is yes. So view a particle as representing the full trajectory. Remember that the particle
+[10:17] is in the notion of a concrete instantiation for the realization of the state. We're tracking
+[10:24] simultaneously capital M instantiation. For each one of them, we're formulating a hypothesis
+[10:32] about the position of the N features, and those hypotheses are formulated through the
+[10:38] lens of EKF filtering. Is this clear? It seems horrible that all of a sudden we go from one
+[10:45] filter to one for the trajectory of the robot, plus capital M times capital N for the features.
+[11:00] So N in general is large. Maybe we have 100 features. M is large, we have 1,000. So basically
+[11:06] we're going from one filter to thousands of filters. So it seems horrible. Why actually
+[11:11] this is very good news? Because each filter is of very low dimensionality. So it's much
+[11:18] easier to incorporate measurements and control in each one of those filters. So basically
+[11:25] we break down the castle dimensionality by exploiting this increasing property of SLAM,
+[11:30] which is not an approximation, is an exact property. From an intuition standpoint, remember
+[11:37] that when we multiply probabilities, what we're basically saying is that they are independent.
+[11:43] From intuition standpoint, where does that independence come from? Note that here we're
+[11:48] conditioning with respect to the trajectory of the robot. Going back to our Bayesian network
+[11:55] representation SLAM problem, remember that the idea is that we have a trajectory, state
+[12:03] trajectory for the robot, but we don't have direct access to the information. What we
+[12:09] have access to is a noisy measurement for each state. That noisy measurement is influenced
+[12:18] by the value of the state for the robot at a given time t and by the position of a given
+[12:26] feature. Now, if I tell you, if an oracle tells us what the exact trajectory of the
+[12:36] robot is, is there any relation between estimating M1 and estimating M2? So if I tell you where
+[12:48] M2 is, conditioning it in exactly what the history of this trajectory of the robot is,
+[12:55] does that information help me improving information for M1? No, they become condition independent.
+[13:05] If I don't know what the state trajectory for the robot is, then M1, M2 do have a correlation.
+[13:16] But if it fixed the trajectory, then the estimation of M1 is completely decoupled from the estimation
+[13:22] of M2, which mathematically is represented here by multiplying these probabilities. That's
+[13:30] intuition. Since some of you may not be convinced by this hand-wavy explanation, we're going
+[13:42] to prove the factorization of posterior, since it's such a fundamental property of the SLAM
+[13:48] problem. In particular, what we want to prove is that the full SLAM posterior can be factorized
+[13:56] into a posterior with respect to the state times the posterior with respect to the individual
+[14:04] future positions. So we're going to do this in a step. The first step is trivial. So the
+[14:13] first step is that the full SLAM posterior can be factored into the posterior with respect
+[14:22] to the state times the posterior with respect to the future vector. Here, what we're using
+[14:30] is simply the notion of conditional probability. So probability of A given B is equal to probability
+[14:40] of AB over probability of B, which means that the probability of A and B is equal to probability
+[14:50] of A given B times probability of B. So take A to be M in our setting, B to be X in our
+[15:14] setting. So what we're saying is that, and remember that the Y is simply the vector that
+[15:19] concatenates X and M. So we're saying that the probability of X and M is equal to the
+[15:26] probability of M given X times probability of X. And then, of course, we have to keep
+[15:34] conditioning on all the remaining variables. So it's a trivial step, the first one. In
+[15:40] the second step, we simply remove unnecessary conditioning variables, meaning that in order
+[15:52] to estimate the position of the futures, once we know the measurements, the controls do
+[15:58] not provide us with any additional information. So we can just remove them from the set of
+[16:04] conditional variables in order to estimate the futures.
+[16:09] So that's the first step. In particular, it allows us to break down the posterior with
+[16:13] respect to the state from the posterior with respect to the futures. So basically, we have
+[16:20] this breakdown here. The second one that is trickier is how to break down the posterior
+[16:26] with respect to the full set of futures into a product of posteriors with respect to each
+[16:33] individual future. Any questions here?
+[16:45] So in order to do that, we consider an intermediate step two that is purely algebraic, doesn't
+[16:52] have much intuition, will become clearer in a second why we do so. In particular, we want
+[16:57] to relate the posterior with respect to the individual future with respect to conditioning
+[17:04] variables at time t and conditioning variables at time t minus 1. And we separate two cases.
+[17:12] The first case is when the future that we observe at time t is different from a given
+[17:27] future n. So we're trying to relate the posterior with respect to future index by future number
+[17:36] n, small n, across conditioning variables up to time t and up to time t minus 1.
+[17:45] So let's assume that we are at time t. And the measurement that we get is not related
+[17:53] to the future n. So what's the relation between the posterior with respect to conditioning
+[18:03] variable at time up to t and conditioning variable up to time t minus 1? In other words,
+[18:11] does my estimate of future n changes if the measurement that I get is not related to future
+[18:19] n? It does not change. So that's why we have the trivial results that the posterior for
+[18:27] the future n with respect to the conditioning variable up to time t minus 1 is equal to
+[18:32] the posterior with respect to the future n with conditioning variable up to time t, assuming
+[18:38] that the measurement that we get right now is not related to future n. So this should
+[18:45] be fairly reasonable. The slightly more complicated part is if at time t the measurement that
+[18:56] I get is related to future n. So in particular, ct is equal to n. That's the case we are looking
+[19:08] at. In this case, we have additional information that allows us to pinpoint the position of
+[19:15] future n, which means that the posterior changes, gets updated. The uncertainty about estimation
+[19:23] for future n changes. Hopefully, it decreases. But by how much it changes? Well, to do so,
+[19:31] we apply as usual the only probability tool that basically we have been using in this
+[19:36] class, which is the tool of bias rule. Specifically, the probability of m given the condition in
+[19:45] variables up to time t can be written by you remember bias rule. So probability of
+[20:00] a given b is equal to probability of ab over probability of b, which is equal to probability
+[20:12] of b given a, pa over pb. So now take b as zt, and then take a as mct. So this is ct.
+[20:39] And z is mct. So probability of m given zt and all the other stuff is equal to probability
+[20:53] of zt given m times probability of m over probability of z. And then we have all the
+[20:59] other stuff. So the first step is just bias rule, where I triple checked that it didn't
+[21:07] make any typos. It's much more difficult to write in a way that is typo-free than understanding
+[21:13] what I'm doing. The second step is just applying standard simplifications related to the fact
+[21:20] that we are in a Markovian setting. Specifically, the current measurement only depends on the
+[21:27] current value of the state. This is an assumption. It's our Markovian assumption. We remember
+[21:33] that we are in a Markovian setting whereby the transition to the next state only depends
+[21:38] to the current state. And the measurement that we get only depends on the current state,
+[21:43] not on the history of the process. So when we remove from here to here all the past measurements
+[21:52] and the past value of the state except for x of t, what I've done is to apply the assumption
+[21:59] that our process is a Markov process. For the second term, I apply the simplification
+[22:09] that says that the information about the position of a future is provided through the measurements.
+[22:21] So if my measurements are only up to time t minus 1, the additional information on the
+[22:27] state at time t and additional information about the correspondence variable time t do
+[22:31] not provide any additional information about the position of the future at time t. Because
+[22:40] the information is only mediated through the measurement. And finally, the denominator
+[22:49] result changes. Does that make sense? Can you just say one more time why we don't need
+[23:03] to consider x t in the second part? Because m depends on x through z. So here I have the
+[23:15] measurement of the state up until t, and the correspondence variable up until t, but
+[23:19] I'm missing z t. So the state per se cannot affect my estimation of m t, because I don't
+[23:26] have the bridge that allows me to connect z t to m c t.
+[23:32] Right. So this is mostly algebraic derivations, but I think it's important. It's a final exercise
+[23:42] about using bias rule. And second of all, it's a very fundamental property of the SLAM
+[23:47] problem that I want to make sure that you have some familiarity with. So the third step
+[23:53] is to finally prove that the posterior over all the futures can be factored as the multiplication
+[24:01] of the posterior with respect to each individual future. To do so, we prove it by using the
+[24:08] tool of mathematical induction. So I don't know how many of you are familiar with mathematical
+[24:15] induction, but there are a few ways to prove mathematical statements. One is through direct
+[24:19] proofs. Another one is through proof by contradiction. And the third one is by using proof that rely
+[24:28] on mathematical induction. That says loosely that if a statement that is related to a sequence
+[24:36] of natural numbers, if a statement is true for the case where the natural number is equal
+[24:41] to one and is equal is true in general for the natural number equal to n, and you can
+[24:47] prove that that implies that the statement is true also for n plus one, then it's true
+[24:53] for all n. Much simpler to explain with an example. Assume that you want to prove that
+[24:59] the sum of the first n integers is equal to n, n plus 1 over 2. So that's a true fact.
+[25:09] But the question is, how do we prove it? So for example, 1 plus 2 plus 3 is equal to 6.
+[25:17] In this case, n, n plus 1 over 2 is equal to 3 plus 1 over 2, which is equal to 6. So
+[25:31] the question is, how do we prove it? Well, the first step is to note that for n equal
+[25:38] to 1, this is trivially true. The sum of the first n numbers where n is equal to 1 is simply
+[25:46] 1, verified. Assume statement is true for the case where we sum the numbers up to n
+[26:03] minus 1. So we're assuming that the sum of the first n minus 1 numbers can be written
+[26:15] as n minus 1 times n over 2. If we can show that the base case along with the so-called
+[26:25] inductive hypothesis prove the statement for the case of n equal n, then we'll prove the
+[26:32] statement for all possible values of n. That's the notion of an inductive proof.
+[26:37] Let's prove it in this case. So we have 1 plus 2 plus 3 plus dot dot dot n minus 1 plus
+[26:44] n. With induction hypothesis, this is equal to n minus 1 times n over 2 with sum n. So
+[26:56] this is equal to 2 n squared minus n plus 2n. So it's equal to n squared plus n over
+[27:06] 2. So it's equal to n n plus 1 over 2. So then the notion of an inductive proof would
+[27:18] allow us to conclude that this statement is indeed true for all n, even though the only
+[27:24] thing that we have actually proved is how to go from induction hypothesis to the proof
+[27:28] of the statement for induction hypothesis plus 1.
+[27:35] So we're going to prove this statement by using induction proof. In particular, assume
+[27:40] that the factorization is true up until time t minus 1. That's our induction hypothesis.
+[27:53] This statement is truly true at time t equal 1. And then everything is conditionally independent.
+[28:04] The question is, how do we prove the statement at time t? Well, we start from the posterior
+[28:10] with respect to all the features. We apply bias rule as before with respect to the future
+[28:23] vector m and the measurement Zt. So probability of m given Zt is equal to probability of Zt
+[28:30] given m times probability of m over probability of Zt and all the other conditioning variables.
+[28:37] I do the same simplifications as before. I apply for the first term the Markovian assumption.
+[28:44] For the second term, I remove condition with respect to Xt and Zt because they do not provide
+[28:48] additional information for the estimation of m and the denominator is unchanged.
+[28:57] I collect the first two terms here. And for the second one, note that the second one only
+[29:04] relies on conditioning variables up until time t minus 1. So here, I apply my induction
+[29:11] hypothesis, whereby we say that at time t minus 1, we postulate that we can factor the
+[29:18] posterior. Now, this product goes from future number one all the way to future capital N,
+[29:34] so the last future. Capital N minus one of those futures won't correspond to the future
+[29:41] that we have observed at time t. One of them will correspond to the future that we have
+[29:47] observed at time t. For those that are not related to the future that have been observed
+[29:55] at time t, the posterior going from time t minus 1 to time t does not change. This was
+[30:02] the first step here. For the one that is related to the observation that we have just
+[30:13] made, the posterior indeed changes. How does it change? We found the relation with respect
+[30:20] to how it changed in going from quantity at time t minus 1 to quantity at time t. I just
+[30:27] plug it in. Plug it in. So basically, probability of MCT conditional quantities up to time t
+[30:43] is equal to this stuff that is exactly equal to this stuff. So all of these is equal to
+[30:49] pure probability of MCT given quantities conditional up to time t. And then I have
+[30:54] this term here. There is a typo here. This should be product for N different from CT.
+[31:05] So this term is exactly this term. And all of this term is equal to this term by step
+[31:11] 2.b. This is a typo. I will correct it. This is product for N different from CT. Put everything
+[31:20] together, and then I get a product from N equal 1 to capital N, which finally proves
+[31:28] the factorization of the posterior. And we approve the theorem, because we have shown
+[31:33] that the base case is satisfied. And then if you assume it's true that the statement
+[31:39] holds at time t minus 1, then the statement holds at time t. And by inductive reasoning,
+[31:44] then it holds for all times.
+[31:49] So how does particle filters lambda exploits this idea? Well, the idea is to decompose
+[31:56] the problem into subproblems. As I said before, the path posterior, so the posterior with
+[32:04] respect to the trajectory, is approximated by using a particle filter, while the map
+[32:11] features are estimated with via EKF filters condition on the robot path.
+[32:21] So we have one EKF for each feature. One EKF. Oh, here there is also a typo, sorry. It should
+[32:29] be PM subscript N. I will correct these two times. So we have one EKF per feature, per
+[32:40] particle representing a trajectory. That's where the capital N EKF filters come from.
+[32:49] In particular, in particle filters lambda, a particle is not just simply a concrete representation
+[32:58] of the state of the robot, but on top of it, has associated the EKF filter information
+[33:08] for each feature. We're using EKF so the belief for the position of each feature is represented
+[33:14] through a Gaussian that is characterized by a mean and a variance. So accordingly, if
+[33:21] particle is a concatenation of an hypothesis about the state, along with mean and covariance
+[33:31] information for each feature, conditioning on the particle X, T, K. This is really particle
+[33:44] filtering on steroids. Does it make sense? Yeah.
+[33:50] I was always assuming that we know the number of obstacles in the map.
+[33:56] Well, the obstacles, so we assume the number of, for now, we're assuming that we know the
+[34:01] number of features. Yeah. Which is basically the case where we're assuming that, as also
+[34:07] explicitly stated here, we assume that we have known the correspondences. So this concept
+[34:13] is similar to what we have in localization. We'll see later on how to deal with the unknown
+[34:18] correspondences. So now, what is left is to understand how
+[34:27] to update a glorified particle. By glorified particle, I mean a particle composing both
+[34:35] and hypothesis about the state along with the EKF filters for each feature. So how to
+[34:43] update that by including the most recent measurement and most recent control. Once we do that,
+[34:52] then we have the particle filters algorithm. So as a summary, this is very important. So
+[34:59] each particle possesses its own set of EKFs. So in total, there are capital N times capital
+[35:08] M EKF filters. Capital M is the number of particles. Capital N is the number of features.
+[35:15] Each particle has capital N EKFs. So the set filtering involves generating a
+[35:20] new particle set Yt from Yt minus 1 by incorporating a new control Ut and a new measurement Zt.
+[35:27] The idea in order to propagate forward a particle from time t minus 1 to time t is
+[35:33] to first extend or propagate forward the path posterior by using information about the control.
+[35:42] This corresponds to the prediction step in a bias filter. Then we account for the measurement
+[35:50] by updating the EKF filters for each feature. And finally, we correct the posterior with
+[36:01] respect to the path by also counting for the measurement. So basically, it's a three step
+[36:06] process. First, we use the control in order to propagate forward the portion of the particle
+[36:12] that corresponds to the state of the robot. Then we use the measurement in order to refine
+[36:18] the estimate with respect to each feature conditioning on the hypothesis about the path.
+[36:26] And finally, we correct the posterior about the path of the robot by using the information
+[36:32] coming from the measurement. As usual, we have a prediction step and then
+[36:38] a correction step. So first step. We have a particle. Remember,
+[36:46] a particle is not just a concrete instantiation of the state of the robot, but also has information
+[36:53] regarding the EKF filter for each feature.
+[37:00] So does one particle have to find stuff to prove that the state is straight out to the
+[37:05] final step? No, the particle only includes the information
+[37:10] of the state. But as we propagate forward the particle in the algorithm, what you do
+[37:17] is to have a pointer that allows you to reconstruct backward at the full trajectory. But it's
+[37:22] a good point. The particle only uses information about the state, not about the full trajectory,
+[37:29] knowing that as we incrementally move forward in time, we can just keep a back pointer with
+[37:35] respect to the previous values of the state. And then at the end, we construct a full trajectory.
+[37:46] The sampling of the new state particle is the same as we did for Markov localization.
+[38:00] We use the state transition model that, as usual, is Markovian. It only depends on the
+[38:05] previous state and current control. And the new particle, xtk, is generated according
+[38:11] to probability distribution. It is conditional on the previous value of the particle with
+[38:18] respect to the state information and the control. And the idea is the same for Markov localization.
+[38:24] Knowing that we start here at the next time step, we have a possible distribution of position
+[38:32] we could be at. And we sample each one of them according to the state transition model.
+[38:39] For example, this could be the particle at time xt. Note that in this forward propagation
+[38:47] of the dynamics and the updates of the particle, we're only using information about the current
+[38:54] control but not the measurement. That means that this corresponds to the prediction step
+[39:00] in a bias filter. But then we need to correct this posterior by using the information from
+[39:08] the measurement. So that's step number one. That's the easy one. Any questions here?
+[39:19] So now the second step. So we have updated this part of the particle. Now we're going
+[39:25] to update this part of the particle, meaning all the filters. And finally, we corrected
+[39:30] this part of the particle by using information from measurement.
+[39:35] Okay, step two. We are updating all the EKF filters. Remember that we have, for each particle,
+[39:47] capital N EKF filters, one per feature. So we update them by using the most recent measurement.
+[39:55] Assume that the most recent measurement does not correspond to feature N, where feature
+[40:04] N is a genetic feature. Then how should we update the EKF filter with respect to that
+[40:10] feature? We shouldn't make any change since the last measurement does not provide us with
+[40:16] any additional information about that feature. Then the EKF filter keeps a belief representation
+[40:24] about the position of that feature that does not change. In particular, the moments of
+[40:30] the Gaussian remain unchanged. So here we're in a situation where we get
+[40:38] a measurement that does not correspond to a given feature N. So the EKF filter does
+[40:44] not change. Does it make sense? For the other one, assume that instead the
+[40:54] measurement that we see corresponds to a given feature N. Now this measurement should affect
+[41:02] the filter through which we estimate the position of that feature. How? Well, we have already
+[41:09] found in a previous slide that we can write the probability of N given ZT and the other
+[41:18] conditioning variables as probability of ZT given N, probability of N times the normalizer.
+[41:25] That's something that is an application of the bias theorem, and we also re-derive it
+[41:30] today. Since we're using the EKF, this quantity,
+[41:38] which is the posterior with respect to conditioning variable up to time t minus one, is a Gaussian
+[41:43] random variable. This is really the posterior that the EKF captures at time t minus one.
+[41:51] This term is simply our measurement model. So as we do, and this is exactly straight
+[42:01] EKF localization, we linearize the model. So what we obtain is a product of two Gaussians.
+[42:13] Then we do a bunch of manipulations that we have skipped in this class. This is exactly
+[42:17] an EKF update. There is nothing new here. We linearize the measurement model, and then
+[42:27] we do a bunch of algebraic manipulations that we haven't derived in this class. But the
+[42:31] key point is that in order to update the mean and the covariance for the posterior for the
+[42:39] future N, what we use is a Kalman filter, whereby the Kalman gain accounts for uncertainty
+[42:51] in the position of the robot along with uncertainty about the measurement. And it trades off our
+[42:59] previous hypothesis about where the future is with a correction that depends on the difference
+[43:05] between the measurement that we got and the measurement that we expect we should have
+[43:09] gotten. So this is straight Kalman filtering. Why do we have the same EKF result? Because
+[43:16] the mathematics are identical. We are multiplying a Gaussian times a measurement model that
+[43:21] we have linearized, and the product of two Gaussians modulus on normalization is still
+[43:26] a Gaussian.
+[43:27] So every single one of our particles needs a different sigma.
+[43:33] Yes.
+[43:34] So shouldn't that sigma also be in the representation of the particle?
+[43:38] Yes. In fact, the sigma here has a superscript k that is related to the index of the particle.
+[43:44] Like, there were a couple slides ago where you're like, this is what the particle was,
+[43:47] and I didn't see.
+[43:49] Here? Yeah. So the sigma depends on the k. So I didn't say that.
+[43:56] Super speed k is the index of the particle.
+[43:59] I guess I thought that sigma referred to the uncertainty about the mean of the first feature.
+[44:07] Yes.
+[44:08] But where is the sigma for the position of the robot, though?
+[44:12] Oh, no. There is no sigma for the position of the robot, because we are using a particle
+[44:16] representation. So there is no notion of a Gaussian representation for the posterior
+[44:21] of the robot.
+[44:22] Can you go forward three slides now to that one that we were just on?
+[44:25] Yeah.
+[44:26] OK. OK. That makes sense. So we're only updating the sigmas for the...
+[44:30] Only for the future. No, no. The Gaussian representation, that's good that we had this
+[44:35] question. So this is not too difficult. No one can get lost in all this notation. No.
+[44:40] So we have a Gaussian representation for the position of the feature. But for the position
+[44:49] of the robot, we have a particle representation. So basically, if you tell me at time t where
+[44:57] is the robot and where are the features, the answer will be, well, I look at all the particles
+[45:03] y. Each of particle y has an hypothesis about x. So I get a bunch of points. And then maybe
+[45:11] something scattered around here. That will be my representation of the posterior. Then
+[45:18] for each particle, I have a Gaussian distribution about where this feature is, where this feature
+[45:24] is, and that's the future is. For this particle, maybe the distribution for this feature is
+[45:31] something that is quite different. So this will be particle 2, particle 1. So this is
+[45:39] the Gaussian for particle 1. This is the Gaussian for particle 2. Make sense?
+[45:52] So the last step is that when we propagated the particle, the particle, well, the part
+[46:02] of the particle that represents the state of the robot, we only accounted for information
+[46:08] from the controls but not from the measurement, which means that we have to resample that
+[46:15] posterior in order to align it with the measurement that we got. And this is exactly the same
+[46:22] step that we did in the particle filter and in Monte Carlo localization. We resample with
+[46:30] the replacement in order to have a more representation for those particles that are more compatible
+[46:38] with the measurements that we have gotten. So basically, if you get a measurement that
+[46:44] is completely incompatible with a possible hypothesis about the value of the state, then
+[46:49] we just throw out that entire particle along with its tail of EKF filters.
+[46:58] In particular, how do we resample? Well, we're going to do a bit of a derivation, but in
+[47:06] the end, you already know the answer. We should resample according to probability of Z given
+[47:11] X. That is our compatibility check. Specifically, up until now, what we have computed in terms
+[47:18] of the posterior for the state trajectory is a probability distribution that is the
+[47:25] product of the posterior time t minus one times the state transition model. So that's
+[47:33] what we have represented in particle form. The target is to get a distribution whereby
+[47:40] the particles are distributed according to distribution that also depends on the most
+[47:45] current measurement. The question is, we have this for now. How do we get to this one?
+[47:55] So what the particle filter does is to resample the particles in order to realign this distribution
+[48:01] with this target distribution. Specifically, how do you choose the important factors? And
+[48:10] here I'm doing derivation, but we already seen this in the context of particle filtering.
+[48:14] How do you use the important, how do you choose the important factors in order to align
+[48:19] the distribution we have with the distribution we would like to have? Where? Well, we define
+[48:27] important factors as Wt equal to probability of X1 t, k given Z1 t, U1 t, C1 t. That's
+[48:44] the probability we would like to obtain, compute over probability of X1 t given Z1 t minus
+[49:06] 1, U1 t, C1 t minus 1. We know this probability. If we know this factor, then by multiplying
+[49:19] this probability by this factor, we get what we want. So the question is, how do we compute
+[49:24] this Wt? Well, we just use a little bit of a bias rule. And we're going to do that in
+[49:32] a second. But then the result is that what we had to multiply, what we had to re-sample
+[49:36] by is the probability of the measurement given the current state. So it's a compatibility
+[49:41] check, exactly what we had for the particle filter or the multicolor localization filter.
+[49:46] So specifically, the posterior with respect to the current measurement can be written
+[49:55] again by using bias rule. So probability of X given Zt is equal to probability of Zt given
+[50:00] X, probability of X times the normalizer. So as usual, we remove unnecessary conditioning
+[50:09] given the Markovianity of the process. So in order to go from this to this, we remove
+[50:16] the information about the history of the project since it does not influence the distribution
+[50:22] for Z. And just to make the mathematics look, and also we remove the conditioning with respect
+[50:37] to Ct because as we saw before, the Ct alone without Zt does not provide us with any additional
+[50:47] information about Xt.
+[50:52] So if Xt and Ct are mediated through Zt, so if I don't have Zt, conditioning on Ct does
+[51:01] not provide us with any additional information. So remove Ct from the conditioning. So these
+[51:07] two terms cancel out. So what I'm left with is probability of Z given X. With intuition,
+[51:16] we should resample particles that are more likely given the measurement that we have
+[51:22] just gotten. And we sample with replacement. So as it was the case for the particle filter,
+[51:31] there is the danger that if you get unlucky, you always resample the same particle, and
+[51:36] then you run into the problem of particle starvation. But we already said that there
+[51:41] are ways to get around that.
+[51:45] So the last step is to resample the particles by multiplying by the probability of Z given
+[51:52] X. The question is, how do you compute probability of Z given X in a way that is analytical that
+[51:59] allows you to do faster resampling? As usual, what you do is a linearization of this probability.
+[52:07] That's exactly what we already did for EKF localization. And you represent this probability
+[52:12] as a Gaussian by using a linearized model. And I'm going to go through the details of
+[52:17] this step because exactly what we did before for Monte Carlo localization and the particle
+[52:23] filter.
+[52:26] So the whole algorithm looks horrendous, but in reality, it's easier to implement than
+[52:34] any other SLAM algorithms. Specifically, you have a set of particles. These are glorified
+[52:40] particles. The particle represented the state of the robot, and then you have the set of
+[52:49] EKF filters associated with that particle. So for each particle, you propagate forward
+[52:57] the state. That's the prediction step. Then you update each EKF filter for each feature
+[53:06] by using a Kalman filter. The reason why we can use a Kalman filter is that because we
+[53:13] have linearized the measurement model. And in the meantime, we also compute the importance
+[53:18] weight. Once we have done all of that, we resample the particles by using the importance
+[53:23] weights. That's it.
+[53:24] So in the z hat calculation, are you assuming some predicted measurements?
+[53:25] Yeah, as usual. The EKF step is exactly identical.
+[53:26] So for the map, are we just going to update it now for the before measurement update map?
+[53:46] For zk, we use the information about the position of that feature that is given by
+[53:58] mu and comma t minus 1. So I'm not making a big deal out of this because this is exactly
+[54:09] the same as EKF filtering. So this block, you can think of this as basically a wrapper
+[54:14] around EKF.
+[54:18] All right. So far, we have considered a case of non-correspondences. In the case of unknown
+[54:25] correspondences, you had the issue of computing the correspondence variables. The way we compute
+[54:30] the correspondence variables is the same as we did in the past for EKF filtering and so
+[54:37] on. We use maximum likelihood estimation. So basically, we choose the correspondence
+[54:42] variable ct that makes the measurement as likely as possible. So here, there are no
+[54:49] differences whatsoever with respect to the previous algorithms.
+[54:52] In this formulation, you just assume that the maximum likelihood is the correct one
+[54:58] and you don't continue to propagate like some believe.
+[55:01] Yes, but there is a conditioning with respect to the particle k, which means that each particle
+[55:10] has a history of correspondences. But different particles have different histories of correspondences.
+[55:16] So this is much more robust than a standard EKF because for the case of EKF, at least
+[55:23] in its most general formulation, you had one history of correspondences and it was it.
+[55:30] So here in parallel, we are keeping track of capital M history of correspondences. So
+[55:38] this is much more robust. If you screw up with some correspondences at some later step,
+[55:44] that particle will start being completely incompatible with the measurement that you
+[55:48] see. Fine. The particle will not be re-sampled. It will die. That's it. Instead with the EKF,
+[55:55] if you start screwing up with your correspondences, then the entire field diverges and that's
+[56:00] it. Now you need to have a hard reset. So it actually leads to a much more graceful
+[56:04] degradation of performance. And indeed, this is a very important point that I have highlighted
+[56:11] here. The key advantage of the particle filters is that each particle relies on its own local
+[56:16] data association decisions. So this is pretty great. All right. So let's summarize the situation.
+[56:25] So we covered both Gaussian filtering, so EKF, and particle filtering. In Gaussian filtering,
+[56:33] the idea is to represent the belief with a Gaussian approximation. In order to do so,
+[56:40] we had to assume that all the uncertainty sources are Gaussian. And most importantly,
+[56:46] we had to linearize the state transition model and the measurement model. Now the advantages
+[56:55] of this approach is that it's relatively fast. Most importantly, it's well understood. It's
+[57:02] quite intuitive, has a lot of legacy. But it only works well when uncertainty is low.
+[57:09] Why is that the case? Well, because we are assuming that the belief can be presented
+[57:16] as a Gaussian. So we are committing ourselves to a unimodeled representation of the belief,
+[57:21] which is certainly not a good idea if you have no clue where the robot could be. And
+[57:26] second of all, we commit ourselves to a single history of the correspondence variables,
+[57:33] which as we were saying before, could be quite dangerous. So if your uncertainty is low,
+[57:43] or if in general, the problem that you're trying to solve is try to be localized in, say,
+[57:51] a narrow corridor and so on, Gaussian filtering is good enough. Or even it's in a way robustified
+[57:58] version of EKF is good enough. But if you had to deal with problems that are more global in nature,
+[58:03] so you have to reason about multiple modes and so on, then a Gaussian filter, even though there
+[58:09] are generalization of it, but an EKF is no longer sufficient. And you need to resort to either
+[58:16] particle filter approaches or other approaches like, for example, graph slam that we have not
+[58:21] covered in this class. In particular, the advantages of a particle filter approach
+[58:27] is that it can deal with any noise distribution. The propagation of the dynamics does not rely on
+[58:34] any approximation. We are using the full information about the dynamics. It represents
+[58:38] a multimodal belief, and it's quite robust to data association errors. The problem, though,
+[58:45] is that even though we are leveraging cleverly the idea of factorization of the slam posterior,
+[58:51] still you have to keep track of several particles. So in general, it does not scale well to high
+[58:59] dimensional problems where you have, say, many states. And then you have all the other issues
+[59:07] that we discussed last time, like, for example, particle starvation, which means that when you
+[59:12] resample, you may want to use a more clever sampling strategy, for example, the one that
+[59:17] you have been using for your Monte Carlo localization algorithm in problem set four.
+[59:23] Now, as you can imagine, slam is a fundamental problem in robotics. So in the past 30 years,
+[59:30] there has been a lot of research started with the EKF localization, then particle filters
+[59:37] starting in 2000, more or less. Now, one of the most state of the art methods is represented by
+[59:44] graph slam that we did not cover in this class. But basically, it uses graph optimization techniques
+[59:53] in order to solve the slam problem. There is a paper that I really like, which is this paper
+[60:01] over here, which provides a fairly exhaustive description of the slam problem and puts it in
+[60:10] a very good historical framework. So if you are interested in getting deeper into the slam problem,
+[60:15] I wholeheartedly suggest this paper. And in particular, this paper makes the case of how
+[60:23] the trends have been to go from the so-called classical age based on the EKF algorithm
+[60:30] to the more algorithmic analysis age where people try to not only design algorithms,
+[60:36] but also prove statements about the correctness to those algorithms, to the current robust
+[60:40] perception age where you want to make statements about the correctness of the algorithms in the
+[60:45] case where something may go wrong. So basically, you can provide guarantees about robust performance.
+[60:53] Now, there are a number of open source packages that implement slam algorithms.
+[60:57] We'll use one of them for your final project. But there are many others. And in particular,
+[61:02] here are some of my favorite links. Open slam provides a comprehensive list of
+[61:09] open source slam software. So that's an excellent reference if you are to implement slam algorithms.
+[61:18] PTAM is a very good implementation of visual slam. So basically, slam that relies on visual
+[61:27] information. Tango was a very cool project from Google.
+[61:33] Entailing slam with the visual information, unfortunately, has been cancelled.
+[61:38] But for example, in the lab, my lab for a while, we used the tango slam algorithm for
+[61:45] my robots. And finally, if you plan to do research in slam, the question is how do you benchmark your
+[61:52] algorithm against the competing algorithms? So fortunately, there is a data set of benchmarks
+[61:59] that you can use for this purpose. So that's also a very good link. So the next topic that
+[62:07] we were supposed to cover is the topic of sensor fusion. But we already covered it
+[62:15] because this lecture was supposed to be before sensor fusion. So this is the future when it is
+[62:19] the past. So actually, the next lecture will be on state machines and will be tomorrow.
+[62:24] This lecture concludes our module three about localization and mapping. Probably has been the
+[62:38] maybe the most difficult one. Maybe trajectory optimization was slightly more difficult.
+[62:42] But certainly, it required a lot of discipline in order to familiarize yourself with the notation,
+[62:48] the key ideas, and so on. But remember that everything we said in a nutshell is an
+[62:55] implementation of the bias filter. So even though the algorithms get very confusing with all these
+[62:59] notation and so on, the building blocks are always the same. Addiction step, a correction step.
+[63:05] The question is how do you make those steps computationally feasible? And we saw a couple
+[63:10] of three main ideas. One to use the notion of linearization in order to push Gaussian
+[63:17] through linear functions, notion of particle filters, and the notion of factorizing the
+[63:21] posterior. All right. So I'll see you tomorrow for the fourth or final module of this class,
+[63:29] which will be state machines and decision making. The midterm will be on Friday. I will provide more
+[63:36] information about the midterm tomorrow. But in a nutshell, the midterm this time will just be
+[63:42] a yes, no type of answer exam. You're already quite busy with the p-sets and with the final
+[63:51] project and so on. So the idea was to make a midterm that is easier. There will be a bunch
+[63:59] of questions where you simply have to say true or false, and there are no tricks. If you say false,
+[64:05] it was true, meaning that you make a mistake. We're not going to deduct points. So it's really
+[64:09] meant to be a fairly nice midterm. But I will discuss a bit more about it. I will talk a bit
+[64:16] more about the midterm tomorrow. In particular, we'll discuss in more detail the topics that
+[64:22] are covered, to what extent, and so on. All right. So I'll see you tomorrow.

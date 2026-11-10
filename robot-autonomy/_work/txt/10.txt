@@ -1,0 +1,488 @@
+[00:00] So today we're going to be talking about stereo vision, which is something that Marco alluded
+[00:09] to last time. But basically the point is that in general, it's not possible to recover the
+[00:16] structure of the 3D world from just one image. And this is due to the intrinsic ambiguity
+[00:22] of the 3D perspective transformation. So in this lecture, we'll discuss different ways
+[00:27] for recovering 3D structure. And here you can see some of the sections for where this
+[00:32] material is taken from. So stereo vision involves two processes. The first is the fusion of
+[00:39] features observed by two or more eyes. And then the second is the reconstruction of the
+[00:44] three-dimensional properties. So the key problem here is actually a correspondence problem.
+[00:50] So given observations P and P prime in camera one and two respectively, how do we know that
+[00:55] such observations correspond to the same 3D point capital P or equivalently that P and P prime are
+[01:04] actually in correspondence, that they actually do belong to the same 3D point. So to help us,
+[01:10] there are several constraints that can be leveraged to simplify step one here. And so
+[01:16] for example, there's a similarity constraint, a continuity constraint, and most importantly,
+[01:23] an epipolar constraint. And we're going to talk about that right now. So a priori,
+[01:30] if you think about how when we have two cameras set up looking at the same scene,
+[01:34] it makes intuitive sense that any pixel that you see in one camera, you should probably be
+[01:39] able to see in the other camera, especially if they're looking at the same scene. And indeed,
+[01:44] matching pairs of pixels that are restricted to lying on the corresponding epipolar line is one
+[01:51] of the main ways that we will be able to generate 3D information from 2D images.
+[01:57] So let's actually break down what we're looking at here, because this is the fundamental image
+[02:03] that we're going to have going forward through this lecture and what you guys should keep in
+[02:06] mind when you're thinking about 3D vision or stereo vision. So these two planes here on the
+[02:12] left and right, Pi, capital Pi, and Pi prime are the image planes. Point O and O prime,
+[02:18] that's like the pinhole camera center that's behind them, some focal length behind them.
+[02:23] And then point capital P is some 3D point that's out in front of the cameras that they've both
+[02:28] captured in the images. So in Pi, this 3D point capital P corresponds to lowercase P, and then
+[02:38] on the right in Pi prime, it corresponds to lowercase P prime. So these are the image,
+[02:46] the 3D world coordinates point in the image, and we call, these are just the image points,
+[02:56] and specifically something that's very important that we're going to be talking about when it comes
+[02:59] to EpiPoles or, you know, let's even disambiguate what that is. So when you have two images from two
+[03:07] cameras looking at the same scene, so the baseline, which is the line from one camera center to the
+[03:14] other camera center, will go through some part of the image. And even if it doesn't, it will go
+[03:18] through some part of this plane, unless they're parallel, but we'll talk about that later. So,
+[03:23] and this is the general case. So the point at which this baseline intersects the image plane,
+[03:30] that those are called EpiPoles. So there's going to be an EpiPole for the image on the left here,
+[03:37] and that's E, and then an EpiPole for the image on the right, which is E prime. And so now for
+[03:42] any 3D point, which then has a corresponding image point, if you draw a line from the EpiPole to that
+[03:50] image point, we call this line an Epipolar line. Okay, so this is just some terminology here,
+[03:58] and then the plane that's defined by these three O, O prime, and capital P, this is called the
+[04:03] Epipolar plane. So when I was alluding to this previous EpiPole constraint for determining which
+[04:12] point in one image maps to a point in another image, which then both map to the same point in
+[04:16] 3D, what happens is, as you can see, if we have some image point capital P, which corresponds to
+[04:25] this image point P prime, in the left image this point must lie somewhere on the Epipolar line.
+[04:34] Why is that? Because it lies on the Epipolar plane, and the Epipolar plane intersects the image
+[04:39] plane along this Epipolar line. So this is the fundamental constraint that we're going to be
+[04:44] working with for developing 3D information from 2D images. Let's see if I want to say anything
+[04:52] else about that. No. The only thing I will say is that, although this is like a fundamental
+[04:57] constraint, it actually is really helpful because it means that when we want to search for
+[05:01] correspondences between two images, rather than searching over the entire image, which is maybe
+[05:05] like what a naive method might do, we only have to search along this line. So it reduces our search
+[05:11] space from one of a 2D search space to just a 1D, which is significantly faster. So between these
+[05:17] one might be like further forward or back. Yep. Yeah, this is the general case.
+[05:22] Yep. So there's no, like the baseline doesn't have to be, well, it's all a matter of semantics,
+[05:28] right? Even if I have one image way behind the other, the baseline is still, you know,
+[05:33] between those two and they can be rotated whichever way. Yep. Any other questions about this setup?
+[05:39] There's some constraints to find p prime, right? How do you find...
+[05:45] That would be borderline if you don't know what p prime is.
+[05:48] Well, the one thing that you know, well, you do know where. You know where p and p prime both
+[05:53] are because you have both images. Like, you know, we are the ones who have these two images
+[05:58] at our disposal here. So we know both p and p prime and we're trying to determine
+[06:03] capital P. That's kind of the whole goal of stereo vision.
+[06:07] And you also have the baseline? Yeah. So we know because this is our camera setup,
+[06:13] we know the baseline and specifically there's two things we know. We know the baseline in terms of
+[06:18] like the translation between the two cameras. We'll talk about this later, but we also know
+[06:22] the rotation between the two because remember we're the ones who set up the camera. So we can
+[06:25] measure these things. So you have p and p prime but how do you know that they correspond to the
+[06:30] same point? Well, this helps us get there because we know that we just have to search on a line,
+[06:38] but in terms of how we exactly find, determine that, we'll actually come back to that later
+[06:42] in this in this lecture. So just to, yeah, maybe this might be a little bit confusing,
+[06:56] but if you think about it, a match for p, so we're looking for a point in pi prime that
+[07:02] matches p. When we say matches p, we mean it corresponds to that same 3D point. So we're
+[07:07] looking here for p prime which must lie on l prime. So there's another line that goes from
+[07:15] 0 prime to p and that intersects to l prime. Not necessarily.
+[07:28] I guess, what does a potential match for p mean? Yeah, so potential matching means that we're
+[07:34] looking for a point in the other image that corresponds to the same 3D point that p does.
+[07:41] And so that's why you see how we draw those like two lines from p into this image and then p into
+[07:46] the other image. So in that image p prime happens to be where capital p lies in that image, but for
+[07:53] us here it's p, for the left image. So when we say we're looking for a potential match for p,
+[07:58] we're basically saying that we're looking for that point p prime.
+[08:02] All right, so to visualize what this might look like,
+[08:09] so kind of towards your question, how do we actually find? So if we know what the epipolar
+[08:17] line is, again we will talk about, we will dive into this more deeply, we will actually get to
+[08:31] this. Right now we're just giving like a high level overview, but we'll dive into it, we will
+[08:35] get to this. So keeping with the high level theme in mind, so if we do have l and l prime,
+[08:42] and if we do have p but we want to find p prime, then what we can do is, as I said before,
+[08:48] you can just search along this line, which is much simpler than searching along the entire image.
+[08:53] But again, we'll talk about it in more detail.
+[08:55] Does it look like l prime is defined using p prime, but then you would try to find p prime
+[08:59] using l prime? No, it's good.
+[09:03] Keep that in mind as we go forward. All right, so let's actually derive how we get this constraint,
+[09:09] and this is now from just like kind of this geometry here. So we know, as I said before,
+[09:15] that o, o prime and then capital p, which anyways, they form this plane that we're interested in,
+[09:23] this epipolar plane. And specifically because p and p prime lie along this plane, we know that
+[09:33] each of these three points, which is these three lines, the baseline, o, p prime and o, p, or o
+[09:39] prime, p prime and o, p must be coplanar, they must all lie on this epipolar plane. And the way
+[09:45] that you can write this mathematically is that you can say that the vector formed by o and p
+[09:51] must be perpendicular to the plane's normal vector, which you can define via a cross product
+[09:58] as such, which is a cross product from the other two vectors that you have.
+[10:03] So one thing to keep in mind is when we have the, when we need to find the cross product
+[10:10] between two vectors, you can actually write this out as, you can actually write out a matrix form
+[10:18] of the cross product for one vector as follows. So this is more of just like a,
+[10:23] let's say like a mathematical trick that makes writing out some of the matrix algebra later
+[10:30] easier. But all this is is just saying that you can write the cross product as a matrix
+[10:35] vector product as well. So just keep that in mind and you'll have these slides for reference
+[10:39] anyways, or they're already up anyways. All right, so how can we actually derive,
+[10:45] yeah, so continuing the derivation of this epipolar constraint. So if we assume that
+[10:50] the world reference system is located with camera one, which means, you know,
+[10:54] you put your initial frame of reference and everything there.
+[11:00] After a bit of algebra, we can find that the epipolar constraint that we're talking about
+[11:05] comes out in this form of p transpose with some matrix f, which we'll talk about,
+[11:13] and p prime must be zero. So this is directly writing this constraint here.
+[11:21] We are directly writing this constraint, but we are defining a few of the terms differently.
+[11:26] So here, lowercase p just corresponds to the vector, because remember we're going from,
+[11:32] we're saying that the world origin is here at o, and so kind of everything is with respect to the
+[11:38] left image here. So p is just the vector from o to p, and then p prime is the vector from o
+[11:46] to p prime, not from o prime to p prime, remember we're considering everything from
+[11:50] this perspective here. And so now there is this kind of interesting matrix f that comes up,
+[12:00] which is kind of similar to if you take the cross product matrix of this vector,
+[12:07] as well as a few other rotations and translations, because you have to take into account the
+[12:12] rotations and translations from camera one to camera two. So specifically if you were to expand
+[12:19] it out, f looks like, so here's where that translation or rotation comes in, as well as
+[12:24] the camera intrinsics, which you know because these are your cameras which you calibrated.
+[12:29] So some key facts about this matrix f, f is referred to as the fundamental matrix,
+[12:36] the reason it's called fundamental is because with this matrix you can basically find out
+[12:40] everything given you know for two images of the same scene. And so specifically something that
+[12:49] was of interest is, specifically something of interest is how can we define epipolar lines.
+[12:57] Well if we have this fundamental matrix, we're going to talk about how you get the fundamental
+[13:02] matrix later, but if you have this fundamental matrix you can simply say that the epipolar line
+[13:08] is this fundamental matrix times the image point that it corresponds to. So remember for an
+[13:13] epipolar line you need well the epipole and then some other point in the image. And so if you know
+[13:19] for l which is defined, keep in mind this is defined in the left image, we're using an image
+[13:26] point that's defined in the other image. The reason this makes sense is because,
+[13:31] and that's why actually these three red lines are drawn here, if you pick some other image point
+[13:36] p i don't know double prime in this right image and you move it you know just somewhere along
+[13:41] that epipolar line you know maybe along some of these other three red lines then it's gonna
+[13:49] it's basically gonna correspond to different points on the left image.
+[13:53] Actually if you move it on the epipolar line it's going to correspond to the same point,
+[13:56] it just might be a little bit bigger in scale.
+[14:02] Yes, oh yeah it's either the transpose of the inverse or the inverse of the transpose, yeah
+[14:06] it's equivalent. Okay so this is how we can find the epipolar line in the left image from a point
+[14:14] in the right image and you can also do this the other way around. So if you want to find the
+[14:20] if you want to find the epipolar line in the right image from a point in the left image
+[14:24] well you can do that just by using the transpose of the fundamental matrix.
+[14:29] So something else that's very important to keep in mind is that f is actually singular,
+[14:35] it's not invertible and why do we know that kind of right off the bat? Well the reason is because
+[14:41] if you actually try and find the epipolar line corresponding to the epipolar the epipole itself
+[14:49] because you can put any image point in there, if you try and find what the epipolar line is
+[14:54] corresponding to the epipole itself you get nothing, well because it collapses to a single
+[15:00] point. You don't get a line anymore because if you're trying to map this to the other image
+[15:06] it's just a single point at the epipole. So if you use the fundamental matrix for this you get
+[15:12] zero. So if you get zero that means it has a null space, if it has a null space then you know that
+[15:16] it's not invertible. Now the other thing to know about f is that it has so f is a three by three
+[15:23] matrix but specifically it has so it has nine elements in there but we only really need seven
+[15:31] to find seven because there are some other constraints that then help us find the other two
+[15:36] and again we will talk about this in more detail in a few minutes.
+[15:39] So some I mean as we talked about before some of the like the obvious usefulness of the fundamental
+[15:47] matrix is that we can find these epipolar lines you know just like that given we have some point
+[15:53] on the left and so towards one of your guys's questions if we have a point in the left image
+[16:01] we don't have the point in the right image but we want to find the point in the right image
+[16:04] what do we do? We start from this point we multiply it by the fundamental matrix
+[16:09] that gives us a line in the right image and then we literally search along this line until we find
+[16:16] something that matches this. We're going to talk about how you do this as well in a couple minutes
+[16:20] but there was a question that came above that came earlier which was related to how that works so
+[16:26] hopefully that answers that.
+[16:27] Yeah great question so there's actually no assumption of absence presence or absence of noise
+[16:41] because I mean there's many things you can do in computer vision rather than like a direct
+[16:48] pixel wise comparison and actually even if you had perfect a perfect image a direct pixel wise
+[16:54] comparison wouldn't even work because if I'm looking at you know for example this statue
+[16:59] and I one camera is a little bit rotated so it sees let's say the right side of the nose whereas
+[17:03] this other camera sees the left side then even a direct pixel match is not going to work at all so
+[17:08] actually even in the first place we have to do something a little bit more interesting than that
+[17:11] but yeah so a little bit of noise shouldn't be that much of a problem too much it'll be harder.
+[17:15] All right so the other cool thing in mind so remember that the the whole point of this
+[17:27] procedure was you know we're using this epipolar plane which is actually defined by this 3d point
+[17:33] but the really great thing about the fundamental matrix is there's no mention of the 3d point here
+[17:38] we don't actually need to find the 3d point in order to find the epipolar line
+[17:43] in the other image so this is very important right because then there's no chicken and egg
+[17:47] problem because we can find the epipolar line first without any need for capital p then we
+[17:53] can find the this other p prime in this image in this in the right image now we have p prime and p
+[18:00] then we can do triangulation and then we can find capital p so there's no you know there's no chicken
+[18:05] and egg problem of oh you need to find to find the 3d point you need to first well find the 3d
+[18:10] point to get this f and then you know do whatever you want so how do we actually compute this
+[18:19] fundamental matrix so this is like another kind of core question yes this matrix is amazing but
+[18:24] how do we actually find it so the first question is is it even possible to estimate f if you just
+[18:31] have two images of the same scene and without knowing really the intrinsic and extrinsic
+[18:37] parameters because remember i mean i said that yeah we can measure r and t but let's say we
+[18:40] can't even measure r and t let's say i just took these two images from google maps or google images
+[18:45] of you know the the rome coliseum or something and they're just from two different viewpoints
+[18:50] so can we even do this yes it's actually possible as long as we have a sufficient number of point
+[18:55] correspondences between the two images and so while there are several algorithms for computing
+[19:01] f we're going to discuss here a you know a pretty a pretty simple one it's called the eight point
+[19:07] algorithm the the naming of which will be pretty clear so what we're going to do is we're going
+[19:12] to use the fact that the fundamental matrix satisfies this epipolar constraint which we've
+[19:17] talked about all this time for all of the pairs of corresponding points so specifically if we let p
+[19:25] and p prime be defined in this homogenous form where u and v are the pixel coordinates in the
+[19:31] left image and then u u prime p v prime are the image coordinates in the right image
+[19:39] we can actually write out that exact same p transpose f p equals zero constraint here on
+[19:46] the right where we kind of leave the elements of f as well undefined because we don't really know
+[19:51] them now so we'll just leave them as symbolic variables and then what we can do is if you
+[19:58] actually write out the form of like what what actually you get if you carry out this this
+[20:04] quadratic form you're going to get you can actually rewrite that form linearly as such
+[20:13] because well you know you can you can kind of look at it if you take u times the first element
+[20:17] f times u prime plus all the other terms you can see that okay well if we just factor out
+[20:23] those first two terms then we can we can write this linear form so now if we have this linear
+[20:29] form this is great because i mean this is just for one set of correspondence one pair of
+[20:34] correspondences if you now have eight of these correspondences then you can actually fully
+[20:42] determine the the matrix f and if you have even more then it becomes a least squares problem and
+[20:48] that's great because we know how to solve least squares problem very easily so w is basically how
+[20:56] we write these matrix of known correspondences and the one thing to keep in mind is that even
+[21:05] if we have all of these different terms there is still some ambiguity and so we actually use
+[21:11] so what we do is we end up solving this you know least squares problem but we do have a constraint
+[21:18] that the the norm of the learned f values is one so this resolves our ambiguity with with respect
+[21:28] to the that ninth point i mean this is called the eight point algorithm but there's nine values in f
+[21:34] and so we really we only need to find eight divide by the last one and it's all good because the
+[21:38] fundamental matrix is you can use it up to scale so it's completely fine if you have differently
+[21:42] scaled values but that's why we normalize such that the largest is one or the the ninth one is
+[21:48] one so while this f that we just learned will satisfy the epipolar constraint we never talked
+[22:01] about that singularity of f which is also very important to enforce because what we need the
+[22:05] epi pools to map to zero when you multiply them in the fundamental matrix so specifically we're
+[22:11] going to enforce this rank constraint via svd it's not very important that you understand exactly
+[22:18] the internals of this but just know that the fun like the way that you can formulate and solve this
+[22:23] problem is if you it's again a least squares problem over the ferbinius norm of the matrix
+[22:29] where you have a subject or you have a constraint which is that it's not invertible
+[22:35] so in in total in sum the eight-point algorithm is to use the normal least squares that you know
+[22:43] we're used to to compute an approximate fundamental matrix f and then to fix up
+[22:50] the fact that we're missing this singularity property with svd
+[22:56] so now if we have the fundamental matrix and we can you know go between these two images in terms
+[23:07] of finding the epipolar lines epipolar lines in both of them something that we might be
+[23:14] interested in doing to make our search over these lines easier yeah
+[23:27] uh well the problem that you have is
+[23:35] i mean i'm trying to think in terms of like is there a massive difference
+[23:42] it really depends it really depends on the on the scene that you have in front of you
+[23:45] uh and how like how good your correspond your correspondences are but really that the key
+[23:51] thing is that you have to make it non-invertible because if that doesn't hold then your epipolar
+[23:57] your epi poles then don't map to each other which means that you kind of have
+[24:01] two baseline lines and that's very weird that's like a very strange so even if the like even if
+[24:06] numerically the matrices are not very different conceptually it is very important to actually fix
+[24:12] this condition all right so does anyone have any other question yeah
+[24:30] yeah the core question yeah so the way you actually know this
+[24:34] so unfortunately this is just kind of the answer here is just that uh we look at the two images
+[24:40] and we just you know either human can do this or someone else someone who's kind of
+[24:43] trying to solve this problem here for us you like pick points you say ah i can i know that this
+[24:49] point belongs to this corresponds to this point and there's like software where you just kind
+[24:53] of click in one image and you click in the other and you say these two points belong to each other
+[24:56] so you kind of you actually have to provide these initial correspondences
+[25:00] and then um i mean to be honest that's one method of doing it another method another method of doing
+[25:07] it is just by starting out using your naive 2d image search right where if you have a point in
+[25:13] one image and you're like okay well i want to find this point in the other well i can just scan
+[25:17] across the entire second image find it and then okay great i know that these two correspond to
+[25:21] each other via some similarity metric some you know visual similarity metric and then just do
+[25:27] it again for other points um but there's like again this can be noisy yeah so yeah what what
+[25:41] that's a great question so we saw before here that f has a couple terms in there
+[25:45] so if your cameras like physically the cameras are the same then your k's are the same so that's
+[25:50] great but it's exactly as you pointed out yeah they have to be set up the same way because if
+[25:55] you move them i.e your translation changes or your rotation changes then f will change so f
+[26:00] is only as good f is only good for the specific scene setup that you have at that you know point
+[26:06] in time oh can you explain one more time why i have to be singular oh yeah f has to be singular
+[26:21] because specifically the epi poll must map to zero you cannot have a line that comes out of
+[26:29] if you try and find the corresponding epi polar line when you pass in the other images epi poll
+[26:36] you have to get zero how can you get a line from that right and so now what does that mean that
+[26:42] means that this metric has a non-empty null space you might remember this from linear algebra you
+[26:47] might not but this kind of important property of the matrix means that it is not invertible
+[26:52] if you have a non-empty null space your metric is not invertible
+[27:01] in a specific way such that the sensitivity of
+[27:05] of the l of p is like weaker depending on the points of f the sensitivity could you could you
+[27:17] your f is a is a knowing the measurement but it depends on your on the frame of reference between
+[27:22] the two so do people choose that in a specific way or is this i guess i imagine that if the
+[27:27] cameras were super far away that would may cause a problem if they were very close i would also
+[27:32] we're going to talk about this actually yes yeah we are going to talk about this about you know
+[27:36] baseline distance for example um and like extreme rotation stuff we're going to talk about it hold
+[27:40] on to that question in your mind any other questions about fundamental matrix and estimating
+[27:46] it great all right so something that's so okay if we have this kind of general setup where we
+[27:57] have epipolar lines that are well they can really be anything i mean they can just be general lines
+[28:02] in the other image something that's kind of annoying is searching along a diagonal line
+[28:10] is kind of annoying in image space because if you think about it what is an image it's a 2d matrix
+[28:15] which means it's discrete i mean especially in a computer it's discrete you have specific pixels
+[28:20] so if you now have to search along this diagonal line that might cut through some pixels but not
+[28:24] others and cut through them i don't know 40 of one pixel and 40 of the other that's very annoying
+[28:30] to work with and quite slow to iterate through from especially in computer vision and so what we
+[28:36] do is it's it's well ideally we would actually just work with parallel images where specifically
+[28:42] there's no rotation between the two of them but there might be a translation and so this is
+[28:46] fantastic right because first of all your epipolar lines are horizontal i mean that's okay that's
+[28:52] cool what does that mean that means that we can just search along you know one specific
+[28:57] coordinate we know that if you have a point here you know that all you have to do is search along
+[29:03] you know the one specific row of the image and the other of the other image and this is now
+[29:08] much faster computationally to deal with and it's it basically simplifies your correspondence
+[29:14] problem which is one of the two fundamental problems that we were talking about earlier
+[29:18] so the real question is is it possible if we do have two images which are kind of generally
+[29:26] rotated and translated is it possible that we can somehow rectify them such that they end up having
+[29:33] parallel or horizontal epipolar lines so of course the answer is yes because we've engineered it so
+[29:41] but basically what you can do is now if you know what the rotation and translation is between
+[29:48] cameras in between the two images that they produce you can actually do something called
+[29:52] a homography i think that's it's called a homography in the general case but it doesn't
+[29:56] matter you can do is you can perform a specific transformation to one image or to both images
+[30:02] in order to rectify them such that after this transformation they are both parallel
+[30:10] views of the same scene so you can see of course that this will warp the image
+[30:16] but that's just something that we have to accept as part of the territory
+[30:25] you absolutely can i mean we might see this later on the slides but basically
+[30:31] most robotic sensors i mean they just put the cameras side by side because then you don't have
+[30:35] to deal with this but we're just saying in general you know from the theoretical perspective this is
+[30:40] one way by which from you know two weirdly rotated cameras you can obtain you know
+[30:47] computationally nice and easy to work with rectified images
+[30:51] but yeah that that would be like the that's actually what's done in practice
+[30:58] all right so if we come back kind of to a high high level overview of what we're
+[31:03] what we're doing and what we're solving so we have these two problems which is
+[31:07] you know this fusion of features that we observe by two or more cameras so this was called
+[31:12] correspondence this is finding one point that matches another point and then we have to actually
+[31:18] you know using these matched points we then have to actually reconstruct the scene that we took an
+[31:24] image of in 3d and so to specifically now solve the to address this correspondence problem
+[31:32] we need to find observations that match like we have to find observations p prime that match p
+[31:39] so this is another question that you know came up earlier and there's two main methods that
+[31:46] we can use to do this the first is area-based so these algorithms they usually consider like a
+[31:51] small patch kind of illustrated here in one image and then you look for the most similar patch
+[31:59] in another image and and you can do this by means of some visual similarity metric or some visual
+[32:04] correlation metric it's you know it's up to you as the designer but the nice thing is that you know
+[32:09] if you have this rectified image which we talked about how you can get then if i have some image
+[32:16] patch in one image i can just very easily scan along you know that that exact same row and see
+[32:23] if i can find some image patch that looks similar now the problem or the benefit of using an
+[32:33] area-based correspondence method is that it's quite dense what that means is you can basically
+[32:39] cover your entire image in points that you want to match and then because you know you're not just
+[32:47] looking at a single pixel that would be very hard to match you have a single pixel as well as some
+[32:52] context around it so you can actually do a pretty good job of matching up one patch in one image
+[32:56] with a patch in another image the problem is that in methods in in regions where your image is quite
+[33:05] uniform like for example if you're going to take a picture of this whiteboard and you're going to
+[33:09] try and match you know two images of this whiteboard which is very textureless and featureless
+[33:14] area-based methods can fail and and so all that dense you know all that nice information about
+[33:19] dense uh about kind of this dense correspondence that you want is kind of out the window
+[33:25] so another popular method are feature-based methods and so what these are is basically
+[33:31] these algorithms first try and extract some salient features in the images and then
+[33:39] match between those and when i say you know what salient features means is these are basically
+[33:43] some robust these are like some points in the image for which this algorithm has determined
+[33:49] that they are robust with respect to let's say lighting changes rotation changes
+[33:53] scale changes stuff like this and there's many like popular you know feature there's many popular
+[33:59] algorithms for this you might have heard of some of them like sift maybe you've heard this term
+[34:03] before surf orb these are just different kinds of uh these are like different names for different
+[34:09] algorithms that find features that are you know robust with respect to scale shift orientation
+[34:16] rotation stuff like this the problem with feature-based or the benefit of feature-based
+[34:22] methods is well they're more robust so even if you have textureless images that you're trying to
+[34:27] to match together you might actually have an easier time finding correspondences the problem
+[34:32] is that usually you don't have such a good dense covering of the image so although you might have
+[34:37] a good a good matching a good correspondence you're going to find less points so you're
+[34:41] probably going to have a more sparse like a more sparse depth depth map that comes out
+[34:47] as a result of that and then you need to interpolate that and you might have errors
+[34:51] along the way so if we have two parallel images and we have now points which are matched between
+[35:05] them using either of these algorithms then we can finally try and solve this problem of finding
+[35:13] capital p in the real world given what we've seen about it in these two images so the way we
+[35:19] could do this is via triangulation this is something that you guys have seen before
+[35:24] you know with where you use similar triangles in order to find how far away something is from
+[35:29] the camera at least theoretically and so the way we can do this is by defining something
+[35:36] called disparity so disparity is the difference between how far one point in one image is from
+[35:45] the other point in the other image and then it's actually from this it's easy to show so we show
+[35:53] you the kind of the resulting formula on the right but from this it's easy to show by comparing
+[35:57] similar triangles that the disparity which is here pu minus pu prime is inversely proportional
+[36:05] to the distance z of the point capital p from the image plane and it's directly proportional
+[36:12] to the baseline b and so this is actually what we'll talk a bit more about this but this actually
+[36:19] is why you know having differently spaced cameras either far apart or close together
+[36:24] has different properties when you're dealing with 3d reconstruction
+[36:30] so thus this equation here can be used to compute the depth from this baseline distance focal length
+[36:36] which we know and then as well as this disparity which we got from corresponding these points in
+[36:41] the different images so yeah as i was alluding to before so some some properties of having different
+[36:47] sized baselines so if you have a very large baseline you can actually you can resolve
+[36:54] quite far like pretty well because you'll have very large you'll do really well to
+[37:03] to resolve farther away points the problem is if they are if they are quite far separated then
+[37:12] points that you see in one image you might not see in the other image so you kind of lose
+[37:16] a portion of your image that you can't see because it's too far apart now the other thing is that if
+[37:22] you have points that if you have cameras that are very close to each other you now don't have this
+[37:27] correspondence problem because almost all the points in one image will be in the other the
+[37:30] problem is you're going to have a lot of depth error because it's your your what's it called
+[37:35] your disparities are going to be very small and and might even be sub pixel for for points which
+[37:40] are sufficiently far away when you rectify two images to so their image planes are parallel to
+[37:48] each other what happens to the focal length so that that becomes different as well
+[37:54] um no so with the when you do this transformation you're keeping um what you're doing is really just
+[38:06] fixing the rotation such that they're parallel it's because you're still keeping like that
+[38:12] origin point behind the image plane and you're just kind of rotating this image plane such that
+[38:17] it is now parallel to the other or in this case in this case you rotated both but yeah so yeah
+[38:26] yeah does that answer your question
+[38:32] but i will say this the other thing is even if it did change your focal length
+[38:41] actually no yeah no it's it's not it's not a concern simply because it keeps
+[38:45] all the other properties about the camera the same it really all it does is really just change
+[38:49] the r with which they're rotated with each other
+[38:53] where were we okay we were here so the output from doing this triangulation process for many
+[38:58] corresponding points is something called the disparity map so i mean aptly named because
+[39:03] you're using disparity compute to compute this but basically you get an image which looks like
+[39:09] the right where you know you might color it such that lighter points are closer to the camera and
+[39:15] but basically given that you have some dense correspondences from one image to another
+[39:20] you can compute the disparity which is that distance the difference in position in the image
+[39:26] of one point and another and you can compute the depth and the one question that's interesting is
+[39:34] you know if you look at these two images i mean it seems like we can kind of
+[39:38] maybe it would be hard for us because the images look pretty similar but it seems like you'd be
+[39:41] able to to come up with a pretty robust um like 3d reconstruction of the scene but if we look on
+[39:47] the right here i mean yes it looks like we came up with a good 3d reconstruction but we have these
+[39:52] black regions and that's a bit weird what what are these black regions i mean why why do we have some
+[39:58] some points for which we can't resolve any information so we're going to look at the
+[40:03] we have some some points for which we can't resolve any information and so well the first
+[40:11] answer especially this is something we talked about earlier especially for this left side
+[40:16] is that we have some points in one image which we cannot correspond to the other because well
+[40:20] the camera can't see them and then the other ones are well occlusion and this is like another this
+[40:26] is another very fundamental problem in computer vision is if objects are blocked by objects in
+[40:30] front of them and so they kind of they almost form these like shadow like appearances but i
+[40:35] mean it from a from a computer vision perspective occupancy it kind of looks like that anyways you
+[40:41] have one object blocking another behind it so so now we have this kind of solution for if we have
+[40:51] two cameras and one scene even if we have general rotations and all that what if we have
+[40:58] multiple cameras and one scene can we do even better or conversely what if we have one camera
+[41:07] but that one camera moves through the scene because now i mean yes having two cameras is great
+[41:13] what if it's too expensive what if you only want to have the one camera and then just kind of
+[41:17] move it around and pan it around some object that you want to scan if you think about it if the
+[41:21] object's not moving you know maybe if you take some snapshots every one second then if you move
+[41:26] one second then if you move this one camera it's kind of as if you have i don't know three or four
+[41:31] cameras that are just placed differently throughout the scene so in structure from stereo we address
+[41:39] the problem of how to recover the structure from the environment from two images of the scene so
+[41:44] here structure for motion we're going to talk about recovering the structure when one the
+[41:49] camera relative pose is unknown i mean if i am moving a camera between i might have no idea what
+[41:55] the rotation and translation are i mean especially because i'm a human and i'm just moving it
+[42:01] so suppose we have m cameras with camera transformations mk between them so this encodes
+[42:07] both the intrinsic and extrinsic parameters of the camera so remember intrinsic are like the different
+[42:16] focal skew whatever you guys learned about last time and then extrinsic are rotation and
+[42:20] translation and then the different capital pj are different 3d points in the scene that we want to
+[42:29] reconstruct and so our aim here is to recover both the structure of the scene so these 3d points
+[42:38] as well as the motion of the cameras so specifically these
+[42:41] projection matrices mk which we also want to find
+[42:45] so the first thing that's important to realize is that in structure from motion
+[42:52] it's actually impossible to recover the scale of the scene so the problem that we have here
+[43:00] is that you know let's say here we have some large cube and then i take one camera and i move
+[43:05] it to the other side and i take an image that's going to look exactly the same as if i have
+[43:13] a smaller cube and i put the camera kind of closer to it and then did the exact same
+[43:18] well not the exact same transformation but a similar transformation so the problem is it's
+[43:23] actually hard to recover the absolute scale and intuitively this corresponds to a well-known
+[43:29] property of the perspective projection which is anyways how we see the world so the apparent size
+[43:35] of objects depends on their distance from the camera but the problem is if you have an object
+[43:40] that's twice as large twice as far away then well it's going to look the same as something that's
+[43:45] well the same size and two times closer or smaller and two times closer
+[43:51] so the reconstruction that we're going to obtain is going to be correct up to a similarity transform
+[43:56] similarity transfer means rotation translation and scaling because you know who knows how
+[44:00] in absolute sense this scene was was reconstructed was constructed so at a high level we're not going
+[44:08] to go super deep into like how you actually solve this problem but at a high level structure
+[44:13] for motion there is an algebraic approach which actually just continues exactly what we were doing
+[44:19] before where you you leverage this concept of a fundamental matrix between two images to solve
+[44:28] this sfm problem so what you could do is you first compute this fundamental matrix f via the
+[44:37] eight-point algorithm that we had from before and then you use this to estimate the projective camera
+[44:43] matrices and then you use these matrices to determine the world coordinates of the points
+[44:50] and now so and and then basically you can you can use these projection camera matrices to get the
+[44:57] triangulation so you can do exactly what we did but you kind of work with pairs of images and then
+[45:02] it basically becomes a stereo vision problem you're just kind of ignoring the other all the
+[45:07] other cameras well you're not ignoring them it's just that you're you're kind of you you're using
+[45:11] the two images to get the 3d points then you use the next two images get the 3d points next two
+[45:16] images get the three points etc now there is a another and i will say significantly more popular
+[45:25] method called bundle adjustment so bundle adjustment is a non-linear method for solving
+[45:30] the sfm problem so computationally it's more difficult but the results you get are significantly
+[45:36] better and this is actually what a lot of methods will use for structure for motion for solving
+[45:42] structure for motion so the way the bundle adjustment works is that internally it's an
+[45:47] optimization problem and specifically the optimization problem is to minimize something
+[45:52] called reprojection error reprojection error is basically if i believe that a 3d point is
+[45:58] somewhere out here and i then try and project this back into my cameras how far away is that
+[46:04] projection from the actual observed point in the image plane so this is a way that and the reason
+[46:10] it's called bundle adjustment is that if you draw lots of these projections from lots of 3d points
+[46:16] to the to the camera image plane it just it kind of looks like bundles of lines so you're adjusting
+[46:21] these bundles of lines so fundamentally this um this bundle adjustment optimization method
+[46:31] it's actually pretty similar to the triangulation method that we talked about it's just that it's
+[46:36] a bit more involved mathematically but it does give you better better performance so
+[46:42] a specific application of structure for motion that is actually very useful in a robotic sense
+[46:47] is something called visual odometry so visual draw odometry is the problem of estimating the
+[46:55] motion of a robot or that of a vehicle by using just visual input and specifically the basic
+[47:03] principle behind visual odometry is a simple iteration of this two view structure for motion
+[47:09] where you kind of take two camera two image views do the whole sfm approach do it again and you
+[47:16] could recover this rnt and then you use this rnt to inform your own odometry so specifically visual
+[47:24] odometry kind of it doesn't really care about all the others you know reconstructing 3d it
+[47:28] really only cares about localizing the robot and localizing its motion through a scene
+[47:33] but it's not uncommon at all to see results also showing the 3d map of the environment that is
+[47:39] output by such methods and actually what we're seeing here so if anyone can take a guess as to
+[47:46] where this image and where this visual odometry algorithm was used does everyone recognize
+[47:55] it's on mars so the rover the mars rovers actually use visual odometry and they actually
+[48:00] use computer vision in order to inform their own localization and what's what's that what's kind
+[48:07] of interesting about that is that if you think about well i guess who here is aero astro
+[48:14] eh good enough good enough amount of people i'm gonna tell you right now mars looks kind of like
+[48:20] the desert and deserts are kind of featureless which is annoying especially if you're trying to
+[48:25] computer vision but the great thing is that every time you know you have a couple rocks or something
+[48:30] which happens frequently enough then you get a pretty dense amount of information and actually
+[48:35] what we're what we're specifically showing you here is an image from the camera from the the
+[48:41] mars rovers camera and these lines so the blue dots are where those points were in a previous
+[48:47] frame and the red dots are where they are now so what you're seeing is how the image or at least
+[48:54] how the rover moved forward between one image to the other and how each of these pixels like were
+[49:00] pulled backward so maybe i flipped that maybe red is where they were yeah red is where they were
+[49:05] before and blue is where they are now so that's how the kind of pixels were moved backward
+[49:11] all right so that's kind of all i have to actually say about 3d reconstruction but next time what you
+[49:18] guys are going to look into is a bit more in-depth computer vision methods specifically ones which
+[49:23] deal with well altering different image properties and applying different operations to images
+[49:30] specifically something like how could you blur an image and also how could you do something like
+[49:35] detect edges from images so that's all i have for today

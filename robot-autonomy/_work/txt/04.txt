@@ -1,0 +1,1476 @@
+[00:00] All right, so today we're going to continue our discussion about trajectory planning
+[00:10] and trajectory optimization.
+[00:13] So last time we formulated the trajectory optimization problem.
+[00:17] We discussed at a high level what are the possible methodologies out there to tackle
+[00:23] the trajectory optimization problem.
+[00:25] In particular, we discussed two main classes of approaches, direct methods and indirect
+[00:34] methods.
+[00:35] They try to compute a feasible trajectory that on top of that optimizes some cost function
+[00:42] by using different philosophies.
+[00:45] The topic of indirect methods is a bit more advanced than this class that is covered in
+[00:52] a class that I teach in the spring.
+[00:54] I'll just give you the high level ideas.
+[00:56] And on Friday, meaning tomorrow,
+[00:58] I will go a little bit deeper into this topic.
+[01:01] But what we did was to say, well, many times
+[01:06] we don't really want a necessary and optimal solution.
+[01:09] A feasible solution that is good enough
+[01:11] as long as I can compute it quickly
+[01:14] will be sufficient for the purposes of trajectory planning.
+[01:17] And we found out that there is a technique
+[01:19] referred to as differential flatness
+[01:21] that allow us to do precisely that.
+[01:23] For a specific class of systems that have the property
+[01:26] of differential flatness, it is possible to compute
+[01:28] a good enough trajectory very quickly.
+[01:30] Indeed, to turn the problem of computing
+[01:34] a feasible trajectory into an algebraic problem
+[01:38] to compute the same coefficients of parameterization
+[01:43] of a feasible trajectory.
+[01:45] So today, we are going to continue this discussion
+[01:48] along three main lines.
+[01:50] First of all, we're going to talk a little bit more
+[01:54] in detail about how to account for constraints
+[01:57] in the context of differential flatness.
+[01:59] If you remember last time,
+[02:01] we just computed a trajectory,
+[02:04] but we did not explicitly enforce any constraints
+[02:07] in the flat outer space.
+[02:08] With a consequence that in the real state space,
+[02:13] we might have a trajectory that violates
+[02:14] the sum of the constraints.
+[02:15] So the question is, how do we encode constraints,
+[02:20] in particular input bound constraints
+[02:22] in differential flatness context?
+[02:25] The second topic will be, okay, now we have a way
+[02:28] to compute an open loop trajectory.
+[02:30] We go back to the two-step design that we discussed
+[02:33] last time.
+[02:34] How do we augment an open loop trajectory
+[02:37] with a tacking controller that imbues some robustness
+[02:41] in the overall control scheme?
+[02:44] Finally, we're going to discuss closed loop control.
+[02:50] And in particular, we're going to discuss
+[02:52] a specific application of closed loop control
+[02:54] to posture stabilization that is going to be used,
+[02:58] as we will see, in conjunction with the two-step design
+[03:03] in order to have an end-to-end trajectory planning module
+[03:06] for your differential drive robots
+[03:08] that is robust and efficient.
+[03:11] So these are the three main topics
+[03:13] that we're going to cover today.
+[03:15] Before we do so, I want just to provide a summary,
+[03:19] a more detailed summary of what we did last time.
+[03:21] As I said, last time we focused on the concept
+[03:24] of differential flatness to compute a feasible trajectory.
+[03:30] In particular, the problem of differential,
+[03:32] the property of differential flatness reads as follows.
+[03:36] In the linear system described by ordinary differential
+[03:42] equation, X dot equal to AXU, X is the state,
+[03:45] U is the input, is differentially flat.
+[03:49] If there exists a set of output C,
+[03:52] the function of X, U, and possibly some derivatives of U,
+[03:57] with a property that the knowledge of the flat output C
+[04:01] and its derivative up to order Q
+[04:03] allow us to backtrack what is the set of states,
+[04:07] and most importantly, the set of inputs that provide
+[04:16] the trajectory Z.
+[04:17] Basically, this allows us to find a one-to-one mapping
+[04:20] between trajectories, pairs of states, and controls X, U,
+[04:25] and the flat outputs for which the dynamics
+[04:28] have effectively been canceled.
+[04:34] Any questions about this?
+[04:38] So from intuition standpoint, differential flatness
+[04:41] captures the notion of whether a curve
+[04:45] in the flat output space can be realized
+[04:49] in the original X space through an appropriate
+[04:52] selection of inputs, with the key idea that
+[04:55] if that is the case, it's much easier to compute a curve
+[04:59] as opposed to compute the solution
+[05:01] to a differential equation.
+[05:06] Any questions?
+[05:06] So this is pretty fundamental, so I want to make sure
+[05:08] that everyone is on the same page.
+[05:11] All right, so if the system is differentially flat,
+[05:17] and as we said, not all systems are differentially flat,
+[05:22] but fortunately, for the sake of robotics,
+[05:25] a number of systems that are of interest in practice
+[05:28] are differentially flat.
+[05:29] If that is the case, it's possible to plan a curve
+[05:34] in a flat output space, Z, and then through the mappings
+[05:39] beta and gamma, and in particular gamma,
+[05:42] to recover the inputs that allow us to realize this,
+[05:45] to translate this trajectory into a trajectory
+[05:47] that is dynamically feasible in the original state space X.
+[05:52] Now in order to compute this curve,
+[05:54] then we can use a variety of interpolation methods.
+[05:58] So the one that we've been discussing last time,
+[06:00] and you're going to use for the first problem
+[06:02] in your p-set, entails polynomial interpolation.
+[06:07] So the idea is that each variable ZJ of T,
+[06:14] ZJ is the jth variable of the vector Z,
+[06:18] or the flat output Z, is going to be represented
+[06:21] as a polynomial, alpha i, j,
+[06:26] times a polynomial basis.
+[06:39] The psi i's provide a polynomial basis,
+[06:42] like for example, as I said last time,
+[06:44] psi one could be one, psi two T could be T,
+[06:49] psi three T could be T squared, and so on.
+[06:56] So basically we parameterize each component
+[07:00] of the flat output as a polynomial.
+[07:03] These coefficients are unknown.
+[07:07] They are computed by enforcing the boundary conditions.
+[07:11] In particular, we have boundary conditions
+[07:13] for the state X, for example, X of T zero
+[07:18] is equal to X zero, X to T F is equal to X F.
+[07:23] So these boundary conditions are translated
+[07:27] into boundary conditions for the flat outputs,
+[07:30] and it allows you to pinpoint the exact values
+[07:33] for the coefficients.
+[07:34] For example, for the first problem, your p-set,
+[07:37] I'm asking you to consider a cubic polynomial interpolation
+[07:41] in order to compute the curve.
+[07:44] You have two flat outputs, X and Y, right?
+[07:50] And in order to completely reconstruct the state,
+[07:53] you also need the derivatives, X dot and Y dot.
+[07:59] And since you have two flat outputs,
+[08:02] you're going to, and you have a cubic interpolation,
+[08:04] you're going to have four coefficients per flat output,
+[08:07] so you have to determine eight coefficients.
+[08:11] But then you have boundary conditions at the beginning
+[08:16] and at the end for each, for both X and Y,
+[08:20] and for its derivative, so you have eight conditions.
+[08:23] That allows you to set up a system of linear equations
+[08:26] that allow you to compute the coefficients.
+[08:28] Now, here we're only talking about feasibility.
+[08:32] If you want to go beyond feasibility,
+[08:34] actually you want to compute the flat output
+[08:36] that has some desirable property,
+[08:38] then what you do is to overparameterize your trajectory,
+[08:42] so basically having more coefficients than constraints,
+[08:45] and then use a cost function to compute the coefficients
+[08:48] that on top of guaranteeing feasibility,
+[08:50] meaning satisfying the boundary conditions,
+[08:52] also optimizes that cost function.
+[08:54] For example, minimization of jerk, a snap.
+[08:58] Is this clear?
+[09:01] So the mathematics at the end of the day
+[09:03] are not too important.
+[09:04] What is very important for you to know
+[09:05] is that for a very important class of system
+[09:07] referred to as differentially flat,
+[09:09] the problem of computing a trajectory
+[09:11] can be converted to the problem of computing a curve
+[09:15] for a subset of the state variables.
+[09:17] Computing a curve can be done very easily
+[09:19] through polynomial interpolation.
+[09:21] Once you have computed that curve,
+[09:22] then by a linear mapping that someone
+[09:25] has already done for you, you can find the inputs
+[09:29] that gives rise to the trajectory in the original space X
+[09:32] that is feasible, and possibly with some optimality property
+[09:37] in terms of minimization of jerk and snap,
+[09:40] which means that if in the future
+[09:41] you have to control a robotic system,
+[09:45] first thing that you should do
+[09:47] is to see if it's differentially flat.
+[09:49] Proving differential flatness is hard,
+[09:50] so what you do is you go on Scholar Google,
+[09:53] you type what your system is,
+[09:55] and hopefully that system falls
+[10:00] in the category of system that is differentially flat.
+[10:02] Great.
+[10:03] If that is the case, you look at what these mappings are,
+[10:06] and then you apply just a procedure
+[10:08] that you have learned in this class.
+[10:10] If it's not differentially flat, then you call me,
+[10:13] and then I give you the lecture slides for two or three,
+[10:15] where I tell you how to basically
+[10:17] do trajectory optimization
+[10:18] if the system is not differentially flat.
+[10:21] Yeah?
+[10:23] The output is almost just a subset of the state variable.
+[10:28] Well, yeah, it's more specifically
+[10:32] a function of the state, and possibly also the input,
+[10:37] and possibly some derivatives of the input.
+[10:41] It's full generality.
+[10:43] For the case of the extended unicycle model,
+[10:48] the one that you have in the problem set,
+[10:50] it turns out that it's just a subset of the state variables,
+[10:53] in particular the Cartesian position of the vehicle, x, y.
+[10:58] But that is not, it just happened to be the case
+[11:02] in that case, but for example in the case of a quadrotor,
+[11:05] you also have yo, apart from the Cartesian position
+[11:08] as an additional flat output.
+[11:13] But in general, it turns out that the flat output,
+[11:17] and the exact reason it's not clear to date, I would argue,
+[11:21] typically have a physical meaning.
+[11:24] So yes, typically is some quantity
+[11:26] that has a physical interpretation,
+[11:28] like x, y position, or heading, and so on.
+[11:30] It's not some weird, from this definition,
+[11:33] the flat output could be some very weird
+[11:36] combination of states, right?
+[11:37] Typically that is not the case.
+[11:39] Typically z is just a subset.
+[11:44] All right.
+[11:46] Now in all this procedure, as I said,
+[11:48] what you do to pinpoint your polynomial
+[11:50] that defines your curve in a flat output space,
+[11:53] we consider boundary constraints.
+[11:55] But these are the only constraints that we account for
+[11:58] when planning a trajectory with differential flatness.
+[12:01] What about additional constraints?
+[12:04] Like, for example, input bound constraints.
+[12:06] The constraint, in the case of a unicycle,
+[12:08] that the driving speed and the angular speed
+[12:10] have to be less than an upper bound.
+[12:14] How do I account for those?
+[12:16] So in general, constraints on x and u
+[12:21] are translated into constraints on the curvature
+[12:24] of the curve on the flat outputs,
+[12:28] on the curve that defines the time history
+[12:30] of the flat output.
+[12:32] The intuition is that if you have sharp corners,
+[12:37] this translates typically in very high control efforts.
+[12:40] That's intuition.
+[12:42] So the procedure to translate general constraints
+[12:47] from the original x, u space into the flat output space
+[12:50] is beyond the scope of this class.
+[12:52] But what I want to do today,
+[12:55] as is the first part of the class,
+[12:57] is to tell you a very effective way
+[12:59] to account, arguably, for the most important class
+[13:02] of constraints, which are the bound constraints,
+[13:06] the input bound constraints.
+[13:07] Typically, for all dynamical systems,
+[13:09] you have an upper bound on much control authority you have.
+[13:12] So what I want to do now is to discuss how,
+[13:15] in the context of differential flatness,
+[13:17] we can account for input bound constraints.
+[13:19] For example, top velocity less than v max,
+[13:23] say, I think it's 0.5 meter per second in your P sets,
+[13:26] omega t less than omega max.
+[13:29] Yeah?
+[13:31] If R is z, for example,
+[13:33] we're trying to also minimize the jerk in the style of x,
+[13:36] then is that-
+[13:37] Oh, that's not, we're reminding the jerk of z.
+[13:40] So when we do the planning problem,
+[13:44] it's entirely in the flat output space.
+[13:47] Turns out that if you typically get
+[13:53] a very smooth curve in the flat output space,
+[13:55] that corresponds to a very nice trajectory in the x space.
+[14:00] But in terms of planning,
+[14:01] and that's the whole point of differential flatness,
+[14:03] you're operating in the flat output space.
+[14:06] That's why we also want to be able to account for constraints
+[14:09] in the flat output space.
+[14:12] So the strategy that I'm going to discuss
+[14:16] is referred to as time scaling.
+[14:19] Extremely useful to account for bound constraints
+[14:21] in the flat output space,
+[14:22] but in general, it's a widely used strategy in robotics
+[14:27] to optimize trajectories for manipulators, for example,
+[14:31] beyond wheeled vehicles.
+[14:34] So the idea of time scaling is easy,
+[14:38] but you should take a little bit of time
+[14:43] to really get familiar to it.
+[14:46] You might get a little bit confusing, basically,
+[14:48] in terms of how you set up the notation and so on.
+[14:51] I'm trying to explain it in the simplest possible way.
+[14:55] The idea of time scaling from an intuitive standpoint
+[14:58] is as follows.
+[15:07] Let's consider again the problem of finding a curve
+[15:11] for the flat outputs, z.
+[15:14] So the curve ZT tells you at each time T
+[15:22] what the value of the flat output should be.
+[15:25] As time changes, then this point changes.
+[15:29] The idea of time scaling is to separate the notion
+[15:32] of a path, which is a purely geometric notion,
+[15:36] basically just this curve,
+[15:38] from the notion of the time scale of the flat output space
+[15:43] and sequence that you use to go along that path.
+[15:47] So basically, the idea is to separate the computation
+[15:50] of the dramatic path from the time schedule
+[15:54] according to which you reach each point along this path.
+[15:58] If you are given a path,
+[16:00] if you are someone that runs very fast,
+[16:02] you may reach this point, say, in one second.
+[16:05] If you are slow, you reach this point in two seconds.
+[16:09] Roughly speaking, if you keep this difference in speed,
+[16:13] the first runner reaches the end condition in time T,
+[16:19] and the second runner reaches the same point in time 2T,
+[16:23] so it takes double the time.
+[16:25] But they have followed exactly the same path.
+[16:28] So the idea of time scaling is to separate
+[16:31] the notion of a geometric path
+[16:32] from the notion of the time schedule that is used
+[16:36] in order to march along that path.
+[16:40] So why is that useful?
+[16:42] I mean, this is useful because then you can just compute
+[16:45] a path neglecting the input bound constraints
+[16:50] that usually relate to how quickly
+[16:53] you want to go through that path from the time schedule
+[16:56] that you can adjust in order to fulfill those bounds.
+[17:03] Does it make sense?
+[17:05] So in particular, the idea from a mathematical standpoint
+[17:08] is to view a function of time T
+[17:13] as a function of T through a time scaling law, S,
+[17:20] where S is a function such that S T zero
+[17:26] is equal to T zero, S T F is equal to T F.
+[17:31] Most importantly, S dot T is greater than zero,
+[17:35] which means that basically when you do the, oh, sorry.
+[17:44] S zero, S F.
+[17:46] Which basically means that as you rescale time,
+[17:49] you keep the property that you cannot go backward in time.
+[17:53] So you need to have this monotonicity property.
+[17:57] So here you see how basically we are separating
+[18:00] the geometric notion of a path
+[18:02] from the time schedule of the path.
+[18:08] So then it's very typical to optimize the geometric path
+[18:12] with respect to arc length, S.
+[18:16] The arc length is the distance
+[18:18] between two points around the path.
+[18:22] And then specify a timing law that tells you
+[18:27] how you're marching along the curve.
+[18:30] Very concretely consider, for example,
+[18:34] the problem of planning the trajectory
+[18:38] for the joint of a manipulator.
+[18:40] Let's call this joint vector theta.
+[18:44] So for example, a typical way of parameterizing
+[18:48] straight line motion is to say that your joints
+[18:53] have to go from an initial condition T start
+[18:57] plus S, which is curve length,
+[19:01] times T end minus theta start.
+[19:10] This will be like a straight line trajectory,
+[19:12] basically, erratically in a path.
+[19:15] S is a variable that belongs to zero and one.
+[19:19] If S is equal to zero, then you are at the start position.
+[19:23] If S is equal to one, theta start and theta start
+[19:26] cancel out, then you are at the end position.
+[19:31] So in this case, there is not even computation of the path.
+[19:35] You just say, I want to do a straight path.
+[19:38] Then, you say, okay, so that's a path I want to follow.
+[19:42] What is the time schedule that I use
+[19:45] in order to march along this path?
+[19:50] Well, one of the easiest time schedule
+[19:53] is a linear time schedule, C T.
+[20:01] Actually, C T over T.
+[20:04] So that's, yeah, T over T,
+[20:08] such that S of zero is equal to zero
+[20:11] and S of one is equal to one.
+[20:16] Sorry, S of T, capital T, is equal to one.
+[20:19] So what's the idea?
+[20:20] That now, if you take the derivative of the theta
+[20:24] with respect to time, what is the derivative equal to?
+[20:30] It's the derivative of theta S with respect to S
+[20:34] times S dot, meaning derivative S with respect to T.
+[20:39] So this is equal to one over T,
+[20:55] which basically means that capital T is a tuning parameter.
+[20:58] So it's how much time you allocate
+[21:02] in order to traverse this curve.
+[21:04] As you increase T,
+[21:08] you decrease theta dot.
+[21:11] And so the idea is that maybe you have upper limits
+[21:14] on how quickly your joint can move.
+[21:16] Usually there are acceleration limits,
+[21:18] but anyway, upper limit on how quickly your joints can move.
+[21:22] Then you can fulfill them
+[21:23] by appropriately tuning capital T.
+[21:26] You make a capital T large enough
+[21:28] so that the maximum value of theta dot
+[21:31] along the trajectory is below the upper bound.
+[21:34] Say, 10 hundred per second, I don't know.
+[21:38] Does it make sense?
+[21:42] As I said, the idea is simple,
+[21:43] but you want to spend a little bit of time
+[21:45] to really get familiar to it, with it.
+[21:49] So in full generality,
+[21:53] the idea is
+[21:57] that we view a trajectory
+[22:01] where there is a X, but just to be consistent
+[22:04] with the part that we are considering
+[22:05] differential flatness, let's call it Z.
+[22:08] Z of T, we view it as a function of S of T.
+[22:12] So that the zeta dot T
+[22:15] is equal to the derivative of X
+[22:17] with respect to S times S dot.
+[22:20] By appropriately choosing S of T, the time schedule,
+[22:25] I can accordingly change the derivative of Z.
+[22:29] And then I would choose the schedule
+[22:32] in such a way that properties on the derivative
+[22:35] in terms of upper bounds are satisfied.
+[22:38] Basically, it's low the time just enough
+[22:41] so that all the bounds are satisfied.
+[22:44] In particular, the bounds that usually we're interested in
+[22:47] are input bounds, so the bounds on your control inputs.
+[22:53] For example, going back to the case of the unicycle,
+[23:00] we said that the input bounds are that omega T
+[23:04] has to be less than omega max,
+[23:06] and V T has to be less than or equal to V max.
+[23:13] Well, in magnitude.
+[23:17] So V T is equal to the derivative
+[23:23] of X T over D T,
+[23:29] which is equal if we view V as a function of S of T
+[23:34] as derivative of X of S over D S times S dot
+[23:43] equal to V of S times S dot.
+[23:49] So if S represents arc length,
+[23:54] again, the arc length is at the natural parameterization
+[24:04] for the car.
+[24:05] It tells you for each point what is the distance
+[24:09] of that point from the origin of the car along the path.
+[24:14] So if that is the case, then interpretation is as follows.
+[24:18] This is your car, X of S.
+[24:30] V of S is the velocity that your vehicle is
+[24:34] when it is at a distance S from the origin, S start.
+[24:43] So you compute the path with associated V of S,
+[24:47] and then for the true input, which is V of T,
+[24:51] you modulate it by choosing a scaling function S.
+[24:58] As I said, typical choices for S are a linear scaling
+[25:02] function where the tuning is with respect to the horizon,
+[25:05] or maybe a polynomial scaling function.
+[25:07] For example, in the case of manipulators,
+[25:10] oftentimes one uses cubic polynomial
+[25:14] to represent scaling function.
+[25:16] This is for speed.
+[25:17] Let's look at angular speed.
+[25:25] So omega T is equal to the derivative of theta T over T,
+[25:39] which is equal to derivative of theta with respect to S
+[25:43] times S dot.
+[25:45] From here, we see that S dot is equal to,
+[25:52] just to be consistent with notation,
+[25:53] this is a, do I use capital B or small b?
+[25:57] Yeah, small b.
+[25:59] So this small b, and this small b.
+[26:08] So S dot is equal to V T over V S.
+[26:15] So this is equal to D T in the S times V T over V S,
+[26:24] equal to theta of S V T over V S.
+[26:35] So for example, so what we will do is then
+[26:39] to choose the time schedule S in such a way
+[26:42] that both your velocity constraint
+[26:46] and angular constraints are satisfied.
+[26:48] Basically, you slow down the motion
+[26:51] until the maximum V and maximum omega along the path
+[26:55] is below that input.
+[26:57] In the case of the P set, you do actually
+[27:03] something a bit different.
+[27:05] What you do, that is like a twist that I made
+[27:07] for the P set to make it more engaging.
+[27:09] Both are useful.
+[27:11] So what you do in the P set is not to set
+[27:14] the time scaling law S of T directly.
+[27:18] Instead, I ask you to readjust the velocity
+[27:26] in the arc length parameterization
+[27:29] in such a way that the input bounds are satisfied.
+[27:32] In particular, you want to make sure that V of S
+[27:36] is less than P max and omega S is less than omega max.
+[27:41] Keep in mind that you have to use this formula
+[27:43] to ensure the constraint.
+[27:46] So once you compute a new velocity profile along the path,
+[27:53] we're not changing the path.
+[27:54] We're just computing a new velocity profile along the path.
+[28:00] Implicitly, you are defining a new time schedule.
+[28:04] When you get the time at which you get to some point
+[28:08] along the path is, of course, a function of the speed,
+[28:11] the speed that you're following along the path.
+[28:13] And in particular, just related to the integral of velocity
+[28:17] with respect to space.
+[28:20] Does that make sense?
+[28:23] So it's just a different twist.
+[28:24] You can adjust your speed, your input bounds
+[28:30] by either adjusting the schedule directly
+[28:34] or adjusting your input directly,
+[28:39] which implicitly define a new time schedule.
+[28:42] And that's what you do in the first problem of PSEC-1.
+[28:46] It seems like the second one is more natural.
+[28:49] Is once you understand what you're doing is more natural,
+[28:53] but in terms of first being exposed
+[28:56] to the notion of time scaling,
+[28:57] I will claim it is more natural.
+[28:59] That's why I decided to explain it in this way
+[29:01] because I think it's more pedagogical.
+[29:03] But I agree with you.
+[29:04] Once you get the hang of it, then it's more natural to.
+[29:08] Do you want to understand the dynamic reduces
+[29:10] in the real world and then reverse engineer the actual path?
+[29:13] Yeah, it's a much more direct way.
+[29:15] Okay, gotcha.
+[29:17] And that's why I'm telling you to do it that way.
+[29:20] Any questions here?
+[29:21] Yeah.
+[29:22] Just real quick, in the equation up there,
+[29:24] it says, so you have M as the time derivative of our path
+[29:29] Hold on, you have the time derivative, so here, you mean?
+[29:32] Yes.
+[29:33] And in the next step, we just say S of T,
+[29:35] but should it be T of S?
+[29:37] No.
+[29:38] Because we're integrating over the path and then saying like.
+[29:41] No, so here is actually different
+[29:45] because here you are differentiating
+[29:47] with respect to the arc length.
+[29:49] Let's say that S is the arc length.
+[29:51] So you want to differentiate with respect to the value of X
+[29:57] with respect to the value of X at the position
+[30:00] along the curve that correspond to a given time T.
+[30:03] Okay, but then the time is not the same time
+[30:05] that we have in the one before?
+[30:08] No, the time T is the same.
+[30:10] Okay.
+[30:11] Yeah, no, of course.
+[30:12] So basically, the idea is to view X.
+[30:16] So basically, the question of Paul is,
+[30:18] should we say, should we view X of T as X of S T
+[30:26] or X of T S?
+[30:32] That's the thing, right?
+[30:33] Yeah.
+[30:34] No, that's an interpretation that we give.
+[30:37] So we view X as indirectly depending on T
+[30:42] through the arc length transformation.
+[30:46] So we say, given time T, where are we along the path?
+[30:52] And based on where we're along the path,
+[30:54] what is the corresponding value of X?
+[30:59] So that's how I set up the time scaling transformation.
+[31:04] If we view it this other way,
+[31:06] then it will not make sense to compute the derivative
+[31:10] with respect to the path S,
+[31:13] because now this is the real independent variable,
+[31:15] so the composition of derivatives
+[31:17] will be the other way around.
+[31:20] But just intuition.
+[31:21] So the idea is, for a given time T,
+[31:25] there is a corresponding value of S,
+[31:27] where I am at a time T.
+[31:31] And then, once I'm here,
+[31:32] I have a corresponding value of X of S.
+[31:35] So basically, I separate X of T in X of S and S of T.
+[31:42] As I said, it's simple,
+[31:44] but you have to spend a little bit of time on it.
+[31:46] It's deceptively simple.
+[31:48] What is the opposite of T?
+[31:52] Here?
+[31:54] Yeah, so this is a possible time in log.
+[31:58] So T is the time, the variable.
+[32:01] Capital T is the horizon, as I discussed it before,
+[32:04] so how much time we allocate
+[32:06] in order to traverse this path,
+[32:08] which is what ultimately we're going to tune
+[32:11] in order to satisfy the input bounds,
+[32:13] for example, V and omega.
+[32:16] And L is the length of the path,
+[32:20] which means that when T is,
+[32:22] T is not fixed, it's something that you tune.
+[32:24] When T is equal to the time horizon, capital T,
+[32:27] then S of capital T is equal to L,
+[32:30] which means that you are at the end of the path.
+[32:35] Yeah?
+[32:37] You said earlier that a common choice for S is arc length.
+[32:39] Are there other common ways to parametrize?
+[32:43] Is it de facto standard?
+[32:44] Because it's the one that really makes sense,
+[32:46] as we were discussing before.
+[32:49] You want to decouple the geometric description,
+[32:52] which is really captured by the notion of arc length,
+[32:56] from the time schedule,
+[32:57] so that at each point of the path,
+[33:00] you select the velocity you want to be,
+[33:03] and then you implicitly compute a time schedule
+[33:09] that ensures that that is the case.
+[33:15] All right.
+[33:18] So what have we done so far?
+[33:21] So what we've done so far is,
+[33:23] starting from the two-step design
+[33:25] that we discussed last time,
+[33:26] we said we first are going to compute
+[33:28] an open-loop trajectory.
+[33:29] Open-loop trajectory means open-loop sequence of controls,
+[33:33] and corresponding state trajectory X.
+[33:36] The correspondence is through
+[33:37] the differential equation of motion.
+[33:42] This is what we've done so far.
+[33:43] But as we discussed last time,
+[33:45] this strategy tends to be fragile,
+[33:48] because it does not have any mechanism
+[33:52] to constantly check how well you're doing,
+[33:54] and correct for possible deviations
+[33:56] due to modern mismatches, noise, and so on.
+[33:59] So we want to augment the strategy
+[34:01] with a tracking controller that gives us an extra level,
+[34:07] that give us a level of robustness
+[34:08] toward modern mismatches.
+[34:11] Now, the tracking controller
+[34:13] is indeed a closed-loop controller,
+[34:14] which means that the control depends
+[34:16] on the current value of the state.
+[34:18] But usually, it's designed to work locally,
+[34:22] so basically in a tube around the nominal trajectory.
+[34:25] Here, D, the subscript of D, means desired.
+[34:29] Basically, desired trajectory, nominal trajectory.
+[34:31] We discussed how to compute the open-loop trajectory
+[34:34] through differential correctness techniques.
+[34:36] We had discussed how to account for input bound constraints
+[34:40] by using the notion of time scaling.
+[34:43] Now we are in a position to move to this piece over here.
+[34:48] This piece over here is problem one in your P set.
+[34:51] This piece over here is problem three in your P set.
+[34:56] As I said, trajectory tracking entails computing
+[34:58] a closed-loop controller,
+[35:00] something that maps the current value of the state,
+[35:04] and usually the difference between where you are
+[35:08] and where you would like to be,
+[35:11] into a corrective control action.
+[35:14] Now, there are many ways of designing
+[35:16] a trajectory tracking controller.
+[35:19] The simplest one, that actually works pretty well,
+[35:22] is a purely
+[35:25] geometric approach.
+[35:29] Whereby, if this is your desired trajectory, X of D,
+[35:35] and you're here,
+[35:37] you may consider the corrective action
+[35:42] that tells you how to intercept.
+[35:46] So, you would like to be here at time T,
+[35:51] and you're here at time T.
+[35:53] So simple tracking control law is the so-called
+[35:56] pursue control law,
+[35:58] where you have an additional control term
+[36:00] whose goal is try to bring you back
+[36:03] along, say, a geometric path, like a straight line.
+[36:07] Say, T is plus delta T seconds ahead of you in time.
+[36:16] So basically, it's like a donkey that is chasing the carrot.
+[36:20] That is an example of, if you are tracking.
+[36:22] So here, this is the carrot.
+[36:27] Well, I don't know how to design a carrot.
+[36:29] But it's a carrot.
+[36:30] That is moving along the path,
+[36:34] and it's always, say, two seconds away along the path.
+[36:37] And you're always trying to aim at that point.
+[36:39] So it's referred to as geometric pursue.
+[36:41] Sorry, Ben.
+[36:42] Second, the dot that you drew for the intersection
+[36:45] is two seconds forward, and it doesn't have to do
+[36:48] with the fact that it's tangential at that point.
+[36:50] No, no, no.
+[36:51] And of course, it's something that moves.
+[36:53] As you move, it moves.
+[36:57] Of course, there is a mathematical formulation
+[36:58] of all of this.
+[37:00] The key point is that it's a fairly simple idea.
+[37:04] And as all simple ideas, they tend to work pretty well.
+[37:07] The second approach is linearization.
+[37:10] So the idea of linearization is that you want
+[37:15] to turn the problem into a linear one
+[37:18] to which you can apply linear control techniques.
+[37:21] For those of you that are not familiar with controls,
+[37:23] linear controls is way easier than the linear control.
+[37:26] So that's what people want to apply techniques
+[37:30] from linear controls.
+[37:30] Linear controls means control theory applied to systems
+[37:34] whose differential equation is linear.
+[37:38] There are two ways of linearizing the system.
+[37:41] One is exact linearization,
+[37:44] which is very related to the notion of differential,
+[37:46] very much related to the notion of differential flatness.
+[37:48] We're going to discuss it in a second.
+[37:50] The second one is inexact linearization.
+[37:54] So the idea is that since for the purposes
+[37:57] of trajectory tracking, if nothing terrible happens,
+[38:03] you're typically very close to your nominal trajectory.
+[38:07] So you may think of linearizing the equations of motion
+[38:14] around your nominal trajectory.
+[38:17] The linearized system is now linear,
+[38:19] and then you can apply linear control techniques
+[38:21] for designing your trajectory tracking controller.
+[38:24] Linearization basically means that
+[38:27] if you have a non-linear function,
+[38:30] and you know that you are at some point
+[38:31] along that linear function, if you move locally,
+[38:34] so if you stay close to that point,
+[38:37] you can approximate the non-linear function
+[38:39] with just a line.
+[38:41] And then do the control, design the control strategy
+[38:45] with respect to the simplified model
+[38:47] where basically everything becomes a line.
+[38:49] Anyway, if you're familiar with controls,
+[38:53] this is an obvious concept.
+[38:54] If you're not, it's a bit obscure.
+[38:55] Just to let you know that this is also a possibility.
+[38:59] The third possibility relies
+[39:02] on non-linear control techniques.
+[39:04] So you tackle the problem without simplification.
+[39:11] Usually this is very hard to do,
+[39:12] and seldom people do it.
+[39:16] If you can do it, it's great,
+[39:17] because you're not doing any approximation,
+[39:19] you're not doing any weird transformation,
+[39:21] but most of the time you can't.
+[39:23] The fourth one is by using optimization-based techniques.
+[39:27] So the tracking controller becomes the solution
+[39:31] to an optimization algorithm.
+[39:33] This is really the realm of model predictive control.
+[39:36] It has a number of advantages.
+[39:37] It can handle large variety of constraints and so on.
+[39:42] But this is beyond the scope of this class.
+[39:44] So what we're going to discuss in this class
+[39:46] is the idea of exact linearization
+[39:49] that is very much related to differential flatness.
+[39:51] We're not going to discuss the other solution strategies.
+[39:56] Just wanted to, you know,
+[39:58] by now you know the philosophy of this class.
+[40:00] I want to give you the high-level overview
+[40:01] of all the tools that are out there,
+[40:03] and then we go deep into one tool that is pedagogical
+[40:08] and is of interesting practice, and is widely used.
+[40:12] So in particular, this is what we're going to discuss now.
+[40:15] Any questions before we do our deep dive
+[40:18] in exact linearization?
+[40:24] All right.
+[40:25] So the idea of exact linearization
+[40:28] is that for some systems,
+[40:31] and in particular the system for which this work
+[40:33] is exactly the class of differential flat systems,
+[40:36] it is possible through a change of coordinates
+[40:39] and through a transformational control input
+[40:42] to transform the system into a linear system,
+[40:46] meaning one that looks like this
+[40:50] in a way that is one-to-one,
+[40:51] meaning the solution to the linear system
+[40:53] can be mapped into the solution of the non-linear system
+[40:56] and vice versa, which means that then you can do
+[40:59] control design for the linear system
+[41:01] and then map the controller that you have
+[41:05] into the non-linear controller for the non-linear system.
+[41:09] Very simple example.
+[41:12] This is super simple too.
+[41:19] So let's assume that you have a system x dot
+[41:21] equal fx plus u.
+[41:24] Well, I don't know why v came out, but say u.
+[41:28] And I tell you to control the system.
+[41:30] So find a control history u that drives the state
+[41:34] of the system to the origin, for example.
+[41:37] Now, f is in general a non-linear function of x.
+[41:40] So you might start thinking, this is complicated
+[41:43] because in general, I don't know the solution
+[41:45] to this differential equation.
+[41:47] How do I really compute u and so on?
+[41:49] But then you might just say, well,
+[41:52] let's set f of x plus u equal v, a virtual control input.
+[42:00] Now, you design v so that x goes to zero.
+[42:06] This is the simplest possible differential equation
+[42:08] that you can have.
+[42:11] And then in the real controller u,
+[42:14] that you will need to use for the true system
+[42:17] to go to the origin, will be v minus f of x.
+[42:25] So what have you done here?
+[42:26] Basically, you are computing an input u
+[42:31] that cancels the non-linearity
+[42:34] and replace the system with a linear structure.
+[42:38] So that now you can just do the control
+[42:40] for respect to v.
+[42:42] So in particular, you can choose v
+[42:43] that makes sure that you converge to zero
+[42:45] with some desired convergence rate and so on.
+[42:48] And then with just the inverse transformation,
+[42:50] you get the input for the true system.
+[42:53] Does it make sense?
+[42:55] This is called exact linearization
+[42:57] because you're not taking any approximation.
+[42:59] You're not doing like in exact linearization,
+[43:03] a Taylor series expansion of your differential equation
+[43:06] and then you truncate the Taylor system up to some order.
+[43:10] You're not doing that.
+[43:11] This is exact.
+[43:13] The problem is that district does not work
+[43:16] for all possible systems.
+[43:18] It works exactly for the differential flat systems.
+[43:22] In particular, one can show
+[43:23] that every differential flat systems
+[43:26] can be equivalently transformed
+[43:28] by a non-linear transformation into a linear system
+[43:33] where by z is the flat output as usual
+[43:36] and it's q plus one derivative is equal to w,
+[43:39] which is the mutual control input.
+[43:42] The fact that there is a tight connection
+[43:44] between feedback linearization and differential flatness
+[43:48] has not been proven here rigorously
+[43:50] but shouldn't come as a total surprise.
+[43:52] As we already discussed, differential flatness
+[43:54] basically removes all the non-linearity from the problem.
+[43:57] So it's not at all surprising
+[43:59] that there is an additional theoretical result
+[44:01] that says that actually you can also give to it
+[44:03] a dynamic interpretation.
+[44:05] But if you want to dig deeper,
+[44:09] I suggest to look at this book, Levina 2009.
+[44:15] Key point here is that the differential flat system
+[44:17] can be translated into a linear system
+[44:20] in an equivalent fashion.
+[44:22] The mappings are really the
+[44:23] differential flat output mappings.
+[44:25] I'm going to give an example in the next slide
+[44:27] so that this becomes much clearer.
+[44:30] Yeah.
+[44:31] Okay.
+[44:33] So if that is the case,
+[44:35] so we have been able to translate to the non-linear system
+[44:38] in an equivalent linear system
+[44:40] through a non-linear transformation.
+[44:42] We'll view it as a change of coordinates,
+[44:44] but it's non-linear in order to remove the non-linearities.
+[44:47] Once we have the linear system,
+[44:49] then we can apply classical linear control techniques
+[44:51] for tracking.
+[44:53] In particular, the simplest possible way to do it
+[44:56] and actually the way that people do it is
+[45:00] you have the flat output, Z,
+[45:05] you have the desired flat output ZDT,
+[45:09] and then you have the actual flat output,
+[45:11] so the one that is actually realized
+[45:13] due to disturbances, model mismatches, and so on.
+[45:16] Z of T.
+[45:18] Then we define an error signal, EI,
+[45:24] as ZIT minus ZDT.
+[45:30] ZID or IDT.
+[45:36] I is the i-th component of the flat output, Z,
+[45:40] which is a general vector.
+[45:43] Okay?
+[45:45] So when you take the derivative,
+[45:48] actually the derivative up to q plus one,
+[45:50] so Eq plus one,
+[45:55] EI T,
+[45:58] is equal to ZI q plus one T
+[46:03] minus ZID q plus one T.
+[46:09] So this is equal to,
+[46:11] we just said that the dynamics
+[46:14] in the flat output space are linear,
+[46:16] so this is equal to the control input,
+[46:17] the i-th component of the control input, Wi,
+[46:21] and is equal to Wi desired.
+[46:24] So how do you choose Wi in such a way
+[46:29] that the error dynamics go to zero?
+[46:32] Error dynamics goes to zero implies
+[46:34] that the tracking error goes to zero,
+[46:35] because it implies that ZI goes to ZID for each i.
+[46:40] Basically implies that the actual flat output
+[46:43] goes to the desired output asymptotically.
+[46:47] So what do we do?
+[46:54] You just set Vi equal to Vid so that you cancel this term,
+[47:02] and then you add a stable dynamics
+[47:05] for the error system to the system,
+[47:07] meaning minus the sum from j equal zero,
+[47:14] q, Kij Ej T.
+[47:19] So that the resulting differential equation,
+[47:32] so that the resulting differential equation
+[47:34] is Ei q plus one T is equal,
+[47:44] so the resulting equation is Ei q plus one T
+[47:46] plus sum of j equals zero to q, Kij Ej T equals zero.
+[47:56] So basically with this choice,
+[47:58] you have been able to derive an equation
+[48:03] for your error dynamics, which is linear,
+[48:06] and what you have to determine are these gains K.
+[48:09] How would you pick those gains K?
+[48:12] Kij?
+[48:16] Sorry, Ei, jth derivative, Ei, jth derivative.
+[48:30] How do you compute those gains?
+[48:33] Basically, how do you design the tacking control law?
+[48:36] You want the error to go to zero.
+[48:38] So what do you want for this differential equation?
+[48:40] What structural property you want?
+[48:43] So if you know about linear differential equations,
+[48:45] or you should know about linear differential equations,
+[48:48] you want to compute the gains K in such a way
+[48:52] that the eigenvalues of differential equations
+[48:54] have negative real parts,
+[48:56] which means that the error dynamics
+[48:58] and its derivatives converge to zero.
+[49:01] If you're not familiar with the linear differential equation,
+[49:04] it's fine.
+[49:06] The key message here is that there are very well
+[49:09] understood techniques to compute the gains K,
+[49:12] such that this differential equation is stable,
+[49:16] which means that E, the variable,
+[49:18] and all its derivatives converge to zero.
+[49:25] So what is the resulting tacking control law?
+[49:30] Is Wi equal to Wi desired,
+[49:35] so the desired control input, which we know,
+[49:38] minus the superposition of E and its derivative.
+[49:43] Which we can compute because we assume
+[49:45] that we have access to the flat outputs
+[49:48] and its derivatives.
+[49:49] It's something that we can measure.
+[49:52] I'm going to give an example in a second
+[49:53] so that it becomes super clear.
+[49:57] Well, yes, so Q,
+[50:03] so if you remember from the definition of the flat outputs,
+[50:08] the flat outputs are a transformation
+[50:13] from the state U and its derivative up to Q.
+[50:16] So that's the Q.
+[50:17] Now a good question is, if you give me a linear system,
+[50:21] is it differentially flat?
+[50:22] As we said, this is a very difficult question to answer.
+[50:25] The reason why it's a very difficult question to answer
+[50:27] is that a priori, nobody tells you
+[50:32] how many derivatives of the input you should consider
+[50:34] in order to find this transformation.
+[50:35] So it's a very painful process.
+[50:38] I mean, there are some automated procedures,
+[50:39] but they don't really scale.
+[50:40] It's a very painful process of,
+[50:42] let's not include U initially.
+[50:45] Am I able to find something that has this one-to-one mapping?
+[50:47] Yes or no?
+[50:48] Then I use U and so on.
+[50:51] So that's why, as I said last time,
+[50:52] if you find that a useful system is differentially flat,
+[50:55] you usually write a paper about it
+[50:57] because usually it entailed a lot of work.
+[51:00] Let me do an example so that all of these
+[51:03] that is quite abstract becomes clear.
+[51:06] And let's consider the extended unicycle model,
+[51:10] which is the one, as we said,
+[51:11] we're going to focus on this class.
+[51:13] It's very good, pedagogical, and it's useful,
+[51:15] and also is in your PISOT.
+[51:18] This model is referred to as extended unicycle
+[51:21] because the kinematics are those of unicycle
+[51:24] that you can recognize,
+[51:25] but now we have added an integrator with respect to speed.
+[51:29] So we are saying that the derivative of speed
+[51:32] is equal to acceleration.
+[51:34] So the inputs now are acceleration and omega,
+[51:38] which in many ways is more realistic
+[51:40] than just a kinematic model.
+[51:42] So what happens if you...
+[51:47] So this system is differentially flat,
+[51:50] with flat output x, y,
+[51:52] and this is what is also discussed in your PISOT.
+[51:57] Now what happens if you take the second derivative of x
+[52:02] and the second derivative of y dot?
+[52:05] So the second derivative of x is equal to
+[52:09] v dot cosine of t
+[52:12] minus v sinus of t theta dot.
+[52:17] And y dot is equal to v dot sinus of t
+[52:22] minus, or plus v cosine of t theta dot,
+[52:28] which implies that x double dot and y double dot
+[52:33] so this is the double derivative of your flat output,
+[52:38] is equal to,
+[52:41] so v dot is equal to a,
+[52:43] v dot is equal to a,
+[52:45] theta dot is equal to omega,
+[52:47] theta dot is equal to omega.
+[52:50] So this is equal to cosine t
+[52:54] minus sin of t
+[52:57] v
+[52:59] sinus of t
+[53:01] v cosine of t
+[53:06] a omega.
+[53:09] And I call this matrix J.
+[53:12] To make any error, cosine of minus sinus t v
+[53:15] sinus v cosine of t.
+[53:21] So then what do I do?
+[53:22] I just say, okay,
+[53:24] let's define all this stuff as
+[53:28] a virtual control input u one, u two.
+[53:32] I do my control design with respect to the system
+[53:40] z double dot,
+[53:42] specifically here we have x double dot,
+[53:45] y double dot,
+[53:47] equal to u one, u two.
+[53:50] And then to obtain the true input,
+[53:54] I just invert this matrix.
+[53:57] Now, if I take the determinant,
+[54:00] the determinant is equal to b.
+[54:02] So if b equal to zero, this is singular.
+[54:04] So this transformation doesn't work,
+[54:06] which means you have point of singularity.
+[54:08] The differential flatness,
+[54:09] oftentimes this happens if you have some point of singularity
+[54:12] there are two main ways to dealing with them.
+[54:15] One is to use slightly more sophisticated techniques
+[54:18] that we don't cover in this class,
+[54:19] whereby we prolong this mapping in such a way
+[54:22] that they're well defined everywhere.
+[54:25] In this class, we just use a more naive technique
+[54:27] that is still useful,
+[54:28] whereby we just reset some of the variables if,
+[54:32] in particular b, if b is below a threshold,
+[54:35] say one to the minus, 10 to the power of minus four,
+[54:38] five or so on.
+[54:42] So this is the linearized, feedback linearized dynamics
+[54:47] that I was referring to before.
+[54:49] So what you do for tracking is to define the error
+[54:54] with respect to each of the flat outputs,
+[54:56] so the x and y here,
+[54:59] and then the superimposed linear dynamics.
+[55:03] In particular, with this choice of u1 and u2,
+[55:07] what are the closed loop dynamics?
+[55:09] Closed loop dynamics mean once you have substituted
+[55:13] for the closed loop control law.
+[55:15] So we have x double dot, let me do it just for x.
+[55:19] So x double dot is equal to x double dot d,
+[55:23] the desired value of x along time,
+[55:29] plus k p x x d minus x dot
+[55:35] plus plus k p y, no, sorry,
+[55:41] k d x, and this is not dot,
+[55:46] x dot d minus x dot.
+[55:53] So if you put everything on the other side,
+[55:57] what you get is x dot minus x dot d
+[56:06] plus x p x x x d x,
+[56:13] x dot d minus x dot plus k p x x,
+[56:24] this is d, k p x x minus x d equals zero.
+[56:31] So this is your error,
+[56:35] this is the derivative with respect to the error,
+[56:38] and this is double derivative with respect to the error.
+[56:41] This is now a differential equation
+[56:42] only with respect to the error term.
+[56:45] For perfect tracking, the error has to go to zero.
+[56:48] So to ensure that I had to compute this gain and this gain
+[56:52] in such a way that this differential equation is stable.
+[56:56] But the discard sign of rules, if you know about it,
+[56:59] if these two are positive,
+[57:01] then all the roots are negative and I'm done.
+[57:04] As I said, if you're not familiar with differential,
+[57:06] linear differential equations, it's fine.
+[57:08] It's suffice to say that for the second order
+[57:10] linear differential equation,
+[57:12] just pick the gains that are positive and you're fine.
+[57:17] The specific values affect how quickly you go to zero.
+[57:22] So you might think, well, why don't you pick like k
+[57:24] in such a way that you go very quickly to zero,
+[57:27] is because oftentimes that translates into,
+[57:30] that violates saturation bounds for your inputs.
+[57:32] So if you do so, then you have to do time scaling
+[57:34] in order to scale everything back
+[57:36] so that you fulfill the bounds.
+[57:40] But so that's neat, right?
+[57:41] Because in the same framework of differential flatness,
+[57:44] we know how to do open loop trajectory planning
+[57:48] and how to design a tracking controller
+[57:52] in the same framework.
+[57:53] So it's pretty remarkable.
+[57:55] Any questions here?
+[57:58] Again, this is not super complicated,
+[58:00] but I encourage you to spend a little bit of time
+[58:03] to familiarize with these concepts.
+[58:07] Many ideas with differential flatness to translate
+[58:10] the trajectory planning problem
+[58:12] into planning the problem from a geometric path
+[58:15] to which you add a notion of times
+[58:18] through a notion of time scaling.
+[58:20] And at the same time, you use a differential flatness tool
+[58:24] through its feedback linearization interpretation,
+[58:26] basically that allows you to turn an linear system
+[58:30] into one that looks linear,
+[58:32] to design a trajectory controller for the linear system.
+[58:35] And then what will be the real controller here?
+[58:40] So U is given by this linear feedback copy law.
+[58:45] So what are the corresponding values of A and omega?
+[58:53] I mean, your inputs are not U one and U two.
+[58:55] Your inputs for the unicycle system are A and omega.
+[58:58] What you do is that you compute these two terms,
+[59:01] and then you just invert the matrix J
+[59:03] in order to find the A and omega,
+[59:06] that give rise to perfect tracking
+[59:09] for the Cartesian coordinates, X and Y.
+[59:11] Again, with a caveat that you always have to check
+[59:16] similarity when you invert stuff,
+[59:18] there are ways to deal with the similarity,
+[59:20] more sophisticated ways and less sophisticated ways.
+[59:23] In this class, we'll look at a more naive way,
+[59:26] but still quite effective and also used in practice.
+[59:29] Yes?
+[59:37] Can you please explain the last of it here?
+[59:40] I mean, the last of it here is only the full pass point.
+[59:45] So how do you know that?
+[59:49] I didn't get it.
+[59:50] Could you repeat?
+[59:52] I mean, the last of it is...
+[59:55] This one?
+[59:56] The last of it.
+[59:58] This one?
+[59:59] Previous one.
+[60:00] Previous.
+[60:01] I see.
+[60:02] This one.
+[60:03] There is Z, Q plus one, and the omega,
+[60:05] there are a lot of other ones.
+[60:06] Oh, there's W.
+[60:07] Whatever it is.
+[60:08] I don't know what the graph presents
+[60:10] in the next example of those ones.
+[60:13] So Z, Q plus one, here,
+[60:22] would be X double dot, Y double dot.
+[60:26] So in this case, the Q was equal to one.
+[60:29] W will be what I call the U1 and U2,
+[60:37] in example, the unicycle.
+[60:41] You see, with this choice of U1 and U2,
+[60:44] the system becomes linear.
+[60:47] So this will be Z, Q plus one,
+[60:50] and this will be U1 and U2 will be
+[60:52] the first and second components of W.
+[61:00] Make sense?
+[61:02] 100%?
+[61:05] 90%.
+[61:08] I mean, as I said, I didn't give you
+[61:14] the entire explanation about why
+[61:16] the differential fact system can be put in a form.
+[61:19] Here I'm asking you to believe me, basically.
+[61:22] But I also gave you some justification
+[61:24] about why that is the case.
+[61:26] As I said, in practice,
+[61:29] if you want to control a robotic system,
+[61:31] you first check whether it is differentially flat.
+[61:33] If it is differentially flat,
+[61:35] there is a paper out there that is showing you the mappings
+[61:38] that allow you to do the trajectory planning part,
+[61:42] and there's also the corresponding linear formulation
+[61:46] that allows you to do the tracking part.
+[61:48] So from a practitioner standpoint,
+[61:50] you don't really need to know
+[61:51] like the more sophisticated mathematics
+[61:54] that allow you to do this transformation.
+[61:57] What you really need to know are the mappings.
+[62:01] In particular, for example, this mapping here.
+[62:05] There are chances are that have been already done for you.
+[62:08] Maybe you're about to expect that
+[62:10] X of dot desire, like, are we really get that problem?
+[62:14] Oh, X of dot desire would be
+[62:18] the state trajectory that corresponds to U desired.
+[62:22] So that is that you have computed your open loop trajectory
+[62:25] which corresponds to,
+[62:30] which corresponds, sorry,
+[62:32] I computed the open loop trajectory,
+[62:35] which meaning the desired U,
+[62:39] which translates into a desired X.
+[62:46] Of course, X is related to U
+[62:48] through the differential equation of motion.
+[62:50] So this is the desired quantity
+[62:52] that you would like your system to always track perfectly.
+[62:59] In this control law, this XD will be here
+[63:03] along with its derivatives.
+[63:06] And the UD is the first term
+[63:09] that you will have in the combined control law.
+[63:14] So, and here the pi will be the non-linear transformation
+[63:17] that allows you to go from the original system
+[63:20] to the differential fact representation
+[63:22] times the error terms.
+[63:26] Does it make sense?
+[63:29] So the procedure is very structured.
+[63:32] You first compute the open loop trajectory.
+[63:35] That becomes the desired one.
+[63:36] Then you compute a tracking controller,
+[63:38] which depends obviously on the desired trajectory,
+[63:42] I mean, the open loop trajectory,
+[63:43] because that's the one that you're trying to track.
+[63:48] All right, last step, closed loop control.
+[63:51] So this seems a bit of a touch.
+[63:54] So as far as two-step design is concerned, we're done.
+[63:58] But I still want to give you a little bit of intuition
+[64:00] about closed loop control.
+[64:01] Before doing so, there was a question.
+[64:03] I was just wondering,
+[64:04] I'm from the previous slide that we just saw.
+[64:07] In our situation, isn't that pi also a function of X dot T,
+[64:11] X, yeah, the first derivative of X of T
+[64:13] minus the first derivative of what the control is here?
+[64:17] Yes, that's true.
+[64:18] But here it is, that if you have the control history of X,
+[64:21] you can then assume X dot and X of the observation.
+[64:24] But yes, absolutely.
+[64:25] You need to also have other measurement of estimation
+[64:29] of the derivative.
+[64:31] That's all.
+[64:35] All right, closed loop control.
+[64:37] Yeah?
+[64:38] On the previous slide,
+[64:39] is it the control gain to be positive?
+[64:41] Does that just happen to be what makes the eigenvalues?
+[64:44] Yes, yeah.
+[64:45] There is something called the Scarf-Sine Rule
+[64:47] that tells you why this is the case.
+[64:50] Wiki the Scarf-Sine Rule.
+[64:54] But yes, now absolutely.
+[64:55] So there's the positive thing.
+[64:57] By the way, P here stands for proportional,
+[64:59] and D here stands for derivative action.
+[65:03] That's standard notation in control.
+[65:05] Proportional means that you're multiplying by the variables,
+[65:11] and the derivative means that you are multiplying
+[65:14] the derivative of those variables.
+[65:18] Sometimes there is an additional action
+[65:20] for two integral actions as well.
+[65:22] But yeah.
+[65:24] So here D does not mean desired, it means derivative.
+[65:31] All right, so closed loop control.
+[65:32] So as far as two-step design, we're done.
+[65:36] I just want to give you a little bit of perspective
+[65:38] about closed loop control.
+[65:39] So basically, finding control laws that depend on X,
+[65:44] and they're supposed to work everywhere,
+[65:46] not just close to your reference trajectory.
+[65:50] Ideally, this is the holy grail of trajectory planning
+[65:53] and control and so on.
+[65:55] Something that tells you from everywhere in the world
+[65:58] what to do, that's the best you can hope for,
+[66:00] because basically it tells you that
+[66:02] even if your model mismatches,
+[66:04] or dramatic disturbance and so on,
+[66:07] that brings you far away from your reference trajectory,
+[66:09] you know exactly what to do in order to achieve your goal.
+[66:13] Now the problem is that this computation
+[66:14] is much more difficult to do, to compute as an object.
+[66:18] That's why we ideally focus on the two-step design
+[66:21] that represents a good trade-off
+[66:23] between computation and accuracy.
+[66:25] But still it's useful to revisit a little bit this concept.
+[66:28] In particular, there are two main techniques
+[66:31] to compute closed loop controls.
+[66:34] These are more complicated techniques.
+[66:36] Oftentimes they're not computationally scalable and so on,
+[66:39] but they're out there.
+[66:41] So the first one is referred to
+[66:42] as Habito-Yakobi-Bellman equation,
+[66:46] which basically is a tool
+[66:49] to compute closed loop control laws
+[66:52] for general non-linear optimal control problems.
+[66:57] The problem is that this equation
+[66:59] is a partial differential equation
+[67:00] that is very difficult to solve in practice.
+[67:03] So readily used.
+[67:06] There is a discrete time analog,
+[67:10] which is referred to as dynamic programming.
+[67:11] If you are a computer science graduate student,
+[67:15] or if you're taking classes in important learning,
+[67:18] most likely have talked about dynamic programming.
+[67:21] That's a tool to solve stochastic optimal control problems
+[67:24] in the general setting.
+[67:26] We're now going to discuss that in this class.
+[67:28] Again, two or three in the spring if you're interested.
+[67:31] This technique really tries to solve
+[67:34] optimal control problems,
+[67:35] whereby you not only try to find a trajectory
+[67:37] that is feasible, but that also satisfies,
+[67:40] that also optimizes some cost function.
+[67:42] There is another technique referred to as Lyapunov analysis
+[67:46] that tries to find a closed loop control law
+[67:48] that allows you to fulfill a task,
+[67:50] typically the task of stabilization.
+[67:52] You want to make sure that your trajectory
+[67:54] goes to some desired point,
+[67:56] but you don't have any notion of optimality.
+[67:58] So if you will, Lyapunov analysis
+[68:00] addresses more the problem of feasibility.
+[68:02] Hamilton-Yakobi-Bellman model problem of optimality.
+[68:07] So this is taught in a nonlinear control class at Stanford.
+[68:12] I think it's engineering 209, but not exactly sure.
+[68:17] So what we're going to do in this class
+[68:19] in the last 10 minutes,
+[68:20] is just so you look at a specific example
+[68:22] referred to as posture stabilization or regulation,
+[68:26] where we're going to derive a closed loop control law
+[68:29] that gives you some more intuition
+[68:31] about closed loop control ease in general,
+[68:33] but it's also useful for the purposes
+[68:35] of trajectory planning.
+[68:37] And I'm going to mention that in a second.
+[68:39] There was a question?
+[68:41] Yeah, all right.
+[68:42] So as usual, our problem is a problem
+[68:48] of controlling a unicycle.
+[68:50] I mean, it's not that there is only the unicycle
+[68:52] as an interesting system out there,
+[68:54] but for this class, I wanted to have
+[68:56] the same running examples throughout the class
+[68:58] so that it's easy to appreciate the concepts.
+[69:02] And also, as I said in lecture one,
+[69:05] this is a very useful model.
+[69:07] So the inputs, as you know,
+[69:08] are the linear driving speed, V,
+[69:12] and the angular speed, omega.
+[69:14] The states are x, y, the Cartesian position,
+[69:17] and the heading, theta.
+[69:20] So the task is to regulate the posture of this vehicle,
+[69:26] which basically means from any possible initial condition,
+[69:31] so any possible x, y, z, theta,
+[69:34] find a trajectory that brings the vehicle to rest,
+[69:38] which means that x equals zero, y equals zero,
+[69:40] theta equals zero.
+[69:41] So we want to get to the origin of the state space
+[69:44] from all possible initial conditions.
+[69:48] So it turns out that in this case,
+[69:53] it's easier to work with alternate representation
+[69:58] of the state of the system that leverages polar coordinates.
+[70:04] So if you don't know what polar coordinates are,
+[70:14] so if you have a point in the plane, x, y,
+[70:18] you can uniquely specify the position of this point
+[70:20] by either specifying the x, y coordinates,
+[70:23] or the distance of this point from the origin,
+[70:27] referred to as rho,
+[70:29] and the angle of the pointing vector
+[70:32] with respect to the x axis, with respect to theta.
+[70:34] If I tell you the distance only,
+[70:38] then the point can be anywhere in the circle.
+[70:40] Once I also specify the heading theta,
+[70:43] then I'm uniquely pinpointing where the point is.
+[70:45] This is referred to as polar coordinates.
+[70:49] So it turns out that it's more convenient
+[70:51] to reason about this system in polar coordinates.
+[70:53] Rho is the distance between the reference point
+[70:58] on the unit cycle and the origin.
+[71:02] Delta is the angular coordinate, which I call theta there.
+[71:07] And alpha is the relative error
+[71:10] between the current heading and the straight line
+[71:13] that will lead us to the origin of the coordinate system,
+[71:15] which is where we want to go to.
+[71:18] There is a one-to-one mapping between x, y, theta,
+[71:22] yes, x, y, theta, and rho, alpha, delta,
+[71:25] which is this distance and these two angles here.
+[71:29] The specifics are not too important.
+[71:33] It's not too difficult to derive, though.
+[71:34] So for example, if x, y is the position,
+[71:37] this distance is simply the square root
+[71:39] of x squared plus r squared, y squared, and so on.
+[71:44] Now, in this alternative representation,
+[71:46] the dynamic represented by this set of equations,
+[71:49] again, the specific form is not too important here,
+[71:53] but I think it's just a little intuition.
+[71:56] So it makes sense that the distance from the origin
+[71:59] represented by rho is only affected by the linear speed,
+[72:04] input, not by the angular input,
+[72:07] meaning that if I rotate in place with v equals zero
+[72:12] and omega equals something, I change my heading,
+[72:15] but I don't get any closer to the point.
+[72:17] So that makes sense.
+[72:19] And in particular, the rate at which I get closer
+[72:22] to the origin depends on the speed at which I'm driving
+[72:26] and how well the heading is aligned
+[72:30] with the pointing vector.
+[72:31] If alpha is equal to zero,
+[72:34] the rate at which I'm getting closer
+[72:35] to the origin is maximized.
+[72:37] If, of course, alpha is equal to pi over two,
+[72:40] I'm just doing a circle,
+[72:42] which means that rho dot should be equal to zero.
+[72:49] Likewise, the relative error ratio to the x-axis
+[72:55] does not depend on omega,
+[72:57] while the heading error depends on both v and omega.
+[73:00] This is just a little bit of intuition.
+[73:03] Now, the key point, and that's actually
+[73:05] what I want to communicate here,
+[73:07] is that we can devise a control law that is closed loop,
+[73:12] meaning it depends on the state variables,
+[73:15] rho, alpha, and delta,
+[73:18] for which you can prove that from every initial condition,
+[73:20] you get to the origin.
+[73:22] Now, this looks ugly.
+[73:23] So you might think, how come someone...
+[73:25] So you can prove that this is asymptotically stable.
+[73:28] If you use v and omega chosen in this way,
+[73:32] and that's what we will do in problem two in your p-sets,
+[73:35] you can prove that actually your state
+[73:37] converges to the origin.
+[73:39] You may think, how come someone could come up
+[73:41] with something so crazy?
+[73:44] So usually, and again,
+[73:45] here I'm just giving you some intuition
+[73:49] and high-level information if you like it.
+[73:51] If you don't, no problem.
+[73:52] Of course, I'm not going to ask you
+[73:54] to derive this type of control laws in your midterms.
+[73:58] But just to make the concept consistent.
+[74:01] So usually the way that this works
+[74:03] is through Lyapunov analysis,
+[74:06] whereby you set up an energy function,
+[74:11] usually referred as v,
+[74:13] that has the property that is zero at the desired point,
+[74:18] so at the origin.
+[74:20] So if you can find a control law that ensures
+[74:23] that you move along the level set of this Lyapunov function
+[74:27] in a way that the value function is always...
+[74:29] So this value function is energy,
+[74:31] so it's a form of a ball.
+[74:32] If you can ensure this value function
+[74:35] is always decreasing,
+[74:37] then you're guaranteed to go to the origin.
+[74:39] So then, how do you design a control law?
+[74:41] You take the derivative of this postulated energy function,
+[74:44] and then you choose the control law
+[74:46] in such a way that the derivative is negative.
+[74:48] And that's, in this case, what it gives you.
+[74:53] Anyway, so here, this is the point that I want to make.
+[74:56] This is a closed-loop control law.
+[74:58] From any possible initial condition,
+[75:00] it tells you how to go to the origin.
+[75:03] With a trajectory, you may like it, you may not like it.
+[75:07] It's feasible, sometimes it does something weird.
+[75:10] So the reason why I wanted to give this example
+[75:12] is first of all to showcase what the control law is.
+[75:15] You see that here, from any initial condition,
+[75:18] I can get to the origin, this is proven,
+[75:20] and you will do a numerical experiment in your P-set.
+[75:24] This is the reference, by the way.
+[75:26] But second of all, control laws are actually useful
+[75:29] even in the concept of a two-step design.
+[75:33] Why so?
+[75:34] As I said before, in two-step design,
+[75:36] you first design the open-loop control kernel
+[75:38] and then the tracking controller.
+[75:40] So in principle, you're done.
+[75:41] You don't need to compute a closed-loop control law.
+[75:43] But oftentimes, what happens is that
+[75:48] as you're approaching your target,
+[75:51] so this is a target,
+[75:55] as you're getting closer to your target,
+[75:58] you need something that allows you to closed-loop very fast
+[76:02] and in a very reliable way.
+[76:05] So this is usually achieved with a closed-loop control law.
+[76:08] The closed-loop control law, as you can see,
+[76:10] does not rely on any optimization
+[76:13] or any solution of algebraic equations.
+[76:15] Basically, it just tells you that you should be able
+[76:17] to measure alpha, delta, and rho,
+[76:22] and then you just compute some sine and cosine,
+[76:25] and then you have your input.
+[76:26] So this is super fast.
+[76:28] So the idea, for example, I have a robot
+[76:31] that is kind of an international space station
+[76:32] and has to grasp an object in space.
+[76:34] So we do the two-step design to get close to the robot,
+[76:37] but once we're very close,
+[76:38] which means that we don't have to reason
+[76:40] about complicated constraints and so on,
+[76:42] we turn it into a closed-loop control law
+[76:45] that neglects some constraints,
+[76:47] but the point is that since you're very close,
+[76:49] you don't need to consider constraints anyway,
+[76:51] but allows you to close the loop much faster
+[76:53] so that you can really do the grasping and manipulation
+[76:55] as usually requires you to close the loop very quickly.
+[77:00] And that's actually what you will do in problem set two
+[77:04] that is due in a week or so.
+[77:06] We will put all these things together.
+[77:08] So you will start from the two-step design
+[77:11] that you're going to develop in your first P set.
+[77:14] You're going to augment it with a motion planning module
+[77:18] to deal with state constraints.
+[77:20] So far, we have not dealt with state constraints.
+[77:23] On top of it, you will use the posture controller
+[77:27] to have an additional level of robustness and efficiency
+[77:31] during the last phases of motion
+[77:33] in order to get to your desired destination.
+[77:35] You'll put everything together,
+[77:37] and then you have an end-to-end trajectory optimization
+[77:39] module that you can use for your final project.
+[77:45] Okay, this way of thinking is very much used in practice.
+[77:50] It's very pedagogical,
+[77:51] so make sure that you comment your ass with it.
+[77:55] So what we're going to do on Friday,
+[77:58] for the graduate students, you should come to the lecture
+[77:59] or you should watch the lecture.
+[78:01] For the undergrads, it's optional.
+[78:03] It's to look at more advanced techniques
+[78:06] for optimal control and trajectory optimization.
+[78:09] Specifically, we're going to look at indirect methods.
+[78:13] All right, see you on Friday for those of you
+[78:16] that have to be there or are interested to be there,
+[78:18] or otherwise on Tuesday.

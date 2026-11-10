@@ -1,0 +1,1113 @@
+[00:00] Today, we're going to conclude the second module of this class about robot perception.
+[00:12] And in particular, we're going to focus on the fourth step of the image processing pipeline.
+[00:17] That is the step of extracting information that can be used for either say localization,
+[00:25] as we will see next week, or for a higher level scene understanding in order to inform
+[00:31] decision making.
+[00:32] Is an object a human or an animal and so on and so forth.
+[00:37] So the goal today is to learn how to extract information from sensor measurements, in particular
+[00:42] from cameras.
+[00:44] And the main reference for this lecture is chapter four from the book from Siguar Urbancash
+[00:51] at Scaramuzza.
+[00:52] So as I said, the goal is to extract information from one or more sensors in order to generate
+[01:03] a higher level percept that can be used for localization or for decision making.
+[01:09] Now, it's important to realize that autonomous robots do not always need to have a very good
+[01:18] understanding of the world around them.
+[01:21] And actually, there is a trade-off between how much understanding you want to have and
+[01:27] the speed and agility of the robots.
+[01:30] If you have a robot that is flying at very high speeds, maybe everything that you need
+[01:35] is just to have a geometric understanding of the world.
+[01:38] But you really don't need to reason about the fine details of what you have around the
+[01:44] robots.
+[01:45] On the other hand, if you want to manipulate the world, for example, if you want to pour
+[01:48] water into glass and sun, then you need to have a much more advanced understanding of
+[01:54] the world around you.
+[01:55] You need to know what is the relation of an object with respect to another one in order
+[02:00] to understand the sequence of tasks that are needed in order to accomplish your task.
+[02:04] Having said that, on the topic of information extraction, we distinguish between low level
+[02:13] features, basically, geometric features, such as lines or circles and sun, that can
+[02:21] be used to form localization, the most basic capability for a robot in order to move around.
+[02:30] And then we consider higher level features, such as recognizing a table or recognizing
+[02:38] an object, which are useful for higher level understanding, which are useful for task planning.
+[02:43] If the robot has to do something that is more advanced than just moving around.
+[02:46] For example, accomplish complex tasks, such as prepare a dish for you or even drive around
+[02:56] a city and so on.
+[02:58] So today we're going to look at both topics, so how to detect geometric primitives in the
+[03:07] environment, and also how to detect objects and hence have a more detailed understanding
+[03:15] of a scene.
+[03:17] Let's start with the geometric primitives.
+[03:20] Now, the typical geometric primitives that one may want to extract, as I said before,
+[03:27] are typically lines or circles, or in 3D, for example, walls, ceilings, and so on.
+[03:36] The two key problems in order to extract geometric primitives are, for example, in
+[03:43] the case of line segmentation, in the case of line extraction, which points belong to
+[03:49] which line?
+[03:50] That's a problem of segmentation.
+[03:51] And given associations of points to a line, how do we estimate the parameters of the line
+[03:57] that best fits those points?
+[03:59] Now, in this class, we are going to focus specifically on line extraction, particularly
+[04:05] because this is one of the most basic geometric primitives that you want to extract.
+[04:10] And indeed, this is a geometric primitive that you will be extracting for your final
+[04:14] project in order to achieve localization.
+[04:17] Accordingly, problem two in your pset focuses on line extraction.
+[04:23] As I said, this is what you'll be using for your final project.
+[04:28] As I said, and this is true basically for all geometric primitives, there is a problem
+[04:32] of segmentation, which points belong to a given geometric primitive, like a line.
+[04:36] And two, once you have found that association, how you find that the geometric primitive
+[04:42] that best explains the points that have been associated to that primitive.
+[04:47] So we're going to look at these two steps in turn.
+[04:50] And in particular, we're going to look at the second step first, which is easier.
+[04:55] And then we'll look later on at the first step.
+[04:59] So let's start with the second step.
+[05:01] The problem of fitting, in particular in the case of a line in 2D.
+[05:06] Similar arguments generalize to 3D, for example for planes, but just for simplicity for this
+[05:12] class we focus on lines.
+[05:15] Now everybody in view knows what an equation of a line is.
+[05:20] So if you are in 2D, this is x, this is y, and you have a line, the equation of a line
+[05:28] in general is y equals mx plus b.
+[05:32] So that's a usual equation of a line.
+[05:35] Typically for image processing, we use a different parametrization of a line, and in particular
+[05:42] the parametrization of a line with respect to polar coordinates.
+[05:45] This is something that may not be familiar with.
+[05:49] So let's explain what a line in the polar coordinates look like.
+[05:55] So you already know about polar coordinates, we saw them earlier in this class.
+[06:00] Just to make sure that everyone is on the same page.
+[06:04] So let's assume that you have a point in the Euclidean plane.
+[06:08] The coordinates you are used to are the x and y coordinates.
+[06:15] But a different way to pinpoint what that point is on the plane is in terms of the distance
+[06:22] of that point from the origin, which we denote as rho, and the angle theta that the segment
+[06:42] joining the point to the origin forms with the x-axis.
+[06:48] If I tell you rho and if I tell you theta, you know exactly what the point is.
+[06:52] Which means that rho and theta are valid coordinates in order to describe each point in the plane.
+[07:02] So then the question is, we know how to describe a line in Cartesian coordinates.
+[07:13] How do we describe a line with respect to the coordinates rho, theta?
+[07:19] Assuming that we have a line whose points are all identified by polar coordinates rho, theta,
+[07:29] what are the parameters that identify this line?
+[07:33] In order to do so, let's consider the plot that we also have over there.
+[07:46] So, we're again given the plane, then we're given a line.
+[07:56] So let's call it B0 and alpha.
+[08:05] So, as you can see, a line is uniquely identified by the distance between the origin and the point
+[08:18] that the segment orthogonal to the line from the origin intersects the line,
+[08:24] and the angle of that segment.
+[08:26] Let's call the length of the segment r.
+[08:29] So here the angle is 90 degrees.
+[08:35] So if I tell you the length of the segment, again this is the segment from the origin to the line
+[08:41] that makes an angle equal to 90 degrees with the line.
+[08:46] If I tell you this distance and if I tell you this angle, I uniquely identify this line.
+[08:53] Now then the question is, what is the relation between all the points on this line
+[09:02] with these two parameters rho, sorry, r and alpha?
+[09:07] That will give us the equation of a line in polar coordinates.
+[09:10] In particular, let's take a general point along the line with the coordinates rho and theta.
+[09:19] What's the relation between rho and theta and r and alpha?
+[09:23] This is a similar equation that we will have for what's the relation between the arbitrary point x, y
+[09:28] on the line and the parameters of the line m and b.
+[09:33] We already know that this relation is y equal mx plus b.
+[09:38] We want to find a similar relation between rho, theta and r and alpha.
+[09:44] Does it make sense?
+[09:49] This length is rho and this angle is theta, all of this.
+[09:58] This angle, the smaller one, this is the theta minus alpha.
+[10:06] By using trigonometry, rho times cosine of this angle is equal to r.
+[10:16] So rho cosine of theta minus alpha is equal to r.
+[10:25] And this is valid for every point on the line described with respect to polar coordinates.
+[10:34] So we can then define a line with parameters r and alpha as the locus of points such that
+[10:44] those points, when described in polar coordinates, satisfy this equation.
+[10:49] Similar to what you would do in the standard Cartesian coordinates,
+[10:53] a line is the locus of points such that those points described in Cartesian coordinates satisfy this equation.
+[11:01] Does this make sense?
+[11:05] You don't seem convinced.
+[11:07] You are convinced.
+[11:08] So-so.
+[11:10] So-so or yes?
+[11:13] OK, cool.
+[11:14] All right.
+[11:16] So again, view this as the polar coordinate representation of y equal mx plus v.
+[11:33] Equivalently, by using the, and this will become useful later on,
+[11:41] by using the fact that cosine of alpha minus beta is equal to cosine of alpha cosine of beta
+[11:51] plus sine of alpha sine of beta.
+[11:56] This equation can also be written as rho cosine of theta cosine of alpha
+[12:05] plus rho sine of theta sine of alpha.
+[12:13] So this is what?
+[12:15] Rho cosine of theta?
+[12:18] Yep.
+[12:19] So it's x cosine of alpha, and this is y sine of alpha equal r.
+[12:28] So basically, this is how we go from the equation on the line in polar coordinates
+[12:33] to the equation on the line in xy coordinates.
+[12:38] Cool, all right.
+[12:39] So all this to say that in polar coordinates,
+[12:45] a line is described in terms of the distance between the point p0, which
+[12:51] is the intersection between the line from the origin to the line orthogonal,
+[12:58] to our line orthogonal to that line, and the angle that that segment forms.
+[13:06] OK, so we know we have now endpoints.
+[13:12] Yes?
+[13:12] How do we deal with lines that go through the origin point in this construct?
+[13:19] You mean here?
+[13:20] This will be done with r equal to, yeah, this will be not well-defined,
+[13:27] because we will not have alpha.
+[13:28] But we have that singularity also with the case of,
+[13:36] because for example here, m could go all the way to infinity.
+[13:41] Yeah, so it's, but as we will see later,
+[13:45] this representation has an advantage with respect to the Cartesian advantage.
+[13:50] In particular, m is a number that can go from 0 to potentially infinity.
+[13:57] So when we try to estimate from data this m,
+[14:01] we have to account for an infinite interval from the slope.
+[14:04] Instead, in the case of the polar coordinate representation,
+[14:08] alpha is obviously between 0 and 2 pi.
+[14:11] And r is basically the distance of the line from the origin.
+[14:17] But since you have a bound in terms of what the environment is,
+[14:21] r is always a well-defined number.
+[14:24] And this is something that we'll see later on.
+[14:26] But that's a good point.
+[14:29] Cool, all right.
+[14:30] So now, assume that, yeah, here.
+[14:33] Assume that now we have endpoints, rho i, theta i.
+[14:48] So we have n of those points.
+[14:52] And we know that they all belong to the same line.
+[14:55] So there exists an r and alpha such that
+[15:00] rho i cosine of theta i minus alpha is equal to r.
+[15:07] So I give you these endpoints.
+[15:10] You know that they are on the same line.
+[15:12] We want to find r and alpha.
+[15:14] So this will be a system of equations.
+[15:17] Nonlinear, but this is a system of equations that you can solve for.
+[15:20] Unfortunately, due to noise, which could be due to measurement noise,
+[15:26] outliers, and so on, even if these points in reality belong to the same line,
+[15:32] what we will measure is something that has some residual, some error.
+[15:39] So the best we can do in order to estimate the line,
+[15:42] meaning its coefficients r and alpha,
+[15:45] is to find the coefficients r and alpha that best describe
+[15:53] how the points will fit at that line in terms of minimizing the residual error.
+[16:01] Specifically, what we do is to form a cost function.
+[16:15] Which is a function of the parameters of the line.
+[16:18] These are the two parameters we want to find,
+[16:20] which is equal to the summation from i equal to one to n,
+[16:23] the total number of points, over d i square.
+[16:27] The discrepancy between the equation of the line and what we actually have.
+[16:37] This is just the discrepancy in r and not the discrepancy in alpha.
+[16:46] Yeah, well, this d i basically accounts for the distance of the point
+[16:57] with respect to the desired line.
+[16:59] That's the meaning of...
+[17:01] So basically, we're trying to find the line that best explains the point
+[17:06] by minimizing the orthogonal distance between that line
+[17:11] and each one of those points, summing all those errors.
+[17:15] This is a model, obviously.
+[17:17] But usually, the most common model for line fitting.
+[17:22] So then the problem is to minimize over r and alpha this cost function.
+[17:35] Which you can see as a least squares problem without constraints.
+[17:42] So here, we are assuming that we equally weight all the measurements.
+[17:48] Remember that the measurements are the values rho i's,
+[17:55] referred to as the range or the distance to each point,
+[17:59] something that a Lidar sensor would give you.
+[18:02] And the theta i, which is the bearing with respect to that point.
+[18:07] This is what you measure.
+[18:08] You want to find the parameters r and alpha that best explain
+[18:14] those measurements in terms of belonging to a line.
+[18:16] Yeah.
+[18:18] You're saying that there's no noise on alpha in this model?
+[18:22] Well, implicitly, you also can't afford noise in...
+[18:27] So the noise is really...
+[18:31] We assume that we have noise in both...
+[18:34] So first of all, the noise is neither in alpha nor in r.
+[18:41] So these are just the parameter of the underlying line.
+[18:44] The noise is in rho and theta, which are the quantities that we are measuring.
+[18:49] So we assume that because of the noise in rho and theta,
+[18:53] the end result will be a point that is offset with respect to the line.
+[19:00] And then, in order to find the line that best fits those points,
+[19:04] we try to minimize the error in terms of the distance of each point from that line.
+[19:11] So in a standard Cartesian measurement system,
+[19:14] you kind of assume there's a Gaussian error about x and a Gaussian error around y.
+[19:19] And then you do the fitting of a line with these squares,
+[19:23] and it minimizes those errors in some good way.
+[19:26] And here, we're working with the...
+[19:31] We're not only measuring things using a LiDAR sensor, right?
+[19:33] Which has error in alpha and...
+[19:35] Yeah, typically with the LiDAR sensor, so you measure distance.
+[19:39] Does that still get you...
+[19:41] Do errors in alpha and distance still translate into Gaussian errors in x and y?
+[19:46] Yeah.
+[19:48] Yeah, that's a good point.
+[19:50] The answer is yes.
+[19:51] And we could actually do an error propagation analysis
+[19:55] to see how those errors propagate into the final estimates that you compute.
+[20:00] But we don't do it.
+[20:02] Because the equation on the next slide...
+[20:05] That minimization equation is minimizing for the Gaussian in xy, right?
+[20:11] There's no real notion of xy.
+[20:13] Here, we are really minimizing the distance between a point and the line.
+[20:23] So the question is how the Gaussians with respect to rho and theta
+[20:26] transform into a Gaussian for that distance.
+[20:30] That's what we are minimizing.
+[20:31] Which basically leads...
+[20:33] So we could actually do a more sophisticated stochastic analysis
+[20:37] of the foundation of what we're doing here.
+[20:41] But we don't do it for simplicity.
+[20:43] Also, it's not that important.
+[20:45] But what is important to acknowledge, as you were mentioning,
+[20:48] is that there is an underlying notion of uncertainty behind each measurement.
+[20:53] And in particular, we know, for example, for stereo ranging,
+[20:59] that measurements of points that are farther away have more uncertainty.
+[21:04] In particular, the variance increases with the square of the distance.
+[21:08] Which prompts us to actually weight the different measurements.
+[21:16] Basically give more weight to those measurements that are more certain.
+[21:20] So points that are closer to us,
+[21:23] and less weight to those measurements that are farther away.
+[21:26] Practically, what we do is to set up weights wi equal to one over sigma i square.
+[21:32] That is exactly what you're referring to.
+[21:34] The uncertainty in the measurement that we have for a point.
+[21:42] And consider then the weighted cost function.
+[21:48] Whereby, if you see, if we are highly uncertain about a measurement,
+[21:52] meaning that sigma is high,
+[21:54] then we give less weight for that measurement
+[21:57] when we do the least square fitting procedure.
+[22:00] This is still a least square problem,
+[22:05] it's a weighted least square problem.
+[22:08] Again, there are two things that we are omitting here.
+[22:13] The first thing is how, given uncertainty in the rho i and the theta i,
+[22:21] we come up with the characterization of the uncertainty in sigma i.
+[22:26] We are not doing that.
+[22:29] And we are not doing all the,
+[22:32] say, stochastic interpretation of least squares.
+[22:34] So I'm just overlooking those issues
+[22:39] and giving you the high level intuition.
+[22:42] But from a practical standpoint, this is what you really need to know.
+[22:49] Now fortunately, this least square problem has a closed form solution.
+[22:54] That looks horrendous, but the good news is that it's a closed form solution.
+[22:58] And this is really the equation that you would use for programming two in your p-sets.
+[23:02] In particular, the alpha that optimizes that cost function is this monster here.
+[23:10] And the r, it is much more benign formula here.
+[23:14] Of course, if the wi's are all the same, wi's are actually equal to one,
+[23:20] then the summation of the wi's will be n.
+[23:23] So this would be basically the average of rho i cos theta i over all the measurements, r.
+[23:33] Which kind of makes sense, right?
+[23:37] So just for intuition, rho i cos theta i minus alpha.
+[23:47] So we had the line.
+[23:49] We had the segment that is perpendicular to the line.
+[23:53] This was alpha.
+[23:54] So this is a point on the line with the coordinates rho and the theta, and it's r.
+[24:02] So rho cos theta minus alpha is this distance.
+[24:12] So basically, the distance with respect to the line.
+[24:15] And so we take r as the average of those distances, which kind of makes sense.
+[24:23] Yeah?
+[24:24] Can we just solve this in Cartesian?
+[24:32] Yeah, so the only thing is that in Cartesian coordinates, you could.
+[24:37] But in Cartesian coordinates, the problem is a little bit less well-conditioned,
+[24:43] because m, the slope, can be a number that could be very large.
+[24:47] And two, because I would use this polar representation.
+[24:51] So there are three reasons.
+[24:52] That second, typically, your measurements in terms of range measurements
+[24:57] are in the form of rho and thetas.
+[25:00] So you don't get x and y from a ladder.
+[25:02] You get rho and theta.
+[25:03] So you could do the transformation, obviously.
+[25:05] But it's better to just go straight from the measurement to the line fitting.
+[25:10] Three, I would use the polar representation of a line
+[25:15] in order to also solve the segmentation problem by using Q-transform,
+[25:19] which we're going to discuss in a few slides.
+[25:22] So just for ease of explanation, I prefer to do everything in polar coordinates.
+[25:28] But yes, in principle, you could do it in xy as well.
+[25:34] Does that address your question?
+[25:35] Yeah.
+[25:36] So it's a mixture of pedagogical reason,
+[25:40] the type of measurements that you actually have,
+[25:43] and the fact that this is a little bit more robust way of doing it.
+[25:45] All right.
+[25:48] Let's go to step number one, light segmentation.
+[25:51] So far, we have assumed that we have a bunch of points.
+[25:53] We know that they all belong to a line.
+[25:56] And then we want to find the coefficients of that line.
+[25:58] We use polar coordinates for a number of reasons that I just explained.
+[26:01] Of course, if you're really against polar coordinates,
+[26:03] then you can use Cartesian coordinates.
+[26:06] The first problem is, OK, but who tells you whether
+[26:10] a bunch of points belong to a given line?
+[26:14] What you get from lighters are a bunch of rho i's, theta i's,
+[26:20] which is very large.
+[26:22] Which point belongs to which line?
+[26:25] And that's tricky.
+[26:26] And that's very important because, of course, for localization,
+[26:29] you want to understand whether that wall is the same as that wall
+[26:33] or there are two different walls with an angle between them.
+[26:36] So we're going to look at the three main methods for line segmentation.
+[26:41] They are relatively simple, but still require a little bit of explanation.
+[26:48] So the first one, which is really really simple,
+[26:51] is referred to as a split and merge.
+[26:55] The deal of split and merge is best illustrated by,
+[27:01] through my skillful PowerPoint drawing skills.
+[27:07] So let's assume that we have a bunch of points.
+[27:09] Now it's a segmentation problem.
+[27:11] We don't know which point belongs to which line.
+[27:13] As a human, you will say, OK, probably this is a line
+[27:17] and that this is a line.
+[27:19] This is what we want to do with the algorithm.
+[27:21] All right, so we had this bunch of points.
+[27:23] So the first thing that we do is just to fit a line
+[27:27] through all of these points by using the same algorithm
+[27:31] that I explained before.
+[27:32] So we assume, OK, maybe all of them belong to the single line.
+[27:36] And that's what we do.
+[27:37] We fit this line.
+[27:40] Then we look at the point that has a maximum distance from the line.
+[27:49] In this case, this will be the probably, probably this one.
+[27:55] This will be the point that has a maximum distance to the line.
+[27:59] So then we say, OK, if this maximum distance is above a design threshold,
+[28:06] say one centimeter or one millimeter, that's a threshold that you decide.
+[28:11] If this distance is above the threshold, then we say, OK,
+[28:13] this point cannot really belong to that line,
+[28:17] which means that I have to split this line into two lines.
+[28:23] So one that will go through this set of points
+[28:26] and the other one that goes through that set of points.
+[28:31] So that's what we do.
+[28:32] And then we iterate.
+[28:33] So this is an iterative algorithm.
+[28:34] Now I have this subset of points.
+[28:36] I redraw a line.
+[28:38] I compute.
+[28:40] I find the point that has maximum distance with respect to the line.
+[28:44] In this case, this one.
+[28:45] And I say, is this distance less than the acceptable threshold?
+[28:49] In this case, it is.
+[28:50] So then I freeze this set of points as belonging to the same line.
+[28:54] I go to this other one.
+[28:55] And again, here are all the points past the threshold test.
+[28:59] And then I'm done.
+[29:00] Yeah?
+[29:00] So you identified the one that was furthest away from the first line.
+[29:03] Yeah.
+[29:04] But then how did you split the points into the group of three and the group of four?
+[29:08] Yeah.
+[29:09] So basically, I have an order list of the points that I define as, where is it?
+[29:16] L?
+[29:17] And then they're indexed.
+[29:19] So I use that indexing in order to split them.
+[29:22] So there are the indexing along the line?
+[29:24] Yeah.
+[29:25] Not along the line.
+[29:26] So basically, at the beginning, I just have a bunch of points.
+[29:30] And I just put them in an array.
+[29:32] OK.
+[29:33] So just hide them with this, because, OK.
+[29:35] Oh, yeah.
+[29:36] See, this is a very carefully constructed case, so that the iteration stops, right?
+[29:42] No, no.
+[29:42] You're right.
+[29:43] In general, I don't have this very nice sequencing and this very nice pattern.
+[29:47] Is there such a way that you have to do and split the points in the not correct way?
+[29:53] Well, but then you will keep splitting until you don't have these weird things.
+[29:58] There is another step.
+[30:00] That's the bridge rule.
+[30:02] Exactly.
+[30:03] So I have another example that maybe addresses that a little bit better.
+[30:08] So this is a refinement of split and merge
+[30:10] that is referred to as an iterative endpoint fit variant.
+[30:14] So what you do is basically a simplification of the previous algorithm,
+[30:21] whereby instead of doing least squares in order to compute the parameters of the line,
+[30:26] you just merge.
+[30:27] So you just have a bunch of points that you have ordered somehow.
+[30:33] And then you connect the first point according to your indexing to the last point.
+[30:39] In this case, it will be these two.
+[30:42] Same deal as before.
+[30:43] We compute the point that has the farthest distance, and then we split.
+[30:52] And then, oops.
+[30:53] And now for this subset of points, we compute another line
+[30:59] by connecting the first and the last element of that set.
+[31:03] We compute a point that is the farthest away.
+[31:07] And this is, again, about the threshold.
+[31:08] So we split.
+[31:11] I get here.
+[31:12] So here, no more splits are possible.
+[31:15] And then there is a final post-processing step whereby we just merge,
+[31:20] and we have a straight line.
+[31:23] This is exactly the case that because of the splitting procedure,
+[31:26] we introduce two lines that were very similar with each other.
+[31:30] So we connected that a posteriori with the merge procedure.
+[31:35] So of course, there are a lot of moving parameters in these things.
+[31:38] So getting it to work correctly.
+[31:41] So the concept is fairly easy.
+[31:43] But getting it to work correctly is a bit hairy.
+[31:46] And you have a problem in your pset to do exactly that.
+[31:49] Does the convergence happen based on the amount of threshold you set?
+[31:56] Oh, yeah, of course.
+[31:58] That's what I'm saying is a bit hairy.
+[31:59] Because depending on the threshold, you might get results that are really awkward.
+[32:05] And as you will see in the second problem, the pset.
+[32:08] So yeah, that requires a little bit of experience.
+[32:10] And the iteration of the threshold remains the same?
+[32:15] Typically, yes.
+[32:19] This felt like it was really dependent on the indexing.
+[32:25] So how do you go about choosing the right index?
+[32:30] Or how do you go about constructing that initial array?
+[32:34] Yeah, there are a lot of moving.
+[32:36] There are a lot of algorithm decisions.
+[32:38] So one, for example, would be to index them in terms of their range distance.
+[32:45] Or you just put it back in terms of where they are in the image.
+[32:49] Basically, there are countless variations of how you can do it.
+[32:52] We provide you with an example in the pset2.
+[32:55] But you're right.
+[32:56] So as I said, the idea is simple.
+[32:59] But making it work correctly is not so simple.
+[33:01] Which actually give rise to the second algorithm that I want to mention, RANSAC.
+[33:07] This is really super simple to implement and super robust.
+[33:11] And actually, it's one of my favorite algorithms.
+[33:13] It's simple, as I said, very robust.
+[33:17] RANSAC, indeed, is an idea.
+[33:19] So RANSAC, first of all, stands for random sample consensus.
+[33:24] And it's a very general algorithm that allows you to estimate
+[33:29] in a robust way parameters of a model, even in the presence of outliers.
+[33:33] So I'm using RANSAC for the specific purpose of segmenting points on the line.
+[33:41] But RANSAC can be used much more generally
+[33:44] in order to find the correspondences between points across different images,
+[33:49] finding planes in the 3D images, and so on.
+[33:53] So the RANSAC concept, per se, is very, very general.
+[33:57] So for example, when you want to do stereo matching,
+[34:01] you have to find the correspondences between two images.
+[34:07] Then most of the image processing pipeline out there
+[34:13] use RANSAC in order to reject outliers.
+[34:15] And we'll see in a second how that works.
+[34:18] But anyway, the idea of RANSAC is to use an iterative randomized method
+[34:25] in order to estimate parameters by rejecting outliers.
+[34:28] Let's look at how it works for the case of line segmentation.
+[34:33] So we have a bunch of points here.
+[34:35] As a human, you might argue that this probably corresponds to a line.
+[34:40] This maybe is also a line.
+[34:44] So the way that the RANSAC algorithm works is extremely simple.
+[34:47] You take two points, and then you compute the line
+[34:51] that goes through those two points.
+[34:53] Of course, there is only one line that goes through those two points.
+[34:56] And then you compute the number of outliers,
+[34:59] meaning the numbers of a point that are within a distance,
+[35:03] how do we call it here, gamma maybe?
+[35:06] Number that go, yeah, that are within a distance gamma from that line.
+[35:12] And then I select the other two points,
+[35:14] and then I compute the number of outliers.
+[35:16] And I do that a certain number of times.
+[35:19] And at the end, I choose the line with the maximum number of outliers.
+[35:23] So the way it works, as I said, you take two points,
+[35:26] like for example, this red point here and this red point here.
+[35:30] You compute the line that goes through them.
+[35:32] You compute the outliers,
+[35:36] meaning those points whose distance is below a given threshold.
+[35:39] So here I'm computing all the distances.
+[35:42] I only keep the points whose distance is below a given threshold.
+[35:45] This is a set of outliers.
+[35:47] So for example, here I have one, two, three, four, six, seven, eight, nine.
+[35:51] So this line has nine outliers.
+[35:55] I do it for these other two points.
+[35:57] And here I have three, seven, outliers.
+[36:01] Keep doing that.
+[36:02] Keep doing that.
+[36:03] Until I'm lucky, I pick these two points,
+[36:06] and I get a big number of outliers.
+[36:10] At the end, I choose the line that has the largest number of outliers.
+[36:15] In principle, in order to be exhaustive,
+[36:19] you should consider all possible pairs.
+[36:22] So you have, assume that you have in total n points.
+[36:26] So how many pairs you will need to consider in total?
+[36:31] The answer is already there.
+[36:32] Is n times n minus 1 over 2,
+[36:35] because of course, the order with which you pick the first point doesn't matter.
+[36:42] Which in general is very large.
+[36:45] So the idea of RANSAC is that you,
+[36:49] and again, this is a very general idea that goes beyond the line fitting.
+[36:52] It's not that you have to select all possible combinations,
+[36:57] but if you have a little bit of a prior information
+[37:00] in terms of how many outliers you should expect for a given geometric primitive,
+[37:06] you can dramatically decrease the number of points that you need to consider.
+[37:10] How?
+[37:11] Let's assume that we have at least a rough estimate
+[37:17] of the percentage number of outliers that a geometric primitive will have.
+[37:26] For example, if you look at a line that is one meter long,
+[37:30] and you have a given resolution for your slider,
+[37:33] you maybe have a good sense that maybe the number of outliers should be maybe 100.
+[37:38] So 100 total outliers,
+[37:39] if you have one million points,
+[37:41] that gives you the fraction of a layer that you should expect.
+[37:44] So this is something that oftentimes you have.
+[37:47] Even if you don't have, there are more advanced versions of RANSAC
+[37:51] that are capable of identifying w,
+[37:54] so the percentage of outliers in an adaptive way.
+[37:57] So basically you will learn it as you proceed with RANSAC.
+[38:02] So in particular, let's assume that w, the fraction of outliers,
+[38:06] is something that we either know or we have a good estimate of it.
+[38:11] So w is a fraction of outliers.
+[38:15] And then let's assume that, so this is a randomized algorithm,
+[38:18] let's assume that we have a desired probability
+[38:22] of finding a set of points that is free of outliers.
+[38:26] And that probability p, for example, could be 99%.
+[38:32] So we want to run RANSAC a number of times
+[38:35] such that with probability at least 99%,
+[38:39] I select two points that are outliers.
+[38:44] And this is again a design parameter.
+[38:46] You can set it at 99.9% as you want.
+[38:49] The question is, given the knowledge of the fraction of outliers,
+[38:55] given the desired probability of finding two points that are indeed outliers,
+[39:03] what is the number of times that I need to run RANSAC
+[39:07] in order to find two outliers with probability at least 99%?
+[39:14] The reason why we're doing that is because we want to run RANSAC
+[39:17] a number of times that is much lower than capital N square.
+[39:23] To answer that, we just need to do a little bit of probability.
+[39:29] So the probability of selecting two outliers,
+[39:35] so two points that belong to that line,
+[39:38] assuming that the way we select points is independent,
+[39:44] is W squared.
+[39:47] Both points in LIGR.
+[39:53] Yep?
+[39:59] No, no, we don't know what the line is.
+[40:01] So we know that there is a line.
+[40:03] I mean, we assume that there is a line.
+[40:05] And we assume that there are some outliers along that line.
+[40:08] But we don't know which of them...
+[40:14] Yes, we're trying to find the line.
+[40:17] So we assume that there is a line in the environment,
+[40:19] and with RANSAC we're trying to find it.
+[40:23] It might be the case that after we run RANSAC a number of times,
+[40:26] we find a number of outliers that is very small,
+[40:29] which means that basically there is no line in your environment that is fine too.
+[40:33] But the question is, if there is a line,
+[40:36] can we find it after running RANSAC a given number of times
+[40:40] with probability at least 99%?
+[40:41] But of course, if there is no line,
+[40:44] then RANSAC will not find that line.
+[40:48] So the probability that both points are in LIGR is,
+[40:53] when you select them,
+[40:54] the probability that both points are in LIGRs will be W squared.
+[40:59] So the probability that at least one of them is not an inlier,
+[41:12] is equal to 1 minus W squared.
+[41:16] So what is the probability that after k times that you run RANSAC,
+[41:21] you don't pick two points that are in LIGRs?
+[41:25] So the probability...
+[41:28] How do we call it there?
+[41:29] RANSAC never selects...
+[41:34] Okay, RANSAC is unlucky.
+[41:37] Unlucky means never selects two points that are both in LIGRs.
+[41:41] Is 1 minus W squared to the power of k.
+[41:49] Is unlucky after k trials.
+[41:55] 1 minus W squared.
+[41:57] The reason why I go through this derivation is that
+[41:59] RANSAC is a very important algorithm.
+[42:00] So besides line fitting, it's used much more broadly.
+[42:03] So I want to make sure that at least you are familiar with the basic concepts.
+[42:06] Yeah, absolutely.
+[42:14] That's why W is a really rough estimate.
+[42:17] It's like a conceptual construct that you use in order to get a sense of
+[42:22] how many iterations you may need.
+[42:24] But yes, you never know W exactly.
+[42:27] You just have some estimate that you use to
+[42:29] guide your selection number of RANSAC iterations.
+[42:32] I know, it seems scary, right?
+[42:36] That the life of a person on an autonomous car depends on this.
+[42:41] But it works.
+[42:43] So that point cloud you showed us, and all the points there is,
+[42:46] you can see as a human that there's a line of points that was denser than the rest of them.
+[42:50] Yes, that means there are more in LIGRs.
+[42:54] Yeah, would it be possible to cut down over points you have to check with RANSAC
+[42:59] by only considering points that are in a certain density threshold, so you don't?
+[43:06] You could.
+[43:06] I mean, you could better inform RANSAC in order to tell RANSAC to focus on some regions.
+[43:11] Certainly true.
+[43:12] I mean, again, RANSAC, you have zillions of variations.
+[43:15] This is really the most basic version of it.
+[43:18] Just based on the version you presented,
+[43:20] won't RANSAC only ever find one line, as you have provided?
+[43:24] Yes, because we just picked the maximum number of layers.
+[43:28] So then what you would do would be to remove all of these,
+[43:31] and then RANSAC again to find that line.
+[43:33] Yeah.
+[43:35] So coming back to the equation of, wow, is this thing works?
+[43:39] So I remember that when I first gave a ride on the autonomous car that I was working on
+[43:44] a few years ago, and my wife was sitting on it, she was very fine,
+[43:50] and oh wow, this works very well.
+[43:52] And I was scared to death because I knew that this was the thing under the hood going.
+[43:57] So the point being that after this class, if you happen to ride on an autonomous car,
+[44:02] you'll see that you are much less relaxed about a person that is not knowledgeable
+[44:06] about what there is behind.
+[44:09] Yep.
+[44:10] Anyway, no, but actually this works pretty well in practice.
+[44:13] So even though we make all these approximations, it's a very robust algorithm.
+[44:16] In particular, let's assume that we are confident about the W value.
+[44:24] So the question is how many iterations you need in order to find a couple of outliers,
+[44:31] so a pair of outliers so that actually you have a line.
+[44:34] Well, as k grows larger, this quantity goes monotonically and synthetically to zero,
+[44:43] which means that as k becomes larger and larger,
+[44:46] the probability that you don't get to two points becomes lower and lower.
+[44:49] In particular, you want to find a pair of outliers with a probability of at least 99%, say,
+[44:59] which means that you want the probability of not finding the entire to be less than 1%.
+[45:06] So you run RANSAC until 1 minus p is greater than or equal to 1 minus w square to the power of k.
+[45:18] And you know that there is a k that is large enough such that this is true,
+[45:22] because you know that as k goes to infinity, this goes to zero.
+[45:30] In particular, basically you choose the k such that this is an equality.
+[45:36] It's not really an equality because, of course,
+[45:42] you may not find a k precisely that makes this equal to 1 minus p,
+[45:46] but just for simplicity, let's assume it is an equality.
+[45:49] So you then consider a number of iterations that is equal to log 1 minus p over log 1 minus w
+[45:55] square. Again, this is basically a guideline that you use in order to tune your algorithm.
+[46:02] The important point here is that k bar depends on w but not on n, which means that in general,
+[46:09] with RANSAC, you need a number of iterations that is much lower than the total number of points.
+[46:15] Since with LIDARs you have millions of points, that is a very important concept.
+[46:20] Second of all, there are more advanced versions of RANSAC that actually retune the w in an adaptive
+[46:26] way. All right, any questions here? RANSAC is useful for light fatigue but much more useful
+[46:37] broadly. So if you stick with the field of robot autonomy, it's very likely that you will stumble
+[46:41] upon RANSAC in the future. Third method for segmentation, Q-transform. This is a very cute
+[46:51] idea and also quite widely used. So again, the idea is that we have a bunch of points.
+[46:58] So you see that we have increasingly more refined ways of doing it. Of course, the more refined your
+[47:03] method is, the more computation you need to do. So same problem, we have a bunch of points we want
+[47:09] to find whether there is a line that goes through those points. So the idea of the Q-transform is
+[47:18] simple but very clever. The idea is that, as we discussed before,
+[47:29] a line in Cartesian coordinates is described as y equals mx plus b.
+[47:35] Which means that if I give you a point with coordinates xi and yi,
+[47:45] what is the set of possible lines that can go through that point? It will be this line, this line,
+[47:52] this line, this line, and so on. And in particular, the set of lines that go through that point
+[48:00] is the set of values m and b such that the yi's equal m xi's plus b.
+[48:09] Which basically means that
+[48:14] every point
+[48:18] xy induces a set of possible values for the line that goes through that
+[48:30] point. Specifically,
+[48:37] the parameters of the line that go through that point are related through a linear equation.
+[48:43] And in particular, the linear equation is b equals minus m xi plus y, which will be this.
+[48:55] So a point has an associated line of parameters that could go through that
+[49:07] point as a line. Does it make sense?
+[49:15] So each one of these lines corresponds to a separate value of m and b.
+[49:19] All those m, b values can be represented as a line in the m, b space.
+[49:27] OK, so why is this a useful insight? Well, let's assume that now we have two points.
+[49:35] So here we have xj, yj. So same idea here.
+[49:43] There is an infinite amount of lines that can go through that point.
+[49:46] But let's assume, but of course, there is only one line that goes through these two points.
+[49:56] How will we detect that line in the m, b space? Well, let's assume that this is the
+[50:03] m, b line associated with point i. And then we have another line that is associated with point
+[50:13] j. Since there is only one line that goes through two points,
+[50:20] the values of m, b of the line that goes through those two points is the intersection
+[50:27] of the two lines in the m, b space. OK, so that's also an interesting insight.
+[50:35] So any questions about this?
+[50:40] So let's call m star, b star, the m, b parameters for this line.
+[50:47] That will correspond to the coordinate of this point. So this will be m star. This will be b star.
+[50:57] So the way that you use this intuition for line segmentation is as follows. That for each point,
+[51:06] you have an induced set of m, b values. In particular, what you do is to grid the m, b space.
+[51:22] And we say that each point votes for those m, b values that are possible for that point. So
+[51:32] for example, for point i in the m, b grid, we will put a 1 here, a 1 here, a 1 here, a 1 here,
+[51:40] 1 here, 1 here, and so on. Because these are plausible parameters explaining the line going
+[51:45] through that point. For this line here, it's too bad it's almost orthogonal. But actually,
+[51:50] you will have one point here, one point here. Now, two points here, 1 plus 1, because both
+[51:56] explain that line, 1, 1, 1, and so on. And of course, in general, you have many.
+[52:02] And so you have accumulators. So each cell corresponds to an m, b value that is plausible
+[52:10] for a given point. Here, we had the six points that had that value as plausible.
+[52:17] So a typical result will be something like this. Now, you might say, well, but if you have
+[52:23] multiple points, and all those points lie on the line, then you should have, for one cell,
+[52:32] a very large number, and then ones, or very small numbers, for all the other ones.
+[52:37] So why do we have this kind of fuzziness? Well, this is due, again, to measurement error,
+[52:42] which means that the points, even if they are on the line in the real world, they may not be
+[52:49] on the line in your image. So that's basically how, then, the hue transform approach for
+[52:55] line segmentation works. Pick a point, you compute the m, b plausible values, and then you add the
+[53:04] one for each cell in a discretized fashion that are intersected by that m, b line. And then you
+[53:11] keep doing that for each point. Yeah? Can you decide the size of the
+[53:16] error rate? That's a great question. The m is a tricky one, because it's a slope,
+[53:25] so it's a tangent. So it goes back to, I think, the earlier question. This can go to infinity.
+[53:30] So where do you stop? Tricky. And we see in a second how to address that.
+[53:36] Because it's done the last 3D well, or? Oh, you mean for planes?
+[53:41] Yeah. A little bit less.
+[53:43] Yes.
+[53:46] Going back to your question, let's go back to the polar equation of a line. Equivalently,
+[53:53] a line can be written as x sinus of alpha plus y sinus of, sorry, x sinus of alpha plus
+[54:05] x cosinus of alpha plus y sinus of alpha equal r. So given a point xi and yi,
+[54:18] then the possible values alpha and r that define a line are related by a sinusoidal equation.
+[54:26] So if I plot here, as depicted there, alpha and r
+[54:38] as a body alpha, then I have a sinusoidal equation, and so on.
+[54:51] So it's the same concept as before, but now instead of having a,
+[54:56] so on each of these curves, we have a pair of alpha and r that represent a line that will go
+[55:04] through the point xi and y. So same intuition, but while in nb space that the relation is a line,
+[55:11] in the alpha and r space, this relation is a sinusoid.
+[55:15] So wait, this is much better. Are you assuming that there's like an equal probability of lines
+[55:23] having an alpha between 0 and 2 pi, whereas the probability of a line having an m decreases
+[55:29] as m increases? Well, the thing is that with the m, you might have an m with very large values.
+[55:35] Well, this one doesn't really make a difference. Alpha can be
+[55:40] discretized with a constant resolution, and r is, if you remember, the distance of that line
+[55:47] from the origin, and this is something that you can upper bound because you have an upper bound
+[55:53] of the size of your environment. So you don't have any more this issue that one of the parameters
+[55:59] will go to infinity. So you do the same thing, but now you have a domain for your grid that is much
+[56:08] better well-defined. This goes back to your question earlier why I was considering
+[56:12] polar coordinates. The third reason was exactly that specifically for Q-transform,
+[56:16] that's the way to go in order to implement it. With xy, it wouldn't really work well.
+[56:21] So then the algorithm is simple. So for each point, we have an induced sinusoidal line.
+[56:30] So we take a discretization for the alpha angle, we compute the corresponding r value,
+[56:37] as induced by the point xy and yi, and then we increase the accumulator, meaning the cell
+[56:44] of the accumulator matrix H at coordinates alpha and r plus 1. And we do that for every
+[56:52] discretization of alpha and, of course, for every point xy and yi that we have found. And then we
+[56:57] choose alpha and r with the highest count. Let's look at an example. So here we have two lines,
+[57:06] no clue where, so we don't know which point belongs to which line and even if we have a line.
+[57:13] So for each point, we build a sinusoid in alpha r space. And as you can see here, we find the two
+[57:22] intersections. These two intersections correspond to the alpha and r of the two lines, which is
+[57:29] exactly what we have here reconstructed. Now in reality, the situation usually is a bit less
+[57:37] clean because, of course, we have noise. So that would be the situation in alpha and r space. So
+[57:44] we don't really have a clean intersection, but usually it's rather easy to find a cluster that
+[57:48] really corresponds to an intersection. So this algorithm is quite neat because, as you see,
+[57:53] we didn't have to make any complicated indexing policy or threshold choices and so on. So that's
+[58:02] why this algorithm is quite widely used in practice. Robust, easy to implement and so on.
+[58:10] You had two peaks and you could see that probably it's two lines,
+[58:15] just one side or how many peaks you're expecting. No, in principle, you don't know how many
+[58:23] peaks to expect. In general, yes, you have an upper bound. I mean, in a reasonable
+[58:27] structural environment, it will be difficult to have one trillion lines. But
+[58:32] no, in principle, this algorithm finds all the lines that are out there.
+[58:37] So you would set a threshold for the peak and then choose a peak based on that?
+[58:42] Yes.
+[58:44] How do these three techniques compare in terms of speed over line?
+[58:49] I mean, if you think about the computation behind all these techniques is extremely fast.
+[58:56] So in terms of speed, they are all, nowadays with current processors, extremely fast.
+[59:03] RANSAC has this advantage of being capable of being robust to outliers. So when you are in
+[59:11] situations with a lot of outliers, RANSAC tends to be more robust, so preferable to QTransform.
+[59:17] But RANSAC has all these additional parameters to tune, like W, the threshold, and so on.
+[59:23] While this method is a bit less robust, does not have a statistical interpretation,
+[59:29] but is almost free of tuning parameters. So I would say that if you are in a situation
+[59:35] with a lot of outliers due to measurement noise or the environment that produces a lot of
+[59:42] reflections for your layers so you get a lot of garbage, then RANSAC is the way to go.
+[59:46] If you have anything clean environment, then QTransform deserves a try.
+[59:53] You say how you choose the set of alphas or gradients to iterate through.
+[59:58] How you choose what?
+[59:59] The set of alphas, like the discrete set of alphas to test.
+[60:04] How you choose the discretization for alphas?
+[60:06] Yeah.
+[60:07] Oh, yeah. When I said it's almost free of design parameters,
+[60:14] I meant that it's not completely free of design parameters.
+[60:17] One, obviously, is the discretization for alpha.
+[60:20] The second one is the threshold with which you deem that there is a line.
+[60:27] So those, again, are tuning parameters and a really dependent application.
+[60:31] There is no good rule there. Yeah, absolutely.
+[60:33] But usually between 50 and 100 values for alpha is plenty.
+[60:39] All right.
+[60:43] So let's talk about object recognition.
+[60:46] And I'll be a little bit quicker here because by now,
+[60:50] the standard to do object recognition is to use neural networks.
+[60:54] But neural networks are the topic of the advanced version of this class,
+[60:57] the one that I will teach in the winter.
+[61:00] So here, in the last 20 minutes of this lecture,
+[61:03] I'll tell you how people were doing stuff until 2012.
+[61:07] And you also have a couple of problems, your p-sets,
+[61:10] that ask you to do this.
+[61:14] And you will soon recognize why people really embraced neural network response.
+[61:18] They became a reliable solution.
+[61:24] So the problem of object recognition
+[61:28] is the problem of basically naming discrete objects in scene.
+[61:33] Now, object recognition encompasses a wide range of problems
+[61:37] like object detection, classification, scene, segmentation, and so on.
+[61:44] So in principle, there are algorithms for each one of them.
+[61:47] But in this class, we just broadly refer to all those problems as recognition.
+[61:52] So basically, we have a blob, it's at the table, it's a human, it's a dog, and so on.
+[61:57] Of course, this is a more refined understanding of the world
+[62:01] beyond the geometric primitives.
+[62:03] Geometric primitives help with object recognition,
+[62:06] but in general, they're not alone,
+[62:08] allow you to categorize an object as a dog, as a human, and so on.
+[62:13] It's a very hard problem,
+[62:14] probably one of the most important problems in computer vision,
+[62:18] and of course, essential for an autonomous robot.
+[62:20] The behavior of a robot should depend on
+[62:22] whether you have a tree or a human in front of you.
+[62:26] It's hard for a number of reasons.
+[62:28] First, the world is made of a jumble of objects
+[62:30] that tend to occlude each other with different poses, different scales.
+[62:35] So that makes it very hard.
+[62:37] And there is a lot of variability within each class of objects
+[62:40] that you would like to classify.
+[62:43] Like a human is, of course, different from a monkey,
+[62:47] but they have a lot of similarities.
+[62:49] So actually, trying to understand those differences
+[62:52] can be quite difficult for a machine.
+[62:55] Then in this class, we're going to look at three methods, classical ones,
+[62:58] template matching, and bag of visual words.
+[63:01] In particular, for the p-set, you will use template matching
+[63:05] to recognize objects.
+[63:08] You realize that it's neat,
+[63:10] but you will use it in order to recognize a stop sign.
+[63:14] You'll see that it's neat, but it has a number of drawbacks,
+[63:18] which will motivate neural networks,
+[63:19] even though we don't cover them in this class,
+[63:21] we will cover them in 274B.
+[63:23] But for a final project, actually,
+[63:25] we will give you neural networks for object recognition.
+[63:28] You will treat it as a black box.
+[63:31] You will understand what there is behind the hood in 274B.
+[63:35] The reason why we're using a neural network
+[63:37] is that for your final project,
+[63:39] you will have a fairly sophisticated robot
+[63:40] that has to maneuver in a mock urban environment,
+[63:43] so doing quite sophisticated tasks in terms of object detection,
+[63:47] something that is already beyond what you can reliably achieve
+[63:50] with template matching or bag of visual words.
+[63:53] But at least I want to give you some intuition.
+[63:55] It's always used to, even if you use more sophisticated tools,
+[63:58] it's useful to understand where those tools come from.
+[64:02] So let's assume that we consider the easiest possible problem
+[64:06] in object recognition, that is object detection.
+[64:08] You know what you're looking for.
+[64:10] You want to see if that thing is in the image.
+[64:14] So let's just, I don't know if you're familiar
+[64:15] with the stream of books, Where is Waldo?
+[64:17] But, so there is Waldo, and here there's a bunch of people.
+[64:22] The question is, you know that there is Waldo there,
+[64:25] but where is Waldo exactly?
+[64:29] This is, of course, an easy problem
+[64:31] because you already know what you're looking for.
+[64:34] But still it's complicated because you have a lot of people.
+[64:37] Do you know where Waldo is?
+[64:43] Okay, fine.
+[64:44] All right, so the solution that I'm going to discuss
+[64:50] is actually a straightforward application
+[64:52] of what we discussed last time, which is linear filtering.
+[64:56] The idea is to view the image as an image,
+[64:59] and then the object that you are looking for
+[65:03] as a template or a filter
+[65:05] with respect to which you apply a correlation.
+[65:08] So you remember that the notion of a correlation
+[65:11] is to have a mask that you slide across the image.
+[65:15] For each pixel, you look locally at whether,
+[65:19] at the weighty, the combination between the filter
+[65:22] and the neighborhood of pixels around that pixel.
+[65:27] You can view that correlation as basically measuring a similarity.
+[65:32] And we will see that a little bit more clearly in a second.
+[65:35] But it is basically to reinterpret the problem of object detection
+[65:39] as a problem of linear filtering, where we apply correlation.
+[65:43] Remember the formula of a correlation.
+[65:45] The idea is that we have an image,
+[65:47] we want to produce an output image
+[65:49] where the value of each pixel in the output image
+[65:53] is average according to some mask f
+[65:58] of the values of the original image
+[66:01] in the neighborhood of each pixel i, j.
+[66:05] Is that clear from last time?
+[66:08] So you can rewrite,
+[66:10] that's what also you will do in your pset,
+[66:13] the correlation as the dot product between two vectors.
+[66:16] And the idea is relatively simple.
+[66:18] So what you do is...
+[66:25] So say that you have a matrix f
+[66:32] with rows f1, f2, fn.
+[66:40] Then you can form a vector f equal to f1, f2,
+[66:46] whereby essentially you concatenate the rows.
+[66:54] For the pixel neighborhood,
+[66:56] so the patch of the image i centered at the pixel x, y,
+[67:02] whereas for the neighborhoods i, j,
+[67:04] where the i, j is the neighborhood of the image,
+[67:08] you can do the same thing.
+[67:09] From the matrix you can put it in a vector form.
+[67:12] Now the reason why here we have a subscript
+[67:15] is that this vector depends on the index of the pixel clash notation.
+[67:25] I should have put a subscript here, x and y.
+[67:28] While in your pset you have i, j.
+[67:30] Sorry for that.
+[67:31] So to be consistent with this notation, t subscript x and y,
+[67:35] because this vector depends on the pixel
+[67:39] at which currently your mask is centered.
+[67:42] And this vector obviously depends on that pixel.
+[67:45] So then you can just rewrite this linear combination as a dot product.
+[67:51] Remember that the dot product is the sum of the products
+[67:55] of the components of these vectors.
+[68:02] So this is a dot product.
+[68:03] So the intuition of a dot product, if you will,
+[68:05] is to see alignments between two vectors.
+[68:09] So in particular, if the two vectors are normalized,
+[68:12] the dot product is maximum when these two vectors are equal.
+[68:17] Which basically induces us to consider the problem of object detection
+[68:21] as a problem of normalized correlation.
+[68:24] Whereby we do the correlation for simplicity just expressed as a dot product,
+[68:29] but where we normalize it in order that if the neighborhood around x and y,
+[68:36] so this y, j here, looks exactly like the mask f,
+[68:43] then this dot product is equal to 1.
+[68:46] Which has the intuition that the feature that has the notion of a template
+[68:50] exactly looks like the neighborhood around x, y,
+[68:53] which means that we have found Waldo.
+[68:55] Does it make sense?
+[69:00] Any questions about it?
+[69:01] Can we compose filters of different scale and location?
+[69:05] Yep, in a second.
+[69:06] So that will be the result.
+[69:10] So you do this sliding.
+[69:14] So you slide this template across the full image,
+[69:18] and then, ta-da, you have a peak.
+[69:22] And that's where you put your bounding box.
+[69:24] In fact, I mean, this is not PPT.
+[69:26] This is done for real.
+[69:29] This was Waldo.
+[69:32] And that's exactly where we found the peak.
+[69:35] Isn't that neat?
+[69:37] Also, it's a nice application of linear filtering.
+[69:40] So it allows you to appreciate what the linear filters are
+[69:44] and also very clever use of linear filtering
+[69:47] in order to do object detection.
+[69:49] Now, the problem here is that we have basically assumed
+[69:56] that we more or less know the scale of the object that we're looking for.
+[70:03] But what if I get all of a sudden much closer to the image,
+[70:06] meaning that the Waldo becomes much larger?
+[70:08] Now I have a template that is much smaller
+[70:13] than the object I'm trying to detect.
+[70:15] In that case, I would not have detection.
+[70:20] How do we address that?
+[70:21] Well, the idea is fairly easy.
+[70:24] The idea is, in order to address this problem of sizing,
+[70:30] we just rescale an image up and down
+[70:34] according to many different scales.
+[70:36] And we do template matching with respect to each scale.
+[70:40] And if we have a match at a given scale,
+[70:42] then we say that we have found an object.
+[70:46] This idea gives rise to the idea of image pyramids
+[70:49] because we have a pyramidal structure of images,
+[70:53] one per scale, like here.
+[70:55] View this as a pyramid.
+[70:59] So this means that we want to both,
+[71:01] so we have an image, we want to downscale it
+[71:04] and we want to upscale it.
+[71:05] In the hope that at some scale we have the...
+[71:09] Is it cute?
+[71:10] Now you can see in a second why it is cute.
+[71:13] It means that at some scale, if there is an object,
+[71:16] you will find it with a template.
+[71:18] How do we subsample an image?
+[71:21] So possible way of doing it will be just to keep
+[71:25] only some rows and some columns.
+[71:27] Like for example, if I give you this image
+[71:30] where there is a small chicken and this is a mouse.
+[71:33] How do we call it?
+[71:34] Mouse, yeah, cute mouse.
+[71:39] Say that you want to subsample in such a way
+[71:41] that we reduce the width by half.
+[71:43] You might say, okay, we remove every other column.
+[71:47] Well, if you do that, the chicken is gone.
+[71:52] Because basically the way that it worked
+[71:55] is that every other line,
+[71:56] there was the overlaid image of the chicken
+[71:58] and every other line, the image of the mouse.
+[72:02] If I just remove every other line,
+[72:04] the ones that were giving you the chicken,
+[72:07] then that is gone.
+[72:08] So we miss information.
+[72:11] So what's happening here?
+[72:13] That in this picture, I had very high frequency components.
+[72:18] These are the factors that was constantly changing,
+[72:21] interlacing the image of the chicken
+[72:23] with the image of the mouse.
+[72:24] So if you're familiar with signal processing,
+[72:27] then you are familiar with the notion
+[72:28] of a Nyquist frequency.
+[72:30] Basically you don't want to sample at a frequency
+[72:35] that creates the aliasing.
+[72:37] And this is exactly what is happening here.
+[72:40] So if you're familiar with signal processing,
+[72:42] in order to avoid this problem, what will you do?
+[72:45] So here the problem is that we have frequencies
+[72:47] that were too high for this subsampling procedure.
+[72:52] So what you do is basically to remove those high frequencies
+[72:58] in such a way that the subsampling is more robust.
+[73:01] How do you basically remove high frequencies?
+[73:06] So for example, we already looked at this when we removed noise.
+[73:09] Noise can be seen as basically high frequency content in the image.
+[73:12] To remove it, we blurred it.
+[73:14] Yeah?
+[73:14] Did you put a filter that caps off at a certain frequency or something?
+[73:18] Yeah, which is basically what Gaussian Blur does.
+[73:22] That basically smoothing out so that the frequency content is...
+[73:27] Again, if you are familiar with signal processing,
+[73:28] this is fairly obvious.
+[73:29] If you are not familiar with signal processing,
+[73:31] this is not so obvious.
+[73:33] But at least visually, this is what happens.
+[73:36] We are given again the picture as before.
+[73:38] But now we do Gaussian Blurring first,
+[73:42] which means that it smears out the high frequency content.
+[73:46] That's how it will look like with Gaussian Blurring.
+[73:49] Now with subsample, and that's what we'll get.
+[73:52] Much better.
+[73:54] So this means that in order to subsample,
+[73:58] what you have to do is fairly simple.
+[73:59] You first blur your image with a Gaussian filter,
+[74:02] and then you keep every other column or every other row.
+[74:06] And that's something that you will do in the pset as well.
+[74:09] So subsampling is easy.
+[74:12] Upsampling is also relatively easy,
+[74:14] but now what you have to do is to do interpolation.
+[74:17] And there are a number of ways to do interpolation,
+[74:20] like a cubic interpolation, nearest neighbor, bilinear.
+[74:23] Bilinear is a particularly good one.
+[74:26] We're not going to go into the details of interpolation.
+[74:29] But the key point is that interpolation can be seen
+[74:32] as a linear filtering procedure,
+[74:34] and that's exactly what you will do in the pset.
+[74:37] So in the pset, basically, you would use subsampling, upsampling.
+[74:42] Actually, not all of you, just the graduate students.
+[74:44] This is the extra problem.
+[74:46] So sorry, you and I, it's not for you.
+[74:49] But you can always do it.
+[74:51] It's kind of fun.
+[74:54] And now that you have pyramids,
+[74:55] then you will do template matching with respect to each scale.
+[75:00] Okay, this is one way of doing object detection.
+[75:05] But this basically assumes that you know what you're looking for,
+[75:08] and you have a template for what you're looking for.
+[75:10] A much more powerful approach is the so-called bags of visual words.
+[75:15] And it can be quick, quick in terms of two-minute quick.
+[75:19] So the idea of the bag of visual words is that we interpret images
+[75:28] as a distribution of features, also referred to as visual words.
+[75:34] The reason why we call them visual words
+[75:36] is because this technique is very much related to document retrieval.
+[75:40] So in particular, the idea is that we have a dictionary of basic features
+[75:45] that you might find in a picture.
+[75:48] Then what we do is that once we have a picture at query time,
+[75:53] we look at the frequency whereby each one of these possible visual words appear.
+[76:00] So for example, this one appears a lot,
+[76:02] this doesn't appear much, and so on.
+[76:04] So then what we do is we take this histogram,
+[76:07] we compare it with the histograms of images
+[76:10] that we have in a database that we have used for training,
+[76:14] and we find the closest match.
+[76:18] There are a lot of things, of course,
+[76:20] how do I come up with this dictionary,
+[76:23] how do I do the comparison with the images in the database
+[76:29] in a feature way, and so on and so forth.
+[76:31] We're not going to go into the details of that.
+[76:33] But this is just to say that,
+[76:34] and this was one of the most popular algorithms for object recognition.
+[76:39] Again, the idea, just a high-level idea,
+[76:41] is to view an image as a bunch of features
+[76:46] with both a detector and a descriptor,
+[76:48] and then form an histogram that gives the frequencies of each feature
+[76:57] as a store in a given dictionary.
+[77:00] Of course, this dictionary should be large enough
+[77:02] in order to account for all the possible things
+[77:05] that you could see in the world, but not too large.
+[77:07] Otherwise, it becomes very difficult to do a match.
+[77:11] And then you do matching with a set of images
+[77:14] that you have in a database that become your reference images
+[77:17] in order to do classification.
+[77:19] Does it make sense, more or less?
+[77:23] So this was basically the de facto standard
+[77:25] for object classification until about seven, eight years ago,
+[77:29] which is kind of amazing.
+[77:30] When I was doing my PhD, that was like this thing,
+[77:33] but now everything has been overtaken by neural nets.
+[77:37] So not just for future description,
+[77:40] but also, and most importantly, for recognition.
+[77:44] The interesting thing of neural nets
+[77:46] is that many of the concepts that we talked about,
+[77:49] like template matching, representing figures
+[77:53] as frequency histograms of basis visual words and so on,
+[77:59] are implicitly learned by a neural network.
+[78:02] So it's not that a neural network does something completely different
+[78:05] from what it was done before.
+[78:07] It's just that what people were painfully doing
+[78:10] in terms of coming up with all the right templates and so on
+[78:14] is now basically implicitly encoded through learning
+[78:19] into a neural network.
+[78:22] To the point that now this is the most reliable thing
+[78:25] that you can use in order for object recognition,
+[78:27] and indeed what you will be using for your final project.
+[78:29] As I said, as a black box.
+[78:31] So for you, it will be just an input-output box.
+[78:33] You put an image in, you get a category out.
+[78:37] The details will be into 74p.
+[78:39] All right, so this was the last lecture for robot perception.
+[78:42] I hope that I give you a good overview
+[78:45] of what robot perception entails
+[78:47] in terms of 3D world reconstruction,
+[78:50] how a camera works,
+[78:51] how you extract information about basic ones,
+[78:53] axiomatic primitives, and more advanced ones.
+[78:56] On Tuesday next week, we'll talk about localization.
+[79:03] So the first step to do so will be to give an introduction
+[79:08] to filtering theory, and then we will use that
+[79:10] in order to solve the problem localization and mapping.
+[79:13] Tomorrow, for the graduate students,
+[79:14] will be a more advanced lecture
+[79:19] on modern computer vision techniques.
+[79:22] All right, see you tomorrow.

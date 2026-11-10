@@ -1,0 +1,1187 @@
+[00:00] All right? Okay. So, last week, the first lecture focused on deriving kinematic dynamic
+[00:17] models of robot motion. Then we had a lecture on the robot operating system, an introductory
+[00:24] lecture. In the next couple of sections, you will get to know ROS much better. And
+[00:31] in particular, this week, you're going to set up the machinery in order to run ROS.
+[00:37] Next week, in the sections, you get to run your first ROS nodes. And in particular, most
+[00:44] of the software activities are going to be handled through the sections. We found this
+[00:50] to be a particularly effective way to teach you how to do things by having you doing things
+[00:54] while having a CA watching you. So today, we're going to leverage what we know about
+[01:03] deriving kinematic dynamic models of robot motion in order to compute the trajectories
+[01:09] for a robot. In particular, today, and actually this week, we are concerned with the following
+[01:16] problem referred to as the trajectory optimization problem. Given an initial condition for your
+[01:22] robot, so for example, initial position and initial heading, and given a desired final
+[01:29] position for the robot and final heading, how do we find a trajectory, meaning a time
+[01:35] history for the state's position and heading that connects the initial condition with the
+[01:42] final condition and satisfies all system constraints? For example, in the case of a
+[01:48] wheeled robot, the constraint that the motion has to satisfy is a kinematic constraint,
+[01:55] meaning the no-slip condition or poor rolling condition that we saw last time. Additionally,
+[02:02] we may also be interested in finding trajectories that are not just feasible, but they also
+[02:08] optimize some cost criterion. For example, we want to get to the final condition in minimum
+[02:14] time, or we want to get to the final condition with the minimum control effort or maybe a
+[02:20] combination of minimum time and minimum control effort, and so on and so forth. So that's
+[02:25] a trajectory optimization problem. So the goal for today, and in general, all the lectures
+[02:31] are going to be structured in the following way. I'm going to introduce the topic, tell
+[02:35] you what the goals and aims are for the day, and I give you some suggested readings. As
+[02:42] mentioned in lecture one, this class does not have a required textbook, but there are
+[02:46] several textbooks that are recommended and listed on the syllabus. For each lecture,
+[02:52] I'm going to give you a main reading reference, in this case, this book, along with some additional
+[02:59] readings when needed and useful. Particularly for this class, the main reference is a book
+[03:05] from Siciliano, Cevico, Villani, and Oriolo, titled Robotics, Modeling, Planning, and Control,
+[03:13] and in particular, the material that we're going to cover is covered in chapter 11 of
+[03:18] this book, if you want to get deeper into this topic. But the slides, along with the
+[03:23] lecture notes, are sufficient in order to learn the material in this class. And in particular,
+[03:28] for your exams, you are only required to know what is going to be covered in lecture and
+[03:35] what is covered in the lecture notes. You don't need material from these more advanced
+[03:39] readings. Anyway, so the goal for today is twofold. First, I want to give you a general
+[03:47] overview of the methodologies in order to tackle the trajectory optimization problem.
+[03:52] As you can imagine, this is one of the most fundamental problems in robot autonomy. And
+[03:59] two, of course, there are many methods. I want to focus on a specific method referred
+[04:04] to as a differential flatness. It is a clever method. It's not applicable to any system
+[04:11] but to a broad class of systems. And it's widely used in the field. For example, quadrotors
+[04:20] or aerial vehicles, the trajectory optimization problem usually is tackled through the lens
+[04:26] of differential flatness. So it's the tool that we're going to focus in this class for
+[04:31] the purposes of trajectory optimization. I'm going to cover it in quite a bit of detail.
+[04:38] It's going to be covered in your homework, particular problem set one, problem one, and
+[04:44] three. And the tools that you will learn today and you will exercise in the P set will become
+[04:51] the backbone for your trajectory optimization module for your final project. So you will
+[04:57] get to know differential flatness pretty well by the end of this class.
+[05:02] So before we get to the problem of trajectory optimization, I want just to go back to the
+[05:09] notion of dynamic models and in particular to the notion of differential equations. There
+[05:13] were a couple of questions in Piazza on to what extent you need to be proficient with
+[05:20] differential equations. In this slide, basically, we have everything we need to know about
+[05:27] differential equations. Specifically, as we saw last time, the equations of motion for
+[05:34] a robot are expressed in the form of a differential equation. That is an equation that relates
+[05:41] the derivative of an unknown function with the unknown function itself and possibly some
+[05:47] unknown parameters, for example, time. So it's an equation. As you might have seen for
+[05:55] the past several years, the key feature is an equation in terms of an unknown function
+[06:03] and the derivative of that unknown function. The reason why differential equations play
+[06:08] a pivotal role in order to understand, in order to describe the dynamics of a system
+[06:14] is that the solution to differential equation gives you the history of motion of a robot.
+[06:21] In this class, you won't need to know any specific technique to solve differential equations.
+[06:29] We're not going to solve differential equations analytically, for example. What you need to
+[06:33] know is how to solve differential equations numerically through discretization scheme.
+[06:39] There are many discretization schemes available out there, but the most basic one, and indeed
+[06:44] the one that we will mostly be using in this class, is the so-called Euler method of discretization,
+[06:53] which is also a good way to understand a little bit better what differential equations really
+[06:58] mean from an operational standpoint. The idea behind an Euler method for differential
+[07:05] equation integration is fairly simple. So let's consider the derivative of time over
+[07:13] a function of time. So x dot t, remember that in this class the dot means the derivative
+[07:29] of time, can be approximated by the very definition of a derivative as x of t plus
+[07:39] delta t minus x of t over delta t. So this doesn't work. This works better. Delta t.
+[07:58] Where delta t is an increment of time. As delta t gets smaller and smaller, this ratio
+[08:08] converges to x dot t. So the idea behind the Euler method is to translate a differential
+[08:18] equation into a discretized version, where we consider the notion of a finite increment
+[08:24] as opposed to an infinitesimal increment. In particular, by using this expression then
+[08:37] we can say that x t plus delta t is equal to x of t plus delta t times x dot t. I've
+[08:53] just rewritten this expression by replacing the approximation symbol with the equality
+[08:58] symbol, with the idea that if delta t is small enough, this is almost like an equality. So
+[09:04] this gives us a very powerful method to solve general differential equations. Because now,
+[09:10] if I tell you what the initial condition is, so the value of the function x at the initial
+[09:17] time t zero, say equals five for example, then you can solve the differential equation.
+[09:25] So find the value of x at all times, more precisely at a finite set of times corresponding
+[09:32] to the discretization points for time, by simply recursively using this expression.
+[09:40] For example, x of t zero plus delta t, t zero plus delta t then will become t one,
+[09:49] is equal to x of t zero, which assume we know the initial condition, plus delta t is a time
+[10:00] increment, basically something that we choose, trading off how long it takes to solve a differential
+[10:06] equation with the accuracy we want. Of course, if we make this discretization very fine,
+[10:12] then I have to iterate on this equation many times before getting to the final. So it's
+[10:17] more computationally expensive. But if I make delta t very large, yes, this is very fast,
+[10:21] but then the solution will not be very accurate. Plus delta t times x dot t zero. So we assume
+[10:30] that we also know x dot t zero, given.
+[10:38] So this is interesting in two ways. One, we saw how we can devise fairly simply a method
+[10:44] to solve a general class of differential equations. It's not the most accurate one, it's not the
+[10:51] most efficient one, but this is a good starting point. But two, from a conceptual standpoint,
+[10:59] it also tells you why it is so important to solve differential equations. Basically,
+[11:05] the knowledge of how the derivative of the function depends on the function itself allows
+[11:10] you to predict what the system will do in the future by simply applying this recursive
+[11:16] set of equations.
+[11:17] In particular, the derivative has the notion of what the system is going to do next, given
+[11:26] the current state of the system. So it makes sense. I'm just trying to give you some concepts.
+[11:30] Maybe so far, you have seen differential equations from a purely mathematical standpoint, but
+[11:35] from a physics engineering standpoint, have a lot of meaning. Knowing how the derivative
+[11:39] depends on the current value of the function basically encapsulates the notion of what
+[11:45] the system is going to do next, depending on the current system state.
+[11:50] That's pretty much everything we need to know in terms of differential equations. We will
+[11:56] be using the Euler method over and over in this class, because obviously, in order to
+[12:02] control a system, we have to control its motion, but this describes two differential equations
+[12:07] that we need to discretize in order to make them computable.
+[12:11] Is the reason we're using the Euler method your simplicity instead of...
+[12:17] This is the simplest, in my mind, method to describe. As I said, there are many other
+[12:23] methods that we could be using for discretization. By the way, here, I refer to the time increment
+[12:28] as hi. Here, I refer to the time increment as delta t. So just to make sure the two are
+[12:35] exactly the same. That's a notational thing. Yeah?
+[12:38] That's like you have a small step size, would you be able to calculate the moment?
+[12:42] Yes, in general, yes. But in order to get it to the final time, tf, then of course you
+[12:49] need many more iterations of algorithms. So say that you're integrating between zero
+[12:53] and one, and you have a step size of 0.1, you have to apply that equation 10 times to
+[12:59] get to tf. If you have delta t equals to 0.01, now you have a more accurate solution, because
+[13:05] that approximation is finer. I mean, it's better, because delta t is smaller, but now
+[13:09] you have to iterate 100 times. So in general, in robotics, there's always
+[13:15] a trade-off between accuracy and optimality versus computation time. No one and other.
+[13:23] The art of being a roboticist is to have a good judgment call. Yeah?
+[13:28] In this class, we're generally using this method, so instead of solving this, it's using
+[13:34] a feature that's... Yeah, the approach of this class is really
+[13:39] computational. So numerically, because many of the things we will be doing do not really
+[13:44] admit an analytical solution. So we're dealing with a nonlinear system of equations, possibly
+[13:50] relatively high-dimensional and so on, so the best we can do is to solve them automatically.
+[13:54] All right. Let's go back to trajectory optimization. So as discussed, the equations of motions
+[14:00] of a robot are represented through differential equations. Now, the question is, by exploiting
+[14:08] a model, how do we find a trajectory that joins an initial condition with a final condition?
+[14:15] But trajectory, as I said, I mean, the history of time for the state from time to zero to
+[14:22] time t f. In a way that satisfies the system constraints, so basically the kinematics or
+[14:32] the dynamics, some control constraints, the dynamic model depends on the control input.
+[14:39] For example, in the case of a unit cycle, the control input are linear speed and angular
+[14:43] speed. We might have the control constraints. For example, the case of unit cycle means
+[14:47] that the linear speed has to be below something, below 10 meter per second. The angular speed
+[14:53] has to be below something, say some radian per second and so on. We might have a constraint
+[15:00] on the state. Constraints of the states usually are obstacles, meaning that your trajectory
+[15:08] as a function of time should not intersect an obstacle. This is a state constraint. It
+[15:16] means that the x of t should not belong to the set x for all t. As a move, I should never,
+[15:27] the time history of my state should never intersect, say, this table. So that's the
+[15:33] feasibility part. If I'm only concerned with finding a function x of t that satisfies the
+[15:40] equations of motion, input constraints, state constraints, then I say that I found a feasible
+[15:45] trajectory for my system. If on top of it, among all feasible trajectories, I try to
+[15:51] find the one that optimizes the cost function, that I say that I'm trying to solve an optimal
+[15:58] trajectory control problem. Now, any questions so far? Yeah.
+[16:07] What's the mean of each function x t and t bar?
+[16:12] I'm going to discuss that in a second. I was going to discuss right now about the, yeah.
+[16:17] You said that x, the constraint of x represents the path that you would, that was the collision avoidance.
+[16:25] And u is just like velocities and angular velocities?
+[16:28] U are input bounds. Think of it as velocity bounds, acceleration bounds, and so on, in general.
+[16:34] Yeah. All right. So let's look a little bit more closely at the cost function.
+[16:44] So the cost function takes the form of j equal h of x t f, t f, plus integral from t 0 to t f of a function
+[16:56] g of x t f, u t f, t f in the t. So this part is referred to as the running cost.
+[17:09] So basically, this is the cost that you accrue as, oh no, so this is not the t f, this is just t.
+[17:23] So this is the cost that you accrue as you move along the trajectory. For example, if g is simply equal to 1,
+[17:34] what is the cost that we're accruing, meaning what are we trying to minimize it? Exactly.
+[17:40] But we might, for example, have an additional term, like for example, u square.
+[17:47] So if I add u square, what is the cost that we are accruing?
+[17:53] Control effort, in general. Usually the square of stuff represents power.
+[17:58] So, I mean, usually this is related to minimizing energy.
+[18:04] And there are many different ways. This is almost up to you to decide what you want to optimize.
+[18:08] I'm sorry, what is it saying for cost?
+[18:11] Running. Running cost, because since there is an integral, so think of an integral as a summation.
+[18:18] So basically, this is the cumulative cost, the cost that I accumulate through time.
+[18:24] For example, because I'm consuming fuel, or simply because if g is equal to 1, time is elapsing.
+[18:34] So, interesting thing here, so think about the integral as a sum. If you discretize an integral, you get a sum.
+[18:42] This means that the running cost has an additive structure, so we express it as a sum.
+[18:47] So you might think, well, can we do it more generally?
+[18:50] So instead of having an integral, we have some non-linear function of an integral and sum.
+[18:55] In some settings, that might be useful. On the other hand, most of the optimal control formulation focuses on the structure for the cost.
+[19:05] Because it's the one for which we can solve the problem in a way that is, in general, computationally quite efficient.
+[19:15] If you go away from the additive cost assumption, then it becomes very hard to find any computational procedure.
+[19:24] So if some of you are familiar with reinforcement learning and dynamic programming and so on, exactly the same.
+[19:31] So if you think about dynamic programming, you have the expectation of a sum as a cost.
+[19:36] The reason why you have that structure is that by leveraging that structure, then you can derive the principal optimality.
+[19:43] And from the principal optimality, you can derive the dynamic programming equations.
+[19:47] You remove the additive structure, then you are in trouble.
+[19:54] So this is the running cost.
+[19:56] This term here, as you were asking before, this is referred to as the terminal cost.
+[20:02] So this is the cost that you incur when at the end of the operation, meaning at time t f, your state is at x t f.
+[20:15] So for example, think about a problem where we want to get to somewhere, but we don't want necessarily to get exactly at a specific point.
+[20:27] It's fine that we get close enough to a specific point.
+[20:31] So the terminal cost, h, could be x t f minus x t f desired, and then I take the norm and I square it.
+[20:43] Which means that it's fine if I get close enough, but I don't want to get it too far, otherwise this terminal cost is very large.
+[20:52] These are the typical two terms in the optimal control formulation.
+[20:58] What's that?
+[21:01] Yeah, the only thing that you really need here is to have this additive cost structure and some differentiability property on h and g.
+[21:12] These are a little bit more technical things that we're not going to bother in this class.
+[21:16] But in the spring, I teach an entire class on optimal learning-based control, where we go to in great detail on these type of questions.
+[21:28] x d, d stands for desired.
+[21:35] In general, in this class, a subscript of d is desired.
+[21:39] A desired trajectory, a desired set point, and so on.
+[21:42] Okay, so here the literature is not very consistent.
+[21:47] But in general, if we do not have state constraints, meaning that the set x is simply the entire Euclidean space,
+[21:57] we refer to this problem as a trajectory optimization problem.
+[22:01] If we do have state constraints, then we refer to this problem as motion planning, or trajectory optimization with obstacles.
+[22:08] We'll look at trajectory optimization with obstacles next week.
+[22:12] These weeks, we're looking at a problem without obstacles, meaning without state constraints.
+[22:16] And hence, we talk about trajectory optimization.
+[22:19] So this week's is trajectory optimization, next week's motion planning.
+[22:22] The main difference is that in motion planning, we deal with state constraints.
+[22:26] For example, collision avoidance.
+[22:27] Trajective optimization, typically, we do not deal with the state constraints.
+[22:33] There was, yeah?
+[22:35] Highly weight, which causes more problems?
+[22:40] Yeah, that's why we still need humans as part of the design loop.
+[22:47] It's up to the designer.
+[22:49] It really depends on what type of performance you want from your vehicle.
+[22:53] In some cases, the only thing that you care is time.
+[22:57] And you want to get exactly to a point in minimum time.
+[23:01] So in this case, h will be equal to zero, g will be equal to one.
+[23:06] And then you have the terminal constraint, xdf equal x final desire.
+[23:14] In other cases, you also care about the fuel expenditure.
+[23:20] And how do you trade time and the fuel?
+[23:23] That's left to the designer.
+[23:25] So in general, in the trajectory optimization problem formulation,
+[23:30] the inputs are the function g, the function h, the function a,
+[23:37] so your model, your constraints x, your input bound u.
+[23:41] That's an input.
+[23:42] The output is the time history of the control and associated time history of the state
+[23:48] that solves this optimization problem.
+[23:53] So t0 and tf seem to be fixed.
+[23:55] Ah, great question.
+[23:56] So t0 generally, yes.
+[23:58] tf, the final time, could be free or could be fixed.
+[24:04] Why sometimes the final time could be free?
+[24:06] For example, for minimum time problem, the problem is to minimize time,
+[24:13] which means that the tf is actually part of the optimization.
+[24:17] For example, the optimal control problem as stated here was formulated and addressed,
+[24:25] first started during the Cold War.
+[24:27] So the problem was to intercept ballistic missiles coming either from the Soviet Union
+[24:32] or from the United States in minimum time by having fuel as a constraint and so on.
+[24:40] In particular, there were two schools, the Soviet school and the United States school.
+[24:44] The Soviet school led to the Pontryagin minimum principles as the general solution approach.
+[24:50] The American school, led by Richard Bellman, led to dynamic programming as the main solution approach.
+[24:59] There are connections between the two, but those are beyond the scope of this class,
+[25:03] which will be covered in my class in the spring.
+[25:07] Good reference for this stuff is a book from Kirk.
+[25:11] All right, so first of all, let me give you a little bit of overview
+[25:16] of what methodologies are out there to solve the problem.
+[25:21] And then we'll do a deep dive into differential planets.
+[25:25] So when we solve for the optimal control problem,
+[25:28] we may solve for one of two possible control functions.
+[25:33] Control functions is the history of the function u as a function of time.
+[25:38] If we solve for a function u that is really a function of both state and time,
+[25:48] we say that we are interested in a closed-loop projective optimization problem.
+[25:53] So if we're trying to find a control that is really a function of x and t,
+[26:01] we say that we are interested in a closed-loop optimal control.
+[26:09] If instead we try to simply find a function u t
+[26:16] that is a function only of the initial condition, so t zero,
+[26:21] and t, so this closed-loop,
+[26:26] this is open-loop.
+[26:29] We say that we're interested in an open-loop trajectory optimization problem.
+[26:34] So the difference between open-loop and closed-loop
+[26:37] is that in a closed-loop control,
+[26:40] we are constantly measuring the state,
+[26:43] and our control action depends on the current value of the state.
+[26:48] This is a bit subtle, so I want to make sure that every one of you
+[26:52] appreciate this part.
+[26:54] Our formulation is deterministic. There is no uncertainty.
+[26:58] There are no random variables, nothing. Purely deterministic.
+[27:01] So if you give me initial condition and a control function,
+[27:07] I can tell you exactly where my system will be,
+[27:09] say, 10 seconds from now.
+[27:12] Which means that if I apply a function that is only a function of time
+[27:18] and a function that is a function of time and state,
+[27:22] since I will always be following my nominal trajectory,
+[27:27] the two will not really give rise to any difference.
+[27:33] So why would we might possibly be interested in closed-loop control?
+[27:38] Again, let me be more specific here.
+[27:45] Open-loop is only a function of time,
+[27:50] so it tells me at each instant of time
+[27:54] which control action I should follow.
+[27:56] And let's say that this is the trajectory that I get,
+[27:59] x open-loop, x off.
+[28:03] This is an open-loop.
+[28:05] Closed-loop is a function of both the state and time,
+[28:09] which means that if I'm here at a given time t,
+[28:14] I take an action,
+[28:16] but if I'm a different state, say, here,
+[28:18] I may take a different action.
+[28:20] In open-loop, no matter where I am at the current time,
+[28:24] I always take the same action.
+[28:27] With closed-loop, at a given time, depending on where I am,
+[28:31] I may take different actions.
+[28:34] So why closed-loop is actually super useful?
+[28:37] Closed-loop is useful is that all models are wrong
+[28:41] and some are useful,
+[28:43] which means that when we do the computation,
+[28:46] we derive a control function for an abstraction of our system.
+[28:50] But there is always some residual uncertainty,
+[28:53] which means that in general,
+[28:54] we will drift away from our nominal trajectory.
+[28:58] If I have a closed-loop control law,
+[29:00] I know exactly what I do if I start drifting away,
+[29:03] which means that I can get back to the nominal trajectory.
+[29:06] In open-loop, if I start drifting away,
+[29:10] I don't have any mechanism to bring me back
+[29:14] to the nominal trajectory.
+[29:16] So very explicitly, open-loop means that, say,
+[29:19] I want to get to Robin, and I just compute the trajectory,
+[29:23] close my eyes, I start walking where I'm going.
+[29:26] You see, I was going toward.
+[29:28] I was drifting because I was only relying on dead reckoning,
+[29:31] basically my international measurement unit.
+[29:34] I didn't have visual feedback for state measurement.
+[29:38] I was drifting, I had my open-loop thing,
+[29:42] and I didn't have any way to correct where I was going.
+[29:45] Now that I have my eyes open,
+[29:46] I'm constantly measuring where I am with respect to the room,
+[29:49] which means that as I start drifting,
+[29:51] I go back to my nominal.
+[29:53] That's closed-loop control.
+[29:56] So now you might say, well, okay, cool.
+[29:59] Then closed-loop control is pretty useful.
+[30:02] Why would you ever consider solving
+[30:04] for an open-loop control trajectory?
+[30:09] The unfortunate thing of closed-loop control
+[30:11] is that this object being also a function of the state
+[30:14] is a much more difficult object to do computation over.
+[30:19] Open-loop is just a function of time.
+[30:22] Closed-loop is a function of time and state,
+[30:24] so it's a much more complicated mathematical object.
+[30:26] Computationally, much more expensive.
+[30:29] So ideally, we would like to have an algorithm
+[30:32] that has the same computation efficiency
+[30:35] required to solve an open-loop control problem,
+[30:38] but with the same robustness of properties
+[30:41] of closed-loop control.
+[30:43] A good trade-off is represented
+[30:45] by two-step trajectory optimization,
+[30:48] whereby your control is given by the superposition
+[30:53] of a reference open-loop control signal
+[30:57] plus a feedback tracking term.
+[31:00] The feedback tracking term is simply control law
+[31:03] that tries to bring your system back
+[31:05] to the nominal trajectory that you would follow
+[31:08] with the open-loop control if there were no disturbances
+[31:14] by using some feedback mechanism.
+[31:20] And this is basically the architecture
+[31:22] that we use in practice,
+[31:23] and that's the one that we will be using in this class.
+[31:27] The downside you mentioned of the closed-loop
+[31:32] is that you don't have to do all this information
+[31:34] with the information you have,
+[31:36] but you also have to do it to optimize.
+[31:39] You are compromising, because basically,
+[31:41] usually the stacking law is valid locally,
+[31:44] so if you are close enough to your nominal trajectory,
+[31:47] then you know what to do,
+[31:48] but if you are far away,
+[31:50] then you have no clue about what to do.
+[31:52] But in general, if, again, I want to go to,
+[31:55] it's fine to just have a tracking that tells me what to do
+[32:00] if I'm two meters far from my nominal.
+[32:02] I don't need the closed-loop control law
+[32:04] that tells me what to do
+[32:05] if all of a sudden I'm teleported back in Italy.
+[32:09] That would be full-blown closed-loop.
+[32:12] So the second part of the two-step design
+[32:14] is easier propagation?
+[32:15] Much easier than that one,
+[32:17] because basically you're only solving
+[32:19] for a tracking controller that tells you what to do
+[32:23] in a tube around the nominal trajectory.
+[32:28] Again, this is engineering,
+[32:30] so we really had to find a balance
+[32:33] between ideally what we would like to do
+[32:35] and practically what works well
+[32:36] and is computationally feasible.
+[32:38] Two-step design, whether used,
+[32:40] that's actually what we will be doing in this class,
+[32:44] which basically means two things.
+[32:46] Now I have to tell you how to compute
+[32:49] an open-loop trajectory as a reference,
+[32:52] well, open-loop control signal,
+[32:55] as a reference control signal,
+[32:56] and then I have to tell you
+[32:58] how to design a tracking controller.
+[33:01] So today we're going to do this.
+[33:03] On Thursday we're going to do this.
+[33:08] Clear?
+[33:09] A bit of philosophy,
+[33:10] but it's important to have the main concepts in mind.
+[33:12] Yeah?
+[33:14] The tracking log in the optimized form
+[33:17] has a special case of the...
+[33:19] Special case of this one?
+[33:21] Yeah.
+[33:22] Yeah.
+[33:23] You're only chucking certain information out
+[33:25] which makes the computation easier.
+[33:27] Yeah.
+[33:28] But the idea is that we would optimize
+[33:29] directly for this one,
+[33:30] as opposed to that.
+[33:31] Yeah.
+[33:33] All right.
+[33:34] So in general, to solve the trajectory optimization problem,
+[33:40] there are two methods.
+[33:42] The first class is referred to as direct methods.
+[33:44] The second class is referred to as indirect methods.
+[33:47] The philosophies are orthogonal.
+[33:50] In direct methods what we do is to discretize the system,
+[33:53] so approximate integrals with sums,
+[33:55] differential equations with a difference equation,
+[33:58] cast the problem as a non-linear optimization problem
+[34:02] over a finite dimensional space,
+[34:05] and then solve it.
+[34:07] The indirect method is orthogonal in philosophy.
+[34:11] The idea is to first derive the necessary optimality conditions
+[34:17] and then solve for those necessary optimality conditions.
+[34:20] And it will be a little bit clearer later on.
+[34:23] But the idea is that in direct methods we first discretize
+[34:26] and then we optimize.
+[34:27] In indirect methods we first optimize,
+[34:30] meaning we derive the necessary optimality conditions
+[34:33] and then we discretize.
+[34:35] We're going to give you a little bit more insights in a second.
+[34:39] Let's first consider direct methods.
+[34:42] As I said, this is the optimal control problem
+[34:45] or trajectory optimization problem.
+[34:47] This is exactly what I stated before.
+[34:50] What do we do in direct methods?
+[34:53] In direct methods.
+[34:55] So the approach, as I said, is fairly simple.
+[34:58] And in its most basic instantiation relies on Euler integration.
+[35:05] So what we do is we have time from t0 to tf.
+[35:12] We discretize it into time intervals, ti.
+[35:16] The difference here is denoted as hi.
+[35:20] And then we approximate the cost function j
+[35:30] as a summation,
+[35:33] which is depicted there.
+[35:35] So hi plus g of xi ui ti.
+[35:46] Okay, so in this formulation I did not include the terminal cost.
+[35:50] But the terminal cost inclusion will be straightforward,
+[35:52] will be the same.
+[35:54] So sum over i of j.
+[35:57] So what I do, I just approximate an integral as a summation.
+[36:04] The idea is that if you have the integral from t0 to tf of a function,
+[36:13] say of g of t in the t,
+[36:16] this is equal to the summation of the integral from ti ti plus the t
+[36:23] or g of t the t.
+[36:26] And we approximate each piece.
+[36:29] So if delta t is small,
+[36:32] the integral between ti and ti plus delta t
+[36:35] can be approximated as g ti times ti plus delta t minus ti.
+[36:43] Do you agree with this?
+[36:46] It's like a calculus one.
+[36:49] Basically you have g of t, t.
+[36:55] This is g of t.
+[36:58] So the integral between ti and ti plus delta t is the area here.
+[37:07] You're just approximating this area as the base times the height.
+[37:14] You can imagine that the height is g ti
+[37:18] and the base length is delta t.
+[37:22] So you can see that as delta t gets smaller,
+[37:24] this gets increasingly more accurate.
+[37:27] So this is a good decision for the cost function.
+[37:30] Then we discretize the differential equation of motion
+[37:34] by using Euler integration.
+[37:37] That's what I did at the beginning of this lecture,
+[37:39] so I'm not going to repeat it.
+[37:40] So now everything is discretized.
+[37:43] The unknowns are the controls at each time step i
+[37:48] and the state at each time step i.
+[37:51] What is known and given is the value of the state
+[37:54] at the initial time step, so zero.
+[37:58] So now this just becomes an optimization problem,
+[38:03] non-linear, because the function g in general is non-linear,
+[38:06] where you solve for the xi ui's that minimize this cost
+[38:11] and satisfy this set of constraints.
+[38:15] Assuming that you know what an optimization problem is.
+[38:18] Is that correct?
+[38:23] Basically, we're trying to find the set of values xi's
+[38:26] and the ui's that satisfies that set of constraints
+[38:30] and minimizes cost function.
+[38:34] How you do it?
+[38:35] Well, it's tricky.
+[38:36] Non-linear programming is in general difficult,
+[38:40] but there are a number of solvers out there specific
+[38:43] to the trajectory optimization problem that can be leveraged.
+[38:48] There's also a running cost in each.
+[38:53] It's not a running cost.
+[38:54] It's a terminal cost.
+[38:55] And as I said, here, since the main step
+[38:58] is to approximate the integral, I just
+[39:01] consider a formulation without the terminal cost.
+[39:04] But we can include it in a trivial way.
+[39:07] In that case, j will simply be that plus h of kf x kf.
+[39:16] But the terminal cost does not require any approximation.
+[39:19] It's just an additional term that you have.
+[39:23] I'll put it in the slides, and I'll
+[39:26] pass the revised set of slides later on so that it's super
+[39:29] clear.
+[39:30] What is the f of xn equals 0?
+[39:32] Oh, yeah.
+[39:33] So we might have an additional set of constraints
+[39:37] for the final state.
+[39:39] So for example, at the end, we want
+[39:42] to be in a certain neighborhood, also referred to as core region.
+[39:46] And how can we enforce that?
+[39:47] How do we bother forward?
+[39:48] Because those bother forwards and have restrictions
+[39:51] that you can't control.
+[39:53] Because you just time constraint and finish condition.
+[39:56] Yeah.
+[39:57] So how we handle terminal constraints is not, as I said,
+[40:01] solving this nonlinear optimization problem
+[40:03] is not straightforward.
+[40:04] If you're interested, you should take my class in the spring.
+[40:07] This is not the methodology that we're
+[40:09] going to leverage in this class.
+[40:10] I'm just going to give a glimpse of the field,
+[40:12] and then we laser focus on a specific technique.
+[40:15] Yes.
+[40:16] Dealing with free final time and more complicated
+[40:19] terminal conditions is not straightforward.
+[40:21] Is there any relationship between choice
+[40:23] and gain for the terminal cost and the discretization time?
+[40:27] No.
+[40:29] No, there are two different functions.
+[40:32] So you might claim it is a bit unfortunate
+[40:34] that I refer to delta t as hi here.
+[40:37] In retrospect, I don't know exactly why.
+[40:39] But yeah, there are two different concepts.
+[40:43] All right.
+[40:44] Let's quickly look at, so there are a number of software
+[40:46] packages that solve this problem for you.
+[40:49] The main differentiating factor is are they open source?
+[40:53] And two, what is the nonlinear solver
+[40:55] that they use in order to solve that nonlinear optimization
+[40:58] problem?
+[40:59] Want to get deeper into this?
+[41:01] Take my class in the spring.
+[41:03] Indirect methods, just to give you the high level idea.
+[41:08] So when you want to solve a nonlinear optimization problem,
+[41:12] one of the very first techniques
+[41:14] that you're introduced to is as follows.
+[41:19] So let's assume that you have a nonlinear optimization
+[41:21] problem.
+[41:22] You want to find a variable x that minimizes
+[41:28] some nonlinear function of x.
+[41:32] This is unconstrained optimization,
+[41:34] the simplest possible form of nonlinear optimization.
+[41:38] How would you solve this problem?
+[41:42] Right.
+[41:43] So take the gradient of f.
+[41:48] Set it equal to 0.
+[41:49] Solve for those x that satisfy the gradient equal to 0
+[41:54] condition.
+[41:55] Those are candidates for optimality.
+[41:57] Plug them in.
+[41:58] See which ones take the minimum value.
+[42:01] You're done.
+[42:02] Assuming some smoothness.
+[42:04] I hope that there are no mathematicians here.
+[42:07] But I mean, we're engineers.
+[42:09] So all this stuff is smooth as much as you want.
+[42:13] OK?
+[42:14] So let's approach.
+[42:16] Indirect methods is exactly the same.
+[42:19] So what you do is to derive a necessary condition
+[42:22] for optimality for the control u of t.
+[42:27] And solve for those conditions.
+[42:30] The challenge, though, is that while in standard nonlinear
+[42:34] programming, the necessary optimality condition reads
+[42:38] as a nonlinear equation, which is difficult to solve,
+[42:42] but it's just a normal equation.
+[42:44] In optimal control, the necessary optimality condition
+[42:47] reads as differential equations, which are harder to solve for.
+[42:53] So the necessary optimality condition
+[42:55] is a differential equation in itself
+[42:57] that needs to be discretized in order to be solved.
+[43:01] We'll go deeper into this during the Friday lecture
+[43:04] for those of you that are in the valid level
+[43:07] version of this class.
+[43:10] But just to give you an idea at a high level,
+[43:12] you first solve for the necessary optimality condition,
+[43:14] and then you solve for your optimal control trajectory.
+[43:19] OK.
+[43:20] So that's how the field is partitioned.
+[43:22] Now, I mean, I teach a class about it.
+[43:27] But for the systems we are interested in this class,
+[43:30] in general for wheeled system, mobile, robotics, and so on,
+[43:34] there is an approach that in practice works extremely well.
+[43:38] The deal of this approach is as follows,
+[43:40] that in general you don't really care that much about optimality.
+[43:46] I mean, you want to find a high quality trajectory,
+[43:48] but oftentimes it's good enough to find a feasible trajectory
+[43:51] that is not too outrageous in terms of some cost function.
+[43:58] So instead of looking for an optimal control trajectory,
+[44:04] let's look for a feasible control trajectory
+[44:08] that gives you performance that is good enough.
+[44:13] Now, the good news is that for a certain class of systems
+[44:17] referred to as differential reflex system,
+[44:20] the problem of computing a feasible trajectory,
+[44:24] meaning a trajectory that satisfies
+[44:25] the differential equation of motion
+[44:27] on top of some input constraints,
+[44:30] that is good enough is particularly simple.
+[44:32] Simple means that you can compute it very fast.
+[44:36] Well, you want to compute very fast.
+[44:37] As an autonomous robot is moving around,
+[44:39] the environment is changing around the robot,
+[44:42] so often you have to recompute your trajectory.
+[44:45] So it's imperative that you close the loop
+[44:47] at usually at least about 1 hertz, possibly 10 hertz.
+[44:53] So differential flatness is a very deep topic
+[44:57] in mathematics and differential geometry.
+[45:00] So here, I'm just going to give you
+[45:02] the operational version of differential flatness.
+[45:05] And to do so, let me start with a motivating example.
+[45:09] So let's go back to the model for a simple car.
+[45:13] Remember from lecture one that the simple car has...
+[45:18] The simple car is a car with two rear wheels
+[45:23] and two steerable front wheels.
+[45:27] The state is the position of the midpoint
+[45:31] of the rear wheel axis and the heading.
+[45:35] The controls are the steering angle for the front wheels
+[45:39] and the speed of the midpoint of the rear wheel axis.
+[45:45] Some people on Piazza asked why phi cannot be equal
+[45:49] to pi over two.
+[45:50] If phi is equal to pi over two, the car is jammed.
+[45:55] It can't go forward because now you have 90 degrees
+[45:58] between the rear wheels and the front wheels.
+[46:01] There is a vehicle, though,
+[46:02] where you can steer the front wheels at 90 degrees.
+[46:05] Do you know what that vehicle is?
+[46:10] Eh, not so much.
+[46:11] I think you're probably too old to play that vehicle
+[46:15] and too young to have kids.
+[46:17] That's a problem.
+[46:18] It's a tricycle.
+[46:19] The tricycle, you know the thing where you move the wheel
+[46:22] from the front?
+[46:23] Right.
+[46:24] So that is front wheel activated.
+[46:26] And in principle, if you're able to steer your legs,
+[46:30] you can actually have an angle of 90 degrees
+[46:32] with your rear wheels.
+[46:33] But in general, for all practical vehicles,
+[46:37] phi cannot be equal to pi over two.
+[46:40] Actually, it should be a little bit less than pi over two.
+[46:42] Otherwise, your vehicle is jammed.
+[46:45] Now, the question is, I give you initial condition
+[46:49] for x and y and theta.
+[46:51] Final condition for x and y and theta,
+[46:53] compute a trajectory for the simple car
+[46:56] that obeys some input constraints.
+[46:58] For example, linear speed should not be larger than something.
+[47:06] What we're going to do is to use a tool referred to
+[47:08] as differential flatness to solve this problem.
+[47:11] And I'm going to use this example to show you
+[47:13] how useful differential flatness is
+[47:15] for the purposes of trajectory optimization,
+[47:19] even though here we're talking about feasibility,
+[47:21] not so much about optimization.
+[47:24] In particular, the idea is as follows.
+[47:26] And I want to use an example because at first,
+[47:28] differential flatness is not very intuitive.
+[47:31] But with example, I hope it becomes quite intuitive.
+[47:35] So we have the kinematic model for the simple car.
+[47:40] Now, let's assume that we're given the initial condition
+[47:47] for the xy position for the midpoint of the rear wheel axis.
+[47:53] And I give you the final condition.
+[47:58] Okay?
+[48:00] And then I ask one of you to come here
+[48:03] and just draw a curve that connects these two points.
+[48:07] Again, this curve should be smooth.
+[48:09] Don't ask me about smoothness because I'm going to unsay.
+[48:12] Everything in this class is smooth, almost everything.
+[48:15] You give me a smooth curve that joins those two points.
+[48:19] So my question is,
+[48:21] can I find a time history of v and phi,
+[48:33] my two control inputs,
+[48:35] such that this trajectory gets realized?
+[48:39] In general, for a nonlinear system,
+[48:41] if you just draw a trajectory for a subset
+[48:43] of the state variables, it's not true
+[48:46] that that trajectory is indeed realizable,
+[48:48] meaning that I can find a set of control inputs
+[48:52] that ensure that the vehicle can follow that trajectory.
+[48:55] That's not true in general.
+[48:57] But there's a specific class of systems referred to
+[48:59] as differentially flat systems for which this is true.
+[49:02] If this is true, why this is a dramatic simplification
+[49:05] for the purposes of trajectory control?
+[49:09] Because it basically means that you can just compute a curve
+[49:15] for a subset of the state variables
+[49:19] without having to deal with any differential constraints
+[49:23] and then apply a map that allows you to compute
+[49:27] the control inputs that realize that curve.
+[49:30] So if you're not too crazy in how you design this curve,
+[49:34] then the trajectory that you eventually compute
+[49:36] is a high-quality trajectory, and it's computed very fast
+[49:40] because we did not account for any differential constraint
+[49:44] in solving for this curve.
+[49:49] So let's go to this example.
+[49:51] Again, I've given you a trajectory in terms of x, y,
+[49:55] not even theta.
+[49:56] I just gave you x and y.
+[49:59] And its derivatives, x dot, y dot, x double dot,
+[50:02] y double dot, and so on.
+[50:04] So the question is, how do I compute v and phi
+[50:07] such that this trajectory is realized?
+[50:09] Well, I go back to the equations of motion
+[50:12] and look at the following.
+[50:15] x dot is equal to v cosine of theta.
+[50:19] y dot is equal to v sine of theta.
+[50:23] So if I take the ratio between y dot and x dot,
+[50:27] what I get is tangent of theta.
+[50:33] So with this equation, I can already pinpoint exactly
+[50:37] what the corresponding heading would be
+[50:40] for such a trajectory.
+[50:42] Actually, probably here, this would be here.
+[50:48] Okay, so I can reconstruct the other state variables
+[50:53] that are necessarily implied by the trajectory in terms of x, y.
+[50:58] But most importantly, let's look at the control inputs.
+[51:02] So again, by the equations of motion,
+[51:04] we know that x dot is equal to v of cosine of theta.
+[51:09] I mean, this implies that theta is equal to inverse tangent
+[51:12] of y dot over x dot.
+[51:17] So I already know how to express theta
+[51:19] in terms of x, y and its derivatives.
+[51:22] This implies, by looking again at equations of motion,
+[51:26] that the v is going to be implied
+[51:30] as x dot over cosine of theta.
+[51:37] That the control would give rise to,
+[51:40] as a function of time, to this trajectory.
+[51:42] If cosine of theta is equal to zero,
+[51:45] then you will simply use the other equation,
+[51:48] y dot equals v sine of theta.
+[51:50] Since cosine of theta and sine of theta cannot be zero
+[51:53] at the same time, you can always find a relation between x and y,
+[51:57] x dot and y dot, with the v that would realize
+[52:00] that x and y and x dot and y dot.
+[52:02] Finally, there is another input, which is phi,
+[52:06] the steering angle for the front wheel.
+[52:08] Again, we go back to the equations of motion.
+[52:13] We have that theta dot is equal to v over l tangent of phi.
+[52:24] I have already computed theta as a function of x dot, y dot and x dot.
+[52:31] So I can also compute theta dot.
+[52:33] I would just take the derivative of this relation.
+[52:36] Of course, I would get a second derivative of x and y.
+[52:40] But as I said, once you give me x and y and you tell me that it's smooth,
+[52:44] I know it's x dot, y dot, x double dot and y double dot.
+[52:47] So simply, then phi is equal to the inverse tangent
+[52:52] of l over v theta dot.
+[53:01] So you saw how we went from trajectories in x, y space,
+[53:07] along with information about x dot, y dot and so on,
+[53:10] to the set of remaining set variables,
+[53:13] and most importantly, controls that will give rise to that trajectory.
+[53:16] That is necessarily paired with that trajectory.
+[53:20] We calculate v as the norm of x dot and y dot?
+[53:25] v as the norm of...
+[53:27] Because then it would be the absolute v, not...
+[53:29] Oh, yeah.
+[53:30] But it comes from the equation of motion as well.
+[53:34] Of course, v squared is equal to...
+[53:36] But v can be a, say, another sign,
+[53:38] versus the other one that would not have a sign.
+[53:40] Right.
+[53:41] That's why I prefer this.
+[53:44] You can assume sign in other ways,
+[53:46] but this...
+[53:47] So the mapping between the subset of variables
+[53:51] that you use to find a curve geometrically
+[53:55] and the set of inputs that realize that curve
+[53:57] is not necessarily unique.
+[54:01] So it's pretty amazing, right?
+[54:04] Yeah, just one second.
+[54:06] I'll get back to you in a second.
+[54:08] So the bottom line is that all of the state variables
+[54:11] and the inputs can be determined
+[54:13] by the trajectory of the real wheels and its derivatives.
+[54:17] In particular, in the jargon of differential flatness,
+[54:21] we refer to the subset of state variables x and y
+[54:26] as the flat output.
+[54:29] In particular, what we just found is that
+[54:35] considering as flat outputs x and y,
+[54:42] we were able to recover the theta
+[54:50] as a function of the flat outputs and its derivatives.
+[54:56] And the controlled signals, v phi, as another...
+[55:02] Beta is a function.
+[55:04] And another function, gamma, of z, z dot...
+[55:07] Actually, z double dot, because to compute the theta dot,
+[55:10] I would need to compute the derivative of this
+[55:12] that depends on x dot.
+[55:13] So I would get second derivatives of x and y.
+[55:18] So by using z as flat output,
+[55:21] I can pinpoint the values of the other state variables
+[55:25] and most importantly, the control inputs
+[55:27] that give rise to this trajectory
+[55:31] through non-linear mappings.
+[55:36] Yep?
+[55:39] What is the property that allows you to...
+[55:44] To say if a system is differentially flat?
+[55:46] Well, last slide, I will address this in the question.
+[55:50] So you have to be patient for the next 20 minutes.
+[55:53] So this was just an example that I used
+[55:57] to convey the notion of differential flatness.
+[55:59] As I said, at first it's not very intuitive,
+[56:01] but I hope this example really clarifies the thing.
+[56:05] The formal definition of differential flatness
+[56:07] is as follows.
+[56:08] We say that the system is differentially flat
+[56:11] if there exists a mapping from the state
+[56:15] and the input and possibly derivative of the input,
+[56:18] but importantly, not from...
+[56:21] Not depending on the derivative of the state.
+[56:23] We refer to this subset of variables as z,
+[56:27] the flat output.
+[56:29] In our case, it will be xy.
+[56:32] So we say the system is differentially flat
+[56:34] if there exists such a mapping with a property
+[56:37] that all the state variables, in our case theta,
+[56:41] and all the control inputs, in our case v and phi,
+[56:45] can be uniquely pinpointed as a non-linear function
+[56:49] of the flat output and its derivatives.
+[56:53] In our case, this is what we have.
+[56:57] So it's exactly basically the generalization
+[57:00] of the example that I just provided.
+[57:02] Or in words, we say that the system is differentially flat
+[57:05] if we can find a set of outputs
+[57:07] that has to be equal in number to the control inputs.
+[57:09] This is not intuitive.
+[57:11] This is a key result that follows from
+[57:13] from the deep theory of differential flatness.
+[57:16] We take this fact as granted.
+[57:18] So the number of flat outputs has to be equal
+[57:20] to the number of inputs.
+[57:21] In our case, we have the two inputs,
+[57:24] speed and steering angle,
+[57:27] and the flat output, so two-dimensional inputs,
+[57:30] the flat output was two-dimensional as well.
+[57:33] This is a key fact.
+[57:34] We take it for granted.
+[57:35] There is a reason for it.
+[57:36] In words, the system is differentially flat
+[57:38] if you can find a set of outputs such that
+[57:40] all states and inputs can be determined
+[57:42] from these outputs without integration.
+[57:45] So basically, I don't have to solve for differential equations.
+[57:50] The mapping here does not entail a solution
+[57:52] to any differential equation.
+[57:57] The reason why it's referred to as differentially flat
+[57:59] is because since I don't have the dependencies on x dot,
+[58:03] the flat output z are differentially independent,
+[58:07] which means that they are not related by differential equations.
+[58:10] For example, here, x and y,
+[58:13] they are not related by differential equations.
+[58:18] That doesn't make sense.
+[58:19] The general definition is not super intuitive.
+[58:25] So in order to appreciate it, understand it,
+[58:28] go back to the example that I gave you,
+[58:30] and map the concepts one to one.
+[58:32] Once you do that, this becomes clear.
+[58:34] Key point here is that I can find, basically,
+[58:36] subsets of states, and then if I just compute a curve
+[58:42] with respect to that subset of states,
+[58:44] I can then find the inputs that realize that curve,
+[58:47] which basically translates a complicated
+[58:50] objective optimization problem into the problem
+[58:53] of finding a path in a lower dimensional subset,
+[58:57] and then using mappings in order to pinpoint the controls
+[59:01] for the true system,
+[59:03] allow the true system to follow that trajectory.
+[59:06] Yeah?
+[59:07] So as you were doing a few examples,
+[59:08] I kind of followed step by step,
+[59:10] kind of bringing it back from this.
+[59:12] What was it about the simple car steering
+[59:14] that allowed us to find that set of outputs?
+[59:16] Right, so this is related to the other question.
+[59:18] What are the structural properties
+[59:20] of a linear system model that allow you
+[59:24] to find a flat output relation?
+[59:28] I'll get to that at the end of the lecture.
+[59:31] But yeah, that's like the million dollar question.
+[59:34] It looks magic, right?
+[59:36] It looks even more magic if we talk a little bit more
+[59:39] about the differential flatness implication.
+[59:41] As I said, what that means is that we can,
+[59:45] so every curve in the flat output space
+[59:49] that is differential enough
+[59:52] corresponds to trajectories in terms of x and u,
+[59:57] given by the transformation mappings.
+[60:00] Which practically means that I can just optimize
+[60:04] the curve in the flat output space
+[60:06] without reasoning about the underlying dynamics,
+[60:09] and then apply those mappings to automatically
+[60:12] account for the kinematic or dynamic constraints.
+[60:19] So practically, the reason why this is very useful
+[60:21] is that for the purposes of trajectory optimization,
+[60:24] it leads to a very simple three-step algorithm.
+[60:27] And this is what you would do in problem one
+[60:29] of the first p-sets.
+[60:31] Step number one, in general,
+[60:34] you're given initial and final conditions
+[60:36] for the state and the input.
+[60:39] Remember that the underlying problem
+[60:40] is trying to connect the initial condition
+[60:42] with the final condition.
+[60:43] You transform those conditions
+[60:46] in the conditions for the flat output variables.
+[60:49] Since the mapping beta and gamma
+[60:52] are actually one-to-one,
+[60:54] you can always do this transformation.
+[60:57] So given initial conditions in terms of x and u,
+[61:00] you transform those into initial conditions
+[61:03] for the flat outputs and its derivatives.
+[61:06] So usually this step is straightforward.
+[61:09] Once you do that,
+[61:10] so this should be z, so this is the typo,
+[61:12] I will fix it.
+[61:14] So once you do that,
+[61:16] you build a smooth curve in the flat output space
+[61:20] by using, for example, polynomial interpolation.
+[61:24] We'll see a little bit more about
+[61:25] polynomial interpolation in the next slide.
+[61:27] The y, yeah.
+[61:30] We denote the flat output as z, not y.
+[61:35] So we build a smooth curve,
+[61:37] and now we're just basically interpolating two points.
+[61:40] So we can use any technique you want for interpolation.
+[61:44] In this class, we will use polynomial interpolation.
+[61:47] We'll see a little bit more about
+[61:48] polynomial interpolation in the next slide
+[61:51] and also in your p-sets.
+[61:55] Once you have completed this trajectory,
+[61:57] then you just apply the reverse mapping beta and gamma
+[62:00] to obtain the values as a function of time
+[62:03] of the remaining state variables and the control inputs.
+[62:08] So super easy.
+[62:09] And since you're just doing computation
+[62:12] and what you're doing that is a bottleneck,
+[62:14] you're just computing this curve,
+[62:16] but it's just a polynomial interpolation,
+[62:18] so it's super fast.
+[62:19] I mean, you can find 100 hertz, super robust.
+[62:23] You know, and not just being fast,
+[62:25] but also having problems that are well-conditioned and so on.
+[62:27] This stuff usually is well-conditioned,
+[62:29] so super robust and reliable.
+[62:31] You don't want, I mean, this,
+[62:32] the lady who separated a part of your system,
+[62:35] you don't want your trajectory optimizer to crash saying,
+[62:37] none, fine.
+[62:39] Yeah.
+[62:40] Is the way the curve you create by interpolation
+[62:43] to create that effect the trajectory?
+[62:45] What's that?
+[62:46] Yeah.
+[62:47] So of course, there are many curves
+[62:50] that you could use for interpolation.
+[62:53] So we'll get in a couple of slides on saying,
+[62:57] okay, so I'm solving the feasibility problem,
+[62:59] but let's also try to inject some notion of optimality.
+[63:02] Not pure optimality, because that in general,
+[63:05] this framework does not allow you to do that,
+[63:07] but having a trajectory that is usually a good compromise.
+[63:10] But before that, let's talk even more about
+[63:13] polynomial interpolation.
+[63:15] The idea is that we want to join the flat output
+[63:22] in terms of initial and final conditions.
+[63:24] One way to do that is to represent each flat output variable
+[63:30] as some polynomial.
+[63:36] So d j t can be represented as the sum over i of a i j psi i t,
+[63:46] where psi i t are basis functions.
+[63:49] For example, we could have psi 1 t is equal to 1,
+[63:54] psi 2 t is equal to t, psi 3 t is equal to t squared,
+[64:01] psi 4 t is equal to t cubed.
+[64:05] So if you do that, we said that we're doing a cubic interpolation.
+[64:10] So what you want to solve for are the unknown coefficients.
+[64:15] Again, this is an effort to keep computation load low.
+[64:20] Instead of optimizing over the entire function,
+[64:23] you just optimize over coefficients of a parameterized function.
+[64:27] The more basis functions you use,
+[64:30] the larger the optimization space is,
+[64:34] the higher quality of the solution you get.
+[64:36] But then incur more computational time trials.
+[64:39] It seems like from what I've seen,
+[64:41] you're kind of designed to have pretty good progress.
+[64:43] Well, I'm not in the mind of, yeah.
+[64:47] But yeah, you can use other ways to do interpolation.
+[64:50] This is a very popular way in robotics
+[64:52] because it's very reliable, quite powerful,
+[64:56] very interpretable, simple to implement,
+[64:58] and so on and so forth.
+[65:00] And it does not entail complex numbers.
+[65:04] What if your basis functions exceeds
+[65:07] the dimensions of the problem?
+[65:10] Then it needs to become an optimization problem.
+[65:15] So then what do you do?
+[65:16] As I said, you translate the initial and final constraints
+[65:21] for the x and u into initial and final constraints
+[65:24] for your output variables.
+[65:27] And then you just establish a set of linear equations
+[65:31] that constraint the value of the interpolation coefficients
+[65:36] and you solve for them.
+[65:38] You might solve for them uniquely
+[65:40] or maybe there is not a unique solution
+[65:41] and then you have a cost objective
+[65:43] that you want to minimize for the coefficients.
+[65:45] Does it make sense?
+[65:47] So basically what we are saying is that
+[65:50] we reason in terms of polynomial splines
+[65:53] and we find the coefficients in such a way
+[65:55] that this polynomial spline actually obeys
+[65:58] the initial and final conditions.
+[66:02] In your p-sets, what you will do is to do cubic interpolation
+[66:06] in order to compute the trajectory for the model
+[66:09] we are focusing on in this class,
+[66:11] which is the unicycle model,
+[66:13] a dynamically extended version of the unicycle model.
+[66:16] You see that along the way
+[66:17] I'm providing additional references if you're interested.
+[66:20] Any questions here?
+[66:25] So key points.
+[66:27] Nominal trajectories can be computed
+[66:29] in a very computationally efficient way.
+[66:32] In particular, for example, through polynomial interpolation.
+[66:37] One aspect that we have glossed over is
+[66:40] what if, besides the differential constraints of motion,
+[66:43] so kinematic constraints,
+[66:45] we have additional constraints?
+[66:48] How do we account for that?
+[66:50] So that means that basically we need to transform
+[66:53] those constraints in x and u
+[66:56] into constraints for the flat outputs.
+[66:59] And in general, this transformation may be quite challenging.
+[67:03] In practice, what people do is to use constraints
+[67:07] in the flat output space that are good proxy
+[67:10] for the constraints that you have in x and u.
+[67:13] Usually, and this is a bit more advanced version
+[67:15] of differential flatness
+[67:17] that we're not covering in this class,
+[67:19] this amounts to providing constraints
+[67:21] in terms of curvature.
+[67:24] From an intuition standpoint,
+[67:25] if you have a curve that does a lot of these things,
+[67:29] it translates into a curve that requires
+[67:31] a lot of control effort.
+[67:33] So for example, if you want to minimize control effort,
+[67:35] you want to avoid these extreme changes in curvature.
+[67:43] In general, you can set up this problem
+[67:45] as an optimization problem with flat output variables
+[67:48] where you have additional,
+[67:50] so when you try to find the coefficients,
+[67:52] you try to not only solve the feasibility problem,
+[67:54] meaning matching initial and final values, conditions,
+[67:57] but also some objective.
+[68:00] An objective that is usually considered
+[68:02] is the jerk or snap of the trajectory.
+[68:08] Do you know what a jerk is?
+[68:11] I mean the jerk in the mathematical sense.
+[68:14] Yes, so the first derivative is referred to as velocity,
+[68:18] the second derivative is referred to as acceleration,
+[68:20] the third derivative is referred to as jerk,
+[68:23] the fourth derivative is referred to as snap,
+[68:25] the fifth derivative is referred to as crackle.
+[68:29] You didn't know about that one.
+[68:32] So we have, well, you know about velocity and acceleration.
+[68:36] Then there is a jerk, there is snap, and there is crackle.
+[68:44] So usually in differential flatness,
+[68:46] you try to find a trajectory that minimizes snap or jerk,
+[68:51] which basically means that you try to find a trajectory
+[68:54] that is nicely smooth.
+[68:57] You don't have these extreme oscillations,
+[68:59] because again, those correspond to trajectories
+[69:02] with a lot of control effort.
+[69:04] Usually optimizing for a snap
+[69:07] gives you a feasible trajectory that is good enough.
+[69:10] And this is, for example, a de facto standard
+[69:13] to compute trajectories for quadrotors or other vehicles.
+[69:17] If you see movies about autonomous quadrotors,
+[69:20] 95% they are running this algorithm with snap minimization.
+[69:26] So super powerful, super useful.
+[69:31] So in this class, we will consider
+[69:34] a specific set of constraints, which is, of course,
+[69:36] which is indeed very useful,
+[69:38] and a specific technique to address those constraints
+[69:41] in the context of differential flatness.
+[69:43] In particular, we consider the case of input bounds,
+[69:47] meaning how do we transform the constraint
+[69:50] that your input u has to be less than an upper bound,
+[69:56] so say velocity less than five meters per second,
+[70:00] how do we translate that constraint
+[70:04] into the flat output space?
+[70:06] The technique that we will see next time
+[70:08] is referred to as time scaling.
+[70:11] The idea of time scaling is that
+[70:13] in order to fulfill this constraint,
+[70:15] we first solve the problem
+[70:17] without accounting for that constraint,
+[70:20] and then we time and re-parameterize the trajectory
+[70:23] until that constraint is satisfied.
+[70:25] So basically, we increase the pace or slow down the pace
+[70:31] at which we move along the trajectory
+[70:34] until we are satisfied with the control bounds.
+[70:37] We'll see that next time.
+[70:38] It will also be reflected in the first problems of your PCET.
+[70:45] So I hope that now differential flatness is clear
+[70:47] and you appreciate the power of these methodologies,
+[70:49] but then it goes back to the equation
+[70:52] from a couple of your colleagues.
+[70:54] One is the system is differentially flat.
+[70:56] Now, you really want to use it everywhere,
+[70:58] but can you use it everywhere?
+[71:00] Now, unfortunately,
+[71:02] the existence of a general computable criterion
+[71:05] to check whether a system is differentially flat
+[71:08] does not exist.
+[71:10] So if you're starting your PhD
+[71:12] and you want to do a very ambitious PhD,
+[71:14] that could be a good research project,
+[71:17] but a very hard one.
+[71:19] There are actually necessary sufficient conditions,
+[71:21] but in general, they do not lead to a computable algorithm.
+[71:26] Only for some cases you can apply it,
+[71:28] but in general, you can't.
+[71:29] The reality is that if you have an interesting system
+[71:34] and you find out that that system is differentially flat,
+[71:37] you usually write a paper about it
+[71:39] because it's an important contribution to the literature.
+[71:43] And there are papers out there, some of them cited here,
+[71:46] whereby the authors provide a catalog of systems
+[71:51] that are known to be differentially flat
+[71:53] and for which the flatness mapping,
+[71:56] so basically those functions beta and gamma,
+[71:58] that relates flat outputs with x and u are provided.
+[72:02] This is, for example, a good reference.
+[72:04] And there are also more recent ones.
+[72:07] So here, I give you a little more references for this topic
+[72:12] if you want to get deeper into this topic.
+[72:15] In terms of application, differential flatness
+[72:17] is really an applied mathematics topic.
+[72:21] So if you're interested in going deeper
+[72:24] on the topic of differential flatness
+[72:27] using projective optimization,
+[72:29] I suggest these two papers from Richard Murray at Caltech.
+[72:34] This deals more with the nuts and bolts
+[72:37] of applying differential flatness
+[72:39] to projective optimization.
+[72:40] This is more an overview of what differential flatness is
+[72:43] and provides a catalog of systems
+[72:45] that are differentially flat, so very useful.
+[72:49] The book, this is the same book
+[72:51] that I referenced at the beginning,
+[72:53] also provides a nice discussion about differential flatness
+[72:56] for the specific application to wheel out the system.
+[73:00] So very relevant to us.
+[73:01] In particular, chapter 11, again,
+[73:03] is the chapter you should look at.
+[73:04] From a theoretical standpoint,
+[73:06] excellent reference is this book from Levine,
+[73:10] extremely mathematically dense,
+[73:12] so read this book with caution.
+[73:15] A slightly less mathematical version of this book
+[73:19] is the book from Rigato.
+[73:21] Those are really the books whereby you go
+[73:23] into the mathematical underpinnings,
+[73:27] like for example, necessary conditions
+[73:29] for differential flatness, sufficient conditions.
+[73:31] All of that for us is beyond the scope of this class.
+[73:34] For our class, what is important to know
+[73:37] is that the unicycle model,
+[73:39] the unicycle model that is the one that we use
+[73:42] for our robot, is differentially flat,
+[73:48] and the simple car model is differentially flat.
+[73:51] So for the sake of mobile robotics,
+[73:55] we are fortunate.
+[73:57] We can leverage differential flatness.
+[74:01] All right, so what we'll do next time
+[74:03] will be to continue the discussion
+[74:06] about differential flatness
+[74:07] in terms of how do we account for constraints,
+[74:09] in particular, input constraints,
+[74:11] through the notion of time scaling.
+[74:13] Then we're going to talk about the second part
+[74:16] of the two-step design.
+[74:18] How do we design the trajectory tacking control law?
+[74:24] So how do we do trajectory tacking,
+[74:26] and how do we solve for the closed-loop control laws
+[74:28] to stay close to the nominal trajectory?
+[74:31] All right, see you on Thursday.
+[74:37] Thank you.

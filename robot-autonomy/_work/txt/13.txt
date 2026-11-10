@@ -1,0 +1,1095 @@
+[00:00] So, today we enter the third part of this class, where we talk about robot localization
+[00:14] and mapping. To make sure everyone is on the same page, let's go back to our usual C-Think
+[00:21] Act paradigm to design an autonomous tech. As we said during lecture one, there are many
+[00:29] ways of architecting the autonomous tech. But the most common way it works is to consider
+[00:36] a four-module architecture, whereby we have a module that is devoted to perceive information
+[00:43] and do some pre-processing in terms of filtering, extracting relevant information in terms of
+[00:49] motion primitives, in terms of object detection and so on. Then the information extracted
+[00:54] from the perception module is given to the localization and map building module, whereby
+[01:01] fusing this information and possibly a prior information, the robot tries to understand
+[01:06] what it is in the world and what it is with respect to other objects in the world. Once
+[01:12] we have an understanding of the scene, we know where we are, then we can feed this information
+[01:17] to a decision-making module that is in charge of making high-level decisions. Do I change
+[01:22] the plane? Do I accelerate? Do I decelerate? And so on and so forth. And then this decision
+[01:28] is passed down to a trajectory optimization and control module that is in charge of translating
+[01:34] high-level decisions into actual control for the actuators of the vehicle.
+[01:38] So in module one, we have talked about the trajectory optimization control module. In
+[01:43] the past couple of weeks, we have talked about the perception module. Today and for the next
+[01:49] couple of weeks, we're going to talk about localization and mapping.
+[01:58] Now today, the goal is to learn the foundations of localization and mapping. As we will see,
+[02:04] a natural framework to frame the localization and mapping problem is the framework of probability
+[02:10] theory. Probability theory is one of the prerequisites for this class. But in order to make sure
+[02:16] that everyone is on the same page, I'm going to provide a quick overview of the probability
+[02:23] theoretical results that we need in this class. And then I will use them in order to derive
+[02:29] a foundational result in localization and mapping, which is the result of Bayesian filtering.
+[02:35] Basically, how do we refine our estimates about an uncertain quantity, in our case,
+[02:42] where we are with respect to the world and maybe what the map is, by sequentially ingesting
+[02:47] data?
+[02:48] So we will frame this process through the lens of Bayesian filtering. So I will go in
+[02:53] detail through that, because in the next three or four lectures, everything we will do will
+[02:58] be building on top of this foundational result.
+[03:03] So as I said, localization is one of the most important tasks for a robot. If you don't
+[03:10] know where you are and if you don't know where the objects are with respect to you,
+[03:14] you can be as clever as you want, but you can be neither safe nor efficient.
+[03:18] There are two main approaches to localization, and they are philosophically very different,
+[03:24] in many ways orthogonal. In the behavioral approach, the idea is to design a set of behaviors
+[03:30] that together result in the desired robot motion. So for example, a typical behavior
+[03:37] could be always follow the wall by keeping the wall on the right-hand side. That could
+[03:44] be one behavior. If you do so, chances are that you're going to explore the entire room.
+[03:51] Why the behavioral approach? And of course, you can then have multiple behaviors and mix
+[03:55] them.
+[03:56] So why the behavioral approach is so appealing? Well, one of the key reasons is that it avoids
+[04:04] too explicit reason about localization and mapping. You don't need to build a map in
+[04:10] order to perform such a behavior, and you don't need to localize yourself with respect
+[04:14] to the map. And arguably, it has also some sense of bio inspiration.
+[04:22] So at the end, what this means is that the behavioral approach is fairly easy to implement
+[04:29] and can be very robust. You're making very few assumptions about the world. On the other
+[04:35] hand, typically it does not scale to general environments. While follow the wall by keeping
+[04:44] it on the left-hand side could be a good strategy to visit this room. In general, it's not a
+[04:48] good strategy to visit any location in the world.
+[04:54] So there are a lot of works in the behavioral approach about how to best combine this behavior
+[04:59] in such a way that you retain a computational efficiency, and yet you have some notion of
+[05:03] generalizability. But the approach that we will be focusing on in this class is the so-called
+[05:13] map-based approach, whereby we keep an explicit notion of localization with respect to a map
+[05:21] that can either be known a priori or can be estimated on the fly. Typically, in self-driving
+[05:29] cars, you pre-compute the maps on the environment. Remember the keynote talk we had during week
+[05:34] one of this class for those of you that were in the lecture on Friday. But sometimes, a
+[05:40] robot needs to localize itself with respect to a map that is also estimated at the same
+[05:45] time. This is a problem of simultaneous localization and mapping.
+[05:50] The disadvantage of this approach is that it's more complicated. You need to be able
+[05:55] to reason about a map. You need to be able to reason typically probabilistically about
+[06:01] the localization, about where you are with respect to this map, and so on. So mathematical
+[06:05] is more complicated. Computation is more complicated. Every time you put more assumptions in your
+[06:11] computational framework, you are more fragile and brittle. In particular, one of the key
+[06:16] issues with a map-based approach is that you might have a diverging internal representation
+[06:21] of where you are, meaning that you're seeing that you are in some position, but in reality
+[06:25] you are three meters away, which, of course, for a self-driving car, for example, could
+[06:29] be disastrous. But having said that, it's a very flexible approach. It generalizes well
+[06:36] to basically any environment as long as you can detect landmarks that allow you to localize.
+[06:42] And this is basically the most popular approach for localization. So that's what we will
+[06:48] be doing in this class. But I just wanted for you to know that there are other approaches
+[06:54] that do not rely on the notion of a map localization that are also quite useful.
+[06:58] OK, so in the map-based approach, there are two main equations that need to be addressed.
+[07:04] The first one is, how do we represent a map? Do we represent it at a very granular level
+[07:11] as a sort of a three-dimensional grid, maybe very finely discretized? Or maybe we represent
+[07:18] it in a more abstract way, as a topological map, whereby we abstract away the specific
+[07:24] geometry of the scene, and we just reason about high-level constructs, like, for example,
+[07:30] a table, a wall, and so on, but we don't really discretize the space, the environment.
+[07:37] And each map representation approach has its advantages and disadvantages, and we'll see
+[07:42] them later on.
+[07:43] The second aspect that is what we will be discussing today is the aspect of belief representation.
+[07:50] How do we model the belief regarding the position within the map?
+[07:56] We will discuss next week the issue of map representation. Today, in the following lectures,
+[08:01] we will discuss how to represent the belief, assuming that we have some map representation,
+[08:06] and most importantly, how to update this belief as we get sequential data from our sensors,
+[08:12] such as ladders, cameras, and so on.
+[08:15] The key idea that we were going to exploit in this class, but it is very general in robotics,
+[08:22] is to represent a belief as a probability distribution that, number one, encodes a sense
+[08:29] of a position, and number two, it also maintains an estimate of an uncertainty in that position.
+[08:36] Now, there is a high-level concept.
+[08:41] There are very different ways of implementing this concept.
+[08:45] In particular, depending on what assumptions we make about the belief representation that
+[08:53] we use in our localization filter, we have different types of localization algorithms.
+[08:59] For example, the first choice as a designer is whether I want to consider a unimodeled
+[09:05] belief similar to the grade distribution of this class, where there is a peak, but there
+[09:11] is only one peak.
+[09:12] So you know that most likely you are here, but you have some uncertainty around.
+[09:19] Or you may consider a multimodel distribution, whereby you may have different peaks.
+[09:28] Now, if you're okay with the assumption that you have a unimodeled distribution, that you
+[09:33] brute force in your filter that your belief representation should be, for example, a Gaussian,
+[09:37] and you try to always re-project your estimate into a Gaussian.
+[09:42] Now, obviously a multimodel representation is more flexible, and in reality it is conceivable
+[09:49] that you might have two rough ideas about where you are.
+[09:54] So if I magically drop you in a room at Stanford, you might have an idea that maybe you are
+[09:59] in a video auditorium, or maybe you are in another auditorium.
+[10:02] Those will be the two peaks.
+[10:05] So why people sometimes consider unimodeled distribution?
+[10:08] Well, first of all, as we will see, is computationally more tractable.
+[10:12] And second of all, oftentimes it's a decent approximation.
+[10:15] So for example, if you're following a trajectory, so you know that you're moving locally with
+[10:21] respect to a given trajectory, you know that most likely you're going to be around that
+[10:26] trajectory.
+[10:27] So you don't need to go through the additional hustle of reasoning about multiple peaks.
+[10:32] But airfield engineering is a compromise between how much powerful you want to be in your representations
+[10:39] and how effective that is.
+[10:43] Second choice is whether you want to consider a continuous representation for your beliefs,
+[10:48] meaning that you can be at any point in your environment or a discretized representation
+[10:52] of your belief that would yield an histogram.
+[10:57] Each bar gives a sense of what is the percentage probability that I am at this location.
+[11:04] Say that y is the probability, x is the distance in a one-dimensional space.
+[11:16] Key question in a probabilistic representation about location is, how do we update a belief
+[11:24] based on a set of measurements?
+[11:27] And the key tool we will be exploiting is the tool of Bayesian filtering.
+[11:33] Now the Bayesian filtering is a probabilistic tool, which basically entails that all the
+[11:38] quantities that we're going to deal with in the context of localization and mapping will
+[11:43] be considered random quantities, in particular, random variables.
+[11:49] That is, functions that map the outcomes of an unpredictable process into a real number.
+[11:57] As you know, the name random variable is a bit of a misnomer because the random variable
+[12:02] is technically a function, so it's not a random variable.
+[12:07] But anyway, so you should be familiar with the notion of a random variable.
+[12:11] So as you know, and here is basically the review of the probabilistic tools that we're
+[12:18] going to exploit in this class.
+[12:20] As you know, random variables can be either discrete or continuous.
+[12:24] If they are discrete, random variables are characterized by a probability max function
+[12:28] that assigns the probability that a given random variable capital X.
+[12:34] So here in this class, we refer to a random variable as uppercase, with uppercase letter.
+[12:39] So the probability that capital X is equal to small x is a number.
+[12:44] This is the probability mass function that fully specify the behavior of the random variable.
+[12:50] Typically, one for notational brevity avoids the capital X equal and just writes P of X.
+[12:57] You should always read the P of X as P of capital X equals X, which means probability
+[13:02] that the random variable assumes the values of X is equal to P of X equals X.
+[13:07] This is something that someone gives you or you estimate from data.
+[13:12] Random variables, particularly the probability mass function, is a normalized function.
+[13:17] In particular, the summation over all possible values that the summation of the probability
+[13:24] over all possible values that the random variable can take on is equal to one.
+[13:29] And this is one of the axioms of a probability.
+[13:34] In the case of continuous random variables, the notions are pretty much the same.
+[13:41] Roughly speaking, what to do is to change summation with integrals.
+[13:45] Of course, mathematically it's more complicated than that.
+[13:49] There are a number of nuances that you would discuss in a more advanced class on probability
+[13:54] theory, like the notion of Lebesgue integration and so on.
+[13:58] But for the sake of this class, the main difference is that now with a continuous random variable
+[14:03] doesn't make sense anymore to reason in terms of the probability that capital X is equal
+[14:10] to X.
+[14:11] Since now you have a continuum of possible values of Xs, the probability that a random
+[14:16] variable takes a specific value, small x, is indeed zero.
+[14:22] Remember that probability at zero doesn't mean impossible.
+[14:24] Just mean probability at zero.
+[14:29] So for continuous random variables, the notion that matters is the probability that a random
+[14:33] variable falls within an interval with the lower bound a and upper bound b.
+[14:41] In particular, that probability is written as an integral from a to b of a probability
+[14:45] density function p of x dx, where px to x is the notion of the probability that the
+[14:51] random variable falls within the infinitesimal interval between x and x plus delta x.
+[15:01] So the main difference is that instead of talking about probability mass function, we
+[15:05] talk about density functions.
+[15:09] And as before, probabilities might be normalized, and in particular, the integral over the density
+[15:14] function over the range of values that the random variable can take is equal to 1.
+[15:29] So this is all stuff that you know.
+[15:31] Now we talk about things that you know as well, but they are more interesting.
+[15:36] In particular, in this class, we'll be talking about probability mass functions, so probability
+[15:41] density functions for multiple random variables.
+[15:44] Why?
+[15:45] Because we have to take into account simultaneously about the state, the stream of measurements
+[15:50] we're taking, the stream of controls we're enacting, and so on, and we want to reason
+[15:54] jointly about them.
+[15:56] So we define the joint probability for two random variables x and y.
+[16:04] Probability of, the notation is x and y, by definition as probability of capital X equal
+[16:13] x, and capital Y equal y.
+[16:20] So this is just a definition.
+[16:24] And an important concept, and actually fundamental concept, as we will see later on, is the notion
+[16:29] of independence.
+[16:31] We say that two random variables are independent if their probability mass function or probability
+[16:40] density function factors out.
+[16:47] Now this seems somewhat intuitive, but not obvious.
+[16:53] It will become obvious once we introduce the notion of a conditional probability, that
+[16:58] along with the bias theorem, forms the foundation for Bayesian future.
+[17:04] So let's assume that we know the value that the random variable y is taking on.
+[17:19] Oftentimes a random variable carries information about other random variables.
+[17:25] So it's legitimate to ask the question about how do we assess the probability of x given
+[17:29] that y is equal to some specific value.
+[17:33] This leads to the notion of conditional probability.
+[17:38] Given a value y such that py is greater than zero, the probability of x given y is defined
+[17:47] as the joint probability x and y over the probability of y.
+[17:58] Now also this seems quite intuitive, but it's not obvious.
+[18:02] So first of all, what is important to notice is that this is not a theoretical result.
+[18:07] So this is not something that we derived from other results.
+[18:09] This is indeed definition.
+[18:11] In some context, conditional probability is considered an axiom of probability theory.
+[18:18] So that's a definition.
+[18:19] Let's try to understand a little bit better why this definition makes sense.
+[18:23] This is the first time that I saw it.
+[18:25] It was, well, it kind of makes sense that we are renormalizing by the probability of
+[18:30] events that we know has happened, but it's not entirely obvious.
+[18:34] So consider the example where, so every time you have doubts about probabilistic results,
+[18:41] always reason about the interpretation in the event space, the so-called omega space,
+[18:48] the space of possible outcomes.
+[18:50] So let's assume that we have a rectangle whose area is equal to 1.
+[18:59] So let's define this set as, actually, let's define this set as A.
+[19:14] Let's say that the area is 0.75.
+[19:18] Let's define this set as B and has area 0.5.
+[19:36] And let's define this set as C with area 0.25.
+[19:49] Now if I just throw, without looking something to this rectangle, knowing that I'm always
+[19:58] so good that I always hit the rectangle, it's just random, what is the probability that
+[20:03] I hit the A subset?
+[20:08] 75%.
+[20:13] So just throwing randomly means that with uniform distribution, I'm going to hit any
+[20:17] point in the rectangle.
+[20:19] And so in that case, the probability of the event is just the area of that event, 0.75%.
+[20:28] So probability of A is 0.75.
+[20:32] So assume that I tell you that I throw the point somewhere in the area denoted as B.
+[20:51] So the area of B is 0.5, so the probability of B is 0.5.
+[20:57] So now that I tell you that somehow what I've thrown is in B, what is the probability
+[21:03] that I also hit the area A?
+[21:15] So what is the probability that I'm here?
+[21:20] 25%.
+[21:22] Why?
+[21:24] So the whole area here is 0.5, this area here is 0.5, this area here is 0.25.
+[21:41] So 50%.
+[21:42] Why?
+[21:43] You know that you are here.
+[21:47] And this area is, well the drawing is not perfect, maybe this one should be more like
+[21:51] here.
+[21:52] The whole area is 0.5, and the overlap is 0.25.
+[21:57] Is how?
+[21:58] Then, since I already know that I'm here, then what really matters is the ratio between
+[22:04] the intersection between the two sets, and the overall set where I'm sure I am.
+[22:09] So the probability of A and B is equal to 0.25, then probability of B is equal to 0.5,
+[22:25] so the probability of A given B is equal to 0.25 over 0.5, it is equal to 1,000.
+[22:38] I mean this is obvious, but sometimes with conditional probabilities one can get confused,
+[22:42] so that's why I want to reiterate the concept.
+[22:45] And again, this is a definition, but the reason why I'm doing this is such an easy example
+[22:51] is to show that this definition is actually very intuitive.
+[22:56] So now that you know that you are confined in a given subset of the sample space, then
+[23:01] it's reasonable to assign to the conditional probability the ratio of what is the size
+[23:08] of that confined sample space with the overlap between the two events.
+[23:15] Of course, if I tell you that I hit C, what is the probability that I also hit a point
+[23:24] belonging to A?
+[23:28] C is this space.
+[23:31] 100%.
+[23:32] The overlap is just 0.25 and this area is 0.25, so 0.25 over 0.25 is actually equal
+[23:43] to 1.
+[23:45] So you're just super familiar with this most likely, but oftentimes conditional probabilities
+[23:52] can be a very tricky concept, it's easy to get it wrong, always go back to the sample
+[23:57] space if you have any confusion.
+[23:59] Trust me, it's the only way to clear any confusion.
+[24:03] If you just put together probabilities, sometimes one can get confused.
+[24:06] Again, this is a definition, it's not a theoretical result, but as you see, it's a definition
+[24:11] that makes sense.
+[24:12] Now, in light of this definition, it's now clearer why we define independency the way
+[24:20] we defined it.
+[24:22] Let's assume that two random variables are independent, which by definition means that
+[24:26] they factor out.
+[24:28] If that is the case for independent random variables, probability of X given Y is equal
+[24:40] to probability of XY given over PY.
+[24:43] But since they're independent, those probabilities factor out, so this is PX, PY over PY, so
+[24:51] this is equal to PX, which clarifies why we define independence the way we defined it.
+[24:57] For two independent random variables, the probability of X given Y is simply given equal
+[25:03] to the unconditional probability, which basically means that Y does not carry over any information
+[25:10] about X.
+[25:16] So these are two most important, together with the bias theorem, the two most important
+[25:20] tools we use in this class.
+[25:21] That's why I spent 10 minutes on it.
+[25:24] Any questions here?
+[25:28] All right, so an additional tool is the tool of total probability, which is a quite convenient
+[25:36] trick that is fairly obvious, but it will require a proof that I'm not going to give.
+[25:43] Basically, it entails exploiting some of the axioms in probability theorem, in particular
+[25:50] the axiom about combining probabilities of non-overlapping events.
+[25:58] So what this theorem is saying is that probability of X can be written as the sum over all possible
+[26:11] values of Y, of a random variable Y, of P of X, Y, which, by the conditional probability
+[26:21] definition, can also be written as P of X, Y, probability of Y.
+[26:33] So this result for us is mostly a convenient trick, if you will, that says that to compute
+[26:43] the probability of X, assuming we don't know it, but assuming we know the joint probability
+[26:48] of X with another random variable Y, then I can just sum all the probabilities for the
+[26:56] joint random variables X, Y, for all possible values of Y, put them together, and then I
+[27:01] get the probability for X.
+[27:04] The reason why this is useful will become clear in a second when we talk about filtering.
+[27:10] We have obviously the analog for continuous random variables.
+[27:16] As usual, we change summation with integrals and probability mass functions with probability
+[27:22] density functions.
+[27:24] Again, these results will require a proof.
+[27:30] The proof is not so important, so just take it for granted.
+[27:33] But you go on Wikipedia, you have a two lines proof, if you will.
+[27:39] And now we get to the interesting things.
+[27:41] So an interesting fact that follows from the definition of conditional probability and
+[27:48] the axioms of probability is the notion of a bias rule.
+[27:59] The notion of bias rule allows us to invert the dependency, the condition in between a
+[28:07] random variable X and a random variable Y.
+[28:11] Before I state it, so this is basically a consequence of the conditional probability
+[28:19] definition and of the total probability theorem.
+[28:21] Before I state it, it assumes that Y is the data and X is some quantity that we want to
+[28:29] estimate.
+[28:30] Oftentimes, we don't know that distribution.
+[28:36] So what is the probability of a quantity given the data?
+[28:38] That's really what we would like to have.
+[28:40] So for example, what's the probability that we are at position X given the measurement
+[28:43] Y?
+[28:44] That's what we would like to estimate.
+[28:47] And usually, what you have is the probability that tells you what is the probability of
+[28:53] seeing some data given that you are at position X.
+[28:58] So for example, if I am at X, what is the probability that I obtain as a range measurement
+[29:03] for my ladder 30 centimeters?
+[29:07] That's what you have.
+[29:09] So the question is, assuming that you know the probability of your data given the quantity
+[29:15] that you are trying to estimate, for example, your location.
+[29:19] And given that you have some prior about the quantity that you're going to estimate, so
+[29:23] you have some general idea about where you are, how do you estimate the probability that
+[29:28] you are in some location given the data?
+[29:31] That's how we would be using this result.
+[29:34] But as I said, it is a straightforward application of the results of the conditional probability
+[29:41] and total probability theorem.
+[29:44] So in particular, if you want to characterize probability of X given Y, we know that this
+[29:52] is equal to by definition P of X, Y over P, Y.
+[29:59] But P of X, Y is also equal to P of Y given X, P of X.
+[30:11] This is the application of the conditional probability definition, but with respect to
+[30:18] the condition and with respect to X, as opposed to the condition with respect to Y.
+[30:23] So we plug this here.
+[30:24] So what we get is probability of Y given X, probability of X, over probability of Y.
+[30:35] Therefore, probability of Y oftentimes is more convenient to compute it, to use the
+[30:41] total probability theorem.
+[30:42] You don't typically have the probability of seeing the data Y, unconditional or anything.
+[30:49] What you have is the probability of seeing the data given, for example, your location.
+[30:54] So the way you write P Y by using the total probability theorem is to sum over all possible
+[31:08] instances of the random variable X i.
+[31:10] So P of Y by the total probability theorem is equal to summation of X prime of P of Y
+[31:16] over X prime, P of X prime.
+[31:21] The reason why I use X prime here is to differentiate this X, which is the specific value of the
+[31:29] quantity I'm trying to estimate, from X prime that are all the possible values of the quantity
+[31:35] I'm trying to estimate.
+[31:36] So this is just a summation of X.
+[31:41] Any questions here?
+[31:42] So mathematically, it's really application twice of the conditional probability definition
+[31:49] plus the application of total probability theorem.
+[31:54] For continuous random variables, E is the same as usual.
+[31:58] Instead of having probability mass function, these are densities, and instead of having
+[32:01] summation, we have integrals.
+[32:05] This is an interesting result in its own right, but in this class, we are opportunistic and
+[32:10] we only care about theoretical results if they allow us to do stuff.
+[32:13] And what this bias rule allows us to do is Bayesian filtering.
+[32:22] And thus, it has a central role in robotics.
+[32:26] In particular, this rule allows us to infer a quantity through the inverse probability.
+[32:34] We just specify the probability of data, assuming that X was the cause.
+[32:38] Specifically, as I said before, let's interpret Y as the data, as the measurements, range
+[32:44] on the ladders, and so on.
+[32:46] And X as the quantity we want to estimate, for example, location.
+[32:51] Then we can interpret, and this is the same bias rule I had in the previous slide.
+[32:57] We can interpret the bias rule as probability of location given the data is equal to the
+[33:02] probability of the data given the location times a prior over the location over the probability
+[33:11] of the data that we write explicitly through the total probability theorem.
+[33:16] Why?
+[33:17] Again, because typically, you are given the prior, you have a rough idea about where you
+[33:22] are.
+[33:23] Bias filters are iterative algorithms, usually, and so you start with initial condition that
+[33:27] is your rough idea about where you can be, that's the so-called prior.
+[33:31] You are given, for example, by characterizing your sensor, what is the probability of the
+[33:38] data with respect to your location.
+[33:41] That's something that you are tabulating in your computer.
+[33:44] And since you're given these conditional probabilities, you can also compute the probability of the
+[33:51] data by using the total probability theorem.
+[33:54] You know this, you know this, you know this, so you know the denominator, you know the
+[33:57] numerator, hence you can estimate this once you obtain the new data Y.
+[34:02] Fundamental.
+[34:06] Any questions here?
+[34:08] If you understand this, the next five lectures will be fairly straightforward.
+[34:11] If you don't understand this, the next five lectures will be hell.
+[34:16] Because we're going to push this to the extreme.
+[34:21] But the good news is that basically what we're doing is this thing over and over.
+[34:26] Now, notice that no matter what the values of X is, this denominator is always the same.
+[34:36] So typically, a more succinct way of writing the bias rule is by defining this denominator
+[34:45] as one over eta, and just write eta times P of Y given X, P of X.
+[34:53] The reason why we write eta is that this value does not depend on X.
+[35:01] So I might be interested in what is the probability of X equal 3, or what is the probability that
+[35:05] X equal 2.
+[35:07] That is answered by the bias rule, but each time I write the bias rule, I always use the
+[35:12] same normalizer.
+[35:13] So there is no need for you to compute these over and over.
+[35:15] For example, computationally, it would be silly if your code, you recompute this normalizer
+[35:21] over and over.
+[35:23] This may cause some confusion.
+[35:27] So again, there is nothing magic here.
+[35:30] The reason why I just call all this term as a constant eta is that it does not depend
+[35:35] on X, the quantity we're trying to estimate.
+[35:37] Think of this as the variable that we're trying to estimate.
+[35:41] Any questions?
+[35:42] Yeah.
+[35:43] You said you don't need to recompute, but you're going to be getting more data.
+[35:49] So is it not?
+[35:51] Yeah.
+[35:52] Once you have new data, of course you have to recompute it.
+[35:54] I'm saying you don't have to recompute it for all possible values of X.
+[35:58] Your code, what you will be doing is what is the probability of X equal 2, given Y.
+[36:05] Or probability of X equal 3, given Y.
+[36:08] Every time you compute this or this, you should always use the same eta.
+[36:11] So you just compute Y.
+[36:12] Yeah.
+[36:13] Of course.
+[36:14] Yeah.
+[36:15] Because remember, then now we have the dependency with respect to Y, if Y becomes dependent.
+[36:20] OK.
+[36:22] So one more abstract thing, and then we're ready to set up the localization problem.
+[36:28] So we can extend all the results we've seen so far in terms of conditional probabilities
+[36:35] and in terms of independence and so on to the case where we condition on any arbitrary
+[36:45] random variable.
+[36:46] We say Z.
+[36:47] In particular, assume that we know that an additional variable Z takes on the value small
+[36:54] Z.
+[36:55] We define similarly the probability of X given Y Z as probability of Y given, OK, so it's
+[37:02] a bias rule.
+[37:03] Probability of Y given X Z, probability of X given Z, over probability of Y given Z.
+[37:08] So we just keep the conditioning on Z.
+[37:10] And of course I could have more.
+[37:16] And likewise, probability of the independence, we say that the two random variables X and
+[37:21] Y are independent given Z if their conditional probabilities with respect to Z factor out.
+[37:32] So basically these are the same results as before, we just keep these conditionings through
+[37:36] Z.
+[37:37] Again, this is a definition.
+[37:41] What I'm trying to say here is that if we add additional conditioning, then the definition
+[37:46] will stay exactly the same.
+[37:49] Now something that people sometimes confuse is that conditional independence, so the fact
+[37:58] that two random variables X and Y are independent given Z, does not imply absolute dependence.
+[38:08] So you might have two random variables that are conditional independent, but they are
+[38:12] dependent when you remove the condition.
+[38:15] I will see a very explicit example in the robotics context later on.
+[38:20] Likewise, absolute independence does not imply that conditioning on Z, those two random variables
+[38:26] are independent, simply because that Z may carry over some information that relates X
+[38:33] and Y.
+[38:37] You can be the fairly easy counterexamples.
+[38:42] So nothing new here, just saying that if you add conditioning variables, the definitions
+[38:48] stay the same.
+[38:49] So you just have to be consistent in keeping that conditioning.
+[38:55] With addition, don't be confused by the notion of conditional independence and absolute independence.
+[39:01] They're not equivalent.
+[39:02] You may find cases whereby the two do not imply each other.
+[39:11] One more theoretical result, but it's really straightforward, is the notion that the probability
+[39:16] distribution of a random variable fully describes what that random variable is.
+[39:20] But oftentimes, because of computational tractability, we want to have some succinct information about
+[39:26] that probability distribution.
+[39:27] Probability distribution is a function.
+[39:29] So it's difficult to work with, it's a high-dimensional object, and so on.
+[39:33] So you want to find some representative numbers.
+[39:36] Two of the two most important representative numbers are the expectation.
+[39:41] The expectation is defined as the summation of X, the possible values the random variable
+[39:47] can take, times the probability that the random variable takes that value.
+[39:54] It's basically the most likely event, in a way.
+[39:57] For continuous random variables, the same with the integral.
+[40:01] The important thing is that the expectation, since it's defined as the summation over outcomes,
+[40:07] is a linear operator.
+[40:09] Which means that the expectation of A X plus B, where A and B are two given numbers, is
+[40:18] equal to A expectation of X plus B. This is one of the very few results in probability
+[40:25] theory that holds without any assumptions, just by structurally exploiting the properties
+[40:31] of the summation.
+[40:36] If you have a vector of random variables, then the expectation of a vector of random
+[40:40] variables is simply the vector of expectations.
+[40:42] You take the expectation for each component.
+[40:46] So the expectation is one number that you can use in order to more concisely summarize
+[40:54] probability distribution.
+[40:56] The other quantity is the quantity of covariance that encodes the notion of a measure of the
+[41:06] joint variability of two random variables.
+[41:09] And the covariance is defined as, well, as it is written here.
+[41:16] Expectation of X minus expectation of X and Y minus expectation of Y.
+[41:20] Gives an idea of what is the notion of joint variability between these two random variables.
+[41:29] If one moves X in some direction, Y moves in another direction in a completely random
+[41:35] way, then the covariance will be zero.
+[41:38] If instead they are property aligned, maybe because they are aligned on the line, then
+[41:41] you have other one of minus one, if they are normalized.
+[41:45] You can write down that the covariance can also be written in this form, that sometimes
+[41:50] is easier to work with.
+[41:53] Prove this.
+[41:54] It's very simple as an exercise.
+[41:56] Anyway, so key point here is that expectation has the notion of a post-party event.
+[42:02] Covariance is a measure of the joint variability between two random variables.
+[42:06] You should really be familiar with it.
+[42:09] Just making sure that your risk composites are fresh in your mind.
+[42:14] Okay.
+[42:17] Now there is an interesting part.
+[42:19] How do we apply all of this to the problem we care about, which is a problem of localization?
+[42:23] For now, for the next couple of lectures, we assume that the map is given.
+[42:27] So we just want to find ourselves within a given map.
+[42:31] Next week, we'll consider a more complicated problem, whereby the map is not given.
+[42:35] So simultaneously, you have to localize yourself with respect to a map.
+[42:40] Now, at a high level, a robot has two main ways that it can influence the environment.
+[42:46] First of all, the robot influences the environment.
+[42:51] Influence means that, for example, the robot moves in the environment by enacting control
+[42:56] actions.
+[42:57] And at the same time, by influence, I mean interact.
+[43:00] At the same time, it can gather information through measurements.
+[43:04] These are the two main ways.
+[43:05] So either you put actions, and then the robot does something in the environment, or it takes
+[43:09] measurements about the environment.
+[43:12] So in order to describe such an interaction, we accordingly define three key notions.
+[43:18] The notion of a state, the notion of a measurement, and the notion of a control.
+[43:22] In particular, the state is defined as a collection at time t.
+[43:27] So the state at time t, written as x of t, is the collection at time t of all aspects
+[43:33] of the robot and its environment that can impact the future.
+[43:36] So basically, it allows me to predict what will happen in the future, possibly probabilistically.
+[43:42] I'm not saying that prediction has to be deterministic, but probabilistically, I can predict what
+[43:46] happens in the future.
+[43:48] For example, the robot pose, where I am, the orientation, the velocity, location of objects
+[43:52] around the robot, and so on and so forth.
+[43:56] Useful notation is just notation.
+[43:58] The history of the state trajectory between time t1 and t2.
+[44:03] So xt1, xt plus 1, xt plus 1, xt1 plus 2, and so on, is simply written as xt1 colon t2,
+[44:10] the just notation.
+[44:13] We say that the state is complete, and is really oftentimes the definition of a state,
+[44:20] if no variables prior to xt can influence the evolution of future states.
+[44:25] We refer to d as the Markov property.
+[44:27] So what that means is that if I tell you xt, basically where you are, and I tell you what
+[44:33] the robots will do in the future, then you can predict where the robot will be in the
+[44:40] future.
+[44:41] And for that prediction, having additional information, such as previous states, carry
+[44:46] no additional information.
+[44:48] So your prediction will be the same.
+[44:50] Now critically here, I'm not saying that the prediction about the future has to be deterministic.
+[44:55] The prediction in general is stochastic.
+[44:58] For example, due to disturbances in how you move, for example, there are wind gusts and
+[45:06] so on.
+[45:07] But what I'm saying is that information about states prior to t do not affect that prediction.
+[45:14] You cannot improve that prediction.
+[45:17] Measurement, as I said, is a second important concept.
+[45:22] The measurements provide information about a momentary state of the environment.
+[45:29] Measurement could be like a range for a lighter.
+[45:32] So again, the notation is that the trajectory of measurements, so the sequence of measurements
+[45:37] from time t1 to t2, is compatible with t1 colon t2.
+[45:41] And finally, the control actions carry over information about the change of state in the
+[45:49] environment.
+[45:50] So u t1 colon t2 means u t1, u t1 plus 1, and so on.
+[45:54] So something that sometimes people are a little bit puzzled by is the key difference in terms
+[46:00] of uncertainty propagation between a measurement and a control.
+[46:05] A measurement, and the measurement data in particular, tends to increase a robot's knowledge.
+[46:10] Basically, you can constrain, for example, where you are.
+[46:14] A control action tends to induce a loss of knowledge.
+[46:18] The fact that the measurement tends to increase the knowledge of the robot is quite obvious.
+[46:22] It provides constraints on the underlying quantity we're trying to estimate, in particular
+[46:26] where we are.
+[46:27] But why control actions tend to induce a loss of knowledge?
+[46:33] So I know that I could be in this area.
+[46:42] I don't know exactly where.
+[46:43] I could be here.
+[46:44] I could be here.
+[46:45] I could be here.
+[46:46] I could be here.
+[46:47] But I could be anywhere.
+[46:49] So why control action induces a loss of knowledge?
+[46:55] Yeah?
+[46:56] Just saying the control is too moved, then the movement will not be exactly what it is.
+[47:02] So since once we enact a control action, we might have a disturbance, model mismatches,
+[47:08] and a number of stuff.
+[47:09] As we move, say that we are here, actually we might end up here, or we might end up here.
+[47:17] And since I don't know exactly where I am, I have to apply the same process for all possible
+[47:22] points that I could be, which means that basically the set is growing.
+[47:28] So localization, and particular Bayesian filtering for localization, is this kind of ballet between
+[47:34] measurement that decreases uncertainty and control action that increases uncertainty.
+[47:40] All right.
+[47:44] So now that we have the key ingredients, how do we describe their evolution through time?
+[47:49] That evolution through time will become essential in order to establish the filtering equations.
+[47:54] Well, as I said, we consider a probabilistic model.
+[47:57] So we assume that the state at time t is generated stochastically through a generative model.
+[48:08] In particular, the probability that the state at time t assumes the value x of x t, conditional
+[48:16] on the trajectory of the state, the trajectory on the measurement, and the trajectory of
+[48:21] the inputs is basically, so this probability mass function, probability density function,
+[48:26] is what fully describes the forward time evolution of the state.
+[48:31] Note here the indices.
+[48:33] So this is something that you may get confused.
+[48:37] P of x t depends on the state from 0 to t minus 1, z1 from 1 to t minus 1, and u from
+[48:44] 1 to t.
+[48:46] So why is this a typo?
+[48:47] Am I sloppy that I didn't put t minus 1 here?
+[48:50] No.
+[48:51] So the underlying modeling assumption, this is just a convention.
+[48:57] I could also do it in a different way.
+[49:01] The convention is that we get into a state x of t, we get a measurement, and then we
+[49:08] get a control that moves us to the next state.
+[49:11] So that's a sequence of events.
+[49:12] I could do it the other way around, but this is the most natural one.
+[49:16] Get into a state, get a measurement, take an action, and then move to the next state.
+[49:21] The stochastic process that describes that evolution is symbolically represented by this
+[49:28] probability density function, probability mass function p.
+[49:30] Now, a key assumption that we make in this class that is oftentimes but not always a
+[49:35] good assumption is that the state is complete, which means that no information prior to the
+[49:44] current time t minus 1 is useful in order to estimate where I will be stochastically
+[49:51] at the next time step.
+[49:53] What that means in practice is that the probability of x t conditional on the entire history of
+[49:59] the process in terms of states, measurements, and control is equal to probability of x t
+[50:04] given x t minus 1 and u t.
+[50:07] This is an example of exploiting conditional independence.
+[50:13] Conditional on x t minus 1, the probability of x t does not depend on all the other stuff.
+[50:20] Does that make sense?
+[50:24] That's the basic, most important assumption that we make.
+[50:28] In order to predict the state at time t, the only thing that you need to know is where
+[50:34] I am at time t minus 1 and what action I'm taking.
+[50:38] What is that not a good assumption?
+[50:41] First of all, if you augment your state vector in a way that is large enough, you can always
+[50:49] turn any problem into a problem that satisfies the Markov property.
+[50:54] But in general, if you don't do tricks, for example, let's assume that you are trying
+[50:57] to infer the intent of a human.
+[51:01] So when you're trying to change your lane, your action and your prediction about what
+[51:08] the human will do in the future does not depend just on what the human is doing right now,
+[51:13] but what is done maybe for the past two or three seconds.
+[51:15] So if that human has been driving recklessly for the past two or three seconds, then your
+[51:20] prediction changes.
+[51:22] So just the separation distance and the relative velocity in that case is not good enough.
+[51:28] But these are much more advanced and in particular part of my research, the research in my lab,
+[51:33] more advanced application.
+[51:34] For the sake of this class, the Markov property is good enough.
+[51:37] Why does the conditional measurement go away?
+[51:42] Because if I know that the measurements would allow you to pinpoint that you are Xt minus
+[51:48] one.
+[51:49] But if I already tell you that I am Xt minus one, then I'm done.
+[51:58] Similarly to the state equation, so this equation is referred to as the state transition equation,
+[52:03] allows me to transition from the current state, current control to the next state, probabilistically.
+[52:10] This particular model holds for the measurements and in particular we make the same Markovian
+[52:14] assumption.
+[52:15] The probability of the measurement at time t conditional on the entire history of the
+[52:21] robot is equal to the probability of Zt conditional on the current state.
+[52:26] So the fact that the measured range equal to 30 meters, given the time position Xt,
+[52:34] the probability of that measurement is exactly the same whether in the past I came from San
+[52:39] Francisco or I came from San Jose.
+[52:41] This is what it's saying.
+[52:43] This is very reasonable.
+[52:46] So putting everything together pictorially or through the lens of a dynamic Bayesian
+[52:51] network models, that's what happens.
+[52:54] Take a control, we go into the state, we take a measurement, based on the measurement, we
+[53:00] compute a control ut, then we get into Xt and the process repeats.
+[53:05] Note that in general, we don't know the state with certainty.
+[53:09] What we know is, of course, the controls because we decide them and the measurements.
+[53:15] These are latent variables that we do not get to observe, we're trying to estimate them.
+[53:19] So it's also referred to as a hidden Markov model, hidden because a part of the variables
+[53:24] are not accessible to us.
+[53:32] Given this, since we don't have the right access to the state X of t, we're trying to
+[53:40] estimate it, what mathematical objects can we use in order to capture the notion of estimate
+[53:47] about the state?
+[53:48] Well the notion that we use is the notion of belief.
+[53:52] A belief is a distribution that assigns a probability to each hypothesis with regard
+[53:57] to the true state.
+[53:59] So besides the fancy name, the belief is simply a function that tells you, so here's the definition,
+[54:05] the probability of Xt given the history of the measurements and the history of the controls.
+[54:11] So if I give you all the measurements from initial time one to t, and I give you all
+[54:15] the controls, what is the probability that your robot is Xt?
+[54:19] In general, your robot will be anywhere, and for each possible position, I assign a probability.
+[54:25] But complete probability mass function is referred to as a belief.
+[54:29] Turns out that for computational reasons, it is oftentimes useful to distinguish between
+[54:35] the belief that is really the object we want to compute, and then call the notion of estimate
+[54:43] about our location.
+[54:45] We want to distinguish that object from the argument of a prediction belief.
+[54:49] The prediction belief is basically an intermediary object that we will be using, intermediate
+[54:54] object that we'll be using in our filtering algorithms.
+[54:58] The intermediate belief is the probability of Xt as before, conditional on the history
+[55:03] of the measurement and history of the controls, but where the measurements go from one to
+[55:09] t versus one.
+[55:11] So what does that mean?
+[55:13] The belief is our belief about where we are before we account for the most recent measurement.
+[55:21] That's a prediction belief.
+[55:23] In the prediction belief, we account for the most recent control, but we do not account
+[55:28] for the most recent measurements.
+[55:29] In the belief, we account for both the most recent control and the most recent measurement.
+[55:36] The reason why we split these two is that the most general result in order to compute
+[55:42] the belief is a sequential algorithm, where first we account for the control and then
+[55:46] we account for the measurement.
+[55:47] So first we compute the prediction belief, then we compute the belief.
+[55:50] At the end of the day, that's what we care about.
+[55:52] Calculating the belief from the prediction belief
+[55:59] is called the correction or measurement update,
+[56:01] because basically we use a measurement
+[56:02] in order to refine our belief about the state.
+[56:06] Having said that, this leads to the fundamental algorithm
+[56:11] in terms of localization and mapping in robotics
+[56:15] for a map-based approach,
+[56:17] referred to as the bias filter algorithm.
+[56:20] This is the most general algorithm
+[56:21] to calculate beliefs,
+[56:24] and the applicability goes beyond robotics,
+[56:26] can be used basically for any major network model.
+[56:31] The key assumption is that the state is complete.
+[56:32] Basically we have a Markov process.
+[56:36] This is a very general algorithm,
+[56:37] plus basically with no assumptions.
+[56:40] As always, generality means that computation is a concern.
+[56:44] In particular, directly defined,
+[56:47] this algorithm is difficult to implement
+[56:49] and very seldom used.
+[56:51] So I'm going to discuss this algorithm.
+[56:52] What we're going to do in the next two lectures
+[56:54] are basically simplifications to approximation
+[56:57] that make this algorithm computable.
+[57:00] So what does the algorithm work?
+[57:02] So I'm going to go from the very abstract view
+[57:05] to semi-abstract view to the detailed view.
+[57:08] Semi-abstract view.
+[57:10] So this is a two-step iterative algorithm.
+[57:12] We start at time zero with a belief about initial states.
+[57:17] About initial states.
+[57:19] So as all algorithms that are iterative,
+[57:22] we have to start with an initial condition.
+[57:25] So we assume that the belief of X zero is given.
+[57:29] What did it do?
+[57:32] If you really have no clue about where you could be,
+[57:34] you just put a uniform distribution
+[57:37] over the entire Stanford campus,
+[57:38] if you assume you are at Stanford.
+[57:40] Or over the entire surface of the earth,
+[57:43] if you really have an absolute no clue where you are.
+[57:46] Okay, so then the algorithm is iterative.
+[57:51] Given as an input the belief at the time t minus one,
+[57:56] so belief of X t minus one.
+[58:02] So given belief of X t minus one,
+[58:07] and given the most current measurement Z t
+[58:11] and the most current and control U t,
+[58:14] I want to compute the belief of X t.
+[58:21] So I have an initial condition, and I assume,
+[58:24] okay, somehow I know the belief at time t minus one,
+[58:28] and I know the most recent control
+[58:29] and the most recent measurement.
+[58:31] How do we compute belief of X t?
+[58:34] The best we can do within our modeling framework.
+[58:38] So the idea is to use a two-step algorithm.
+[58:40] For each possible X of t,
+[58:46] remember that we don't have direct access to X of t,
+[58:48] so the best we can hope for is for each possible state
+[58:51] where we could be to compute the corresponding probability
+[58:54] we are there.
+[58:55] For each possible X of t,
+[58:57] first I compute the prediction belief.
+[58:59] So basically, I refine my prior
+[59:03] by taking into account the most recent measurements.
+[59:05] And second, I compute a belief by now counting for the,
+[59:11] this is a measurement of control.
+[59:13] Let's repeat it.
+[59:14] So I'm at time t minus one.
+[59:16] The first, so I have the prior
+[59:20] of where I am at time t minus one.
+[59:22] The first step is to refine that prior
+[59:24] to compute the prediction belief
+[59:26] by counting for the most recent control, U t.
+[59:29] The second step is then to account
+[59:31] for the most recent measurements
+[59:33] in order to compute the probability that I am at X t,
+[59:37] given the most recent measurement Z t and control U t.
+[59:41] And then I iterate for all possible values of X t.
+[59:44] So where are these two equations coming from?
+[59:47] So we're going to do derivation,
+[59:49] but the intuition is fairly simple.
+[59:53] So let's say first that we know the belief
+[59:58] at time t minus one,
+[60:00] and we want to understand how the notion of the control U t
+[60:03] allow us to refine this belief.
+[60:07] Well, I don't know exactly where I could be,
+[60:10] but X t minus one,
+[60:15] so one, or X t minus one,
+[60:19] two, X t minus one.
+[60:22] And so these are all possible hypotheses
+[60:25] about where I could be.
+[60:27] For each one, at time t minus one.
+[60:29] For each one, I know the relative probability
+[60:31] that I am there through the notion of a belief.
+[60:34] Now, assuming these are all possible states
+[60:40] from which I can arrive at X of t.
+[60:44] So these are all possible states
+[60:45] from which, through the control U t, I can arrive at X t.
+[60:50] So the reasonable thing to do is,
+[60:52] I know the probability that I could be here.
+[60:58] And I know, given that I'm here,
+[61:00] what is the probability that by using control U t,
+[61:04] I get to X t?
+[61:10] So overall, what is the probability that I am at X t,
+[61:16] given that I use control U t?
+[61:18] I consider all possible hypotheses.
+[61:20] I weight them by the probability
+[61:22] that each one of those hypotheses is true.
+[61:25] I multiply those probabilities by the probability
+[61:27] that if indeed this hypothesis is true,
+[61:30] then I'm going to get to X t.
+[61:32] Of course, if the probability of going
+[61:33] from X t minus one to X t, given U t is zero,
+[61:36] then certainly there is no way I can go to X t
+[61:39] from these possible values X t minus one.
+[61:42] And then I combine all of them.
+[61:43] So I do a summation.
+[61:45] This is a very high level.
+[61:46] We're going to derive it more formally.
+[61:48] But basically, what this equation is saying
+[61:50] is that the probability that I am at time,
+[61:54] I am at state X of t is equal to the summation
+[61:58] of the probability with respect to where I could be
+[62:02] at time t minus one.
+[62:03] And the probability that, assuming that is true,
+[62:05] by using control U t, I go to X of t.
+[62:12] Just to give you some intuition.
+[62:16] What is the probability that I'm here?
+[62:17] Well, let's look at where I could come here
+[62:20] from all the possible places
+[62:23] where I could be at the previous steps.
+[62:25] And let's account for what is the probability
+[62:27] that from all those previous places, I can come to here.
+[62:31] And then I sum all of them.
+[62:35] Okay, so that's the first step.
+[62:36] The second step is, what about measurements?
+[62:41] Well, I already know what is the probability
+[62:44] that I am at X t, given the control U t.
+[62:50] But then, let's modulate those probabilities
+[62:54] to see how compatible they are
+[62:56] with respect to the measurement that I get.
+[62:58] Maybe I have a very high probability of being X t,
+[63:02] but then if the probability of getting a measurement
+[63:04] at Z t given X t is very low,
+[63:07] then I should re-weight the probability
+[63:08] and bring it down to zero.
+[63:09] So, say that the probability of being at X t
+[63:13] before I consider a measurement is 0.7.
+[63:17] But then, the probability of getting a range measurements
+[63:19] of 0.3 meters, given that I'm at that value X of t is zero.
+[63:25] Then, now that I give you this information,
+[63:27] what is then the probability of being at X t?
+[63:31] Well, if I tell you that the probability
+[63:32] that observing that measurement is zero,
+[63:35] if you are at X t, then you should have played
+[63:37] the probability with zero.
+[63:39] Does it make sense?
+[63:40] So, basically here, we either enhance
+[63:44] or demodulate probabilities, depending on how compatible
+[63:47] they are with the measurements we observe.
+[63:50] Again, this is intuition.
+[63:51] We're going to do derivation, intuition.
+[63:53] In reality here, we are using, as we will see,
+[63:59] the bias rule, and so there is the Nupotlius normalizer,
+[64:03] we'll see in a second.
+[64:04] Normalizer eta means that this number here
+[64:06] does not depend on the specific value X of t
+[64:08] that you're computing.
+[64:09] Again, here we are iterating with respect to X t,
+[64:12] so that's why you don't want to recompute eta.
+[64:14] So, practically what you do is to compute all these factors,
+[64:18] sum all them, and that will give you the eta,
+[64:20] and then you just normalize.
+[64:23] Can you say some, can you say long space?
+[64:26] Well, you can do it anywhere you want,
+[64:28] as long as you normalize it,
+[64:29] and this is a probability distribution,
+[64:32] so the integral has to be equal to one.
+[64:35] So, does at least a high-level idea make sense?
+[64:38] The reason why we're spending so much time here
+[64:39] is that everything else that we're going to do
+[64:43] is basically a refinement of this fundamental algorithm
+[64:49] to make it computable, so something that you can code.
+[64:52] And in particular, in the problem set in homework four,
+[64:56] you will be coding a bias filter under the assumption
+[65:01] that your belief distribution is Gaussian.
+[65:03] This will be the EKF filter.
+[65:06] Okay, so let's explain the first step here,
+[65:09] and then I'll save the second step for Thursday.
+[65:12] So on Thursday, we're going to explain the second step,
+[65:15] so to derive the second step,
+[65:16] and then we work on making this filter computable.
+[65:20] I want to give it more slowly today,
+[65:22] because I really want to make sure
+[65:23] that everything here is super clear.
+[65:25] So before I go into derivation, any questions?
+[65:30] The first step is the easiest,
+[65:35] is really a straightforward application of the bias rule.
+[65:40] So the, actually, sorry,
+[65:43] the second step is the easiest, I will say.
+[65:46] It's a straightforward application of the bias rule.
+[65:49] The belief of X, T, so by definition,
+[65:51] the probability of X, T,
+[65:53] given the history of the measurement
+[65:55] and the history of the control,
+[65:57] actually, let me write down the bias theorem.
+[66:08] Probability of X given Y is equal to P of X, Y over P, Y.
+[66:13] It is equal to P over Y given X, P X, P Y.
+[66:22] There's bias rule.
+[66:33] So this is the definition of the beliefs.
+[66:36] So now we apply the bias rule with respect to X, T,
+[66:41] with respect to X, T, and Z, T.
+[66:46] So in particular, probability of X, so we keep,
+[66:50] so the variable, the extra conditioning variables
+[66:54] will be Z1 to T minus one, and U1 to T.
+[66:57] And we apply bias rule with respect to X, T and Z, T.
+[67:01] Okay, so apply bias rule.
+[67:04] Apply bias to X, T, and Z, T.
+[67:12] So X, T will be basically here,
+[67:15] and Z, T will be the Y here.
+[67:18] All the other variables are extra conditioning variables
+[67:20] that we keep, as we discussed before.
+[67:23] So probability of X, T given Z, T, Z1,
+[67:26] all the way to T minus one, U1 all the way to T,
+[67:29] is equal to probability of Z, T given X, T,
+[67:33] and all the extra stuff,
+[67:34] probability of X, T over probability of Z, T.
+[67:37] And we keep the extra conditioning variables.
+[67:41] Note that this quantity does not depend
+[67:46] on the specific value of X, T.
+[67:48] So this is our normalizer that we just defined
+[67:51] as eta minus one.
+[67:55] So what is this object?
+[67:57] So this is the probability of Z, T,
+[67:59] so of the current measurement, given the state,
+[68:05] the previous measurement, and the controls.
+[68:07] Remember that by the Markov assumption,
+[68:13] the probability of seeing a measurement Z, T
+[68:16] only depends on the current state and nothing else.
+[68:19] In particular, previous measurements,
+[68:21] given the current state,
+[68:23] given that we know the current state,
+[68:26] do not tell us anything more
+[68:27] in terms of how to predict the measurement.
+[68:31] So here, to go from here to here,
+[68:35] I apply the Markov property.
+[68:37] Again, this is critical.
+[68:41] So what it's saying is that the conditional,
+[68:44] and this is the notion of conditional independence,
+[68:46] conditional X, T, all the extra information
+[68:49] about the previous measurements and controls,
+[68:52] do not carry any additional information about Z, T.
+[68:55] This is the assumption that we're making.
+[68:58] So if we believe in this assumption, this is correct,
+[69:00] otherwise it's not correct.
+[69:02] Usually this is a good assumption, so this works.
+[69:06] What about the second term?
+[69:08] So this is the probability of X, T,
+[69:09] given all the measurement up to T minus one,
+[69:12] so up to the previous step,
+[69:14] and all the controls up to time T,
+[69:16] so up to the previous step and the current control.
+[69:20] By definition, this is the prediction belief,
+[69:24] the belief about the states
+[69:25] will account for the most recent control,
+[69:28] but not the most recent measurement.
+[69:30] So what we have just found out
+[69:32] is that the relation between the belief
+[69:34] and the prediction belief is through a multiplicative factor
+[69:38] that accounts for the most recent measurement.
+[69:43] This is something that we assume we know,
+[69:45] so we have characterized our sensor in a way,
+[69:47] so if I'm in a certain location,
+[69:49] I can predict what type of measurements I could get.
+[69:54] This is something that gets updated recursively.
+[69:58] So this comes from, so this will be step two
+[70:02] of the algorithm.
+[70:03] The prediction belief is computed in step one.
+[70:09] And eta is the normalizer.
+[70:10] Any questions here?
+[70:17] Well, okay, so it's time, let's do the first step.
+[70:20] So this seems slightly more involved, but not really.
+[70:28] So again, let's start from the definition
+[70:30] of the quantity that we're trying to characterize
+[70:33] with respect to what we already know.
+[70:34] Again, what do we know?
+[70:36] Is we assume that we know the belief at time t minus one,
+[70:40] and we know the state transition model,
+[70:43] and we know the measurement model.
+[70:45] In the first step, the measurement model
+[70:47] actually doesn't play any role.
+[70:49] So the prediction belief is the probability
+[70:53] of the state being equal to xt
+[70:55] given the history of the measurements
+[70:56] and the history of the controls.
+[70:59] But a total probability law,
+[71:01] and again, we use it as a trick
+[71:03] to make computation more tractable,
+[71:06] we express this probability by adding the conditioning
+[71:10] with respect to xt minus one.
+[71:12] What we do so from intuition standpoint
+[71:15] is because we want to leverage the knowledge we have
+[71:18] about the transition function.
+[71:20] So the knowledge that we assume we have
+[71:22] about how to predict the state at time t
+[71:24] given that we are at state t minus one
+[71:26] and we not control ut.
+[71:28] We're trying to relate what we want to compute
+[71:30] with what we know.
+[71:32] So we apply the total probability theorem
+[71:35] by using as, by considering extra conditioning variable
+[71:38] xt minus one.
+[71:39] Remember, total, I like to write it in a simple form
+[71:44] to show you that even though there is a quadrant there,
+[71:46] the concept is easy.
+[71:48] Remember that probability of x
+[71:50] is equal to the summation over y
+[71:52] over p of xy equal to summation over y
+[71:57] over p of, sorry, x given y py.
+[72:07] This is exactly what I'm doing here.
+[72:09] The clatter is that we have additional
+[72:10] conditioning variables.
+[72:12] But I'm adding the extra condition
+[72:13] with respect to xt minus one.
+[72:15] So probability of xt is the summation but integral
+[72:17] because we're assuming here we are in continuous spaces.
+[72:19] So probability of xt given xt minus one
+[72:21] and the history as usual,
+[72:23] probability of xt minus one and the history as usual.
+[72:26] Probability.
+[72:27] Now we apply Markov.
+[72:28] So Markov says that the probability
+[72:31] of being in state x of t given xt minus one
+[72:34] and the most recent control u t.
+[72:36] So that probability does not get any,
+[72:41] systematically the quantity does not get
+[72:42] any additional information given xt minus one and u t
+[72:45] if we assume that we also know all the previous measurements.
+[72:48] Knowing the previous state t minus one
+[72:51] and the current control is all we need
+[72:53] in order to estimate x of t.
+[72:56] So that's a Markov property again.
+[72:57] Before we applied it for the measurements,
+[72:59] now we are applying it for the state propagation.
+[73:03] Fundamental concept.
+[73:04] So from here, so this object, to go to this object,
+[73:08] apply the Markov property.
+[73:11] Now, this project, this component did not change.
+[73:18] So I just applied a Markov property here.
+[73:20] The last one, and not tricky,
+[73:24] but a little bit subtle, is that now we have,
+[73:28] so this first component, we keep it equal.
+[73:33] So this is a quantity where we assume we know.
+[73:36] So this is basically the state transition model.
+[73:39] And we already talked about it, for example,
+[73:41] during lecture one.
+[73:42] This really related to the kinematic model of your vehicle.
+[73:45] If another state, another control,
+[73:47] you know what will be in the future.
+[73:50] Difference here is that we are reasoning probabilistically
+[73:52] as opposed to the deterministic model
+[73:54] we were considering in lecture one.
+[73:57] So the subtle thing is here.
+[73:59] So here I have probability of x t minus one,
+[74:01] given the history of the measurement
+[74:02] up to time t minus one, and all the controls.
+[74:06] I'm saying that this probability
+[74:09] is equal to this probability,
+[74:10] whereby I still have x t minus one.
+[74:12] I still have all the measurements.
+[74:14] And I condition all the controls up to t minus one, not t.
+[74:18] So basically I removed the condition with respect to t.
+[74:22] So why is that so?
+[74:28] Well, so the thing is, if you think about the
+[74:34] dynamic bias net interpretation.
+[74:39] So we have u t minus one.
+[74:44] We go into x t minus one.
+[74:46] We get z t minus one, and then we get a new control, u t,
+[74:56] then go into x t.
+[75:02] But we're trying to estimate x t minus one.
+[75:05] So the fact that I tell you the control that I will apply
+[75:09] in order to transition to x t,
+[75:11] what type of possible information can carry
+[75:16] in order to better estimate x t minus one.
+[75:18] At best, u t is computed by using information
+[75:22] from z t minus one and previous measurements.
+[75:24] So it's basically a function of stuff
+[75:27] that I'm already conditioning over.
+[75:31] So u t is usually controlled,
+[75:34] so the control is a function of the measurements
+[75:36] that I've received so far.
+[75:37] So typically u t depends on all the previous measurements,
+[75:42] or most practically the previous measurements only.
+[75:45] So if I already tell you z t minus one,
+[75:47] knowing u t does not carry over any additional information.
+[75:51] So that's why these two probabilities
+[75:54] are actually a dense plot.
+[75:56] Does it make sense?
+[75:57] So here what I'm saying is that u t does not carry over
+[76:00] any additional information to estimate x t minus one.
+[76:03] The reason being is that u t,
+[76:06] for general output feedback policies,
+[76:08] that is control policies that are a function
+[76:10] of the measurements,
+[76:12] so that u t will be a function of z t minus one
+[76:14] and previous one.
+[76:15] So it will just be a more compressed version
+[76:20] of all the previous measurements,
+[76:21] but doesn't carry over any additional information.
+[76:25] Okay, but if that is so,
+[76:28] what is by definition probability of x t minus one,
+[76:30] given measurement up to t minus one
+[76:32] and control up to t minus one?
+[76:34] That's by definition is the belief at time t minus one.
+[76:37] And now let's go from the start to the end.
+[76:44] This is really step number one.
+[76:47] So I gave you a derivation for these two steps.
+[76:49] I also gave you the intuition.
+[76:52] So what we'll do next time will be to
+[76:59] start from the bias filter,
+[77:01] but now make it computable.
+[77:02] So making approximations is such a way
+[77:03] that we can use it in real time
+[77:06] in order to estimate the quantity we care about
+[77:09] in this context,
+[77:09] which is localizing the robot with respect to the map.
+[77:13] So I'll see you on Thursday.

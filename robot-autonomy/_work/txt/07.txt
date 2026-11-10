@@ -1,0 +1,1320 @@
+[00:00] All right, so today we're going to continue our discussion about motion planning by discussing
+[00:15] another class of algorithms referred to as sampling-based algorithms, which have become
+[00:20] quite popular in the field of robotics and robot autonomy.
+[00:25] In particular, as you know, the problem of motion planning entails finding a sequence
+[00:29] of actions that drive a robot from an initial position to a goal region, while avoiding
+[00:37] obstacles, respecting the dynamics of the system, and possibly optimizing a cost function.
+[00:43] Last time I had as an image of a motion planning problem an image of a discretized word, because
+[00:50] we focus more on grid-based approaches.
+[00:52] Here I have an image of motion planning where we have a continuous path, because today we're
+[00:57] going to look at algorithms that reason about the continuous formulation of motion planning,
+[01:04] where you're reasoning about the continuous path.
+[01:08] In particular, the goal of today is to learn about the class of algorithms referred to
+[01:11] as a sampling-based motion planning algorithms.
+[01:14] A good reading for the lecture of today is chapter 5 in the book of Steve Lavallee called
+[01:23] The Planning Algorithms.
+[01:26] So let's start from where we ended last time.
+[01:31] A critical point that I already made a few times, but I want to make one more time, is
+[01:36] that while the motion planning problem is defined in the workspace, you want to find
+[01:41] a trajectory that does not collide with obstacles.
+[01:45] The procedure, the process of building a trajectory really happens in another space, the configuration
+[01:51] space, the space of configurations that a robot can have.
+[01:58] Like in the case of a unicycle, where you have as a configuration the XY position of
+[02:04] the unicycle and the heading of the unicycle, the configuration space is three-dimensional.
+[02:10] Now the difficulty is that translating constraints that are defined in the workspace, in the
+[02:15] real world, into constraints in the configuration space is, in general, quite difficult.
+[02:22] In particular, to better explain this difficulty, this is the same sequence of figures that
+[02:28] I had last time.
+[02:29] I'm going to show how the difficulty in making this translation possible increases as the
+[02:37] number of dimensions of the configuration space increases.
+[02:40] Let's consider first the case of a triangular robot that wants to maneuver from initial
+[02:44] configuration to final configuration.
+[02:47] Here we're allowing the robot to only move in the vertical direction and in the horizontal
+[02:52] direction, meaning that the configuration space is two-dimensional and the workspace
+[02:56] is two-dimensional as well.
+[02:58] So the way that motion planning works is that we shrink the robot to point its configuration
+[03:04] and accordingly we enlarge the obstacles.
+[03:07] In this case it's fairly simple, so what we would do would be to slice the shape of
+[03:11] the robot around the obstacles and then the representation of the obstacle in the configuration
+[03:18] space of the robot would be this gray area plus the purple area, with the idea that if
+[03:25] the configuration of the robot, in this case taken to be the XY position of this corner
+[03:31] of the robot, is not in neither the purple area nor in the gray area, then the robot
+[03:38] in the workspace, what we really care about, is not going to be in condition with the obstacle
+[03:42] at all.
+[03:43] Does it make sense?
+[03:51] So we do the same for the other obstacle.
+[03:55] We do the same with respect to the boundaries of the environment, so we have to crop the
+[04:00] boundaries to make sure that our obstacle doesn't get outside of the boundaries of the
+[04:04] environment.
+[04:05] And now the problem has been translated into the problem of finding a path for a point
+[04:11] which represents the configuration of the robot, which as I said, would represent the
+[04:16] XY coordinates of this vertex of the triangular robot, then we just find the path knowing
+[04:25] that if the XY position of this vertex is collision free in the configuration space,
+[04:33] then the robot is going to be obstacle free in the real space, in the workspace.
+[04:38] So these are all good and fine, but now let's assume that we start considering a more complicated
+[04:45] model for the triangular robot, whereby apart from just translating, the robot can also
+[04:50] rotate.
+[04:51] So the configuration is both XY and theta, the heading angle.
+[04:56] In this case, the workspace is still two dimensional, but now the configuration space is three dimensional,
+[05:02] XY and theta, which means that we will need to carry out the same sliding procedure for
+[05:08] each fixed value of theta and incrementally build a 3D representation of the obstacles
+[05:18] in the configuration space.
+[05:19] So even though the obstacles in the workspace are two dimensional, now in the configuration
+[05:23] space, they will look something like this, fairly complicated three dimensional objects.
+[05:29] You can imagine how this procedure, as the configuration vector becomes larger and larger,
+[05:35] or if you start accounting for dynamics, becomes extremely complicated.
+[05:42] So the key point here is that when the motion planning problem is described in the real
+[05:47] world, also referred to as the workspace, it really lives in another space, the configuration
+[05:52] space, whereby the robot has been shrunk to a point and the obstacles have been enlarged
+[05:59] accordingly and represented in the configuration space.
+[06:03] So having said that, there are two main approaches to continuous motion planning, continuous
+[06:07] in the sense that we reason about the continuous trajectory.
+[06:11] The first approach to continuous motion planning, which is what we saw toward the end of the
+[06:15] lecture on Tuesday, whereby we build data structures, like for example, cell decompositions
+[06:23] that discretely approximate the continuous formulation of the problem without neglecting
+[06:30] any information that is necessary for the problem.
+[06:34] This is, in principle, the ideal approach.
+[06:39] The disadvantage of this approach is that in order to work, it requires the explicit
+[06:44] representation of the obstacles in the configuration space, which, as I said, is extremely challenging.
+[06:51] To build the cell decomposition, you need to have explicit representation of the obstacles
+[06:55] in the configuration space, which is very challenging.
+[06:59] This motivated the development of a second class of algorithms, simply based algorithms,
+[07:04] which only implicitly represent the obstacles in the configuration space.
+[07:10] And this is what makes them really work for complex motion planning problems.
+[07:15] I will discuss in a second what implicit representation of an obstacle in the configuration space
+[07:21] means.
+[07:27] The idea is as follows.
+[07:30] Using the obstacles from the workspace to the configuration space is hard.
+[07:36] But what is easy is to say, if a robot is a given configuration, say x, y, theta, would
+[07:43] the robot be in collision with an obstacle in the workspace, yes or no?
+[07:49] Such yes or no type of question can be easily answered by using a collision checker.
+[07:55] So the idea of a sampling-based algorithm is to avoid the explicit representation of
+[08:01] obstacles in the configuration space, and instead, probe the configuration space with
+[08:06] a set of samples that are drawn randomly.
+[08:10] For each sample, which is a specific instantiation of the configuration vector, we call a collision
+[08:17] checker asking the question, if the robot were to be at this configuration, would the
+[08:23] robot be in a collision, yes or no?
+[08:26] If the sample is collision-free, then we retain it.
+[08:31] If it actually will lead to a collision, then we discard it.
+[08:34] And then by using these samples, we build a roadmap or some variation of a roadmap that
+[08:40] we can leverage to compute a path.
+[08:42] I will give you explicit examples of algorithms instantiating this idea in a second.
+[08:48] Overall, this is the key idea behind the sampling-based algorithms.
+[08:54] As I said, to capture the structure of the configuration space by random sampling, then
+[09:00] use a black box component, a collision checker, to check if every sample configuration will
+[09:09] lead to a collision, yes or no?
+[09:11] And then use such a set of samples in order to build a roadmap.
+[09:17] A good reference for this is a paper, 2011, from Steve Laval, the same author of the book
+[09:23] I mentioned before.
+[09:27] Now before we go into specific instantiation of this idea by discussing some popular algorithms
+[09:35] implemented in this idea, let me say that the main advantages of this class of algorithms,
+[09:40] which has made them quite popular in the robotics domain, is that, as you will see, these algorithms
+[09:46] are conceptually simple.
+[09:48] Remember, when we were talking about combinatorial algorithms, we were talking about doing a
+[09:53] set of decompositions that require complicated geometric structures that require quite a
+[09:59] bit of coding and so on?
+[10:02] These algorithms are super simple to implement, say, 50 lines of code.
+[10:05] That's it.
+[10:06] Very difficult to make mistakes with them, which is a big plus.
+[10:11] Second of all, they are quite flexible.
+[10:14] For example, with the combinatorial algorithms, the set decomposition approach is really dependent
+[10:22] on how you represent your obstacles, like in a polygonal way.
+[10:26] It really depends on the specifics of your robots, whether it has dynamics or not dynamics.
+[10:32] These algorithms, as we will see, can be applied very broadly.
+[10:38] And in particular, they can be applied beyond the geometric case.
+[10:40] They can be applied to the case where we account for dynamics in a motion planning procedure,
+[10:45] can be extended to the case where we also account for uncertainty in environment, even
+[10:50] though we won't see it in this class, and so on.
+[10:52] There are disadvantages, as for everything in engineering.
+[10:57] First of all, as you will see, a key question is, how many samples do we need in order to
+[11:03] accurately cover the configuration space?
+[11:06] In general, there is no rigorous answer to this question, which means that you still
+[11:11] need some experience in order to select a good enough number of samples that you want
+[11:19] to use.
+[11:20] Second of all, if there is a path, these algorithms will most likely find it.
+[11:26] And actually, we're going to have more precise statements about this.
+[11:30] But if a path does not exist, in general, these algorithms won't tell you that it does
+[11:35] not exist.
+[11:36] The algorithm will continue running, and then you will continue waiting, but it will never
+[11:40] terminate saying, sorry, no path exists.
+[11:44] Which is annoying, right?
+[11:45] From an algorithm, you would like to know that if a solution exists, it finds it, and
+[11:49] if it does not exist, it tells you that it does not exist.
+[11:52] These algorithms, unfortunately, do not tell you that a solution does not exist.
+[11:57] But in reality, this is a mild disadvantage, because in practice, if an algorithm runs
+[12:03] for a long time, you know that most likely a solution does not exist, and that's what
+[12:07] you basically claim.
+[12:09] So today, we're going to discuss three main topics in the general umbrella of sampling-based
+[12:15] motion planning algorithms.
+[12:16] First, I'm going to discuss representative algorithms that are sampling-based and address
+[12:24] the problem of geometric planning, meaning we try to find a path that avoids obstacles,
+[12:29] but we do not account for dynamics in the motion planning procedure.
+[12:34] Then we consider the case where we actually account for dynamics in the motion planning
+[12:38] procedure.
+[12:39] In this case, motion planning is referred to as a kino-dynamic planning to make it explicit
+[12:44] that we're counting for dynamics.
+[12:46] And finally, I will discuss a fairly natural question, which is, does the probing of the
+[12:54] configuration space through the sampling procedure need to be random?
+[12:59] As I said, since the first description of these algorithms used randomized sampling,
+[13:08] but a natural question is, does the probing sampling sequence need to be random or can
+[13:16] be done actually deterministically?
+[13:19] Let's start with the geometric case.
+[13:22] Any questions so far?
+[13:28] So the key concept that is a bit subtle, and I will say that a number of roboticists out
+[13:33] there actually confuse this concept a little bit, is the main difference between combinatorial
+[13:38] and sampling-based is that the combinatorial algorithms explicitly represent obstacles
+[13:42] in the configuration space.
+[13:44] Sampling-based relies on implicit representation of obstacles in the configuration space through
+[13:50] this notion of sampling, whereby you just throw some possible instantiation of configurations
+[13:59] and for each one, you call a collision checker to see if those samples are in collision or
+[14:06] not.
+[14:07] By doing so, you only implicitly represent the obstacles because the obstacles are only
+[14:11] represented by the samples that have been declared respectively collision-free or not.
+[14:23] So there are two main approaches in the field of sampling-based planning.
+[14:28] The first approach is referred to as a multi-query planning.
+[14:33] Multi-query means that this class of algorithms give you a data structure that can be used
+[14:39] to solve any motion planning instance that you want.
+[14:45] Any means for any pair of origin and destination, you can use this data structure to find a
+[14:51] path.
+[14:52] Single-query instead of planners that allow you to solve only one instance of the motion
+[14:57] planning problem, basically for one specific origin and goal region pair.
+[15:04] Depending on your application, one might be preferable to the other one.
+[15:08] So the first algorithm that was proposed in the multi-query setting was the PRM algorithm,
+[15:15] Probabilistic Roadmap, which was devised about 20 years ago by Lydia Kavaraki and her
+[15:20] co-authors and has seen a lot of development in the subsequent 20 years.
+[15:27] The other approach, the single-query, is dominated by a class of algorithms referred
+[15:32] to as RRTs, Rapidly Exploring Random Trees, which was proposed a few years later with
+[15:38] respect to PRM.
+[15:39] It was proposed in 2001 by Lavallee and here there is a typo, it should be Kufner.
+[15:45] Lavallee is the same author of the book that I mentioned before.
+[15:50] And this algorithm as well has seen a lot of development in the past 15 years or so.
+[15:56] So what we're going to do now is to discuss in terms PRM and RRT, discuss the relative
+[16:02] advantages and disadvantages, and then discuss also some alternatives.
+[16:08] So let's consider PRM first.
+[16:10] The idea of PRM is fairly simple.
+[16:14] So let's say that this is the configuration space of our robot.
+[16:21] White means that this region is collision free.
+[16:25] So if the configuration of the robot is this point, remember that the configuration represents
+[16:30] the value for a configuration of the robot, specifically in the case of a unicycle, specific
+[16:40] values for x, y, and theta.
+[16:43] So if this configuration, so white means free space, gray means a set of configurations
+[16:50] that will lead to a collision for the robot in the workspace.
+[16:54] The way that PRM, in sampling base, we assume that we do not have an explicit characterization
+[17:04] of the free region of the configuration space.
+[17:06] So I'm showing it here because, of course, that notion exists, but the algorithm does
+[17:13] not have access to it.
+[17:15] So what the algorithm does is to throw a bunch of possible configurations.
+[17:21] Each one, again, corresponds to a given pose of the robot in the workspace.
+[17:26] For each one, we call a collision checker.
+[17:29] So we say, if the robot were to have this pose, would the robot be in a collision?
+[17:35] Yes or no?
+[17:36] In this case, the answer is yes, here you will be in a collision.
+[17:40] No, here you would not be in a collision.
+[17:43] So you discard all these samples that will lead to a collision, and you keep those ones
+[17:50] that would ensure that the robot is collision free.
+[17:54] And that's our implicit representation of the free configuration space.
+[17:59] The robot does not have access to these boundaries, but has an implicit characterization of what
+[18:04] is free through the samples that have been declared collision free.
+[18:11] Then what we do is for each sample, we try to connect that sample to neighbors.
+[18:20] Basically we try to answer the question, can I go from this sample to this sample in a
+[18:25] way that is collision free?
+[18:27] So in the case where we're solving a geometric problem, the best way to connect two points
+[18:31] is through a straight line.
+[18:34] So for each point, we look at the neighbor, for each sample, we look at the neighborhood
+[18:38] around that sample, and we try to connect that sample to all its neighbors.
+[18:46] In particular, we look for each sample x at all samples x prime that are within a ball
+[18:54] of radius r.
+[18:57] So you might say, why don't you try to connect each sample to any other sample?
+[19:03] In principle, that will give you a very dense graph that you could use to plan high quality
+[19:09] paths.
+[19:10] So that seems reasonable.
+[19:12] So why in practice people do not consider as radius in order to establish connections
+[19:18] to neighbors the full diameter of the environment?
+[19:25] Yeah, because that would require you to evaluate a lot of connections.
+[19:31] For each one of these connections, you will need to call a collision checker to make
+[19:35] sure that this connection is collision free.
+[19:38] Remember that the robot does not have an explicit characterization of the obstacles in the configuration
+[19:42] space.
+[19:43] So in order to check whether this edge is collision free, what in practice you had to
+[19:47] do is to discretize this edge in multiple configurations for each one called a collision
+[19:57] checker.
+[19:58] So you can see that the more connections you're trying to establish, the more computation
+[20:04] that you have to do up to a point where this cannot be run and you have time anymore, which
+[20:09] means that the algorithm is not useful anymore in general.
+[20:14] So you try to limit the size of these radius in such a way that you still connect to a
+[20:22] representative number of neighbors, but you don't do too much computation.
+[20:26] We discuss later on how to choose that radius in a way that represents a good compromise
+[20:33] between solution quality and computation.
+[20:37] So you establish these connections.
+[20:39] And once you've done that, what you have is a roadmap in your free configuration space.
+[20:46] And for any motion planning instance, which means for each pair of goal and starting
+[20:57] configuration and final configuration, what you do is attach your initial configuration
+[21:02] to the closest sample in the roadmap, your goal configuration to the closest sample in
+[21:09] the roadmap, like this.
+[21:12] And then you plan a path by using one of the pathfinding algorithms that we discussed
+[21:16] last time, like the Jextra or A star and so on.
+[21:21] And that's it.
+[21:23] As you can see, this is a very simple algorithm.
+[21:27] So once you have a collision checking module, which oftentimes is relatively easy, the collision
+[21:34] checking module only has to answer the question, if the robot is a dispose, is the robot going
+[21:39] to be in collision?
+[21:40] The robot is just evaluating the intersection in general between polygons.
+[21:44] It's still computationally intense, but it's not the end of the world.
+[21:48] So once you have that in place, once you have collision checking in place, then coding a
+[21:55] PRM algorithm is really a matter of 40, 50 lines of code.
+[21:59] Super easy.
+[22:00] Yeah.
+[22:01] Why do you only connect the certain end to the closest nodes?
+[22:04] Like, what if it leads you to go backwards first, or what if the graph is disconnected
+[22:09] and connected to one side instead of the other side?
+[22:12] Sure.
+[22:13] That can happen.
+[22:13] The only problem is that you don't have any.
+[22:18] So sometimes you have additional information that can guide you in that choice.
+[22:23] But usually, in absence of other information, this is the best you can do.
+[22:27] When you pick your initial and final configuration, and you go to the closest node, basically,
+[22:36] do you need to check that streamline?
+[22:37] Oh, yes, absolutely.
+[22:38] So it might be very well the case that this is actually, there is an obstacle here.
+[22:43] So there is an obstacle in the workspace that translates into the configuration space will
+[22:48] lead you to a gray area here, which would invalidate this edge, which means that now
+[22:53] you have to consider the second best.
+[22:55] Yeah.
+[22:57] Would it be more efficient to do more random samplings closer to the robot, and then less
+[23:03] further away from the robot?
+[23:05] Yeah, so there are a number of parameters that we haven't discussed about this algorithm.
+[23:09] In particular, how we select the radius, how densely we sample, something that will remedy
+[23:17] to the issue that you mentioned, and with which distribution.
+[23:21] So here, I just show a uniform distribution.
+[23:26] But in reality, as you said, a much better way to sample, and that's what people actually
+[23:32] do in practice, is to do non-uniform sampling informed by some players.
+[23:39] At the very least, you try to sample more closely toward your robot, toward your goal
+[23:44] region.
+[23:45] Sometimes, you have some understanding about what are the best pathways in the configuration
+[23:51] space, and so on.
+[23:53] A common trend, and also something that we work with a bit in the lab, is to use data-driven
+[23:57] methods, so basically machine learning methods, to learn good sampling distribution.
+[24:02] So basically, you solve one million motion planning problems, and then you have a neural
+[24:07] net that learns, given as an input, the representation of the obstacles in the workspace, what is
+[24:14] a good sampling distribution in the configuration space.
+[24:17] So that's an excellent question.
+[24:18] And just to make sure I understand, so we still presume that we know where all the obstacles
+[24:23] are in the workspace?
+[24:24] Yes.
+[24:25] Yeah.
+[24:26] That's the assumption of-
+[24:27] That's the input to the algorithm.
+[24:28] What we do not assume we know is the representation of them in the configuration space.
+[24:34] Then the other version is, what if the obstacles are time-varying in the workspace?
+[24:40] What if we have uncertainty about where the obstacles are in the workspace, and so on?
+[24:46] And there are answers to all those questions, but those are beyond the scope of this class.
+[24:50] Would it ever be worthwhile to somewhere down during the path to recalculate and resample?
+[24:59] Yes, absolutely.
+[25:00] So the way these algorithms are run, and that's why they need to run fast, is that you compute
+[25:06] this path, you execute the first part of it, and then you recompute the path in a receding
+[25:14] horizon matter, or in a repeated optimization matter.
+[25:19] So it really depends on the tempo of your dynamics, but usually, as a rule of thumb,
+[25:26] you want these algorithms to run between 200 milliseconds to a couple of seconds in order
+[25:31] to re-optimize quickly enough to account for variations in your environment.
+[25:39] How does the fluency checker actually work, because don't we still need like a full representation
+[25:43] of our- not a full representation, but a pretty big representation of our workspace like you
+[25:49] showed in the diagram before, because we would still need to find the intersection between-
+[25:53] But in the workspace, not in the computation space.
+[25:55] In the workspace, yeah.
+[25:57] Yes, well, so the problem becomes a purely geometric problem.
+[26:02] For example, sometimes there are some libraries to do that, or you can also use bullet and so on.
+[26:07] But the idea is that it's a purely geometric problem in the workspace.
+[26:10] You don't have to do any complicated transformation.
+[26:13] What you have is that each configuration corresponds to a pose of the robot, xy position, position
+[26:18] of the joint angles if you're a manipulator, and so on.
+[26:21] So now you have a certain configuration of the robot in the workspace, you have an obstacle,
+[26:26] and then you call bullet or something else to say, are these two geometric entities intersecting or not?
+[26:32] How you do that is not entirely straightforward.
+[26:35] But by now there are libraries that do that fairly reliably.
+[26:39] Usually, as a roboticist, you do not implement collision checker.
+[26:43] There are libraries out there that do a very good job.
+[26:45] What you do is to implement these algorithms.
+[26:49] Out of curiosity, do those algorithms convert the robot into the workspace
+[26:53] and then check the configuration collisions in the workspace, where they translate the obstacles into the configuration?
+[26:58] No, no, no.
+[27:00] But that's the whole point, that you don't want to do this translation because it's in general intractable.
+[27:04] So it's easier to translate the robot into the workspace than that.
+[27:06] We know that you translate, because every point indeed corresponds to a pose in the configuration space.
+[27:13] So then you just, well, yes, OK.
+[27:17] So if you will, you translate that pose into a set of points in the workspace that are taken up by the robot.
+[27:23] Yeah, that's how they work.
+[27:24] So the collision checking is done in the workspace, not in the configuration space.
+[27:30] Cool.
+[27:30] I like these questions because it really means that you understood this business of configuration space and workspace,
+[27:40] and also that I'm a good teacher, that I was able to communicate that to you.
+[27:44] So this graph sits in the configuration space?
+[27:47] Yes, absolutely.
+[27:49] OK, that question actually makes me more worried that I'm a good teacher because, yes, absolutely.
+[27:54] Although the point of this is that this is a configuration space.
+[27:57] This is the free space, the free area in the configuration space that we only implicitly present through this sampling scheme.
+[28:06] So you said that with these methods, we are, like this method runs infinitely if we can't find the path to find it?
+[28:16] Yeah, because say that we don't find a solution.
+[28:21] That you don't know whether you don't find a solution because you don't have a problem scheme that is fine enough,
+[28:29] or because actually there is no feasible solution.
+[28:31] So what you do is you redraw an additional n samples, making this quantization finer.
+[28:40] If you don't find a solution, you keep going.
+[28:42] But you never know whether if you don't find it is because you don't have enough samples,
+[28:46] or because there is no solution.
+[28:49] But if we are able to find the path to the final destination, it means we don't have a solution.
+[28:56] No, no, it means we don't have a solution up to this discretization.
+[29:01] Because think about this case.
+[29:03] So I'm just representing that road map around the starting point.
+[29:13] So you have a point here, well, more or less.
+[29:16] So this is your start goal, right?
+[29:19] So let's assume that now we have a situation, so that will be the start goal, the pink one over there.
+[29:26] And this will be the five blue neighbors, not immediate neighbors.
+[29:31] So let's assume that we have a planning problem that looks like this one.
+[29:37] So this will be obstacles in the configuration space.
+[29:41] So we try to establish this connection doesn't work.
+[29:43] We try to establish this connection doesn't work.
+[29:44] This does not work, this does not work, this does not work.
+[29:48] The algorithm will say, I can't find a path.
+[29:51] But if you sample more densely, then I can find a path to get out.
+[30:02] So by the way, these situations are referred to as bug traps in the motion planning literature.
+[30:07] Notoriously difficult to deal with.
+[30:10] They happen sometimes with planning for robotic manipulators where you have to maneuver in very tight spaces,
+[30:18] for example, to place a cup in the refrigerator and so on.
+[30:23] All right, so that's PRM in a nutshell.
+[30:27] So easy algorithm to implement, very general, tends to work pretty well, reliable, what they use.
+[30:36] It's a multi-query algorithm because if now you give me a different initial and goal position,
+[30:43] I would just connect them to the roadmap and I would solve the problem.
+[30:46] So it's not really specific to the initial and goal position.
+[30:52] The other class of, well, the other algorithm that is very popular under the umbrella of sampling-based algorithm
+[30:59] is the so-called RRT algorithms, which is a single-query algorithm that works by growing a tree or path
+[31:07] rooted at the starting configuration.
+[31:12] In particular, the way it works is as follows.
+[31:15] Let's assume that we have already grown a portfolio of a path.
+[31:25] It's really a tree which is rooted at the initial configuration.
+[31:28] The way it works is that we build this tree iteratively by sampling one configuration at a time.
+[31:36] So, for example, here we sample a new configuration that had one.
+[31:41] We collision check whether that configuration is collision-free or not.
+[31:47] In this case, it's collision-free, so we keep it.
+[31:50] Then we find the nearest point in the tree to that configuration.
+[31:58] Then we try to extend the tree either all the way to the newly sampled configuration or a fraction of the way.
+[32:08] Usually you don't want to extend it all the way because otherwise it will lead to trees with very long branches
+[32:14] that might lead to paths that are highly non-optimal.
+[32:18] So usually you just extend by, say, 10% of the distance or so.
+[32:24] Then you collision check this edge.
+[32:27] In this case, this edge is collision-free, and then you keep it.
+[32:30] And then you have added a new tiny branch to your tree.
+[32:36] And then you keep going.
+[32:37] So initially you start just from the root of the tree, which is the initial configuration.
+[32:44] And then you incrementally proceed with this process.
+[32:49] The sample new configuration.
+[32:52] Here, in this case, this configuration will be in collision.
+[32:59] But you still try to extend to it, at least in a way that your edge is collision-free.
+[33:06] And then you keep this edge, and so on.
+[33:09] You keep doing that, and eventually you will get to the goal.
+[33:16] Does that make sense?
+[33:18] So this is an incremental algorithm,
+[33:20] whereas the PRM algorithm is a batch algorithm.
+[33:25] In the PRM, you throw n samples, and then you build a roadmap.
+[33:29] Here you throw one sample at a time, and you incrementally build a tree.
+[33:35] It's single query, because we had built the tree at the initial configuration.
+[33:41] So if now you give me another initial configuration,
+[33:44] it's unclear how I will reuse this data structure to plan a path.
+[33:49] There are ways, actually, to make RT also multi-query.
+[33:53] But in general, it's a single-query algorithm.
+[33:56] So this is the procedure in more mathematical terms.
+[33:59] We sample a new configuration, which we call xrun.
+[34:02] Run stands for randomize.
+[34:04] We find the nearest vertex in the tree to xrun.
+[34:07] We extend the tree from the nearest neighbor to xrun,
+[34:12] in such a way that the extended edge is collision-free.
+[34:16] And then we update the tree with a new branch, and then we repeat.
+[34:21] In general, if you do this process, it would be very unlikely,
+[34:27] and actually it will have a probability 0,
+[34:30] that at some point you sample the goal tree,
+[34:32] and you get to the goal tree.
+[34:34] So RT is usually implemented with the so-called goal-biasing strategy,
+[34:39] whereby every few times you sample as a configuration
+[34:46] the goal configuration.
+[34:47] So basically, in that way, you try to see
+[34:50] if you can make a direct connection to the goal.
+[34:52] So say, every 20 samples, you sample non-randomly the goal configuration,
+[35:00] and then you try to extend the tree toward that goal.
+[35:04] It is referred to goal-biasing, because doing so,
+[35:06] you're biasing the growth of the tree toward the goal.
+[35:09] Practically, if you don't implement goal-biasing,
+[35:12] this algorithm really doesn't work.
+[35:13] If you implement goal-biasing, this algorithm works pretty well.
+[35:17] Do you want to check the goal if you're close enough?
+[35:20] Like, if you're really far away from the goal,
+[35:22] would you actually want to check?
+[35:23] Because then that edge would be really long.
+[35:25] Yeah, so there are about 3,000 papers
+[35:30] that are offspring of the original paper that proposed RT,
+[35:34] with all sorts of variations on the theme.
+[35:38] How much do we extend, when do we do it,
+[35:41] how do we select this fraction, zillions of it.
+[35:45] Because, again, this is an algorithm that you can implement
+[35:47] in very few lines of code, very general, works very well in practice.
+[35:51] Yes, absolutely, you could do that, as you could do many other things.
+[35:55] We're going to talk about one particular variation,
+[35:58] which is what makes this algorithm guaranteed
+[36:02] to find an optimal solution as the number of samples goes to UKD.
+[36:06] Knowing that there are another 2,199 variations on the theme.
+[36:11] But Optimize, of course, is one of the most important variations.
+[36:14] Any questions about this?
+[36:16] Can you go back a slide?
+[36:20] Yeah, to the point where it was all clear.
+[36:22] I had a question about the last argument,
+[36:24] which is why do you try to fully connect the graph
+[36:27] to all of its neighbors beforehand?
+[36:29] Oh, you mean for PRM?
+[36:31] Yeah, why wouldn't you just try to use some kind of heuristic
+[36:38] to go towards the end position and then only check
+[36:40] if the points are connected, if you might use them.
+[36:43] Right, there's work done in the bottom right of that graph,
+[36:45] which is never used.
+[36:47] And so the question is why would you do that?
+[36:49] So one of the very first variations for PRM
+[36:53] is to build the, so basically, sample.
+[37:01] Then, so the variation that I'm referring to
+[37:04] is referred to as a lazy PRM.
+[37:06] So roughly speaking, the way that lazy PRM works
+[37:10] is that once you have a sample, you just
+[37:12] build the graph by using connection to your neighbors,
+[37:17] but without collision checking those connections.
+[37:21] Then you run A star, and you find the path assuming
+[37:26] that there are no collisions.
+[37:27] And then you collision check the edges along the path.
+[37:31] If you have not found any edge in collision,
+[37:34] that's the optimal path.
+[37:35] If you do, you actually discard that edge,
+[37:39] and you rerun A star.
+[37:42] It's called lazy because in that case,
+[37:43] you evaluate collision checking only
+[37:46] when it is really needed to validate the terminal path.
+[37:49] In that way, you would, as you said,
+[37:51] avoid this wasted effort here.
+[37:55] This effort will not be wasted if actually you
+[37:57] plan to use the algorithm in a true multi-query setting,
+[38:02] meaning that you want to use it for all possible source
+[38:06] and goal destinations.
+[38:07] But if you do not want to do it, then lazy PRM
+[38:10] is the way to go.
+[38:11] Indeed, lazy PRM is one of the most popular implementation
+[38:15] of PRM.
+[38:16] I was going to ask if that's the main driving difference
+[38:19] you are going to use it for a multi-query or a single-query?
+[38:22] Well, yes.
+[38:23] OK.
+[38:24] Gotcha.
+[38:26] So this would be more computationally than single?
+[38:28] Yes, PRM is more computationally than TensorRCT by far.
+[38:32] And you can see why that is the case because in general,
+[38:36] roughly speaking, and we'll come back to this point,
+[38:39] here for each sample, we have to collision check
+[38:43] at least in the basic implementation.
+[38:44] For each sample, we have to collision check each edge
+[38:49] to enable it.
+[38:51] In RRT, we collision check only one edge per sample.
+[39:00] So it's much less computationally intense.
+[39:04] Just to share, are we taking kind of like an implicit thread
+[39:06] first approach where we kind of add a new edge to every node
+[39:11] and kind of go back to the beginning?
+[39:13] No, we don't go back to the beginning.
+[39:15] We're not to the beginning, but if we have a set of nodes,
+[39:17] right, a set of end nodes, are we just adding
+[39:20] one branch to each end node?
+[39:21] No, in RRT, we sample nodes incrementally.
+[39:27] So we don't have, like in the standard pathfinding setup,
+[39:31] you're given end nodes, and you try to find the best
+[39:34] way to explore all of them.
+[39:35] Here, we actually explore them.
+[39:38] So we build the graph incrementally.
+[39:41] Does that make sense?
+[39:42] So basically, we sample a node here, we extend.
+[39:45] We sample another node here, we extend.
+[39:47] Actually, this question brings to an interpretation of RRT
+[39:52] that is useful to understand what works better in practice,
+[39:57] which is the notion of Voronoi bias.
+[40:01] So the reason why RRT works well,
+[40:04] and it's called rapidly exploring random tree,
+[40:07] is that consider the vertices of the tree.
+[40:12] And consider the Voronoi diagram with respect
+[40:15] to the vertices of the tree.
+[40:17] A Voronoi diagram is basically a diagram
+[40:19] whereby you have partitioned environment into cells
+[40:23] with a property that within each cell, each point in that cell
+[40:29] is closer to the representative node of that cell
+[40:32] than to any other node.
+[40:34] So for example, here, this point is closest to this point
+[40:37] than to this point.
+[40:40] The boundary is the set of points
+[40:43] that is equidistant from these two nodes.
+[40:47] The Voronoi bias tells the following,
+[40:50] that at the frontier of the tree,
+[40:55] the Voronoi cells tend to be larger,
+[40:58] which means that the likelihood that you sample in this region
+[41:02] is larger.
+[41:04] The likelihood of sampling is proportional to the area
+[41:08] of the corresponding cell, which
+[41:10] means that basically there is a strong bias in the sampling
+[41:14] procedure towards sampling in unexplored regions.
+[41:19] So this is basically, going back to your question,
+[41:22] is related in a way to greedy search on an implicit graph.
+[41:26] Implicit because we still have to sample the graph.
+[41:30] So it's just one interpretation of why RRT is called
+[41:32] rapidly exploring random trees.
+[41:38] In practice, for high dimensions,
+[41:42] it's pretty tractable to compute the full Voronoi diagram.
+[41:47] No, you don't compute a Voronoi diagram for this.
+[41:50] The Voronoi diagram is only a conceptual structure
+[41:54] that we use in order to understand
+[41:56] why RRT work in practice.
+[41:57] In the field of motion planning, usually low dimension
+[42:01] is rule of thumb, but low dimension means 2 to 4.
+[42:05] Reasonable dimensions means 4 to maybe 12.
+[42:09] Beyond 12 is beyond what even these algorithms can do.
+[42:14] And the reason is quite simple.
+[42:16] So assume that you have a two dimensional problem.
+[42:21] And the problem is non-trivial in any other dimensions, which
+[42:26] means that at the very least, you
+[42:28] may want to consider a sample in this quadrant,
+[42:31] a sample in this quadrant, a sample in this quadrant,
+[42:33] a sample in this quadrant.
+[42:35] I would claim that at least you need four samples
+[42:38] to have a remotely decent coverage of the configuration
+[42:43] space.
+[42:44] Now, let's assume that we go to three dimensions.
+[42:47] So in order to put a sample in each quadrants in three
+[42:54] dimensions.
+[42:57] But that thing, right?
+[42:58] So how many samples do you need?
+[43:02] Right, so two to the three.
+[43:03] And then you go to four dimensions.
+[43:05] How do you call quadrant in four dimensions?
+[43:08] I don't know.
+[43:08] Anyway, 16.
+[43:10] So basically, just roughly speaking,
+[43:13] you need a number of samples that
+[43:15] grows exponentially in the dimensions.
+[43:17] So beyond 12, 13 does not work.
+[43:19] So what you do in those cases is to either decompose the problem
+[43:23] into subspaces.
+[43:26] Or in many cases, the problem is not
+[43:32] interesting in some of the dimensions,
+[43:34] meaning that you don't have collisions
+[43:35] in some of the dimensions.
+[43:36] So you just collapse some of the dimensions.
+[43:39] But this is beyond the scope of this class.
+[43:41] For the system we deal with, these algorithms are fine.
+[43:45] In particular, in this class, we deal mostly
+[43:49] between three and eight dimensions.
+[43:51] So we're good.
+[43:54] So in practice, when you're finding the nearest vertex,
+[43:57] do you use some fast running convergence?
+[44:00] Yes, we're going to go back to what are
+[44:02] the bottlenecks of these algorithms.
+[44:03] Nearness enabled search is certainly one of the bottlenecks.
+[44:07] And keep in mind that there are about,
+[44:10] say, at ICRA, which is one of the most important robotics
+[44:14] conferences that has about, say, 1,500 papers per year,
+[44:18] there are about 200 papers on motion planning.
+[44:20] So this is still a very active field.
+[44:22] Particularly, for example, the question of scalability
+[44:25] is still quite open.
+[44:28] So what about theoretical guarantees?
+[44:30] Unfortunately, in general, there are no theoretical guarantees
+[44:34] in finite time.
+[44:35] The only theoretical guarantees are
+[44:36] with respect to the asymptotic behavior of these algorithms.
+[44:40] Asymptotic means that we say something
+[44:43] in the case where the number of samples goes to infinity.
+[44:48] And in particular, the very first guarantees
+[44:50] that were derived are that a PRM with a constant radius
+[44:57] is guaranteed to find a feasible solution if one exists
+[45:00] as the number of samples goes to infinity.
+[45:03] So the probability that PRM does not find a solution if one
+[45:07] exists goes to 0 as n goes to infinity.
+[45:12] A similar theoretical guarantee exists for RRT.
+[45:17] As the number of samples goes to infinity,
+[45:20] then RRT is guaranteed to find a feasible trajectory, which
+[45:26] is OK.
+[45:27] I mean, it's not the best guarantee you can have.
+[45:29] It's a probabilistic one.
+[45:30] It's asymptotic.
+[45:31] But it's better than nothing.
+[45:34] In practice, as I said, they work pretty well.
+[45:37] Now, all these guarantees are the guarantees
+[45:39] that I just mentioned are with respect to feasibility.
+[45:42] What about quality of the path?
+[45:46] It turns out that RRT, in terms of quality,
+[45:50] does not do a good job.
+[45:53] In particular, oftentimes, as you will see in the P-sets,
+[45:56] RRT produces trajectories that have
+[45:59] a lot of zigzag, which means that the cost is large.
+[46:04] Actually, you can prove mathematically
+[46:06] that with non-negligible probability, in some instances,
+[46:10] RRT provides a path whose cost is a factor away
+[46:15] from the optimum cost.
+[46:17] So for example, in this case, you
+[46:19] can prove that it may happen that RRT
+[46:22] with a non-zero probability will select
+[46:24] as a path this very long one, as opposed to this blue one.
+[46:28] The exact reason why that happens,
+[46:30] we're not going to discuss it.
+[46:31] But there are a couple of references out there
+[46:34] that you can look at if you're interested.
+[46:37] This has prompted, in the past 10 years or so,
+[46:41] quite a bit of research in trying to understand
+[46:43] what additional conditions should be done to the algorithms
+[46:52] in order to ensure quality of the solution,
+[46:56] meaning having a property that says
+[46:58] that as the number of samples goes to infinity,
+[47:01] then we recover not just a feasible solution,
+[47:03] but actually an optimal solution.
+[47:05] So it turns out that if you choose for PRM the radius
+[47:12] with a scaling of log n over n to the power of 1 over d,
+[47:16] then PRM is guaranteed to find, with probability 1,
+[47:20] an optimal solution if 1 exists.
+[47:23] So log n, so n here is the number of samples.
+[47:26] D is the number of dimensions.
+[47:32] As n goes to infinity, log n over n
+[47:35] goes to 0, which makes sense, because basically,
+[47:39] as n goes to infinity, so we have increasing more samples,
+[47:43] we want to make the radius with respect
+[47:45] to which we find neighbors smaller and smaller in order
+[47:48] to contain the number of connections
+[47:53] that we want to make that are computationally expensive.
+[47:57] On the other hand, the ball has a radius in the dimension of n
+[48:07] over d, which means that with this scaling,
+[48:09] we are guaranteed that for all n,
+[48:12] we have roughly log n neighbors.
+[48:15] That's one last idea.
+[48:17] So there's a good trade-off between computation
+[48:20] and retaining enough connectivity of your roadmap.
+[48:23] And in particular, it turns out that with this scaling
+[48:25] or with the larger scaling, we are guaranteed
+[48:27] to find an optimal solution.
+[48:30] Now, it turns out, and this has been
+[48:31] a very influential paper, so it turns out
+[48:33] that it was a logical gap in the proof of this result.
+[48:38] So this result, as stated, is not quite correct.
+[48:41] So together with Kirill Solovey, who
+[48:45] is a postdoc in my lab and a couple of students,
+[48:47] I recently published a paper where we correct the proof,
+[48:50] but that required also changing a tiny bit the results.
+[48:53] In particular, the scaling should be respect to 1 over d
+[48:55] plus 1.
+[48:57] The plus 1, if you care, is due to the fact that in RT,
+[49:01] you sample the nodes incrementally.
+[49:04] So you also have to account for time as an additional state
+[49:08] variable.
+[49:08] So that's why you have plus 1.
+[49:10] But anyway, it's just a fine detail.
+[49:12] Similar optimality extension exists for RT.
+[49:17] In order to make RT an optimal sampling-based planner,
+[49:22] optimal means that as the number of samples goes to infinity,
+[49:24] you recover an optimal solution.
+[49:26] You have to do a couple of variations
+[49:28] to the RT algorithm.
+[49:30] Basically, you have to rewire some edges in such a way
+[49:35] that you straighten up your RT.
+[49:37] We're not going to cover the details.
+[49:39] But here, pictorially, I show you the typical output
+[49:42] of an RT algorithm.
+[49:44] You see that there is a lot of zigzag.
+[49:46] And zigzag doesn't really go away
+[49:48] as the number of points goes to infinity.
+[49:50] With RT star, we straighten up the path
+[49:53] by doing some local rewiring that I'm not explaining here.
+[49:56] So we have a much straighter path and hence optimal path.
+[50:02] So the key point here is that optimal variants of PRM and RT
+[50:08] exist.
+[50:09] And they require minor variation to the PRM and the RT
+[50:13] algorithm.
+[50:13] So that's good news.
+[50:15] And there are fairly rigorous mathematical statements
+[50:19] about the optimality in terms of a synthetic convergence.
+[50:24] So observation.
+[50:25] PRM, in general, for given n samples,
+[50:29] is the algorithm that gives you the highest quality solution,
+[50:33] because it carefully connects to the computational space.
+[50:37] RT is a much greener algorithm, going back to that question,
+[50:41] which means that it's faster.
+[50:42] Per sample, you only do one collision check.
+[50:45] PRM, in general, does log n collision checks,
+[50:48] because as we said before, the number of neighbors per sample
+[50:51] is about log n.
+[50:52] And then in PRM, you collision check connections
+[50:55] to every neighbor.
+[50:57] So much faster.
+[50:59] But in general, the quality of the path is poor.
+[51:01] Basically, it traps itself in the initial paths
+[51:04] that it finds.
+[51:05] And then it's unable to get out of those bad paths.
+[51:09] You can offset this behavior partially with the RT star.
+[51:13] But basically, the RT star represents an posterior fix
+[51:17] of what is bad in RT, which prompted Marisi's group
+[51:22] to design another algorithm referred to as FMT star.
+[51:26] The details are in the paper here.
+[51:29] Lucas Johnson was a former PhD student in my group.
+[51:32] He's now at Harvard.
+[51:33] Anyway, so the idea of FMT is to get the best of both worlds
+[51:40] from PRM and RT.
+[51:41] Basically, you tend to have an algorithm that gives you
+[51:44] the solution quality of PRM, but with the same computational
+[51:47] speed of RT.
+[51:49] And the way it works is quite similar to, I think,
+[51:51] what you were saying.
+[51:53] So the way it works is that, assume
+[51:56] that we have built a tree of a path.
+[51:59] And u1 and u2 are two vertices.
+[52:05] So it's a tree.
+[52:07] So it's a tree.
+[52:07] This is one branch.
+[52:08] This is the other branch.
+[52:09] u1 is terminal node for this branch.
+[52:12] u2 terminal node for this branch.
+[52:14] So the idea of FMT is that let's sample a new node, v.
+[52:20] And let's try to attach v to the branch such
+[52:25] that the cost to arrival is minimized,
+[52:28] neglecting possible collisions of the last step.
+[52:32] In particular, we connect v to the node u such
+[52:36] that the cost to arrive to u plus the cost of going from u1
+[52:40] to v, or the cost to go from u2 to v, is minimized.
+[52:47] In doing this, we are lazily neglecting collision avoidance.
+[52:55] We just gradually select the node
+[52:58] that minimize the cost to arrive to v, for example, through u2.
+[53:03] And then, of course, we have to call the collision checker
+[53:06] in order to validate whether this edge is in collision
+[53:09] or not.
+[53:10] In this case, this edge will be in collision.
+[53:13] So you might say, well, then you should consider connecting v
+[53:17] to u1.
+[53:18] The algorithm actually says, OK, I will just keep v altogether,
+[53:22] which means that for each sample,
+[53:24] you only carry out one collision check.
+[53:26] So the key thing that requires a little bit of math to prove
+[53:30] is that since we are lazily collision checking edges,
+[53:37] and sometimes we are suboptimally
+[53:39] connecting due to this laziness, we sometimes
+[53:43] do errors in building this roadmap.
+[53:45] But as the number of points goes to infinity,
+[53:47] such error becomes a vanishingly rare to the point
+[53:51] that it actually will cover the same graph of PRM,
+[53:55] but by only doing one collision check per sample.
+[53:58] So basically, we have, in a way, the computational complexity
+[54:01] of RRT, one collision check per sample,
+[54:03] with the solution quality of PRM.
+[54:08] This is the high-level idea.
+[54:10] There are a few additional details,
+[54:11] but this is basically the bottom line.
+[54:13] And if you will, it's related to the comment
+[54:16] that I think you made or somebody else made.
+[54:19] So why is you connect to your roadmap?
+[54:23] Why you're not more careful?
+[54:26] And instead of just greedingly connect,
+[54:29] you also come from the notion of cost to arrive,
+[54:32] which is very much in style of pathfinding algorithms.
+[54:36] Cool.
+[54:44] All right.
+[54:44] So somebody about sampling-based algorithms.
+[54:48] So the idea of sampling-based algorithms
+[54:50] is to represent obstacles in the workspace,
+[54:53] implicitly in the workspace, and then
+[54:55] to transform the problem of computing
+[54:59] a path of a trajectory into a bunch of subproblems
+[55:04] that are much easier to solve.
+[55:07] And in particular, the subproblems
+[55:08] are the problems whereby we try to connect two samples that
+[55:12] are close to each other.
+[55:15] The two main bottlenecks of sampling-based algorithms
+[55:18] are, one, the collision checker.
+[55:21] We already discussed it.
+[55:22] There are libraries out there that
+[55:24] do collision checking for you.
+[55:26] As a roboticist, typically, you don't
+[55:27] have to develop a new collision checker.
+[55:30] So you have to be aware that collision checking, in general,
+[55:34] is a time-consuming procedure.
+[55:37] The second bottleneck is presented
+[55:38] by nearest neighbor search.
+[55:40] As you were pointing out, we need to search for neighbors.
+[55:45] And even if you use dedicated data structures,
+[55:48] that can be computationally intensive.
+[55:51] But even in that case, there are good solutions
+[55:54] that work well both theoretically and practically.
+[55:58] Yeah?
+[55:59] In your diagrams, I didn't see any path collisions
+[56:02] between two feasible paths.
+[56:05] Are you also checking those collisions, too?
+[56:08] Path collisions between two feasible paths?
+[56:10] Yeah.
+[56:11] So first of all, there is no such a notion,
+[56:12] because these are paths for individual robots.
+[56:15] So the individual robot will take either one or the other.
+[56:18] So it will never crash with itself.
+[56:20] But of course, there are generalizations
+[56:25] of these algorithms to the setting
+[56:26] whereby you have multiple robots, in which case
+[56:30] you have to account for collisions
+[56:33] between trajectories of the different robots.
+[56:36] Dealing with multiple robots is complicated,
+[56:39] because quickly the configuration space
+[56:42] scales up, because now you're adding
+[56:44] the configuration of robot number one
+[56:46] and configuration of robot number two.
+[56:48] But there are techniques out there.
+[56:50] In particular, the book from Steve Navalle
+[56:52] covers some of these techniques.
+[56:54] But again, those are a bit beyond the scope of this class.
+[56:57] Oh, consistently?
+[56:58] Always uniform across the configuration space?
+[57:01] No.
+[57:02] As I was mentioning before, practically
+[57:04] it's done in non-uniform fashion.
+[57:06] Non-uniform could be either driven by a prior information
+[57:11] about a problem, say you want to sample more
+[57:14] closely to your robot, or maybe you
+[57:16] have some big idea about where the obstacle could
+[57:19] be in computational space.
+[57:20] But as I said, the other trend right now
+[57:22] is to use data-driven methods to learn non-uniform sample
+[57:25] distribution.
+[57:28] Very good point.
+[57:29] Yes, typically it's done in a non-uniform way.
+[57:32] But again, these are all variants
+[57:34] that unfortunately we're not going to cover in this class.
+[57:36] But I'm going to go, but I'm giving you
+[57:38] all the references for these variants I discussed at length.
+[57:43] Second step, kino-dynamic.
+[57:45] So you already know what kino-dynamic planning really
+[57:48] entails.
+[57:49] Now we want to find a trajectory that
+[57:50] not only avoids obstacles and possibly
+[57:53] optimizes the cost function, but also respects
+[57:56] the dynamics constraints of your system, which basically means
+[58:00] that at each configuration, your set of available motions
+[58:06] as represented by the velocity vector is constrained.
+[58:12] For example, with a car, you cannot move laterally.
+[58:15] You can only go forward or turn.
+[58:19] So the question is, how do we account for dynamic constraints
+[58:25] into planning by using sampling-based algorithms?
+[58:28] Conceptually, the good news is that this is relatively simple.
+[58:32] The implementation is much more complicated.
+[58:34] But conceptually, it's relatively simple.
+[58:35] And there are two main ways of handling dynamics
+[58:40] within motion planning with sampling-based algorithms.
+[58:43] The first approach is referred to
+[58:44] as a forward propagation-based approach.
+[58:48] The idea is to only rely on the forward propagation
+[58:52] of the dynamics.
+[58:54] Specifically, let's consider again RRT.
+[58:58] The way that the RRT can be implemented
+[59:01] to account for kino-dynamic constraints is relatively simple.
+[59:05] So what you do is to sample a new state randomly,
+[59:11] as you do with RRT.
+[59:18] So this is your tree.
+[59:22] I have a banded path, because now I'm
+[59:25] saying that we are doing kino-dynamic planning.
+[59:27] So the way we go from one sample to the next one
+[59:31] is not necessarily a straight line.
+[59:32] It might be a curved line, because we
+[59:35] have kino-dynamic constraints.
+[59:38] So we sample a new point, which we call x run.
+[59:43] So that's the line here.
+[59:45] We find the closest sample in the tree to x run,
+[59:53] say this one here.
+[59:56] And at this point, I select randomly
+[60:00] the amount of time through which I
+[60:04] want to forward propagate the motion of the vehicle.
+[60:07] And the control that I'm going to use in order
+[60:10] to forward propagate the motion of the vehicle.
+[60:14] So basically what I do is to solve the differential
+[60:17] equation x dot equal f of x near.
+[60:22] Sorry, hold on a second.
+[60:24] x dot equal f of x and u.
+[60:31] Let's call this sample x near.
+[60:36] With the initial condition x0 equal x near.
+[60:41] With a control input, input u, which
+[60:46] has been randomly selected.
+[60:57] So I call this input u bar.
+[60:59] And then I integrate this differential equation forward
+[61:02] for t time units.
+[61:04] So say that this will lead to a path that looks like this.
+[61:09] And then a stop.
+[61:10] And this is my new sample.
+[61:15] So just simulate the dynamics forward.
+[61:17] But you have certain constraints on the sampling of u, right?
+[61:20] It wouldn't go backwards?
+[61:21] No, so you randomly sample u in such a way
+[61:24] that it belongs to capital set u,
+[61:27] which is the set of available controls at that state.
+[61:35] So from intuition standpoint, that's probably the easiest
+[61:37] thing that you can do.
+[61:39] You just forward propagate your dynamics
+[61:40] in order to expand your tree by using
+[61:42] randomly selected controls and randomly selecting
+[61:45] horizon to forward expand your dynamics.
+[61:49] Why would you do that in a selection control?
+[61:52] It might not renew it in the right direction
+[61:55] towards the pointer.
+[61:57] That's right.
+[61:58] But the idea is that if you do this with one trillion nodes,
+[62:03] then chances are the sooner or later
+[62:05] you'll find something that brings you.
+[62:07] But it's completely uninformed.
+[62:09] And you are currently right.
+[62:10] So this is the simplest version of a sampling-based algorithm
+[62:14] for kinematic problems.
+[62:16] But as I said, it's extremely wasteful
+[62:18] because it does not capture any domain
+[62:22] knowledge about the problem.
+[62:25] So why would people consider this algorithm?
+[62:28] It's that in some cases, the structure of the dynamics
+[62:31] or the structure of the problem is so complicated
+[62:34] that that's the best you can do.
+[62:35] So this is your baseline.
+[62:37] If the problem looks desperately complicated,
+[62:40] at least you have this algorithm that you can basically always
+[62:43] implement.
+[62:44] But in some cases, in many cases, actually,
+[62:47] and this goes back to your point,
+[62:51] you can exploit domain knowledge.
+[62:53] And in particular, what I refer to here as domain knowledge
+[62:56] is the following.
+[63:01] Let's assume that now, again, I sample a new node, Xand.
+[63:09] But we spent two weeks on a trajectory optimization
+[63:12] that basically is the problem of finding a trajectory that
+[63:17] connects two points.
+[63:19] So now, instead of just randomly selecting an input,
+[63:23] you solve a trajectory optimization problem
+[63:26] that optimally connects these two samples.
+[63:28] This provides a much more direct way to get to your goal.
+[63:32] And a much less wasteful way of sampling controls.
+[63:36] What is the downside?
+[63:37] That now, instead of forward propagating the dynamics,
+[63:41] here, you're solving a trajectory optimization
+[63:47] problem, which is more computationally intense.
+[63:53] And that's where we actually bring together
+[63:55] the field of motion planning and trajectory optimization.
+[63:57] Kinonomic motion planning, if you
+[63:59] want to account for domain knowledge,
+[64:01] amounts to breaking the problem into small trajectory
+[64:04] optimization problems, solve for those,
+[64:08] and then a posteriori collision check for this path.
+[64:12] Does it make sense?
+[64:14] So in some cases, this trajectory optimization
+[64:16] can be done analytically or by solving
+[64:19] simple systems of linear equations,
+[64:21] like by using differential flatness.
+[64:23] In some other cases, you need to use
+[64:25] full-blown optimal control methods,
+[64:28] such as indirect methods or direct methods,
+[64:31] best thoughts to the graduate students last week.
+[64:34] Up to a point where it becomes so complicated,
+[64:37] then then you go back to RRT with the forward expansion.
+[64:40] Is it harder to collision check a current line
+[64:44] generated by motion planning as opposed to a circle?
+[64:46] No, it's the same.
+[64:47] Because the way you do it is that you discretize the edge.
+[64:51] Each point corresponds to a configuration.
+[64:53] So you again call the very circle.
+[64:55] So you don't necessarily use the linear structure
+[64:56] in the previous example?
+[64:57] No.
+[64:58] Yeah.
+[64:58] For collision checking, it's just a black box
+[65:00] to give and dispose, M and a collision.
+[65:02] That's exactly the same question that you answer,
+[65:04] either in this setting or in the other setting.
+[65:09] Yeah?
+[65:12] In the trajectory optimization situation,
+[65:15] what if you randomly sampled a point that was not
+[65:19] available in your space?
+[65:21] It is not reachable.
+[65:22] Yeah, it is not reachable because of the dynamic.
+[65:24] Yeah, no, great question.
+[65:25] So one of the nuances of kinematic planning
+[65:28] is that not only you have to reason about collision
+[65:32] avoidance, but also about no reachability
+[65:36] of some of the configurations.
+[65:39] In particular, and this is related to this point here,
+[65:43] the two differences between running, say,
+[65:47] PRM or FMT star with and without kinematic constraints
+[65:52] is that if you want to account for kinematic constraints,
+[65:55] the connection between two points
+[65:57] is not a straight line with actually a solution
+[65:59] to trajectory optimization problem, number one.
+[66:02] Number two, when you want to find neighbors,
+[66:06] you're no longer just finding points within a given radius.
+[66:11] That is really meaningless for kinematic systems.
+[66:13] You have to somehow account for the dynamics of your system,
+[66:17] in particular through the notion of reachable sets.
+[66:20] What is a reachable set?
+[66:22] Let's assume that this is the pose of your robot,
+[66:24] like a unicycle.
+[66:28] The reachable set is the set of points
+[66:32] that can be reached within time t.
+[66:36] So why it has this weird form is that for a car,
+[66:41] reaching a point in the forward direction
+[66:44] is easier than reaching it in the lateral direction,
+[66:46] because to reach a point in the lateral direction,
+[66:48] you have to go forward, say, and then backward,
+[66:53] which means that the amount of travel
+[66:55] that you can do laterally within a given time horizon t
+[66:58] is less than the amount of travel
+[67:00] that you can do frontally within a given time t.
+[67:04] So in this class of algorithms, the way
+[67:07] that you use nearest neighbors is
+[67:09] by replacing bolts or spheres with reachable sets.
+[67:13] And this would account for the fact of whether,
+[67:15] for example, within a time.
+[67:16] So for example, let's assume that I'm here,
+[67:21] and I consider this reachable set.
+[67:26] The point being here, it means that it
+[67:28] is beyond what can be reached within time t,
+[67:31] so it would not be considered for inclusion.
+[67:35] So usually, instead of considering bolts of radius r,
+[67:38] you consider reachable sets for a given time horizon t,
+[67:43] or in general, for a given cost c,
+[67:44] where the cost could be a combination of time and control
+[67:47] effort.
+[67:47] Does it make sense?
+[67:49] The geometric case, if you think about it,
+[67:52] is just a special case.
+[67:53] For the geometric case, what is the reachable set?
+[68:00] It's just a ball, because for a point with no constraints
+[68:03] in the dynamics, every direction looks equally feasible.
+[68:07] So space is isotropic, and the reachable set is a ball.
+[68:12] You can view kinematic planning as a setting whereby
+[68:14] you have to squish these balls in order to align them
+[68:17] with the dynamics.
+[68:18] So two main differences with respect to geometric planning.
+[68:23] You have to connect points by using reachable sets that
+[68:28] might have, sometimes, weird shapes.
+[68:30] And two, when you connect two samples,
+[68:34] you cannot just use a straight line,
+[68:35] but actually, you have to solve the trajectory optimization
+[68:38] problem.
+[68:39] If you can do that quickly, for example,
+[68:41] by exploiting offline computation,
+[68:44] then this can run very fast.
+[68:46] For example, for a double integrator model,
+[68:50] which is simple, but arguably quite representative
+[68:52] for a number of systems, because you account for momentum.
+[68:55] In the dynamics, you can solve 3D kinematic planning problems
+[69:00] in about 50 milliseconds.
+[69:03] How do you generate the reachable set, or that shape?
+[69:07] Yes.
+[69:08] You take my class, it was in the spring.
+[69:11] So there are well-known methods in optimal control
+[69:18] to compute those reachable sets.
+[69:21] So that reachable set, in some cases,
+[69:22] can be computed analytically.
+[69:25] Many cases can be computed numerically.
+[69:28] But unfortunately, this is beyond the scope of this class.
+[69:31] For this class, if we ask you to consider kinematic planning,
+[69:38] we will give you that information
+[69:39] about the reachable set.
+[69:40] But knowing that for most representative systems,
+[69:42] that is known.
+[69:44] So practically, you can do it.
+[69:45] So for PRM, when we had just a circle, we were doing this.
+[69:48] Because of geometric.
+[69:49] PRM, a kinematic, then you will have this.
+[69:52] Right.
+[69:52] But in that case, we were picking a radius.
+[69:54] And that was a parameter we could change.
+[69:56] So in this case, for the reachable set,
+[69:58] would you be changing time?
+[69:59] No.
+[70:00] Yeah.
+[70:00] So time, or in general, we talked
+[70:03] about the cost-bounded reachable sets.
+[70:05] So the set of the configuration that you can reach,
+[70:08] within a cost c upper bar.
+[70:11] Where c could be time.
+[70:13] In this case, we talked about t limiting the reachable sets.
+[70:16] Or it could be a combination of time and the control effort.
+[70:20] So just for clarification, the reachable set
+[70:23] for all configurations?
+[70:24] It can be reached within a given cost.
+[70:28] Subject to the differential cost.
+[70:29] Subject to the differential cost.
+[70:31] And here is, again, let's assume that the cost is really time.
+[70:35] And you have a car.
+[70:37] And the car has the heading in this direction.
+[70:41] So you can go farther in the frontal direction.
+[70:47] And you can travel a smaller distance
+[70:48] in the lateral direction, because you
+[70:50] need to concatenate motion primitives.
+[70:52] You can still do it, because you can go forward and backward,
+[70:55] and so on.
+[70:56] But it takes more time.
+[70:58] That's why, in terms of t limited reachable set,
+[71:00] the space you can travel leads to the squishing
+[71:03] of the reachable set.
+[71:04] Make sense?
+[71:07] So it's very natural, I think.
+[71:09] So is the reachable set going to be a static thing?
+[71:11] Or will you change it based off of the geology
+[71:14] of the space, or are there any obstacles or something like
+[71:16] that?
+[71:17] Yeah, so the idea of planning is try
+[71:19] to separate and decouple trajectory optimization
+[71:23] from obstacle avoidance.
+[71:25] So the reachable sets and the trajectory optimization
+[71:28] problem are solved without accounting for obstacles.
+[71:32] And then you account for obstacles up posteriorly
+[71:34] through collision checking.
+[71:36] That's really the hallmark of sampling-based planning,
+[71:38] to try to decouple little things in such a way
+[71:40] that you gain computational tractability.
+[71:45] All right, very last topic, and here I'll be quite quick.
+[71:49] Question, do probabilistic planners,
+[71:52] like PRM, that stands for probabilistic roadmap,
+[71:55] or RRT, that stands for collaborative exploring
+[71:58] random tree, really need to be random,
+[72:01] meaning relying on a randomized sequence?
+[72:04] Answer to this question is important,
+[72:06] because if you're able to actually deal
+[72:08] with the deterministic sequences,
+[72:10] you may have a number of advantages.
+[72:12] It would ease certification process.
+[72:13] So say that you want to apply this algorithm
+[72:15] to a flying self-driving car, which is safety critical.
+[72:20] Having a probabilistic guarantee is not the best
+[72:22] you can hope for.
+[72:25] It would allow you to reuse offline computation.
+[72:27] So instead of sampling new roadmaps every time
+[72:31] you want to solve a motion planning problem,
+[72:33] you would use the same roadmap, which
+[72:36] means that you can pre-store that roadmap,
+[72:39] pre-compute the, say, two-point malleable problem
+[72:42] reachable sets, and so on.
+[72:44] It could also simplify some operations,
+[72:46] like nearest network searches.
+[72:48] Turns out that this question is related to the notion of L2
+[72:53] dispersion.
+[72:55] The L2 dispersion of a set of points
+[72:58] is loosely defined as the radius of the largest ball
+[73:04] that you can fit in that set of points
+[73:06] without touching none of the points.
+[73:10] So we say that we have large dispersion.
+[73:12] If we can fit a ball, this does not
+[73:15] intersect any of the points with a large radius.
+[73:20] So given endpoints, the stupid way of sampling
+[73:23] would be to put all the endpoints here,
+[73:26] which would lead to a very large dispersion sequence,
+[73:29] because then the ball that does not
+[73:31] intersect any of the points would have, say,
+[73:33] this radius here.
+[73:35] This would be a decent sequence.
+[73:38] In particular, formally, the dispersion for a set of points
+[73:43] is defined as the supremum over all points
+[73:47] in the space of the minimum distance between that point
+[73:51] and one of the sample, which basically
+[73:53] means fitting the largest ball that
+[73:57] doesn't hit any of the points.
+[74:00] So you can think that for planning,
+[74:04] you want to have a set of samples that
+[74:13] have low dispersion, because that
+[74:15] ensures that you have good coverage on the environment.
+[74:18] The natural question is, are sequences
+[74:24] with the minimum possible dispersion known?
+[74:27] The question is that, the answer is that, in general, that
+[74:30] is not known.
+[74:31] But what is known is that there are
+[74:33] deterministic sequences whose dispersion
+[74:36] is asymptotically optimal.
+[74:37] So as n goes to infinity, at least the scaling
+[74:40] is the asymptotically optimal scaling.
+[74:42] And in particular, the scaling goes with n
+[74:44] to the power of minus 1 over d.
+[74:47] n is the number of samples.
+[74:48] It makes sense that the optimal dispersion
+[74:51] goes to 0 as the number of samples increases.
+[74:55] But it's not clear how optimally it should go.
+[74:57] That's the optimal scaling.
+[75:00] Now, it turns out that if you go back to PRM, in PRM, as I said,
+[75:06] there are two, basically, degrees of freedom.
+[75:09] How big is the ball that you use to connect points?
+[75:15] And then, how do you place the samples
+[75:19] in the configuration space?
+[75:21] This, again, the animation of how PRM works.
+[75:24] So it turns out that if you choose as a sampling
+[75:29] distribution, the distribution of samples that
+[75:32] has low dispersion, meaning that the scaling is
+[75:35] the asymptotically optimal scaling,
+[75:37] and those sequences are known.
+[75:40] And if the radius of the ball decreases
+[75:44] no faster than n to the power of 1 over d,
+[75:47] then PRM is guaranteed to converge to the optimal path,
+[75:51] deterministically.
+[75:53] Which basically means that contrary
+[75:55] to what people believe for 25 years,
+[75:57] you don't really need random sampling.
+[75:59] A deterministic sequence that has low dispersion
+[76:04] and those sequences are known achieve asymptotic optimality.
+[76:08] So it was the result that I published
+[76:10] with one of my students about three or four years ago.
+[76:13] So it's pretty surprising that still people
+[76:15] believe that the randomization is really
+[76:17] the key to the success of RT and PRM, where
+[76:21] that is absolutely not true.
+[76:22] That's not really the reason why they are successful.
+[76:24] They are successful because they cleverly
+[76:27] exploit the notion of implicit representation of obstacles
+[76:30] in the configuration space.
+[76:32] For some reason, people believe that randomization, magically,
+[76:35] was solving the problem, which is obviously not the case.
+[76:38] Here is just a bunch of problems where
+[76:40] I compare the performance of PRM on deterministic sequences.
+[76:46] And PRM would run on randomized sequences
+[76:50] and deterministic sequences.
+[76:52] Basically, less than 100% means that deterministic sequences
+[76:56] perform better.
+[76:57] Higher than 100% means that the randomized sequences
+[77:00] perform better.
+[77:01] You can see that across the board for planning problem
+[77:04] in different dimension from 2 to 8,
+[77:07] with key dynamic chains like for manipulators, aircraft,
+[77:11] and all sorts of systems, deterministic sampling
+[77:14] not only has better theoretical properties,
+[77:16] but actually perform also better in practice.
+[77:19] On top of it, actually, it turns out
+[77:21] that we can also provide the convergence rates guarantees,
+[77:24] meaning how many samples you need in order
+[77:26] to get to a solution within a certain optimality gap,
+[77:30] something that was not known until a few years ago.
+[77:34] So the remaining takeaway is that a synthetic optimality
+[77:38] can indeed be achieved with the deterministic sequences
+[77:41] and indeed with a smaller connection of values, which
+[77:43] means less computation.
+[77:45] And we can also provide convergence rates.
+[77:48] And experimentally, deterministic sequences
+[77:51] appear to provide superior performance.
+[77:53] So this is something that we published quite recently.
+[77:56] And it's quite surprising that for so many years,
+[77:58] people believed that, as I said, randomization
+[78:00] was the key to the success of these algorithms,
+[78:02] whereby running the same algorithms on carefully
+[78:06] constructed deterministic sequences,
+[78:08] in particular, deterministic sequences with low dispersion,
+[78:10] gives you better performance that is actually deterministic.
+[78:14] That opens the door to apply these algorithms
+[78:17] to synthetic systems, for example.
+[78:20] All right, so the time is up.
+[78:22] Next time, well, you had a midterm, sorry.
+[78:26] But the next time, which is Tuesday,
+[78:29] we start the second module of this class, which
+[78:31] will deal with robotic perception.
+[78:35] In particular, I'll first give an overview of the sensors that
+[78:39] are available for robots.
+[78:41] And then we'll focus on cameras, how to model them,
+[78:45] how to process the data that is collected by camera,
+[78:47] how to extract features, how to extract semantic meaning,
+[78:50] and so on and so forth.
+[78:52] All right, so I'm going to have office hours from now till 1.
+[78:56] And otherwise, I'll see you on Tuesday.
+[78:59] And good luck with the midterm.

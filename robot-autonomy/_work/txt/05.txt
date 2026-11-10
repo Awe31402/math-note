@@ -1,0 +1,685 @@
+[00:00] Alright, so I think we can get started. Today we're going to talk about advanced methods
+[00:10] for trajectory optimization. So this is the last lecture on the topic of trajectory optimization.
+[00:17] Next week, we'll look at a problem of motion planning that in the language of this class
+[00:22] should be understood as a trajectory optimization with stateful constraints, that is with obstacles.
+[00:28] So today what we're going to do is to revisit the problem of trajectory planning by casting
+[00:34] it as an optimal control problem. When we talked about differential flatness methods
+[00:41] for trajectory planning, what we said is that in that context, we are interested in a feasible
+[00:49] solution with some nice properties, but we're not trying to, in general, optimize a cost
+[00:55] function. But in some cases, it's very important to have a trajectory that not only is a good
+[01:01] trajectory, but actually optimizes some cost function, like for example, minimizes time,
+[01:06] minimizes control effort, minimizes a combination of time and control effort, and so on. So
+[01:11] this is really the topic of optimal control. I teach a class on this topic in the spring.
+[01:16] Today I'm going to share with you some key ideas. And as in the start of this class,
+[01:22] I'm going to do a deep dive in a specific technique by giving you some actionable insights
+[01:28] to solve some problems with specific techniques. In particular, we're going to focus the discussion
+[01:37] on indirect methods. And toward the end of the class, I'm going to shed some light on
+[01:42] the connection between indirect methods and direct methods for optimal control. The suggested
+[01:49] reading for this lecture is this book by Kirk. It's a bit dated, but it's a very accessible
+[01:55] introduction to the field of optimal control. The field of optimal control tends to be extremely
+[02:01] mathematically heavy. It's a fairly sophisticated topic. This book does a good job in being
+[02:06] rigorous while at the same time being quite accessible. All right. So as we said earlier
+[02:14] this week, the trajectory planning problem can be cast as, actually should be cast as
+[02:20] an optimal control problem. Whereby the idea is that we are given the equations of motion
+[02:25] of our robotic system in the form of a differential equation. As usual, x is the state, u is the
+[02:31] input. The differential equation, for example, could represent the equation of motion of
+[02:37] a unicycle, differential drive, simple car, and so on. We are given input constraints
+[02:44] in the form, for example, of upper bounds on control authority, maximum speed, maximum
+[02:49] acceleration, maximum angular velocity, and so on. We are possibly given state constraints
+[02:57] in the form of obstacle avoidance. But as we said, we're going to deal with obstacle
+[03:01] avoidance next week. For this week, we consider the case where we have no constraints, which
+[03:06] means that the feasible set of states is the entire Euclidean space. And finally, we're
+[03:12] given a cost function that has an additive structure, terminal term plus a running cost.
+[03:19] The integral term captures the notion of a cost that is accrued throughout the execution
+[03:25] of the trajectory. The terminal term captures the notion of penalizing whether at the final
+[03:33] time t f, we are in a position that is not exactly the position where we want to be.
+[03:38] For example. So it's a very general formulation. Usually, you're given the initial condition.
+[03:46] The task is to find a control history u that with an associated state trajectory x obtained
+[03:57] through the solution of differential equation of motion, such that the cost is minimized.
+[04:04] Now, this is a complicated optimization problem because we are optimizing over the space of
+[04:10] functions. Control input u is a function of time. So you may be more familiar with the
+[04:20] optimization problem where you optimize over a set of finite decision variables, say x1,
+[04:26] x2, x3. Here, you are optimizing over a function, which, if you think about, entails optimizing
+[04:32] over an uncountable set of decision variables, each one for all possible value of t. t is
+[04:38] a continuous number. So you have one decision variable per t. So you have an uncountable
+[04:43] number of decision variables. So people refer to this class of problem as infinite dimensional
+[04:49] problems because the space of function is infinite dimensional. So that doesn't mean
+[04:53] that this problem is infinitely more complicated than standard optimization, but certainly
+[04:58] is more complicated than standard optimization. So as we discussed last time, the standard
+[05:05] setup for optimal control entails looking at, entails computing open loop control trajectories
+[05:14] u that only depend on time and possibly the initial condition. Remember that open loop
+[05:20] means that your control action at time t is the same regardless of where you are in
+[05:29] the state space, which basically implies that if performance is nominal, then you're doing
+[05:35] the right thing. But if for whatever reason, due to model mismatches, disturbances and
+[05:39] so on, you start drifting away, you keep applying the same action that you should have applied
+[05:45] if performance was nominal, which might indeed result in disaster. And then we discuss why
+[05:50] you want to augment open loop control with the trajectory tracking and so on. But for
+[05:55] the second optimal control, the standard setup is to optimize over open loop function, meaning
+[06:00] function over time t. Now there are two main methods to do so. First class of methods referred
+[06:06] to as indirect methods, whereby the idea is to first write down the necessary optimality
+[06:11] condition for the infinite dimensional optimization problem that I presented in the previous slide,
+[06:18] and then solve for those necessary optimality conditions. The other approach referred to
+[06:25] as direct methods entails transcribing the problem into a finite dimensional non-linear
+[06:32] optimization problem through discretization, and then solve for that optimization problem.
+[06:39] So to remember, indirect methods can be summarized as we first optimize in terms of writing down
+[06:45] the necessary optimality conditions and then discretize, but direct methods is the opposite.
+[06:50] We first discretize to do the transcription to a non-linear optimization problem, and
+[06:55] then we optimize. So today we're going to discuss mostly indirect methods, and then
+[07:01] we are going to discuss direct methods, something that actually we already discussed on Tuesday,
+[07:06] in particular in terms of what are the commonalities, and what is the link between these two classes
+[07:12] of methods. Any questions so far?
+[07:18] Yeah.
+[07:18] I have a question.
+[07:20] Where does the methodology that you gave us for the eventually flat system, which class
+[07:26] we don't fall under?
+[07:27] It doesn't fall under neither of those classes. It philosophically is more related to direct
+[07:34] methods because we don't write down necessary optimality conditions. But in reality, the
+[07:39] point is that with differential flatness, you are not trying to solve an optimal control
+[07:44] problem. You are trying to solve a feasibility problem, whereby you're just trying to find
+[07:49] a control action u that satisfy the differential equation and additional constraints like initial
+[07:58] condition and terminal conditions and so on.
+[08:00] In reality, we said that we can also include some notion of optimality by setting up a
+[08:06] cost function in the flat output space, for example, in terms of jack and snap. But strictly
+[08:11] speaking, differential flatness looks more at a feasibility problem than an optimality
+[08:14] problem. And we said that is more conceptually related to direct methods because there is
+[08:19] no notion of writing down the necessary optimality condition. The idea is to transform the problem
+[08:26] into a finite dimensional problem or even into a linear system of equations, as we saw
+[08:32] last time. Does that make sense?
+[08:33] Yeah.
+[08:34] So if you will, it could be categorized as a specific application of direct methods where
+[08:40] we are not too strict in enforcing optimality with respect to cost function.
+[08:47] So let's start with indirect methods. So as I said, conceptually, indirect methods, the
+[08:55] procedures behind indirect methods is fairly straightforward. You should be familiar with
+[09:03] the standard unconstrained optimization setup whereby you're given a non-linear function
+[09:10] f of x. x is a vector that belongs to Rn, so it's a vector with n components. Each component
+[09:20] is a real number. You have a question? All good? Good. Right. And then you want to find
+[09:28] the global minimum or the global minima of this function.
+[09:34] So one way that you can solve this problem is assuming that the function is differentiable,
+[09:41] you set the gradient of this function equal to 0. That's a necessary condition of optimality
+[09:47] for unconstrained optimization. You solve for those values of x such that the gradient
+[09:53] of f is equal to 0, and those are all candidates for optimality. And then you pick the one
+[09:59] that gives you the lowest cost. So that's an example of an approach whereby you first
+[10:05] write down the necessary optimality condition, and then you solve for them. In the case of
+[10:10] unconstrained linear optimization, the necessary optimality condition is gradient of f equal
+[10:14] to 0. Solving for them entails solving a non-linear algebraic equation.
+[10:22] What an indirect method for optimal control does is instantiate this framework in the
+[10:28] same way. The only difference is that writing down the necessary optimality condition for
+[10:34] an optimal control problem is much more complicated. I'm going to show you those necessary optimality
+[10:41] conditions. I'm not going to prove them. But to justify them and to give you a little
+[10:45] bit more insight into what they mean, I want to draw a parallel with the topic of finite
+[10:52] dimensional optimization. But we want twist, and the twist is that now we are also considering
+[11:00] constraints. So on top of minimizing a cost function f, we have to consider a set of unconstrained
+[11:11] n constraints of the type h of x equals 0. So what do you think this setup, finite dimensional
+[11:21] optimization means this x is a vector with n components. So what do you think this setup
+[11:27] is in a way the finite dimensional equivalent and optimal control problem? Why do we have
+[11:32] to include constraints to have something that is closer to an optimal control problem? In
+[11:38] other words, which is the equality constraint that is the hallmark of any optimal control
+[11:45] problem? Every optimal control problem has an equality constraint. Which constraint is
+[11:50] that one? Let's go back. Well, here there is only one equality constraint. Every optimal
+[11:59] control problem entails finding a control and corresponding state that satisfy the differential
+[12:07] equation of motion. Differential equation of motion is indeed an equality constraint.
+[12:11] It's a differential equation as opposed to an algebraic equation, but still is an equality
+[12:15] constraint. So in terms of finite dimensional optimization, equality constraint and the
+[12:21] linear optimization problem are the class of problems that comes closest to optimal
+[12:28] control. So in order to shed some light on how indirect methods for optimal control problem
+[12:34] work, I'm going to tell you a little bit more about the equality constraint nonlinear
+[12:38] optimization problems, and then I'm going to draw a parallelism between the necessary
+[12:43] optimality condition for equality constraint optimization problem and necessary optimality
+[12:49] condition for optimal control problem. Yeah?
+[12:52] Yes. So of course, the marginal version is a nonlinear optimization problem with equality
+[13:09] and inequality constraints. It is possible to derive necessary optimality conditions
+[13:13] for those problems as well, but that is beyond the scope of this class. Here for me, the
+[13:19] reason why I'm going through the equality constraint nonlinear optimization topic is
+[13:26] more from a pedagogical standpoint as opposed to teaching you how to solve general nonlinear
+[13:31] optimization problems. But you are absolutely right. In general, you have, even for optimal
+[13:36] control problems, you might have a more sophisticated class of constraints, and that leads to more
+[13:44] sophisticated necessary optimality conditions. That again is beyond the scope of this class.
+[13:49] But if you're interested, I'd be happy to talk to you about this, give you some readings,
+[13:54] and obviously you can also take my class in the spring. All right. So you may or you may
+[14:00] not be familiar with how to write down the necessary optimality conditions for equality
+[14:06] constraint nonlinear optimization problems. Just to make sure that everyone is on the
+[14:11] same page, I'm going to summarize to you what the necessary conditions are. So you
+[14:17] know that if there are no constraints, then the necessary optimality condition is greater
+[14:24] than or equal to zero. The question is, what is now the necessary optimality condition
+[14:30] for the case where we have equality constraints? This boils down to a very elegant theory in
+[14:38] mathematics and optimization, referred to as Lagrange theory. The bottom line is define
+[14:47] an augmented cost function. So the idea is reasoning directly in terms of these constraints,
+[14:54] it is tricky. So the idea is actually to move these constraints into the cost function f
+[15:04] and then optimize a function without constraints, whereby we penalize the violation of those
+[15:13] constraints as well. That's the idea. So basically, including in the cost function a penalty term
+[15:20] that penalizes the violation of the equality constraints. In doing so, we remove the constraints
+[15:25] and we can then solve the problem as an unconstrained optimization problem, for which we already
+[15:30] know how to write down the necessary optimality condition in terms of gradients equal to zero.
+[15:37] Of course, there is a lot behind it. But as I said, the idea is to set up an augmented
+[15:45] cost function x and lambda. x are the previous decision variables, and lambda are additional
+[15:52] decision variables, defined as f of x plus a sum from i equal one to m of lambda i h
+[16:04] i x. So this augmented cost function that now accounts as independent variables, both
+[16:14] the decision variable x and additional vector of variables lambda. Lambda one, lambda two,
+[16:22] lambda m. So this function is referred to as the Lagrangian. So the main result in equality
+[16:40] constraint nonlinear optimization problem is that a necessary optimality condition,
+[16:46] an OC, for a point x, x star, to be a minimum for the equality constraint nonlinear optimization
+[17:01] problem is that the augmented cost function is at the stationality point, which means
+[17:09] that the gradient of the Lagrangian is equal to zero, which means that the partial derivative
+[17:14] of the Lagrangian with respect to x is equal to zero, and the partial derivative of the
+[17:18] Lagrangian with respect to the lambdas is equal to zero.
+[17:28] So here, of course, there is quite a bit of technical results that I'm hiding under
+[17:41] the rug. But the main intuition, as I said, is as follows. Solving directly problem with
+[17:47] the reasoning directly in terms of the constraints is hard. So the idea is to turn the problem
+[17:53] into an unconstrained optimization problem for which we already know how to write down
+[17:58] the necessary optimality condition. And the way to do so is to move the constraints to
+[18:03] the cost function and penalize them through penalty variables lambda i's, referred to
+[18:09] as Lagrange multipliers.
+[18:21] So something that is very important to note is some of you may think that Lagrange is
+[18:26] French. He's not. He was Italian. So don't get mistaken by the fact that. So Lagrange
+[18:37] was born Lagrange. He was born in the same city I'm from, Torino, and at the age of about
+[18:48] 40, moved to French. And well, French people started calling him Lagrange. That looks
+[18:53] more French. And now he's known as Lagrange. Everyone thinks he's French, but he's Italian.
+[18:59] But having said that, you didn't know that one, right? You thought it was French. Oh,
+[19:04] I told you. Yes. You see, I told this to everyone. Okay. So having said that, so this legacy
+[19:13] of Italy, quarters of Italy, all right. So the idea is that now we have this augmented
+[19:18] cost function where we have a penalizing constraint. The magic of Lagrange automatic
+[19:23] theory is that a point x star, a necessary condition for a point x star to be a minimum
+[19:32] of the original equality constraint on the optimization problem, a necessary condition
+[19:37] is that it has to be a minimum for the unconstrained optimization problem with respect to the
+[19:42] augmented cost function. What is a bit weird here is that in order to compute the minimum
+[19:50] for the augmented cost function, we are solving not only for x, but also for the lambdas.
+[19:59] Another thing to consider here is that when you take the derivative of the Lagrangian
+[20:05] with respect to the lambdas, like for example, if you take the derivative of the Lagrangian
+[20:10] with respect to the ith Lagrange multiplier, what do you get? What's that? Not zero. If
+[20:21] you take the derivative with respect to the lambda i's, you get h i. So this set of conditions
+[20:28] basically enforce that the point is feasible for the original optimization problem. Feasible
+[20:35] means that it satisfy the equality constraints. And the other part ensures that there is indeed
+[20:39] a local minimum. Practically what do you do? You set up the Lagrangian. You find a point
+[20:44] of stationarity. You solve for both the x's and the lambdas. You then discard the lambdas.
+[20:50] Those were just auxiliary variables that allowed you to crack the problem. And then the x becomes
+[20:56] a candidate for optimality for the equality constraint problem. Let's do an example just
+[21:02] to clarify things. By the way, here I say a point x star is a local minimum. On top
+[21:14] of satisfying this equation, it has to be regular. Regular means that basically the
+[21:20] constraint gradients, the gradients of the constraints had to be linearly independent.
+[21:23] So there is a mild technical condition for this to be true. This is a little bit beyond
+[21:28] the scope of this class, but just to give you a heads up that there is just a mild condition
+[21:32] for this to be true. But again, here my point is to give an intuition for the necessary
+[21:35] optimality condition for optimal control problem as opposed to give a lecture on linear optimization.
+[21:44] Let me give you an example. So assume that you want to solve the problem minimum of x1
+[21:50] plus x2 subject to x1 squared plus x2 squared equal to. So geometrically what does this
+[22:03] mean? So this y-axis, oh no, this is the x2-axis. This is the x1-axis. This is the
+[22:20] circle such that x1 squared plus x2 squared is equal to 2. So this is the set of feasible
+[22:30] points for the optimization problem, meaning that the only points that can be considered
+[22:36] as the solution to that optimization problem are those that lie on this circle. That's
+[22:42] what this equality constraint here means. Now, among all those points, x1, x2, we want
+[22:48] to find those that minimize their linear combination. In particular, from a geometric standpoint,
+[22:57] you can visualize the sum x1 plus x2 as lines, which actually form a 45-degree angle. So
+[23:09] this will be x1 plus x2 equals c. This will be x1 plus x2 equal what? Zero. This will
+[23:23] be x1 plus x2 equal minus c, which is more or less symmetric and so on. So these basically
+[23:34] are the level curves of the cost function x1 plus x2. So geometrically, if you were
+[23:38] to find the minimum, what would you do? So c is greater than zero, which is greater than
+[23:46] minus c. So ideally, geometrically, what you want to do is to move this line as much to
+[23:52] the left as possible, but with the constraint that there should be an intersection with
+[23:56] the circle, because otherwise, you don't have any feasible x1, x2 for your optimization
+[24:04] problem. So you start from here, maybe here, x1 plus x2 is equal to 10. You start moving
+[24:12] to the left. Here, x1 plus x2 is equal to zero. You keep moving to the left. The more
+[24:17] you move to the left, the more x1 plus x2 is small until you reach a point of tangency
+[24:22] here. So by the symmetry of the problem, it's not too hard to convince yourself that this
+[24:30] is minus 1, minus 1. So minus 1, minus 1 is indeed the solution to this linear optimization
+[24:38] problem. But let's see if we can find the solution by applying the Lagrange multiplier
+[24:43] theorem.
+[24:53] So what do we do to solve this problem? Step number one, we form the Lagrangian. The cost
+[25:01] function is x1 plus x2. This is f. And to be consistent with our notation, x1 squared
+[25:15] plus x2 squared minus 2 equals zero. So this is the function h, the constraint function.
+[25:23] Here we only have one equality constraint. So i is equal to 1. We have a number of Lagrange
+[25:34] multipliers that is equal to the number of equality constraints. One Lagrange multiplier
+[25:38] per constraint, each lambda i is a real. So in this case, we have only one Lagrange multiplier
+[25:49] times the constraint x1 squared plus x2 squared minus 2. Two, we write down the necessary
+[25:57] automatic condition that, as I said, amount to setting the gradient of the augmented function,
+[26:04] the Lagrangian function, equal to zero. Remember that now the Lagrangian function depends on
+[26:08] both x and lambda. So I have to take partial derivative with respect to both x and lambda.
+[26:14] So partial derivative of lambda with respect to x1 is equal to 1 plus 2 lambda x1. And
+[26:25] this has to be equal to zero as the necessary automatic condition. Partial derivative of
+[26:31] the Lagrangian with respect to x2 is 1 plus 2 lambda x2 equal to zero. Partial derivative
+[26:38] of the Lagrangian with respect to lambda 1, well, with respect to lambda because we
+[26:45] have only one constraint, is equal to x1 squared plus x2 squared minus 2 equal to zero. See
+[26:52] how the partial derivative with respect to the Lagrangian multiplier gives you the equality
+[26:57] constraint that basically enforces that what you're solving for is indeed the feasible
+[27:02] point for the original equality constraint optimization problem. This is the link between
+[27:06] the augmented problem and the original problem.
+[27:12] OK, now we have three unknowns, x1, x2 and lambda, three equations. We solve for them.
+[27:19] The solution will be a candidate for optimality. In particular, from this one, we see that
+[27:25] x1 is equal to minus 1 over 2 lambda. x2 is equal to 1 minus 1 over 2 lambda. I plug this
+[27:35] into here, so 1 over 4 lambda squared plus 1 over 4 lambda squared equal 2. So this implies
+[27:45] that 1 over 2 lambda squared is equal to 2. So this means that lambda squared is equal
+[28:02] to 1 over 4, which means that lambda is equal to plus minus 1 house.
+[28:15] So then I go back into these two equations. I substitute for lambda. So if lambda is equal
+[28:24] to 1 house, then x1 is equal to minus 1 and x2 is equal to minus 1. If lambda is equal
+[28:37] to minus 1 house, then x1 is equal to 1 and x2 is equal to 1. So these are the stationary
+[28:48] points for the Lagrangians. You throw away the Lagrangian multiplier with just a tool
+[28:55] to get to the solution, but it's not what you care about. I mean, the Lagrangian multiplier
+[28:59] actually incorporates some interesting information about the optimization problem, for example,
+[29:05] in terms of sensitivity. But for the sake of this class, this was just a tool to solve
+[29:09] the problem. We don't really care about it. Throw it away. So a candidate for optimality
+[29:13] is minus 1, minus 1, and a candidate for optimality is 1, 1. So then what you do, you
+[29:20] go back to your cost function. You plug in the first point, minus 1, minus 1. We get
+[29:26] as a cost minus 2. You plug in the second candidate for optimality, 1, 1, and you get
+[29:32] as a cost 2. Since 2 is greater than minus 2, actually the minimum, in this case the
+[29:37] global minimum, is represented by this point.
+[29:40] What would happen if you plug in the numbers into the Lagrangian equation?
+[29:51] Which number?
+[29:52] The Lagrangian. Like, not the lambda, but the big L, right? If you were to plug in those
+[29:59] numbers.
+[30:00] Yeah, yeah. So the intuition of the Lagrangian is that, I mean, there are some more specific
+[30:08] interpretations. The intuition of the Lagrangian is not going to be cost-functional, but you
+[30:11] penalize these constraints. At a minimum, since you have a feasible point, this goes
+[30:15] to 0, and now you have the minimum for your function.
+[30:22] But for the sake of this class, just think of it as basically an unconstrained, penalized
+[30:27] version of your original equality constraint problem.
+[30:31] So very important to understand the procedure. You first set up this generalized cost function
+[30:38] that makes the problem easier, and that tells you what the solution about the original problem
+[30:44] is. You write down the necessary optimality condition for this augmented cost function,
+[30:50] and then you solve for them. You throw away the Lagrange multipliers that you used to
+[30:55] augment the problem, and you retain the information about the original decision variables as your
+[31:01] candidates for optimality.
+[31:02] Are we going to have to prove that this is the global minimum?
+[31:08] In this case, yes, because since it is a continuous function and a compact domain, so there is
+[31:15] a minimum and maximum. And we found that those are completely characterized by the Lagrange
+[31:23] stationary point.
+[31:25] Try all the points and I'm good.
+[31:27] Yeah, in this case, yeah. But it's not always so, right? For example, even in unconstrained
+[31:36] optimization, so for example, think about this case.
+[31:50] So the points that satisfy the gradient equal to zero condition are at this point and this
+[32:02] point here. But indeed, the global minimum is here. So in order for the gradient equal
+[32:12] to zero condition to be a necessary condition for local optimality, it is important that
+[32:21] the point is in the interior of the domain. Here, what Brent brought is that it was in
+[32:26] the boundary.
+[32:27] So there are some of those nuances. But again, I don't want to give a lecture about nonlinear
+[32:32] optimization. I just want to give you an example of some intuition on nonlinear optimization
+[32:38] to see how to interpret the necessary optimality condition for optimal control problems.
+[32:45] Cool. Having said that, and here, of course, I won't do the demonstration, but the idea
+[32:53] of indirect methods to solve optimal control problem is very similar to the idea of solving
+[33:00] equality constrained nonlinear optimization problem on a finite dimensional set of variables.
+[33:07] In particular, the idea is to first construct an augmented cost function in the case of
+[33:14] optimal control, referred to as the Hamiltonian.
+[33:27] So the Hamiltonian has a similar meaning of the Lagrangian function. So it's given by
+[33:35] the running cost, g, similar to what you had here with f for equality constrained optimization
+[33:42] problem, plus p transpose of t times a of x, u, t.
+[33:57] The function a is the one that was giving you the quality constraint. p are additional
+[34:02] variables that play the same role of Lagrange multipliers. But in optimal control, they
+[34:17] are referred to as the costates variables. That is just terminology. So in optimal control,
+[34:24] typically people don't refer to these variables as Lagrange multipliers, but as costates.
+[34:30] Two, they are a function of time. So the Lagrange multipliers or costates itself are functions.
+[34:42] Which makes sense, since the original set of variables was, or decision variables were
+[34:50] functions, x and u, makes sense that Lagrange multipliers also are functions.
+[34:58] So that will be step number one. Step number two entails writing down the necessary optimality
+[35:02] condition. In the case of optimal control problem, the set of necessary optimality condition
+[35:09] is represented by a set of coupled differential equations, ordinary differential equations.
+[35:17] So this is a little bit annoying, because now we don't have a simple gradient of f equal
+[35:22] to zero conditions, meaning that we had to solve non-linear algebraic equations. We actually
+[35:27] had to solve differential equations. But they will be the same. We are given these
+[35:33] equations. I'm going to give an example. We are given these equations. We solve for the
+[35:38] x, u, and p. So for the original decision variables, x and u, and the Lagrange multipliers.
+[35:45] Then we throw away the Lagrange multipliers, and what we get is a candidate for local optimality.
+[35:51] The same way that with Lagrange theorems, we get candidates for local optimality.
+[35:59] Note the similarities. First, the Hamiltonian looks extremely similar to the Lagrangian.
+[36:08] One term is represented by the cost function, and the other term is a penalization term
+[36:17] for the deviation from the equality constraint. In this case, the differential equations of
+[36:23] motion. Similarity number one. Similarity number two, one of the conditions, in particular
+[36:33] the x dot equal partial derivative h with respect to p, gives rise to what? If you take
+[36:42] the partial derivative of the Hamiltonian with respect to p, what do I get? Right. So
+[36:50] I get ax, ut, which is really the differential equation. Same way that when I was taking
+[36:58] the partial derivative with respect to the Lagrange multiplier, I was getting the equality
+[37:03] constraints. That's neat. Finally, in this setting, so in the final dimensional setting,
+[37:14] x is a vector with n components. We are assuming that the decision vector has n components.
+[37:20] Lambda is a vector with m components, because we are assuming we have m equality constraints.
+[37:25] So I have n plus m decision variables, and how many equations do I have? So this equation
+[37:36] gives me how many constraints? Well, so n, because I have n components, and here, m.
+[37:49] So I have n plus m variables and n plus m equations, which means that I have a number
+[37:55] of equations that is sufficient in order to solve for all the variables, which is great.
+[38:00] What about here? So here, I have here n differential equations, one per component of the state
+[38:10] vector. Here, I have how many equations? How many costate function or Lagrange multiplier
+[38:23] function would I have? Remember, one per equality constraint. Since I have one equality constraint
+[38:32] with a per state variable, and I have n state variables. Well, another way to see this is
+[38:43] that I'm taking the partial derivative with respect to x, and x is n variables, so what
+[38:48] do I get as an output? This is a vector scalar matrix. So I have n differential equation
+[38:56] from here, n differential equation from here. I'm assuming that I have n inputs, as usual.
+[39:02] So I have m algebraic equations from the last one, which means that I have 2n plus m equations.
+[39:11] 2n of them are ODEs, ordinary differential equations, and the other m are algebraic.
+[39:24] How many decision variables do I have? I have n variables, because the state vector
+[39:34] is n dimensional. We have one Lagrange multiplier per constraint, and I have n constraint, because
+[39:40] the differential equation is n dimensional. So p is n dimensional as well. And I have
+[39:45] m controls. So I have 2n plus m functions to solve for. 2n plus m functions to solve
+[39:56] for, and 2n plus m equations, because actually I have a number of equations that is sufficient
+[40:01] in order to pinpoint all the decision variables and Lagrange multipliers. The long thing about
+[40:13] this necessary optimality condition is that these are differential equations. So to solve
+[40:18] for them, I need also boundary conditions. In order to solve differential equations,
+[40:27] you need to have initial condition that pinpoints the constants of integration. In particular,
+[40:33] how many constants of integration do I have here? Now I'm going to call out every ICME
+[40:41] student here to answer. Not that it's one ICME student. So roughly speaking, for each
+[40:49] first order differential equation, you have one constant of integration. So for example,
+[40:57] if I have the equation x dot equal x, what's the solution? Well, yes, but then of course
+[41:14] I also have a constant in front, which depends on initial condition. Let's say that initial
+[41:19] condition is x0 is equal to 0. In that case, what is a equal to? Well, not 1, because if
+[41:28] you set a, e, 0, this is equal to a, and this is equal to x of 0, that we're saying is equal
+[41:35] to 0. So here you have n constants of integration. So n of them come from the initial boundary
+[41:54] condition, xt0 equal to c0. The second one comes from this more convoluted expression.
+[42:15] In order to match into it, use it more as a tool to solve these problems, here delta
+[42:21] x xf captures the notion of admissible variation at the final endpoint, whether we want to
+[42:30] reach a specific point at time tf, or actually that is free, part of the optimization. Delta
+[42:36] tf captures the admissible variation with respect to the final time, whether the final
+[42:40] time is fixed, meaning I want to get somewhere in 10 seconds, or the final time is free,
+[42:46] meaning that I want to get somewhere as soon as possible, but I'm not specifying the final
+[42:50] time. Which basically means that assuming that we can solve this set of differential
+[42:59] equation, in order to do so, we had a differential equation, but we had to set up the boundary
+[43:04] conditions correctly. And this is the, actually I'll skip this one, this is the last annoying
+[43:08] slide before doing the fun stuff. So in particular, the way to interpret this slide is as follows.
+[43:23] So small h here is the terminal cost. So this reads as delta h partial derivative with respect
+[43:38] to x, minus p, delta xf, plus, of course I am omitting the independent variables for
+[43:50] gravity, plus the Hamiltonian, plus the partial derivative of the final cost with respect
+[44:01] to time, delta tf, has to be equal to zero. So that's the master equation.
+[44:11] So now the task is, how do I find the boundary conditions in such a way that I can pinpoint
+[44:17] all constants of integration? In all cases, we are assuming that we are fixing the initial
+[44:24] conditions. So we already have n conditions, but we need n more, because we have a 2n differential
+[44:31] equations, which means a 2n constant of integration. So let's see how to use that master equation
+[44:38] in order to pinpoint those boundary conditions. In particular, assume as, yeah, let's consider
+[44:53] this case first. I think it's the easiest. So assume that tf, okay, so the easiest is
+[45:00] assume that tf is fixed and xf is fixed. So the final time and final conditions are specified.
+[45:10] I want to get somewhere specifically at final time tf equals 10, say. In that case, how
+[45:18] do I make substitutions for the delta xf and delta tf? These again have the interpretation
+[45:24] of admissible variation. So if both the final time and the final state are fixed, is there
+[45:35] any admissible variation for the final time and final state? No, since they're fixed,
+[45:42] every variation is inadmissible, which means that delta xf has to be considered equal to
+[45:46] zero, delta tf has to be equal to zero. This is more of a mnemonic thing rather than a conceptual
+[45:50] thing. It means that this equation tells you nothing. But on the other hand, if xf is fixed
+[45:56] on top of the condition xtc is equal to zero, we also have the condition xtf equals xf.
+[46:02] And this is another set of n equations. So in total, I have the 2n equations that allow me to
+[46:09] pinpoint the 2n constant of integration. So that was an easy case. A slightly more complicated case
+[46:18] is the case when tf is free. This is a very typical case, by the way. And xf is fixed.
+[46:28] So you want to get to a final condition
+[46:33] as soon as possible, but a specific final time is not specified.
+[46:37] You want to minimize the time, so actually time becomes part of the optimization.
+[46:42] So in this case, we still have xt0 equal to x0.
+[46:54] But for tf, so tf is now free. So since xf is fixed, what is the admissible variation for xf?
+[47:07] So this has to be zero. So this term goes away. But delta tf is free, which means that it can
+[47:14] take any possible value. So for this equation to be satisfied for every possible value of delta tf,
+[47:21] what should this term be equal to? This has to be equal to zero. So this master equation is
+[47:29] implying that h plus partial derivative of small h with respect to time has to be equal to zero.
+[47:40] And then we have the condition xtf is equal to xf. So I have n equations from here, n equations
+[47:48] from here, and one equation from here. So in this case, we have a 2n plus 1 equation for 2n
+[47:57] constant of integration. So why do you think we need an additional equation to solve for everything?
+[48:04] So what do we have here that we have additionally to determine that we did not have here?
+[48:14] We have the time is free. So on top of the 2n constant of integration, I need an additional
+[48:21] equation that allows me to pinpoint the optimal final time, which is given by this one.
+[48:28] So everything comes together. So at this point, you should understand the
+[48:32] trick. So when you want to write down the boundary conditions, usually you have initial condition,
+[48:41] and then you go into the master equations and you make the proper substitutions for delta xf and
+[48:46] delta tf, depending on whether the final condition for the state and or the final condition for the
+[48:52] time are free or not. Little h is the terminal cost for your optimal control powers.
+[49:04] Okay, so I'm going to do an example that should clarify all of this.
+[49:08] But before we do that, something to consider is that in your experience, you might have been
+[49:16] exposed primarily to initial value problems, whereby you have differential equations, whereby
+[49:22] all the boundary conditions are enforced at the initial time, so on one side. For example, initial
+[49:32] position and initial velocity. In the solution to the necessary optimality condition for optimal
+[49:41] control problem, you have some boundary conditions that are specified at initial time
+[49:47] and some boundary conditions that are satisfied at the final time.
+[49:52] So this class of problems are referred to as the notorious two-point boundary value problems.
+[50:01] Much more complicated than initial value problem. So if you thought that differential equations were
+[50:06] difficult, this is the difficulty of steroids. The difficulty is now you have to find a function
+[50:14] that not only satisfies the differential equation, but satisfies constraints both at initial time
+[50:19] and final time. So if you think a little bit, that is much trickier to do. It is tricky.
+[50:27] Fortunately, there are some solvers out there to do so. I'm going to give you an example in Python
+[50:34] that you're going to use for your last problem in the PCET. And the solver is referred to as
+[50:40] BVP solver. The BVP solver is a handy function in Matlab that allows you to solve two-point
+[50:47] boundary value problem on this form, whereby you have boundary condition and initial time and the
+[50:52] final time. Exactly what we have for optimal control problems. If you're a Matlab user,
+[50:56] which you should not because you're taking this class, there is also a boundary value problem
+[51:00] solver in Matlab called BVP4C. There are a lot of interesting aspects of a numerical optimization
+[51:08] behind them. Again, in the second class, I want to give you the operational insights about these
+[51:13] tools. So let's consider a simple example. So this example has nothing to do with optimal control.
+[51:18] It's just an example to show you how to solve a two-point boundary value problem. I'll discuss
+[51:23] it later how to apply a two-point boundary value problem solver to an optimal control problem.
+[51:30] So here I have a differential equation whereby z.1 is equal to z2, z.2 is equal to minus
+[51:35] absolute value of z1, z1 is equal to 0, and z1 4 is equal to minus 2. So the initial time is 0,
+[51:42] the final time is 4. I have a boundary condition at initial time and a boundary condition at the
+[51:49] final time. All right, so that's how this solver works, and it's indeed pretty easy.
+[52:06] So first of all, you install it, and we provide a link in the pset to do so. So the way it works
+[52:13] is that you have to specify a couple of things, and then it works in general pretty well. So
+[52:18] the first thing that you specify is the callback function that describes your, actually let me
+[52:25] write it here. So we have z.1 is equal to z2, z.2 is equal to minus z1,
+[52:50] z1 0 0, z1 at 0 is equal to 0, z1 at 4 is equal to minus 2.
+[53:04] So the first thing that you do is to set up the callback function that specify the right-hand side
+[53:15] of the differential equation. So basically you tell the solver what the differential equation is,
+[53:19] in particular the first element of the differential equation is z2,
+[53:26] remember that in Python the counter starts from 0, so z2 here is z1.
+[53:32] And the second component of the differential equation is minus absolute value of z1,
+[53:40] which is z0, because again in Python the counter starts from 0. So that's the differential equation.
+[53:46] The second thing to set up is the function that specify the residuals
+[53:54] of the boundary conditions. The residuals means by how much your current boundary values
+[54:01] are not fulfilling the boundary conditions. So basically this is another term that the
+[54:05] solver uses in order to eventually find the solution to the two-point boundary value problem.
+[54:11] So in particular the residual for the first boundary condition is simply the value of
+[54:21] z1 evaluated at 0, here. And the second residual is z1 4 plus 2. So basically you take everything
+[54:36] to the left-hand side, what you get should be equal to 0. What the solver wants to know is if
+[54:42] that is actually 0 or something else. If it is something else then it's going to penalize it so
+[54:46] that you get such a solution and satisfy the boundary conditions. Does this make sense? This
+[54:52] is for this solver just a thing that is a little bit less intuitive, but if you think about it,
+[54:57] it's just a way to specify by how much you're violating the boundary conditions. Once you do
+[55:01] that then setting up the problem is easy. You define the problem by telling the solver how
+[55:06] many differential equations we have. I'm going to pause this code so that you have a template that
+[55:12] you can use for your P set. You specify the number of left boundary conditions, so the number of
+[55:18] conditions at initial time. You thought it was over, it was not. So left boundary conditions,
+[55:30] of course since you know that we have two differential equations, if you have one on the
+[55:33] left it means that you have one on the right. The domain of integration between time equals 0,
+[55:39] time equals 4, what is the ODE function, the callback function for the differential equation,
+[55:44] and finally what are the boundary conditions in terms of the residuals.
+[55:48] The last step is to specify the initial guess, typically a constant function, so something that
+[55:55] you give the solver to help the solver. In this case we're saying that the guess is that the
+[56:01] first variable is equal to 1 throughout and the second variable z2 is equal to 0 throughout.
+[56:09] Just give something sensible, 0, 0 if you have no idea. And then you call the solver.
+[56:17] And that's it. So you do that, it should be here.
+[56:26] So here we have z1 and z2, we see that
+[56:33] for example, yeah, z2, its derivative is always negative because it's minus absolute value,
+[56:42] so as you can see it goes down. For z1, the derivative has the same sign of z2,
+[56:48] so as long as z2 is positive, z1 is going up, and when z2 is negative then the z1 goes down.
+[56:55] So the differential equation, at least from an intuition standpoint, is satisfied.
+[56:59] Boundary condition z1,0 is equal to 0 and z1,4 is equal to minus 2. So this is to show that
+[57:07] actually we have solved the two-point malleable problem. So pretty handy tool. As it is,
+[57:14] not that useful for optimal control, it becomes useful once we apply it to the
+[57:20] necessary automatic condition. Before doing so, I really go to the key point of this lecture,
+[57:25] we need to do one more thing. The thing is that if you sit here,
+[57:34] this solver, and pretty much any solver out there, assume that you know the final time.
+[57:40] But in optimal control, oftentimes the final time is up to optimization.
+[57:46] So what do you do? What you do is that you look back to your slides and lectures
+[57:54] or video recordings, and then you remember that there is a very nice article that is
+[58:00] basically a bunch of tricks to take your two-point malleable problem with weird features,
+[58:07] like for example the final time is not specified in the sum, and there are a bunch of tricks
+[58:13] to recast the two-point malleable problem in standard form, meaning in this form,
+[58:19] meaning in a form where now you can call a solver. So there are a number of tricks,
+[58:25] the most important one is the one that allows you to handle a final time that is not specified
+[58:32] and up to optimization. And the trick is again related to the notion of time rescaling.
+[58:40] And the idea is fairly simple. The problem is that assume that you have an optimal control
+[58:51] problem whereby Tf is free. So you've read down the necessary optimality condition,
+[58:56] but once you try to call the solver, Tf is free, so you cannot really apply it directly.
+[59:02] So then you do time rescaling. Then you introduce a new time, tau,
+[59:07] this is equal to the true time over Tf. You do not know Tf, but you know that at some point you're
+[59:16] going to get to the end of the operation. So when t is equal to Tf, tau is equal to one.
+[59:21] So with respect to tau, now the domain of integration is fully specified, it's between zero
+[59:27] and one. So now what you do is to view x of t as x of tau t, similar to what we did on Wednesday,
+[59:41] and then the derivative of x of t with respect to t is equal to the derivative of x with respect to
+[59:48] tau times derivative of tau with respect to t, which is equal to one over Tf, which means that
+[60:00] the derivative with respect to tau is equal to Tf, derivative with respect to t. So then the idea
+[60:10] is then to introduce a time scaling. Tf now just becomes, so we express all the derivatives with
+[60:19] respect to the new time tau. Tau is regardless of the specific value of Tf, it's always between zero
+[60:26] and one. You replace all the derivatives with respect to t as derivative with respect to tau,
+[60:34] but simply multiplying by Tf. Now Tf is a constant, you don't know it, it's something that you're
+[60:39] solving for. So you add a state variable with trivial dynamics, r dot equal to zero, where r is
+[60:50] Tf, basically, and then the solver will pick up the right value of Tf in order to satisfy
+[60:56] the boundary condition that comes from the master equation that I did, oh no, here, we're solving
+[61:03] the master equation. I'll give an example that makes this very clear, and that's something that
+[61:07] you have to do for your p set. So let's assume we want to solve this optimal control problem.
+[61:13] It is an important one, it's simple, but it's actually an insightful one.
+[61:27] So x double dot is equal to u, so I have a double integrator,
+[61:38] so think of a particle on a line that has momentum. So x double dot is equal to u,
+[61:48] x zero is equal to ten, x dot zero is equal to zero,
+[61:58] x Tf is equal to zero,
+[62:02] and x dot Tf is equal to zero. So the idea is that you start, so let's say that this is the origin
+[62:12] of your line. So you start here, according to ten, with velocity zero, and you want to get here.
+[62:23] But you want to do so in a way whereby
+[62:28] you minimize time plus control effort.
+[62:42] So the reason why this is an interesting problem is that you have dynamics, it's a double integrator,
+[62:50] and you are considering a cost function that is a very common one, a combination of time
+[62:57] and control effort, here represented as u squared. Tf is free, and you're trying to optimize it.
+[63:05] So now the task is, we have this problem, how do we use everything we've learned so far to
+[63:10] write down the necessary humanity condition, to set up a two-point Mandelbrot problem that I can
+[63:14] solve, and then just call the BP solver, and then I'm done. Which is, by the way, what you have to do for
+[63:21] the last problem in the p-set. So let's do that. So you had to be methodical. So the first step
+[63:30] is you write down the Hamiltonian. So the Hamiltonian here is equal to
+[63:35] g. So g is one else bu squared, plus the term penalizing the dynamics. Let me be very specific.
+[63:50] So x double dot is equal to u. First of all, we had to put the problem in the same notation of
+[63:57] the optimal control problem. Remember, in an optimal control problem, we have a first order
+[64:01] differential equation. So what we do is a standard trick. We denote by x1 is equal to x.
+[64:12] Then x2 is equal to x dot. So I can express equivalently the dynamics as x1 equal to x2,
+[64:21] and x dot two is equal to u. Do you know this trick, to go from first order differential
+[64:26] equation, sorry, second order differential equation to a system of two first order
+[64:31] differential equations? Yeah, this is just an equivalence. So how many differential equations
+[64:37] do I have? Two. How many Lagrange multipliers am I going to have? Two. One per differential equation.
+[64:45] So this is a plus p1 times x2 plus p2 times u. That's the first component of the differential
+[64:55] equation. That's the second component of the differential equation. Good. So now we have,
+[65:03] so we have set up the Lagrangian, sorry, the Hamiltonian. We have to take the partial derivative.
+[65:10] So partial derivative h with respect, so what are the necessary optimality conditions?
+[65:17] Here. We have partial derivative h with respect to p, we will get exactly the differential
+[65:26] equation. So I'm not going to write them again. The interesting one is partial, so p dot
+[65:37] one is equal to minus partial derivative h with respect to x1. So go here, derivative with respect
+[65:45] to x1 is zero. Here I don't have any dependency with respect to x1. So this is zero. p dot two
+[65:53] is equal to minus partial derivative h with respect to x2. Zero, zero, p1.
+[66:02] So this is equal to minus p1.
+[66:06] And then I have the third one, the partial derivative h with respect to u,
+[66:11] which is equal to bu
+[66:20] plus p2. This has to be equal to zero, which means that u is equal to minus p2 over b.
+[66:30] And now you're pretty much done. So
+[66:41] you have the set of differential equations x dot one equal to x2, x dot two equal to u,
+[66:48] but u is equal to minus p2 over b.
+[66:54] p dot one is equal to zero, p dot two is equal to minus p1. So that's your set of differential
+[67:05] equations you're going to solve for. But the final time is free, so now you cannot directly call
+[67:12] the two-point Mandel-Iberus solver, so you have to do the timely scaling trick,
+[67:17] which means that now you rescale with respect to time tau, which means
+[67:26] let's denote the derivative with respect to tau as a prime instead of dots.
+[67:34] All of this becomes derivative with respect to tau,
+[67:39] but when I take the derivative with respect to tau, I have to multiply by tf, as we showed before.
+[67:47] For consistency.
+[67:52] We, in order to represent everything in the same formalism that the BVP solver wants,
+[67:58] we add an additional variable r that represents tf, we give it the trivial dynamic zero,
+[68:05] so that will be r, that will be r, that will be r.
+[68:12] And now I have to write down the boundary conditions.
+[68:16] So I have four boundary conditions already.
+[68:33] So what are the boundary conditions?
+[68:37] So I have x0 equals 10, x
+[68:47] dot zero, so x2 equals zero,
+[68:56] x tf is equal to zero, so x of tf is equal to zero,
+[69:07] and then x dot tf is equal to zero.
+[69:12] So I still needed to write down the
+[69:20] additional boundary condition with respect to time, I go into the master equation.
+[69:26] I don't have a dimensional variation with respect to xf, so the only equation that
+[69:31] we had to satisfy is h, so the Lagrangian, plus the partial derivative of small h with respect to t,
+[69:41] so what's the derivative of this with respect to, if you view h as a function of t,
+[69:46] what's the derivative of t?
+[69:49] It's alpha tf.
+[69:53] Plus alpha tf equals zero.
+[70:07] Yeah, so now r is a variable with trivial dynamics.
+[70:19] What I do is in this equation, I just substitute the tf with r, and now I have
+[70:27] a set of five differential equations with five boundary conditions and
+[70:31] the domain integration between zero and one, because I've done the time rescaling.
+[70:37] Here I've written a differential equation in a more compact form.
+[70:40] Just verify this is straightforward.
+[70:43] But let me show you the code.
+[70:52] Yeah, so I went ahead and I implemented this stuff, so u is equal to minus one over b,
+[70:59] here, times p2.
+[71:04] I called the vector z is x1, x2, p1, p2, r.
+[71:13] So this is saying that the u, oh no, this is y, sorry.
+[71:17] Yeah.
+[71:27] Why?
+[71:28] So u is equal to minus one over b, y3.
+[71:32] This is y3.
+[71:35] Probably consider.
+[71:38] This is y3.
+[71:39] And so we are encoding that one.
+[71:46] And so x dot, which will be x1 dot, x2 dot, is equal to y4, which is this one,
+[71:56] times the dynamics.
+[71:57] You can easily verify the dynamics.
+[71:58] What I want to show that indeed I'm multiplying by the time scaling factor.
+[72:04] And then basically encoding the dynamics also for p.
+[72:09] And then the dynamics for the dummy state that represents the final time tf.
+[72:16] So just take your time to go through this code.
+[72:19] But that's pretty much it.
+[72:20] So once you understand this, you can fully easily solve a large variety of optimal control
+[72:26] problems by applying these techniques.
+[72:32] The other thing will be just to set up the boundary conditions.
+[72:35] This is exactly what we have there.
+[72:37] We have the one on the left, the ones on the right.
+[72:40] And this, the weird one, will be this one here.
+[72:45] The one that entails Hamiltonian.
+[72:48] So what I did was to solve this problem for different values of
+[73:01] b and alpha.
+[73:06] So I keep b fixed and I change alpha.
+[73:11] Changing alpha means that basically it will give more weight on the fact that you're
+[73:15] taking longer.
+[73:16] So alpha larger means that you care more about time than control effort.
+[73:22] So I solved the problem for several combination of parameters.
+[73:26] And you can see that as alpha is increased, the final time, so the time I get to the destination,
+[73:35] decreases.
+[73:36] Blue is the analytical curve.
+[73:40] It turns out this problem can be solved analytically.
+[73:42] You don't need numerical methods.
+[73:44] The red dots are the result of the numerical integration.
+[73:48] So to show you that actually this method is quite accurate.
+[73:51] I'm going to pause this code as well.
+[73:55] So any questions here?
+[73:58] Yeah, so the difference between learning method and Hamiltonian method is a type of constraint.
+[74:06] That's right.
+[74:06] And yeah, which in particular entails solving differential equations as opposed to algebraic
+[74:10] equations.
+[74:11] Yeah, because you can think of variables.
+[74:13] Yeah.
+[74:13] Yeah.
+[74:14] But that's the third point, that if I show you right away the differential equation,
+[74:18] you will say, whoa, what is this stuff?
+[74:21] Instead, by showing first equality constraint on optimization, I hope that this seems a
+[74:27] little bit less esoteric.
+[74:31] All right, the last couple of minutes, the other very small thing that I wanted to chat
+[74:36] about is the relation between direct methods and indirect methods.
+[74:40] So I won't go through the entire discussion because it would take another 10 minutes.
+[74:45] But the idea here is, as I said, indirect methods, the idea is to, we already discussed
+[74:49] this on Tuesday, the idea is to transcribe the problem into a non-linear optimization
+[74:54] problem by doing a discretization of differential equation and of the integral for the cost.
+[75:00] We already discussed this, so we already know this.
+[75:03] Now, the question is, what is the relation between the solution that a direct optimization
+[75:11] solver provides and the solution that you will get with an indirect method?
+[75:16] So what's the connection between the two approaches?
+[75:18] Well, the connection is as follows.
+[75:21] So this is now a finite dimensional non-linear optimization problem.
+[75:25] Finite dimensional because you have a finite number of decision variable x of i's, where
+[75:29] i is equal to one, is equal to one, dot, dot, capital N, capital N is the number of discretization
+[75:35] points.
+[75:36] So the connection is that if you write down the necessary optimality condition for this
+[75:41] non-linear optimization problem, you write down, and I'm not going through all the details,
+[75:50] this is more for your own, it's bonus information.
+[75:53] I'm not going to ask you about this, neither in the p-set nor in the midterm one, nor in
+[75:59] the midterm two, it's just for your own edification.
+[76:02] If you write down the necessary optimality condition for the non-linear optimization
+[76:06] problem, for the transcribed one, and if you take the time step, hi, so basically the
+[76:13] discretization in time, if you make it smaller and smaller, the necessary optimality condition
+[76:18] that arise from the discretization in the linear optimization problem converge to the
+[76:24] necessary optimality condition for the optimal control problem.
+[76:28] So that's the consistency check.
+[76:30] So if you go the direct route, so you first transcribe and you write down the necessary
+[76:34] condition, but if the time step is very small, those necessary conditions look like almost
+[76:40] identical, indeed are the discretized version of the necessary optimality condition for
+[76:45] the optimal control problem, it are leveraged by indirect methods.
+[76:50] So that's oftentimes, this is not said, so it's not mentioned, so it seems that these
+[76:54] two approaches are completely different.
+[76:56] Indeed, they are tightly coupled, as it should be, because we're solving the same problem.
+[77:02] As I said, this is more information for you, it's going to be represented in the lecture
+[77:06] notes, you have the slides here, but the topic of indirect methods is going to be covered
+[77:12] in the midterm.
+[77:13] This relation between direct and indirect is not going to be covered in the midterm.
+[77:18] All right, tools out there, I already mentioned those on Tuesdays.
+[77:22] Next time, so next week, we'll focus now on the problem of trajectory planning and optimization
+[77:26] with constraints, so where we have to account for obstacle avoidance, which will lead us
+[77:30] to talk about motion planning algorithms.
+[77:34] Okay, so have a nice weekend, and I'll see you on Tuesday.

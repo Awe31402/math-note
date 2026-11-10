@@ -1,0 +1,680 @@
+[00:00] All right, so we can get started. And as a reminder, we're working now on the task
+[00:13] of localization. We discussed last time that the way that we address the task of localization,
+[00:18] that is the task of determining our pose with respect to a map that for now we assume given.
+[00:26] This week we'll consider the case when the map is not given to us and it has to be estimated
+[00:31] concurrently with estimation of our pose. So we said that that process is embedded in
+[00:37] a probabilistic framework. And in particular, in this class, we look at the approach referred
+[00:45] to as Bayesian filtering, whereby recursively we estimate our localization by sequentially
+[00:53] incorporating information about the actions that we enact and the measurements that we
+[00:58] receive from our sensors as we move around. In particular, last time we discussed the
+[01:05] bias filter in its full generality. And we said that the bias filter comprises two main
+[01:12] steps, specifically given the belief about our state, so the probability distribution
+[01:18] about what our pose could be. And given the most recent control, UT, and most recent measurement,
+[01:25] ZT, how do we compute the posterior belief, that is the belief with respect to the state
+[01:30] at time, key, whereby we have incorporated UT and ZT as information. We said that the
+[01:36] bias filter breaks this computation in two steps. First, we compute the prediction belief
+[01:43] when we account for the most recent control, UT, but not yet. We don't yet account about
+[01:51] the most recent measurement. And in the second step, the correction step, we account for
+[01:56] the most recent measurements. We derived both expressions rigorously last time, but once
+[02:02] more, I want to give you the intuition just to make sure that what you see here is as
+[02:09] clear as possible, specifically because everything we're going to do next entails an elaboration
+[02:15] of the bias filter. So if the foundations are not clear, everything else is going to
+[02:18] be very unclear as well. So in particular, remember that the idea for the computation
+[02:25] of the prediction belief is rather straightforward. There is an integral that seems very complicated,
+[02:32] but what this is saying is that we want to understand what is the probability that we
+[02:37] are at state X of T. So to do so, what we do is to say, OK, from what states at time
+[02:44] T minus one, I can come to state XT. Then I assign a probability for each state at time
+[02:53] XT minus one with respect to the belief that I assume I have. And then we weight those
+[02:59] probabilities by the probability that from each possible state XT minus one, I can go
+[03:03] to state X of T by using control-udt. And now I put together all those probabilities
+[03:09] by summing them because they are culturally exclusive. Does it make sense? So I look at
+[03:15] all possible ways I could have arrived at state X of T and weight those ways probabilistically
+[03:24] by accounting for the probability that I am in each one of those states in the first place
+[03:31] and that from those states, I transition to the current state X of T by using control-ut.
+[03:39] So if you think about this fairly intuitively, do you agree? Is intuition here? Now, here
+[03:48] we have not accounted for the most recent measurement yet. So what we do in the correction
+[03:54] step, again, we have derived this rigorously, but intuition is that it's just a compatibility
+[04:00] step. We check whether what we believe about what our current state X of T could be is
+[04:06] compatible with the measurement that we have just gathered. In particular, if the probability
+[04:12] of the measurement that I've just received is extremely low with respect to the possible
+[04:18] value of X of T, then I re-modulate this probability with a value that is very low. So if before
+[04:27] accounting for the measurement, I had an assignment of probability with respect to
+[04:31] state X of T that was very large, so meaning the probability that, for example, I'm here,
+[04:36] maybe it's 0.8. But then I get a measurement that is completely incompatible with the fact
+[04:42] that I'm here, then it makes sense to correct that probability with a much lower probability.
+[04:49] And of course, by the other way around, if instead this is very compatible, then we announce
+[04:58] this probability. So intuition, I hope, is pretty clear. In the first step, we look at
+[05:05] all the possible ways we could have arrived at the current state X of T, and we weight
+[05:13] each of those ways by using the information that we have with respect to the prior belief
+[05:18] and the transition model for the state. In the second step, we recalibrate the probabilities
+[05:25] by making sure that they are compatible with the measurements that we have just gathered.
+[05:29] Yeah.
+[05:30] So this is interesting. So first of all, if P of Z T given X T is 0, then this becomes
+[05:46] very clear. So indeed, that information is very useful. Remember that you don't have
+[05:55] a full access of X of T, you only have a belief. So what you're saying is that if we postulate
+[06:01] that we are a state X of T and the measurement is incompatible, that information is actually
+[06:06] very useful. It's saying that for sure you're not an X of T, so you don't really want to
+[06:12] take another measurement. Having said that, there is a generalization,
+[06:17] what I'm saying here, which is referred to as active estimation, whereby instead of computing
+[06:25] controls that do not account for the estimation process, you compute controls that not only
+[06:32] try to achieve the task at hand, but at the same time, try to disambiguate as much as
+[06:37] possible information about your pose or about the map and so on.
+[06:41] It's active because in a way you're trying to make targeting the motions and measurements
+[06:46] in such a way that you decrease the uncertainty in your filter. Think about the case where
+[06:52] you're lost in a forest, and then you try now to walk, trying to reach a location whereby
+[07:00] you may have a fix with respect to a beacon or say a lighthouse or something else. There
+[07:04] will be active measurements. If you're not active, you're just passive. You keep walking,
+[07:08] trying to achieve your goal, but then certainly the filter will be larger. Does it make sense?
+[07:15] Again, the whole point here is to demystify the bias filter. It seems worrisome at first,
+[07:22] but it's actually very intuitive. We did the formal derivation of it. Just want to mention
+[07:28] that we derived the bias filter in a continuous setup, meaning assuming that the state X of
+[07:34] T can take on any value in a given interval. But we can also consider a discrete version
+[07:41] of the bias filter whereby the state X of T, instead of taking any possible values in
+[07:48] an interval, only takes on a discrete number of values, say capital M.
+[07:57] The structure of the filter is exactly the same. The only difference is that now we reason
+[08:04] with respect to each possible value of the state, discrete state. So K is a counter between
+[08:09] one and capital M. And instead of integrals, we have sums. Indeed, for the discrete filter,
+[08:16] the intuition is even clearer. So in order to compute what is the probability that at
+[08:21] time T, I am at state K, I look at the probability that at time T minus one, I am in any possible
+[08:29] state I, then I multiply the probability by the probability of going from state I to state
+[08:34] K if I use control U T and the sum of those probabilities. So in a way, the discrete bias
+[08:40] filter is conceptually the same, but is even more intuitive.
+[08:48] So if you have any doubts about the bias filter, look at the discrete version of it. Try to
+[08:54] work out a couple of examples by yourselves, and then you'll see that it's fairly set forward.
+[08:59] OK, so unfortunately, in its full generality, so here, the bias filter is very difficult
+[09:08] to apply. So it's conceptually simple. But if you want to implement it, it's complicated.
+[09:15] Why is this complicated? Well, first of all, here I'm doing it for each X of T. So here
+[09:21] I'm cheating. So assume that I can enumerate all possible states X of T in a continuous
+[09:28] domain. But obviously, that is not possible. You can do it in a computer. You can enumerate
+[09:33] every possible real number. But even then, even if you can do it, then we have to solve
+[09:40] this integral that in general is multidimensional. This is the integral with respect to all possible
+[09:45] states. States are generally multidimensional objects, position, heading, velocities, and
+[09:52] so on and so forth. So this is a multidimensional integral. So in general, this is computationally
+[09:58] intractable.
+[10:00] So what we're going to discuss next, and this is the topic of the lecture today, is how
+[10:06] to make the bias filter tractable in a way that you can do computation. From an implementation
+[10:12] standpoint, this would be covered in homework four.
+[10:27] So topic of today, how to make the bias filter computationally tractable. Again, for now,
+[10:33] I'm not talking yet about a specific application of the bias filter to localization, just setting
+[10:38] the foundations so that next week we can apply these foundations to both the topic
+[10:41] of task localization and simultaneous localization mapping.
+[10:47] So there are two main ways of making the bias filter tractable. And both ways, in a way
+[10:55] and another, cleverly exploit structure and or approximation in the filtering procedure.
+[11:04] In particular, we can distinguish two main approaches, parametric filters and non-parametric
+[11:10] filters. In the case of parametric filters, what we do is to impose a structure on the
+[11:18] belief. In particular, for example, we force the belief to be a Gaussian. And so what we
+[11:25] do is instead of reasoning in terms of a general density function, we reason about the parameters
+[11:33] that specify the parametric class of density functions that we force the belief to satisfy.
+[11:41] So for example, as we will see later, it would be better if we have a Gaussian distribution
+[11:48] by how many parameters is characterized. Mean and standard deviation. So when we apply
+[11:55] all those integrals and stuff in the bias filter, what we had to do, if you assume that
+[12:02] the belief is indeed a Gaussian, is to reason only about the two quantities, mean and variance.
+[12:09] So instead of propagating forward the entire density function, we propagate forward only
+[12:14] the mean and the variance, which is a dramatic simplification. This will lead to the class
+[12:19] of a common filter and extended common filters for localization.
+[12:25] Now there's just one way of imposing structure in terms of a parametric class of density
+[12:30] functions that the belief we assume should have. There are also other ways, but for the
+[12:36] sake of this class, we focus primarily on Gaussian structures. The other class of approaches
+[12:43] is referred to as non-parametric filters. So here we do not superimpose any specific
+[12:49] structure on the belief, but rather we exploit approximations, for example, through Monte
+[12:59] Carlo sampling. Basically, we approximate density function through a carefully chosen
+[13:07] set of particles, and then we just push those particles forward.
+[13:12] Now we're going to talk today about parametric filters, EKF and particularly EKF, on Friday.
+[13:20] So for the graduate students, which tomorrow we're going to talk about non-parametric filters,
+[13:26] in particular the histogram filter and the particle filter.
+[13:29] So any questions at least at the high level, what is the difference between parametric
+[13:34] and non-parametric? Parametric, as I said, we assume some structure for the belief in
+[13:41] such a way that we can reason more efficiently in terms of how we propagate forward through
+[13:47] time the belief. So instead of propagating forward the entire function, we only propagate
+[13:51] forward only some of the parameters that characterize the structure that we use. For
+[13:56] example, in the case of a Gaussian mean and standard deviation. In the case of non-parametric
+[14:00] filter, we use approximation for the belief in terms of particles, basically.
+[14:10] All right, so today we focus on parametric filters. And in particular, the class of structures
+[14:24] that we're going to use is the class of Gaussian distributions. Specifically, we assume that
+[14:30] the belief has a Gaussian distribution. What is a Gaussian distribution? Again, you should
+[14:37] be already aware about this information because probability theory is a prerequisite for this
+[14:42] class. But just to make sure that everyone is on the same page, I will just give an overview
+[14:47] in the same spirit as last time about the basic tools that we need from Gaussian distributions
+[14:57] in order to make this lecture as clear as possible. So in particular, a Gaussian random
+[15:03] variable is a random variable whose density follows the so-called Gaussian distribution.
+[15:08] The Gaussian distribution is written down here. So it is an exponential of minus one
+[15:16] over two of X minus mu squared over sigma squared. Mu is the mean of the random variable,
+[15:23] so the expected value. Sigma squared is the variance of the random variable. So you can
+[15:30] see that the argument of exponential depends with the square of X and then everything is
+[15:37] weighted by an exponential. So graphically, if I were to plot this function for given
+[15:43] values of mu, the expected value, and sigma, the standard deviation, the Gaussian distribution
+[15:50] has a bell shape. The larger the sigma, the fatter the distribution. Note that this distribution
+[16:03] has infinite support, meaning that it applies a non-zero probability for every possible
+[16:12] value of X from minus infinity to plus infinity. Of course, as you go to plus infinity, meaning
+[16:18] that you go very far from the mean, the probability becomes extremely small, but still non-zero.
+[16:24] We'll come back to this in a second. So it's typical to reason in terms of one sigma to
+[16:32] sigma three sigma. Basically, the probability that the random variable falls in the interval
+[16:38] between minus sigma and sigma is about 68%. Between minus two sigma and two sigma is about
+[16:43] 95% and so on. That's what one sigma to sigma means.
+[16:47] Now, what does it mean to force the belief to be a Gaussian distribution? Well, practically
+[16:54] means committing ourselves to a couple of practical consequences. First of all, if we
+[17:05] force the belief to have a Gaussian, or actually approximated the belief to have a Gaussian
+[17:10] distribution, basically we are reasoning with a unimodal distribution. So basically
+[17:16] we track only a single hypothesis about where we might be. By hypothesis, I mean a single
+[17:23] peak in your distribution, most likely value of your distribution.
+[17:29] As I said last time, when we talk about localization, in general, the belief is a multimodal object,
+[17:35] meaning that we can assign high probability values in a way in several different parts
+[17:41] of the domain of integration. Like for example, if I magically dropped on the Stanford campus
+[17:47] and I see a room, I assign high probability for this room, high probability maybe for
+[17:52] another room that looks similar, very low probability for a garden, and so on. So basically
+[17:57] what we do is to take that object and just approximate it with a Gaussian. Which, if
+[18:06] your true underlying distribution is multimodal, is actually a very bad approximation. So let's
+[18:10] assume that your underlying distribution is something like that, where with the high probability
+[18:16] you're here and with the high probability you're here, what you're saying is that you
+[18:20] approximate all of this with a Gaussian that puts a mass in a brown spot.
+[18:28] So why then we use a Gaussian as a parametric class of distribution that we use for localization?
+[18:36] Well, first, because as we will see, it leads to very fast implementation of the bias filter.
+[18:41] But two, in those cases where you start with, so you initialize the filter with a good enough
+[18:49] initial estimate, then it's reasonable to assume that the true underlying distribution
+[18:55] stays unimodeled. So it's reasonable to approximate that with a unimodeled distribution with a
+[19:00] given structure. Does that make sense?
+[19:04] So it's very important that you're aware of the consequences of the approximation that
+[19:09] you make. Otherwise, you implement an algorithm, you get nonsensical results, and then you
+[19:15] don't know if that is like a bug in your code or there is something more fundamental
+[19:18] in the mathematics. Another aspect that is a little bit weird about the probability distribution
+[19:25] that is Gaussian is that we're putting non-zero probability on all possible values of x from
+[19:32] minus infinity to plus infinity. So basically, with a Gaussian distribution, if you treat
+[19:37] it as an approximation to your belief, you're also putting some probability, albeit very
+[19:42] small, that you are a few years from Earth. Basically, that's what you're doing.
+[19:49] Now, of course, again, this is nonsensical. But the point is that the probability is so
+[19:55] small that it really does not impact the practical performance of the algorithm that you get
+[20:01] with this approximation. But again, it's important that you have in mind what consequences are
+[20:07] you committing to every time you make an approximation.
+[20:12] Here's a definition of a Gaussian random variable in 1D, the extension to multiple dimensions.
+[20:18] We need extensions to multiple dimensions because the state vector in general is a multidimensional
+[20:22] object. It is very similar. The only difference is that instead of reasoning in terms of a
+[20:29] number for the variance, now we have a covariance matrix. And instead of reasoning in terms
+[20:36] of a number from the mean, now we have a vector of means. Each component of that vector
+[20:43] is the mean for the component of the vector of the random variable.
+[20:52] So the Gaussian distribution in 2D has a ball shape in 2D, and the contour plots will look
+[20:58] like ellipses. So basically, this is the Gaussian distribution projected on the plane. This
+[21:03] will be the mean, and this will be the contour plots with respect to different sigma values.
+[21:09] So we probably did 68% here. We probably did 99.5% here in these ellipse and so on. Of
+[21:15] course, in 3D, 4D, you cannot visualize it anymore, but intuition is the same. So any
+[21:21] questions here? You should be super set forward.
+[21:24] Now there are a few properties of Gaussian random variables that you're for sure already
+[21:29] aware of, but I just want to make sure that they are clearly spelled out, because we will
+[21:35] be using them extensively. First of all, if you apply a linear transformation to Gaussian
+[21:41] random variable, what you get is still a Gaussian random variable with a very nice relation
+[21:47] in terms of means and in terms of mean and in terms of the standard deviation.
+[21:52] Specifically, let's assume that you have a random variable X that is Gaussian with
+[22:01] mean mu and variance sigma, standard deviation sigma, and means normal distribution. So basically
+[22:09] Gaussian distribution, mu and sigma are the two parameters that specify the Gaussian random
+[22:13] variable. Importantly, as I mentioned before, a Gaussian random variable is fully specified
+[22:18] by two parameters. So if I give you mu and sigma, or in a multivit case, the covariance
+[22:24] metric and the vector of expectations, you make exactly the entire density. That's one
+[22:31] of the key advantages of Gaussian distribution. So computationally, it will be much cheaper
+[22:35] to reason about. So let's assume that now I form another random variable Y as AX plus
+[22:43] B. Or let's assume that we are in one dimension just to keep things simple, AX plus B. So
+[22:51] what is the expectation of Y? The expectation of Y is A expectation of X. So it's equal
+[23:03] to A mu. And what is the standard deviation? Well, the variance of Y. So the variance of
+[23:10] Y will be what? Will be Y minus expectation of Y squared, which is equal to expectation
+[23:34] of AX plus B minus A, we already computed here expectation of Y, A mu minus B. So this
+[23:48] cancels out. So this is equal to expectation of A squared, AX minus mu squared. But expectation
+[24:03] is linear. Yes, it's a linear function. So the constant goes out. So this is equal to
+[24:16] A squared, expectation of X minus mu squared. And this is exactly the variance of X. Now,
+[24:30] the last step will be to prove that indeed Y is Gaussian, which is not too complicated,
+[24:37] but we're sticking to the proof here. So the key point is that if I apply a linear transformation
+[24:44] to a Gaussian random variable or a Gaussian random vector, what I get is still a Gaussian
+[24:51] random variable, Gaussian random vector with the mean equal to the linear transformation
+[24:56] applied to the expected value of X and a quadratic correction, if you will, to the
+[25:05] standard deviation of X, in terms of A sigma A transpose. In this case, since we were reasoning
+[25:13] about a one-dimensional Gaussian random variable, instead of having A sigma squared A transpose,
+[25:20] we have A squared because the transpose of A is still A. So A transpose is equal to A
+[25:27] squared.
+[25:28] Another property that is extremely important is that if we take two random variables, X1
+[25:35] and X2, each one of them Gaussian, and we refer to the mu i and sigma i as the expectation
+[25:43] of Xi and the variance matrix of Xi. Their sum is still a Gaussian random vector or random
+[25:53] variable with expectation given by the sum of the two expectations, and this is trivial.
+[26:01] If you sum two random variables, the expectation of the sum is always the sum of the expectations.
+[26:06] So no magic here. But what is actually interesting is that the covariance matrix is the sum of
+[26:15] the covariance matrices. Again, I'm not proving it here. You should have proven this in probability
+[26:23] theory class. Not too complicated for us. We just take it as a fact. Yeah.
+[26:29] Yes. Oh, sure. Absolutely. That was a nasty mistake. Yeah, thank you.
+[26:52] And finally, if I take the product of two Gaussian PDFs, what I get is still a Gaussian
+[27:00] probability density function. Which again, due to the fact that when I multiply exponential,
+[27:07] what I get is still exponential. And then by completing the square, I will still obtain
+[27:12] a Gaussian PDF. Again, we take it as a fact. If you want to prove it, as usual for each
+[27:19] lecture, I give you some extra readings. In particular, the material from last lecture,
+[27:24] this lecture, and tomorrow is taken from a book called Probabilistic Robotics, which
+[27:29] is an excellent book that covers the topic of filtering, localization, and so on for
+[27:36] autonomy, robot autonomy. OK. So we take these three facts as given.
+[27:44] Make sure that you remember them, because we'll be using them extensively later on.
+[27:48] All right. So remember, what we're trying to do is to cast the bias filter into a form
+[27:58] that is computable. In particular, we will start by saying that by considering a more
+[28:07] specific setting for the problem, whereby actually considering a Gaussian distribution
+[28:13] is not an approximation, but is exact. And then we will see later on how we can scale
+[28:18] this up to the non-linear setting, whereby actually the Gaussian structure isn't an approximation.
+[28:26] So let's assume for now that the dynamics of our system are linear. So that the state
+[28:34] at time t is equal to a t x t minus 1 plus b t u d t plus epsilon t. So the state of
+[28:43] the current time depends on the linear transformation of the state at the previous time and the
+[28:47] current control plus a random disturbance epsilon t. Epsilon t is a random variable
+[28:53] that we assume is distributed as a Gaussian. And in particular, we assume it has a zero
+[28:58] mean and a covariance matrix equal to r t. What a subscript t here means is that the
+[29:05] matrix a and b can actually change over time, but they do not depend on x. So this is a
+[29:13] time-varying linear model plus stochastic noise. Where is this stochastic noise coming
+[29:19] from? It is referred to as a process disturbance and reflects the fact that due to actuator
+[29:25] uncertainty, model uncertainty, or uncertainty about interaction between actuators and environment,
+[29:32] if you prescribe a given control, so if you enact a given control action, the state you
+[29:38] end up with is not necessarily the one that you will predict with your model, but there
+[29:42] is some uncertainty.
+[29:43] So you're also saying that it's a unique invariant in the variance?
+[29:48] Yes, we also assume that r t is possibly time-varying.
+[29:52] So this is to talk about full generality, but for example, think about a robot that
+[30:00] is moving first on the cement, then it's going on sand. Of course, when you spin your wheels
+[30:07] on sand, you have much more uncertainty about where you could be at the next step. In reality,
+[30:13] most of the times r is considered time-invariant. But this is to say that this is a very specific
+[30:20] setting. We will extend it later on to the nonlinear setup. That is, in the end, the
+[30:24] one that we care about for robotics. But it's not so limited because at least we have a
+[30:31] work count for time dependence.
+[30:34] Now what do we have here? So remember that in the bias filter, the way we set up the
+[30:43] problem is that we have a generative model for the state, and then we have a similar
+[30:48] measurement model that predicts what the measurement would be given a given state x
+[30:53] of t. So what we are trying to do is that given this transition model, what is the state
+[30:59] transition model in the framework of a bias filter? So what is the probability of x t
+[31:05] given u t, x t minus one? Remember that this is one of the key terms in order to implement
+[31:13] the bias filter. In particular, it enters the first step of the bias filter, where we
+[31:17] compute the predictability.
+[31:21] So if this is the state transition model, what is the probability of x t given u t,
+[31:25] x t minus one? Well, if I give you x t minus one and I give you u t, you can view x t,
+[31:33] so the state at the next step, as basically a linear transformation of the random variable
+[31:41] epsilon t. So we say that x t is equal to a t x t plus b t u t plus epsilon t. So given
+[32:01] x t minus one and u t, then this is a constant and this is random. And we want to compute
+[32:15] the probability of x t given x t minus one and u t. So this is the probability of distribution
+[32:25] for a random variable that is Gaussian that is linearly transformed. In particular, the
+[32:31] confusion we multiply the random variable by is just one, and then we add the constants.
+[32:36] So using the property number one that we had before, what we get is still a Gaussian random
+[32:41] variable whose mean is equal to the sum of the mean of the stochastic quantity plus the
+[32:50] constant. But we're assuming that epsilon t has a zero mean, so the expectation of x
+[32:57] t is simply equal to the constant term, meaning a t x t minus one plus b t u t, which is what
+[33:09] you have here. What about the variance? The variance will be in full generality the variance
+[33:20] of the stochastic term pre-multiplied and post-multiplied by the term that multiplies the random variable.
+[33:27] Here we just have a one or the identity. So what we get is simply the variance of the
+[33:34] process noise. So here I'm just trying to say, OK, the reason why I'm doing so will
+[33:43] become clear in a second. Let's consider for now the restricted setting, whereby we have
+[33:48] a linear dynamics. Given that setting, let's try to frame everything in the same framework
+[33:54] for the bias filter when we talk about generating model for the states and for the measurements.
+[34:00] And then let's apply it, then let's see how the bias filter actually can be turned into
+[34:04] something that can be very easily computed over. So any questions about this?
+[34:14] Step number two is to also assume for now a linear model for your measurement. So we
+[34:20] assume that your measurement z t depends linearly on the current state plus some noise that
+[34:28] we assume is distributed as a Gaussian with a zero mean and covariance matrix Q t. Similarly,
+[34:37] as before, we can reinterpret this model as a linear transformation of the noise term
+[34:49] delta t. So c t is equal to c t x t plus delta t. In particular, assume that x t is
+[34:59] given in the framework of the bias filter. So this is a constant if you assume that x
+[35:06] t is given. This is stochastic quantity. Again, by using the property number one of Gaussian
+[35:11] distributions, what I get is a Gaussian distribution with mean c t x t. We're assuming that the
+[35:18] mean of delta t is equal to zero and with covariance Q t.
+[35:27] So we are starting assuming that we have a linear model for both the state transition
+[35:32] equation and for the measurement equation. From that, we derived the generative models
+[35:38] for both the state transition equation and the measurement equation that are used in
+[35:43] the bias filter. Finally, let's assume that the distribution
+[35:54] about the initial state is also Gaussian. So we don't know exactly where we are at the
+[35:58] beginning, but we have a Gaussian characterization of it. Particularly, we assume that the belief
+[36:05] about the state at time x of zero is a Gaussian with expected value equal to mu zero and the
+[36:12] covariance equal to sigma zero. Now, these three assumptions, meaning linear
+[36:22] state transition equation, linear measurement equation, and initial Gaussian distribution
+[36:30] for the initial state, guarantee that at all time the belief is indeed a Gaussian.
+[36:41] So if those three assumptions are verified, actually the belief will be a Gaussian. There
+[36:46] is no approximation in using a Gaussian structure to the belief. We'll see later on when this
+[36:52] will become an approximation. We have to show this. I mean, it's not obvious.
+[36:59] We're going to show it in a second. But for now, this is the main implication that if
+[37:04] those three assumptions are satisfied, the belief at all time t is indeed a Gaussian.
+[37:09] What is the practical implication of it is that in order to implement the bias filter,
+[37:16] what they need to do is simply to reason with respect to the expectation and covariance
+[37:24] of the Gaussians that represent the belief at each time t. So instead of propagating
+[37:31] forward an entire density function, I just propagated forward a vector and a matrix.
+[37:40] But I haven't shown yet that is indeed the case. We're going to show it in a second.
+[37:46] Now this problem setting, and in particular the implementation of the bias filter within
+[37:50] this problem setting, is referred to as the Kalman filter, which is the most influential
+[37:57] filter out there, in particular in the context of robotics. It was introduced in the 50s
+[38:03] by Rudolf Kalman. Interestingly, the paper that first introduced it was rejected by a
+[38:10] major journal in controls. There was a lot of debate at the time about whether a state
+[38:17] representation for control was indeed a good idea or not. The main paradigm at that time
+[38:23] was a frequency representation of a control problem, if you're familiar with the control
+[38:28] theory. Finally, it was published in a not so famous journal, but of course later on
+[38:34] became the algorithm of choice for filtering. Again, important thing to recognize is that
+[38:43] once we consider Gaussians, we are committing ourselves to unimodal representation and belief
+[38:49] distributions, so basically to a single hypothesis. But as I said, in the case of linear models
+[38:55] for state transition and measurements, this is not really an approximation. This is actually
+[39:00] an exact computation. So let's stop for a second. We're going to prove in the next few
+[39:10] minutes that this isn't true, but before doing so, let me show the practical consequence.
+[39:17] The practical consequence is as before. So I discussed before the bias filter, and I
+[39:22] said that the bias filter relies on two steps, computing the prediction belief and computing
+[39:26] the correct belief. The bias filter works by starting with a belief at time t minus
+[39:32] one and, as additional input, having the most recent control, u t, and the most recent
+[39:42] measurement, c t. The output is belief at time t. Assuming that, as I said, everything
+[39:49] is linear, the belief, as we will prove, is a Gaussian at all time. So what the bias filter
+[39:56] becomes, it becomes a recursive algorithm to update the mean and the covariance of the
+[40:03] Gaussian belief by iteratively accounting for the most recent control and the most recent
+[40:10] measurement. In particular, the way that it does it, and now I'm going to give an intuition.
+[40:16] We're going to derive the equations in a second. The way that it does it is specular to the
+[40:22] bias filter. Isn't it just an implementation of the bias filter? In the first step, we
+[40:26] compute the prediction belief, so we will account for the most recent control. In the
+[40:30] second step, we account for the most recent measurement. Let's look at the first step.
+[40:35] The first step, we first update the expectation by using, as we will see more clearly, knowledge
+[40:43] about the state transition model. And then we update the covariance about where we could
+[40:51] be by using, again, knowledge about the state transition model as encapsulated by the matrix
+[40:58] A, which is the one that multiplies X. This provides us with a Gaussian distribution that
+[41:07] represents the belief, actually the prediction belief, the updated belief when we have accounted
+[41:13] for the most recent control. Now we want to account for the most recent measurement. The
+[41:18] way to do so is by introducing a gain, referred to as a Kalman gain, that essentially models
+[41:25] to which extent we want to account for information from the measurement as opposed to the information
+[41:31] that comes from our model. In particular, we form a gain by using this complicated equation.
+[41:40] And then we update the mean and the variance of the belief as follows. So the mean of the
+[41:48] correct belief is the mean of the predicted belief plus a linear combination of the measurement
+[41:55] that I got and the measurement that I think I should have gotten. Remember that the model
+[42:04] is what I have here. The measurement model is CT equals CT XT plus delta T. So what is
+[42:13] the expectation of the measurements that... And this is zero. So CT mu bar T is the expected
+[42:35] measurement with respect to the characterization of the state as described by the prediction
+[42:43] belief. Mu bar T is the mean of the prediction belief. So this is the measurement that I
+[42:48] expect to have given my current information about the state. ZT is the current measurement.
+[42:56] KT is a gain. If KT is equal to zero, that means that I'm essentially discarding information
+[43:03] from the measurement and only trusting information that I derived by exploiting knowledge of
+[43:08] the model. If KT is very large, basically means that I'm discarding information that
+[43:14] comes from the model and I'm relying more heavily on the measurements. We'll come back
+[43:23] to this in a second. And finally, I have an update rule for the covariance as well. So
+[43:28] it's clear that the Kalman filter is really where all the magic of the Kalman filter really
+[43:32] happens. It's basically a gain that trades off how much I trust the model versus how
+[43:37] much I trust my measurements. Specifically, let's look again at the Kalman gain. QT is
+[43:45] the covariance of the measurement noise. So it's the covariance of delta T.
+[43:53] So assume... I'm here just trying to give you the intuition. Assume that the QT is very
+[43:59] large, meaning that your sensor is extremely noisy. Basically, it's returning junk.
+[44:07] Here I'm taking inverse. So if QT is very large, what do you think happens to KT? Think
+[44:16] about that one-dimensional case where this actually becomes a division. If QT is very
+[44:20] large, what happens? We are dividing by a very large number, which means that KT is
+[44:27] a very small number. Which basically means that once I correct my belief by counting
+[44:34] for the measurement, basically I'm discarding information for the measurement. Why? Because
+[44:39] if I know that my sensor at time T is extremely noisy, then I'm better off relying on the
+[44:45] model. Likewise, assume that sigma bar T, which is the uncertainty in the prediction
+[44:53] belief, is very close to zero. Which means that with my prediction belief, I'm already
+[45:03] very certain about what the true value of my state is. What happens to the Kalman filter
+[45:10] if the sigma is very small? Again, k is very small as well, because basically it's saying,
+[45:18] well, I already know that the state is a given value with a very high probability.
+[45:26] So instead of using information from a sensor that is noisy, just let's ignore the measurement
+[45:33] and keep the information that I already have. So you can see how k, again, really trades
+[45:40] how much I trust my model in terms of estimating the underlying quantity of interest of the
+[45:47] state and how much it trusts my measurements. Yeah?
+[45:51] Where does the Kalman income come from? Oh, we're going to see it in a second. Yeah,
+[45:58] so here I'm just giving you the intuition. But of course, one had to derive it. It's
+[46:06] not so obvious where this is coming from. Yeah?
+[46:10] So C of t is your measurement, but projected into the space of your state, right?
+[46:21] Well, the projection is through C t. C t is the matrix that trusts for the state into
+[46:30] your measurement plus some noise. And in general, C t does not need to have a certain dimension
+[46:35] of x t. Yeah. But in principle, C t could be even equal to that entity, even though
+[46:43] that is very rare. I mean, usually, for example, C t could be the range, like the distance
+[46:50] between where you are and an object. And the state could be x, y, and your heading. So
+[46:58] clearly, there is a down projection from your state to the space of measurements. And
+[47:07] we will see this more explicitly once we then apply all of this to the task of localization.
+[47:13] And in particular, for making this thing concrete for localization, we will consider a sensor
+[47:18] a LIDAR sensor, which is, by the way, also what you use on a title board.
+[47:22] So here, just to give you an intuition, again, the bias filter might seem a little bit scary
+[47:27] at first. Common filter might also seem a little bit scary at first. But just try to
+[47:31] think about the high big picture. Bias filter compresses two steps. Common filter does the
+[47:37] same. And what we do in each step is that since we know that the belief is a Gaussian,
+[47:42] we have to propagate the mean and the variance. In the first step, we rely on the model to
+[47:48] do that propagation. In the second step, we rely on the measurements. Now, the question
+[47:53] is, how do we properly account for the measurements? The magic is through the notion of a common
+[47:58] gain that allows to optimally trade off how much you trust the model with respect to how
+[48:03] much you trust the measurements. Optimally, because one can show the common filter is
+[48:10] the optimal filter in terms of those filters that minimize the mean square error in terms
+[48:15] of your estimate. We're not going to see that in this class, but just as further clarification.
+[48:23] All right, so there were some questions about where do these equations come from. The reasoning
+[48:33] is fairly straightforward. It's just a little bit tedious. So what you do is to take the
+[48:39] bias filter that we have already proven rigorously, and then insert the three assumptions that
+[48:47] we have made, meaning initial distribution is Gaussian, the state transition model is
+[48:53] linear, and the measurement model is linear. And what you get as an output is this set
+[48:58] of equations. How? Well, let's start first from the prediction. Remember from the bias
+[49:03] filter that the prediction belief is an integral in terms of all the possible states at time
+[49:09] t minus one, you could go to state xt weighted by the probability that you are in state xt
+[49:17] minus one, and the probability that from state xt minus one, you go to state xt if you just
+[49:22] control ut. But now we have additional information. So we want to prove that at each step the
+[49:30] belief is indeed Gaussian, and its parameters are updated according to these equations over
+[49:36] here. So the proof is by induction. Let's assume that at some arbitrary step, we have
+[49:43] a Gaussian representation for the belief. Let's see that that actually implies that
+[49:49] at time t, the belief is also Gaussian. Let's start with the prediction belief. So we're
+[50:00] assuming at time t minus one, the prediction is Gaussian with some mean mu t minus one
+[50:05] and some covariance sigma t minus one. We're doing a proof by induction. Also, we are assuming
+[50:12] that the generative model that describes our state transition follows a Gaussian distribution.
+[50:23] That was assumption number one. Since we have a linear model for our state transition equation,
+[50:31] the generative model is indeed a Gaussian. That is what we have here. Linear model corresponds
+[50:40] to, implies that the probabilistic generative model is Gaussian. So this is our inductive
+[50:47] step. This follows from the assumption about a linear transition model. Property number
+[50:53] three of Gaussians is that when I multiply Gaussian PDFs, what I obtain is indeed a Gaussian
+[51:02] PDF. So the proof then will be extremely tedious and would then tell showing that by completing
+[51:11] the square, what you get is indeed the Gaussian distribution with this mean and this covariance.
+[51:19] Now there is a more direct route to see that the prediction belief has updated the expectation
+[51:28] and covariance according to these equations that reasons as follows. So this will be the
+[51:33] formal way to do it by using the same bias filter formalism. So what you would do once
+[51:37] you multiply these exponentials, you complete the square, it's like a two page of very boring
+[51:43] algebra calculations, and then you get the results. Not very insightful. If you don't
+[51:48] believe me, read those sections. I'm too lazy to do all these steps. They're not particularly
+[51:54] insightful. But there is a more direct way to do it. So again, the assumption is that
+[52:01] the transition model is linear. So if I know the distribution of xt minus one, which we
+[52:10] assume is Gaussian, and I know the distribution of epsilon t, which we assume to be Gaussian,
+[52:18] what I have is that xt is the sum of two independent random variables. xt minus one and bt ut plus
+[52:28] epsilon t. bt is just a constant, so this random variable is a linear transformation
+[52:32] of epsilon t, where I've just added a constant. So what is the result of the sum of two independent
+[52:40] random variables? There's a Gaussian. It's still a Gaussian random variable, whereby
+[52:48] I sum the expectation and I sum the covariant matrices. In particular, the expectation of
+[52:56] this term is at mu t minus one, which is here. The expectation of this term is, so this is
+[53:03] a constant, so expectation of the constant is the constant itself, so bt ut plus zero,
+[53:08] because we're assuming that epsilon has a zero mean, which is here. First equation in
+[53:13] the first step of the common feature. What about the covariances? Well, this is a linear
+[53:19] transformation of a Gaussian random variable, so its covariance is given by A transpose,
+[53:27] the covariance of that Gaussian random variable, sorry, At, the covariance of that random variable
+[53:33] At transpose, plus the covariance of the second random variable. So this is a linear
+[53:40] transformation, epsilon plus a constant. The constant doesn't show in the covariance, so
+[53:45] what I simply have is the covariance of epsilon. So you see that what we get are exactly the
+[53:55] first two equations for the common feature. So as I said, formally, what I should do in
+[54:01] order to be consistent with all the notation and the framework that I've shown so far,
+[54:05] I will need to take these products, complete the square, and find the result in Gaussian,
+[54:11] but it's much easier to think in these terms. Now, something that I didn't explicitly say,
+[54:18] but I want to make sure is absolutely clear, is that we're assuming that the process noise
+[54:24] and the sensing noise not only are Gaussian, but they are independent from the state. So
+[54:31] I didn't mention this assumption, but this is a critical assumption, otherwise, for example,
+[54:37] this step would not work. Are we clear with this? So now, with this perspective, these
+[54:47] two equations become rather clear. So basically, I'm propagating forward my uncertainty about
+[54:54] the state, accounting for the control, by applying in a rather straightforward way the
+[54:59] knowledge about my state transition equations. The second step is the compatibility step.
+[55:08] Again, going back to the bias filter, the link between the prediction belief and the
+[55:16] posterior belief is through the generative model for the measurement. So probability
+[55:21] of Zt given Xt. Remember that eta is a normaliser, meaning that it's a number that does not depend
+[55:27] on Xt. So we have already shown that under all the assumptions we made, the prediction
+[55:35] belief is a Gaussian with the expectation mu bar t covariance at sigma bar t. Now, we're
+[55:44] also assuming that this is assumption number two, that the measurement model is linear,
+[55:53] which implies, as we saw before, that the generative model for the measurement is Gaussian
+[55:59] as well, in particular with mean CXt. So here, the small typo should be Ct of Xt, since we're
+[56:07] also assuming that Ct is time-varying, Qt. Now, let's plot again property number three
+[56:17] of Gaussians. So if we multiply Gaussian distributions, well, what we get is still
+[56:23] a Gaussian distribution. By completing the squares and doing another two pages of very
+[56:29] boring algebraic computations, you will find that the distribution that arises from multiplying
+[56:39] these two Gaussians is still a Gaussian distribution with the parameter mu t and sigma t given
+[56:45] by these equations. So this actually falls from basically completing the square here.
+[56:52] Extremely boring. Again, I gave you editing to do so.
+[56:58] Now, so here, unfortunately, I didn't have a direct link between. There is not really
+[57:04] easy way to, like easy mean, like one, two lines to go from this computation to this
+[57:11] computation unfortunately. Let's just take it as a fact. Now, there are multiple ways
+[57:16] of deriving the Kalman filter. This derivation whereby we leverage the notion of a bias filter
+[57:23] and then we inject into it the assumption that Kalman filter is probably the most foundational
+[57:30] one. But there are many other ways. Another way is to reason directly in manipulation
+[57:34] on Gaussian random variables. That's the most difficult one. Not particularly exciting.
+[57:40] The more interesting one is the one given by Rudolf Kalman in his original paper. So
+[57:46] I encourage you to read his original paper. Super clear, the way it's derived is in the
+[57:53] context of optimal estimation theory. So you set up a cost function, which is mean square
+[57:58] error, and then you try to find the estimator that optimizes mean square error by using
+[58:05] a projection theory. It's very elegant, very few steps. Unfortunately, it's a bit unrelated
+[58:11] from the formalism of the bias filter, so I prefer not to use that derivation. But I
+[58:15] encourage you to read this paper. As a roboticist, Kalman filter is one of the most useful tool.
+[58:21] So the more you understand it, the better it is. Note that this Journal of Basic Engineering,
+[58:27] I don't even know if it exists anymore. It's not a very famous journal. It's the only journal
+[58:31] where he was able to publish this work. So if you have a paper that is rejected multiple
+[58:35] times, no worries, you're in good company. That's the main takeaway. So any questions?
+[58:43] Good. All right. So there is one caveat. The caveat is that we have derived the Kalman
+[58:52] filter under the assumption that the state transition model is linear. And that the measure
+[58:59] model is linear. So under that assumption, then the fact that the belief distribution
+[59:04] is Gaussian is not an assumption, is indeed a fact. So pictorially, what we've been doing
+[59:14] is to say that assuming that the state transition model is linear, what we do is simply to push
+[59:21] Gaussians through linear transformation that maintain the Gaussianity of a distribution.
+[59:26] So we have a Gaussian as an input. We transform this random variable distributed as a Gaussian
+[59:31] through a linear transformation. What I get as an output is still a Gaussian with mean
+[59:36] equal to A mu plus B. A and B will be the equation for this line. And then covariance
+[59:42] A squared sigma squared. So this is pictorially property number one of Gaussians. That's what
+[59:48] we exploited heavily in the Kalman filter. Now, the problem is that most robotic models,
+[59:55] as we saw earlier in this class, are not linear. So for example, for the sinusoidal model,
+[60:00] you have cosine of theta, sinusoidal of theta, and so on and so forth. So speaking, you cannot
+[60:06] apply the Kalman filter. So what do you do? Well, the idea is to now introduce approximation.
+[60:14] So if you have a linear model for your state transition equation as for your measurement
+[60:19] equation, unfortunately, it is no longer true that the belief distribution is Gaussian.
+[60:27] So what you do is now introducing approximation, saying, OK, let's pretend that it is Gaussian.
+[60:33] And with this approximation, let's see how we can derive a filter that maybe in practice
+[60:38] still works in a way that is good enough. In particular, what type of approximation
+[60:44] do we make? The approximation we make is as follows. So let's assume that we have a
+[60:53] random variable that is distributed according to a normal distribution, so it's Gaussian.
+[60:58] But now the transformation we force this Gaussian to go through is nonlinear. So what we get
+[61:04] as an output in general is something that does not look as a Gaussian at all. For example,
+[61:09] here we have two peaks. So what we do is somehow to approximate what we get with a
+[61:17] Gaussian. The question is, how do we do that? Well, the idea, and actually, let me pictorially
+[61:23] do it here. The idea, we are going to do it mathematically in a second, is to use the
+[61:28] concept of linearization. The idea that every function locally, well, almost every function
+[61:34] locally, looks like a line. So what we do is to approximate this nonlinear transformation
+[61:41] with a linear one, and then push the Gaussian, for example, the initial distribution, through
+[61:49] the linear approximation. So what we get as an output is a Gaussian, because when we push
+[61:55] a Gaussian through a linear transformation, we get a Gaussian. There will be some approximation
+[62:00] of the true underlying belief. How good? We're going to discuss it in a second. So
+[62:06] mathematically, what do we do? So we have this transformation, g of x t, u t, which
+[62:18] is nonlinear, and hence destroys the property that when we push the Gaussian variable through
+[62:25] it, what we get as an output is no longer Gaussian. So what we do is to view this nonlinear
+[62:31] transformation, we approximate this nonlinear transformation with a linear one by using
+[62:36] the concept of linearization. Linearization, as you're already familiar with, because calculus
+[62:41] is a prerequisite, says that a function f that is differentiable can be approximated
+[62:48] as f of x bar plus the derivative of f with respect to x evaluated at x bar times x minus
+[62:58] x bar, where x bar is the linearization point. So if I have a function f of x that is nonlinear,
+[63:16] I can approximate it as a linear function. In terms of x minus x bar, this will be the
+[63:22] slope of the line, and this will be the constant term for your line. Everyone understands this?
+[63:30] Good. So what we do is the same here. The only question is around which point do we
+[63:37] linearize the function. So basically, which point do we choose as x bar around which we
+[63:46] perform the linearization. So conceptually, we want to have an approximation that is as
+[63:56] good as possible in the area where we have most of the probability mass function. So
+[64:02] that means that it seems natural to use as a linearization point the mean of the random
+[64:08] variable that you want to pass through that nonlinear transformation. So that's exactly
+[64:14] what extended Kalman filter, extended means that we account for the nonlinearity of the
+[64:18] transition equation. What extended Kalman filter does, we expand interior series to
+[64:28] the first order, the nonlinear term around the mean. So this is complicated, but it's
+[64:35] exactly the same equation, where x bar will be mu t minus one here. We're expanding around
+[64:42] the mean. J is the Jacobian. We are taking the derivatives of the function g with respect
+[64:48] to x, and then x minus mu will be the x minus x bar over there. So this is really straightforward
+[64:55] linearization. No magic here. What is bias? Well, now the update equation, x of t, can
+[65:07] be written as g ut mu t minus one plus gt. I define the Jacobian as gt xt minus one minus
+[65:26] mu t minus one plus the process disturbance, so plus epsilon t.
+[65:38] So assuming that xt minus one follows a Gaussian distribution, or the distribution of x t minus
+[65:45] one is approximated as a Gaussian distribution, we're assuming that epsilon t is also Gaussian.
+[65:52] So what is the distribution of x of t? It's also Gaussian. So basically, by using linearization,
+[65:58] we fall back exactly into the same setup we had before. The difference is that before
+[66:04] we were assuming that the transition model was linear, now we are introducing an approximation
+[66:09] that makes the transition model look as if it were linear.
+[66:13] So we should do the same also for the measurement model, where the linearization again will
+[66:20] be with respect to the mean of the distribution of x t minus one. So once we do that, what
+[66:28] we have is a linear state transition model and a linear measurement model. So then the
+[66:35] same equations we derived for the Kalman filter apply here. In particular, when I look at
+[66:40] the extended Kalman filter, the equations are exactly the same. The only difference
+[66:46] is that instead of the A or C matrices that we had before by assuming a linear transition
+[66:55] model, I look at equivalent A and C matrices for the linearized system. In particular,
+[67:05] looking at the state transition model, what is the matrix that takes the place of A t?
+[67:10] Remember that in the Kalman filter, the model was x t equal A t x t plus B t u t plus epsilon
+[67:23] t. What is the matrix that takes the place of A t? G. And so that's what we have here.
+[67:32] Before you had A sigma A transpose, now you have G sigma G transpose. What is the matrix
+[67:39] that takes... So this is the linearization for the measurement model. So we have Z t
+[67:53] approximated as h mu bar t plus h t, which will be the Jacobian, times x t minus mu bar
+[68:05] t plus delta t. So what is the matrix that replaces C t, the projection of the state
+[68:14] into the measurement? I mean, it's really pattern matching. You have to look at what
+[68:21] multiplies x. h, right? So instead of having C, then here you just have h. And yeah, so
+[68:37] basically the Kalman filter, I mean, the equation extended Kalman filter are the same equation
+[68:42] of the Kalman filter, whereby what you have replaced is the nonlinear transition model
+[68:49] and nonlinear measurement model with linearized versions. Once you do that, then all the other
+[68:54] mathematics are exactly the same. And this will be the extended Kalman filter. So what
+[69:02] do you do in order to implement an extended Kalman filter? You take your nonlinear model,
+[69:06] you linearize it, and then you plug the Jacobians into the equations for a Kalman filter. Any
+[69:17] questions about this? So here the point I'm trying to convey is that extended Kalman filter
+[69:22] is very similar to the Kalman filter once you linearize the equations, you are again
+[69:28] in the setup of linear transitions, so everything else stays the same. The key difference is
+[69:34] that now this is an approximation, so there are no guarantees anymore that this is going
+[69:38] to work. In practice, it works well, as long as you stay closer to an operating point.
+[69:47] Why? How EKF can fail? Let's look again at what the EKF is doing. We have some Gaussian
+[69:57] random variables whose distribution is Gaussian or is approximated as Gaussian. And I wanted
+[70:02] to pass this through a nonlinear transformation, which would be the nonlinear equation of motion
+[70:07] of my vehicle. If I do it exactly, I obtain this horrible thing, computationally intractable.
+[70:14] But if I do a linearization, then I obtain as an output these red Gaussians. It is very
+[70:23] similar to this blue Gaussian that would be the Gaussian that tries to match as well as
+[70:28] possible the true underlying distribution by matching the mean and the standard deviation.
+[70:34] So this is a case where actually the EKF works well. How can EKF fail? Well, it can fail
+[70:43] in two ways. One is if this distribution is very fat, meaning that I have a lot of probability
+[70:52] mass here and here, it means that the linearization that is generally speaking very good when
+[70:59] you're close to the linearization point becomes very coarse when you have a lot of mass, which
+[71:06] basically means that you're introducing much more error. Or the other way it can fail is
+[71:11] that if you have a significantly nonlinear function, then the linearization is not accurate
+[71:17] even when you are close to your linearization point. Let's see if it will be better what
+[71:22] happens. So let's consider the same nonlinear function with the same linearization, but
+[71:28] now the distribution has heavier tails, meaning higher uncertainty.
+[71:34] Now let's compare the blue curve, which corresponds to the best possible Gaussian through which
+[71:42] you can fit the true underlying distribution. Again, best possible Gaussian means that we
+[71:46] match mean and standard deviation with the Gaussian if you obtain by passing these Gaussians
+[71:54] through the linearization. Now you see that there is a lot of difference and a significant
+[71:58] difference in the mean. Here they were closer, but here they are very far apart. Why? Because
+[72:04] now we are passing significant mass in our probability distribution through a linearized
+[72:11] model that is in general very inaccurate. Of course, this is just to give you an intuition.
+[72:20] On the other hand, if your Gaussian distribution has very small variance, it means that you
+[72:28] are pushing most of the probability mass around the point through which you have linearized
+[72:33] and your linearization is very good. And so what you get as an output is something that
+[72:38] coincides very well, not only with the best possible Gaussian approximation, but indeed
+[72:42] with the true underlying approximation. So if your EKF is not working, it means most
+[72:52] likely you have bugs. So there are four things. You have bugs. You have a horribly nonlinear
+[72:59] function, so then you have to start thinking about a different filter. Your uncertainty
+[73:04] is too large, so maybe you should start thinking about buying better sensors. And fourth, and
+[73:12] it's actually very common, is that in implementation, the common filter, we are assuming we know
+[73:18] RT and QT. RT is the process noise. QT is the measurement noise. But in general, where
+[73:25] do you get those numbers from? Who tells you what is the process disturbance of sand? Hard.
+[73:33] You use calibration, of course. You do a lot of measurements and so on in order to calibrate
+[73:40] these numbers. But oftentimes, it's a bit of an art to pick right numbers for the noises,
+[73:50] to the point that these almost become killing parameters. And what is extremely annoying
+[73:56] about a common filter, for example, was working on a common filter for active determination
+[74:00] for a satellite, is that it's not that it smoothly tends to work. It doesn't work, and
+[74:09] all of a sudden, it works. So you spend really days trying to troubleshoot this thing until
+[74:14] it works. Eventually, it works. But making it work sometimes can be quite a pain in the
+[74:19] neck. As I said, robotics is a lot of frustration. If you're not ready to be frustrated, then
+[74:25] consider something different. Sorry. Cool. Yes, there was a question?
+[74:32] Yes, you can. The problem is that in closed loop, so once you start deploying your robot,
+[74:49] what guarantees you can give? Very hard to say, because the uncertainty about your belief,
+[74:55] it depends on a lot of things that you don't control. Maybe there is a pedestrian that
+[74:59] is doing something erratic that screws up your... And so, yes, you can. And maybe you
+[75:05] can have monitors to say, OK, at this point, EKF cannot really track your localization
+[75:12] because you're in a regime that is nonlinear, and then you should do something else. Yes,
+[75:17] absolutely. It's quite tricky to do it. But yes, and EKF has been extensively studied
+[75:22] in the field of robotics, so you have tons of variations. Some of them would increase
+[75:26] level of robotics. So let me wrap up the lecture today by saying
+[75:31] that the extended Kalman filter is not the only way to do an approximation of the Kalman
+[75:37] filter in nonlinear settings. Another popular way is the so-called unscented Kalman filter,
+[75:42] which you can think of as the dual of the EKF. So what you do in the EKF is to linearize
+[75:47] the transformation and then pass the Gaussian through. What you do in the EKF is actually
+[75:54] to approximate the Gaussian that you have as an input through particles and then pass
+[76:00] those particles through the nonlinear transformation. So in a way, it's just the dual. So what you
+[76:06] do is you compute particles referred to as sigma points, usually distributed symmetrically
+[76:12] with respect to your covariance function. You transform them through the nonlinear state
+[76:17] equation. And then as an output, once you get these particles, you try to fit a Gaussian
+[76:24] that best fits those particles. So basically a statistical regression technique.
+[76:28] We're not going to go into the details of the EKF, just wanted to mention that it exists.
+[76:34] It tends to be more robust. It just will be more complicated to implement. Again, the
+[76:38] high level notion is that in EKF, you linearize the transformation. In EKF, you've approximated
+[76:44] the input random variable. You pass it through exactly the nonlinear function. And then you
+[76:50] reconstruct the density at the output. Results. So with the EKF, even if we have a very fat
+[76:59] distribution, what we get as an output is something that resembles much better the best
+[77:04] Gaussian we could reconstruct with respect to what the EKF can do. So basically EKF tends
+[77:10] to be more robust in cases whereby you have high uncertainty, which goes back to his question.
+[77:15] All right. So on Friday, tomorrow, we're going to talk about nonparametric filters. For those
+[77:23] of you that are not coming tomorrow, on Tuesday, we'll then apply everything we have learned
+[77:27] so far to the specific problem of localization.

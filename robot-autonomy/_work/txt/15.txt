@@ -1,0 +1,714 @@
+[00:00] So today we're going to cover localization. That is, we're going to use of the tools techniques
+[00:10] from, that we, for Bayesian filtering that we covered last week in order to understand
+[00:16] how a robot can localize itself within a given known map. Specifically, the talk for today
+[00:24] is to cover two main techniques for robot localization. One referred to as Markov localization,
+[00:31] which is the more straightforward way of instantiating the bias filter for the purposes of localization.
+[00:39] Very general method, quite intuitive, but as usual, due to its generality, it's computationally
+[00:47] in general intractable. So we will consider then approximation as we did for the topic
+[00:53] of filtering last week. And in particular, we will consider the Gaussian approximation,
+[00:59] which will lead it to the EKF filter.
+[01:06] Alright, so the main readings for this lecture, again taken from the book Probabilistic Robotics,
+[01:13] in particular from chapter 7, section 7.2 to 7.6. So just to make sure that everyone
+[01:20] is on the same page, the topic of localization is the, and is the problem of determining
+[01:27] the pose of a robot relative to a given map. In other words, it can be interpreted as the
+[01:34] problem of establishing a correspondence between the map coordinate system and the robot's
+[01:38] local coordinate frame. So assume we have a map, we have a coordinate system attached
+[01:43] with that map, and then the robot has its own local coordinate frame. The task of localization
+[01:49] is try to find this transformation from global to the local coordinate frame. For example,
+[01:56] in the case of a unicycle model, we want to find the XY position for the origin of the
+[02:04] local coordinate frame for the unicycle, along with the heading vector.
+[02:09] Obviously, assuming that you know the map, once you know about this transformation, then
+[02:16] the robot can use this map in order to understand where the objects, where all of the objects
+[02:22] in the map are with respect to the robot, and hence the robot then can plan a trajectory
+[02:27] that is safe, meaning that it reaches some goal, and avoids objects and achieves collision
+[02:33] avoidance. Now this process requires continuous integration of measurement in data over time.
+[02:42] The point is that, as it is the case of filtering, the underlying state, in this case the state
+[02:49] of the robot, is not directly observable. It's only observable through measurements
+[02:54] that are however affected by noise. So localization algorithm is an algorithm that accumulates
+[03:01] measurements through time in order to refine the knowledge of such a transformation between
+[03:08] the global coordinate frame and the local coordinate frame.
+[03:12] If you want to interpret the localization problem according to a bias network, the framework
+[03:18] is very similar to the framework that we introduced for bias filtering. We have states, which
+[03:24] are unobservable quantities, we cannot observe them directly. We have controls that affect
+[03:31] the time evolution of the state. At each time t, we gather a measurement that can be
+[03:38] used in order to constrain the possible values of the state. For us, constraining the value
+[03:44] of the state means constraining the belief distribution through which probabilistically
+[03:50] we represent our knowledge of the state. In localization, we also assume that the map
+[03:56] is given. So in addition to the measurements that we have access to, the controls that
+[04:03] we have access to because we decide them, we also have information stemming from an
+[04:09] a priori map that we fuse in order to refine the belief about the state. So that's a localization
+[04:15] problem. Again, we assume that the map is known. On Thursday, we will discuss the case
+[04:20] whereby the map is not known. So simultaneously, not only you have to localize yourself with
+[04:26] respect to the map, but you also have to estimate the map, which seems like a chicken
+[04:31] and egg problem. If you don't know what the map is, how you can localize yourself with
+[04:34] respect to the map, and vice versa, we will see that actually there are effective algorithms
+[04:38] to address this chicken and egg problem.
+[04:41] Do you ever have to localize more than six configuration variables of your position when
+[04:47] you're heading?
+[04:48] No. I mean, the problem of localization is to determine the pose of the configuration
+[04:53] variables. So by definition, the task of localization is to pinpoint those variables.
+[05:00] So typically for a three-dimensional robot on a plane, it would be x, y, and theta, orientation.
+[05:07] But for a drone, then you also have to estimate the pitch, yaw, and so on and so forth.
+[05:18] So there are many different instantiations of the localization problem. And each instantiation
+[05:24] requires, in general, different algorithms. So I'm going to discuss four main dimensions
+[05:30] through which the localization problem can be described. And then I'm going to tell you
+[05:36] exactly what specific instantiation of the localization problem we're going to look at.
+[05:41] So first of all, the localization problem can be classified with respect to how much
+[05:48] a priori information we have about the initial position. So if we assume that the initial
+[05:53] pose is known, or at least is known with the high accuracy, we talk about a local localization
+[06:00] problem, which is best addressed through Gaussian localization algorithms, EKF algorithms. Why?
+[06:08] Because if you know that the initial pose is known, then if the algorithm does a good
+[06:13] job in tracking the position of the robot, it's reasonable to assume that the belief
+[06:18] is unimodeled. So if that is the case, it's fine to use an EKF algorithm that relies on
+[06:24] the Gaussian approximation, and remember that the Gaussian distribution is unimodeled. If,
+[06:29] on the other hand, the initial pose is unknown, so you know that you are at Stanford, but
+[06:35] you don't know if you are in this room or in another room, so maybe you are equally
+[06:39] likely in this room or in another room, then it doesn't make any more sense to use a Gaussian
+[06:46] as a parametric approximation for the belief distribution. You are better off using a multimodal
+[06:52] distribution where you put some peak for the mass function of your belief in the other
+[06:57] room and some mass function for the belief in this room.
+[07:02] This is the so-called global localization problem. It's the case when you drop the robot,
+[07:06] initially you know where you are, the robot has to localize itself. A third and even more
+[07:12] advanced version of the problem is the so-called kidnap robot localization problem, whereby
+[07:17] the initial pose is unknown, so you might have a uniform prior or maybe a multimodal
+[07:22] distribution, and you consider that during operations someone can literally kidnap your
+[07:30] robot, take it, and teleport it somewhere else. What do you think this problem is of
+[07:38] any usefulness in practice? Of course, teleportation is yet not achievable, so in practice we don't
+[07:44] have teleportation.
+[07:45] Exactly. So if you have an algorithm that can solve the kidnap robot localization problem,
+[07:53] it means that you're very robust to possible lack of signals or sudden drifts in your signal
+[08:01] that may look like as if your robot is working out. So the localization problem is best addressed
+[08:06] by Gaussian filters, so EKF localization algorithms. Global localization and kidnap robot localization
+[08:13] are best addressed by multimodal localization algorithms that rely on particle filtering.
+[08:20] For the undergraduate version of this class, we will mostly be talking about EKF, so today
+[08:27] and on Thursday. For the graduate version, we'll consider these two additional problems
+[08:33] through the lens of particle filtering. Unfortunately, on Friday I'll be on travel, so we'll have
+[08:38] a make-up lecture to cover these two topics. The good news is that in the homework we only
+[08:45] deal with the EKF localization, so as far as the homework is concerned, it's not an
+[08:49] issue that I'm going to reschedule the Friday lecture to a later time.
+[08:55] So second dimension is whether the environment is static or dynamic. Is the robot the only
+[09:00] object that is moving in the environment, or are there other objects that are moving
+[09:04] in the environment? If the only object that moves in the environment is the robot, we
+[09:10] say that this is a static localization problem. If there are additional objects that move,
+[09:16] we talk about the dynamic localization problem. Why is this more challenging? Because maybe
+[09:21] you are considering something as a landmark through which you try to localize yourself,
+[09:27] but then that landmark moves, and then you have to listen about the motion of that landmark,
+[09:32] so it's an additional level of sophistication. This can be addressed in a variety of ways,
+[09:38] but basically treating landmark that moves as outliers and then adding a layer of a try
+[09:44] to rejection on top of your localization algorithm, or you can reason directly about
+[09:49] the objects that move by doing a process referred to as state augmentation, so you try to also
+[09:54] pinpoint the location of the other objects in the environment, but this is more complicated.
+[09:59] Third aspect to consider is passive versus active localization. In passive localization,
+[10:05] the robot only, so the localization module only observes the robots, and in particular
+[10:11] the controls you see that we use are not meant to ease the localization process. Basically,
+[10:17] the robot is doing its own thing in order to get somewhere, along the way you gather
+[10:21] measurements you want to use that for localization. This is different from active localization,
+[10:26] whereby your control actions you see are strategically computed in order to ease the localization
+[10:33] process. For example, you are deployed in Normandy in the D-Day, and you are parachuted
+[10:42] there in land, and then you try to move to find some landmark like a church or something
+[10:47] in order to understand where you are. In practice, localizing yourself is always
+[10:55] the part of the problem, but it's not the entire problem, so oftentimes people consider
+[10:59] hybrid approaches whereby you have control actions that blend the objective of localizing
+[11:05] yourself with the objective of fulfilling a task. For example, in the lab, my lab, we've
+[11:11] been doing quite a bit of work on planning trajectories that ensure that the robot stays
+[11:15] well localized. Roughly speaking, if you have a quadrotor, you want to plan a trajectory
+[11:20] such that you always have in your field of view an environment with a lot of texture
+[11:26] that you can use in order to pick up landmarks. If you have a quadrotor in its field of view
+[11:31] only has a wall, then it becomes a problem because then it's very difficult for the robot
+[11:36] to understand what it is with respect to the wall, since the wall doesn't really have features
+[11:41] that allow you to pinpoint your position. Finally, we distinguish between single robot
+[11:49] and multi-robot localization. Single robots, we have a single robot that is trying to localize
+[11:53] themselves. Multiple robots is the case where we have multiple robots that collectively
+[11:59] are trying to localize themselves, so you also rely on the help of your teammates. So
+[12:05] in this class, we're going to focus on local through EKF and global through particle filtering,
+[12:11] static or quasi-static passive single robot localization problems. First of all, this
+[12:18] class of problems is the one that is most often found in applications. Second of all,
+[12:26] it's the simplest one. Third of all, it provides the foundation for all the other problems.
+[12:32] So once you understand how to solve this problem, the other problems are not easy, but basically
+[12:36] are extensions. Is that clear? All right. Now, so in this lecture, try always to have
+[12:44] in mind everything we discussed last week about bias filters. Keep in mind that everything
+[12:50] we do is basically instantiating a bias filter. If you have this perspective in mind, this
+[12:55] lecture is going to be enjoyable. If you don't have this perspective in mind, this lecture
+[12:59] is going to be confusing and not very pleasant. All right. So again, the idea is to frame
+[13:07] the localization problem as a bias filtering problem. So in order to do so, we have to
+[13:12] identify all the typical concepts from a bias filtering with the case of robotics.
+[13:20] So in particular, we have to say what the state is in our context, what the transition
+[13:25] model and the measurement model are in our context. And we have to add a new notion that
+[13:31] is the notion of the map that we assume is given. We have to understand how to factor
+[13:36] that knowledge in a bias filtering framework. So that's the agenda. So for the next 20 minutes,
+[13:41] we're going to set up the ingredients in order to set up a bias filter algorithm for
+[13:46] localization. And then we're going to discuss the algorithm. So first step is to identify
+[13:54] the notion of states, measurement, and controls with the notion of robotic states or robotic
+[13:59] controls or robotic measurements. And this is pretty straightforward. So in the case
+[14:04] of a robot, it really depends on your robot. But as you know, the example that we used
+[14:11] throughout this lecture to make things consistent is the example of a unicycle. So in the case
+[14:16] of a unicycle, the state will be x, y, and theta. So position and heading. The control
+[14:25] is the linear speed and the angular speed. And the measurements in general could be anything,
+[14:31] depending on the sensor that you have. In order to make the exposition transparent,
+[14:36] and this is also typically the case, we consider range and bearing measurements. So basically
+[14:42] sensors that provide us with a distance measurement with respect to a landmark and a bearing measurement.
+[14:49] So basically what's the angle between our current heading and where the landmark is.
+[14:53] So our measurements from now on will be vectors indexed by i. We assume that in general we
+[15:00] have capital N measurements where the first component is the distance to the landmark
+[15:06] and phi i is an angle, which is the bearing angle with respect to the landmark.
+[15:14] So it's straightforward. A little bit more discussion is required in order to explain
+[15:19] the notion of a map. So far we've been very casual in how we talked about a map. In reality,
+[15:26] how to represent a map has a dramatic impact on the quality of the localization process.
+[15:37] In particular, in the context of localization, a map is, in a nutshell, a list of objects
+[15:45] in the environment along with their properties. So it's just a list, M1, M2, all the way to
+[15:51] M capital N, assuming that we have N objects, each one with properties. Like for example,
+[15:56] if we have point futures, and I'll be clear in a second about what the future is, then
+[16:03] M i will be the xy position for that future. If you have a line, then M i will be the R
+[16:12] and alpha coefficients of a line in polar coordinates. And you might have additional
+[16:17] information like, for example, the color of the future and so on. In particular, maps
+[16:22] can be either location-based or future-based. In location-based, the index i correspond
+[16:29] to a specific location. So think about a cell. M i will be the i-th cell in that grid. And
+[16:38] M i might have the meaning about whether that cell is occupied or not. So it could be just
+[16:43] a binary variable. In future-based maps, the index i is a future index. And M i contains
+[16:50] some properties of that future. As I said, the position, color, and so on and so forth.
+[16:56] So these are two completely different ways of representing a map. One is a volumetric
+[17:00] one. It relies on the composition of the state space. The other one is based on futures.
+[17:06] Of course, the future-based representation is more succinct, so computationally easier
+[17:13] to deal with, but is also a bit more intricate. And both types of maps are widely used.
+[17:21] And these coordinates are with respect to you, or with respect to some frame of reference?
+[17:27] So we assume that a map has an associated global reference frame. And then the robot
+[17:32] has its local reference frame. The task of localization is to find the rotation and translation
+[17:37] matrix, if you will, that basically explains the transformation. And of course, you have
+[17:44] freedom in selecting the reference frame for your map. But you have to be consistent, obviously,
+[17:53] through the steps.
+[17:55] Let's get some examples. So for location-based maps, as I said, these are the simplest possible
+[18:00] maps you could have. You're just decomposing environments into a cell. Each element of
+[18:07] the map then becomes one of the cells. And basically, so mi would be the index of one
+[18:14] of these cells. And then the value would be, for example, whether that cell is occupied
+[18:19] or not.
+[18:20] So you can do a decomposition. This is something that we already saw during the lecture on
+[18:25] motion planning. You see how many of the primitive algorithmic routines are used in a cross-cutting
+[18:31] sense throughout the autonomy stack. You can decompose the environment by using a vertical
+[18:36] cell decomposition, something we already saw for motion planning. But most usually, you
+[18:41] just have a fixed cell decomposition that leads to the notion of an occupancy grid.
+[18:45] Basically, you discretize an environment. You assign to each cell the value of a one
+[18:50] or zero, one if it is free, zero if it is occupied. That's it.
+[18:55] Now, this is a very dense representation. It's indeed a volumetric representation of
+[18:59] your environment. So it captures a lot of information. But at the same time, it's computation
+[19:05] expensive and also memory expensive.
+[19:10] More sophisticated version of the grid map of the occupancy grid, for example, might
+[19:15] encode the notions of probabilities, what is the probability I'm in collision here,
+[19:20] or might also have additional attributes. For example, for Mars navigation, there are
+[19:26] additional attributes in terms of how likely I'm going to traverse this cell without getting
+[19:33] stuck.
+[19:34] Turns out that the killer for Mars rovers are not so much rocks and sun, but sand dunes.
+[19:39] Extremely hard to detect. And once you're in there, that's game over. You're stuck.
+[19:44] By the way, one of the rovers was lost in a sand dune. People worked for one year to
+[19:51] get it unstuck from the sand dune, but it didn't succeed.
+[19:56] So I'm saying, so occupancy grid, very widely used tool. Its simplest form encodes the notion
+[20:02] of whether a cell is occupied or not, but you might have additional attributes.
+[20:07] Another way of, different way of representing a map is through the notion of features. So
+[20:13] this is not a volumetric representation. This is a feature-based representation. So for
+[20:17] us, a map is a bunch of objects, like for example, landmarks or lines, for which we
+[20:25] know the equations with respect to a consistent global reference frame.
+[20:32] So a feature map could be in terms of geometric primitives, blinds, points, and so on, or
+[20:37] in terms of objects, even semantic objects. We talk in that case about topological maps,
+[20:43] whereby we have a map in terms of, say, tables and lamps and seats and chairs and so on.
+[20:49] Of course, as you move from an occupancy grid to a topological map, the information
+[20:56] is increasingly more abstract. But at the same time, you lose some information. So there
+[21:03] is a trade-off in terms of computation and representation power between all these maps.
+[21:08] Depending on application, you may choose one or the other one.
+[21:12] OK, so we know how to represent a map. That was the second ingredient. The third ingredient
+[21:18] is how to represent the state transition model. Remember that in the bias filtering
+[21:24] context, the state transition model was Markovian, which means that the states at the next time
+[21:36] is distributed according to probability distribution. That only depends on the previous states and
+[21:44] the current control. So the assumption is that the probability distribution about next
+[21:49] states, future states, depends on the past only through the previous state. The history
+[21:55] of the process doesn't matter. So in this case, the interpretation in the
+[22:02] robotic context is quite straightforward with a caveat. It's straightforward because now
+[22:08] we interpret this transition model as basically the differential equations for our robot.
+[22:17] Like, remember, for a unit cycle, you had x dot equals cosine theta, v y dot equals
+[22:25] sine theta, v theta dot equals omega. You discretize them by using Euler discretization.
+[22:37] You add process noise, and that will lead you to your probabilistic transition model.
+[22:47] Probabilistic because we add noise here, noise here, and process noise here.
+[23:00] So the state transition model is simply you take the kinematic model, what you have, discretize
+[23:06] it, you add process noise, that's your stochastic state transition model. In the p-set, that's
+[23:12] exactly what you would do, again, for the case of a unit cycle.
+[23:18] The distribution of the next states is obviously related to the distribution of the process
+[23:24] noise, which in our case is Gaussian with zero mean.
+[23:28] Can I ask a question about the design of the map? Would the process of actually treating
+[23:34] our robot as a point and then adding extra patterns to all the features, would that be
+[23:37] involved here, or is that more associated with motion planning cases?
+[23:40] Typically, this is associated with motion planning cases. Good question. That is more
+[23:46] the job of the motion planning model. Now, all this is fine. So basically what we're
+[23:52] saying is that we are at state x t plus minus one, we apply control u t, and we get a distribution
+[23:59] of possible next states. Darker means that it's more likely. When we have a distribution,
+[24:04] again, because we assume that now we have a process noise, which in reality is good
+[24:08] in order to model mismatches, we are stuck. That happens in terms of data mechanics and
+[24:13] so on. Now, the caveat, though, is that in the context of bias filtering, we didn't have
+[24:19] a notion of a map. But for robotic applications, we do have a knowledge of the map and we have
+[24:26] to account for that in our state transition model. In particular, for the case of robotic
+[24:33] applications, more rigorously, we should think in terms of probability of next state x of
+[24:40] t given x t minus one, u t, and the fact that we know the map. How is the map affecting
+[24:48] the probability distribution of all next states? Right. So you cannot be in the future
+[24:56] in a location whereby you are in a collision. Because, for example, say that we have a wall,
+[25:05] if we are not conditioned on the map, it might be possible to be directly on the other side
+[25:10] of the wall. But if we know that there is a wall, then there is no way for the robot
+[25:14] to go through the wall. So the posterior probability distribution has to account for
+[25:18] that. So the question is, how do we account for this extra conditioning? Once we do that,
+[25:25] then we have a state transition model that we can use as usual in our bias filter. Does
+[25:29] it make sense? So the idea is relatively straightforward, and we're going to just derive it more rigorously
+[25:36] in a second. So we approximate the state transition model with the map conditioning according
+[25:42] to the equation eta, which is a normalizer, probability of x t given u t x minus one.
+[25:54] So this is the state transition model assuming that, so without conditioning with respect
+[25:59] to the map, times probability of x t given m over probability of x t. So this is usually
+[26:09] taken to be a uniform distribution. So typically, this is subsumed in a normalizer u prime.
+[26:19] We're going to derive this in a second. But what is the intuition? That the probability
+[26:25] of being the next state x t conditioned on x t minus one, u t and m, is equal to the
+[26:31] probability transition into the next state x t given u t x t minus one times a term that
+[26:40] measures the compatibility between the next state x t and the map. So in particular, if
+[26:50] the next state x t corresponds to a state that is in collision, meaning in an object,
+[26:59] which is not possible, this will be zero. Otherwise, we just set it to a constant value,
+[27:05] which is then subsumed, whose proper scaling is given by the fact that this probability
+[27:11] distribution has to be normalized. So super simple. I mean, practically, what do you do?
+[27:17] You take your state transition model, so unicycle model, you discretize it, you add the process
+[27:22] noise, you have the probability distribution, you multiply that by something that is zero
+[27:28] if at the next state you're in collision, or otherwise it's just a constant term. That's
+[27:34] the probability to be in each possible state x t. Then you sum all of these probabilities,
+[27:41] and then that number is divided in order to make sure that this probability distribution
+[27:44] is normalized, meaning that the probability is summed to one. That's practically what
+[27:48] you do. So straightforward multiplication. Where is this approximation coming from?
+[27:53] Well, it's due to the usual application of the bias theorem, which is really the probabilistic
+[28:03] result that we use in this class. So in particular, probability of x t given x t minus one, u
+[28:10] t m, is equal to sum normalizer eta times probability of... Actually, how do we do it?
+[28:34] So you want a price bias here. How do we propose to do it as an exercise? So basically
+[28:41] you want to flip x t with m. So this is equal to probability of m given x t, u t, x t minus
+[29:05] one, times probability of x t given x t minus one, u t, times the normalizer. I applied
+[29:20] the bias theorem with respect to m. Now we make the approximation that this probability,
+[29:29] so the probability of the map given x t, u t, x t minus one, is approximately equal
+[29:37] to probability of having a map with the given future positions m, given x t. Now, again,
+[29:46] apply bias to p of m given x t, which is equal to p of x t given m, probability of m over
+[30:02] probability of x t, and then apply this back and obtain exactly that formula. Now, the
+[30:10] probability of the map is taken to be basically a uniform, so it's subsumed by the normalizer,
+[30:18] and that's in the end what you get. The eta here is different from the eta here. Basically,
+[30:26] we have multiplied, so that eta is equal to this eta multiplied by p m. So basically we
+[30:34] plug this one here. So what we get is equal to eta, probability of x t given m, p m, p
+[30:52] of x t, times the probability of x t given x t minus one, u t. So this one does not depend
+[31:02] on x t, so it's folded into the normalizer, which we redefine as eta. It's a different
+[31:09] number by a standard number. Make sense? Practically, they just say that this is not coming out
+[31:16] of the blue, but the intuition should be pretty straightforward. As I said, typically p of
+[31:21] x t is taken to be uniform, so it's subsumed into the normalizer. So in the algorithm,
+[31:25] we just account for these two pieces.
+[31:35] So fourth block is the notion of the measurement model. So the measurement model, again, the
+[31:49] sensation is relatively straightforward. So before, we had a notion of probability
+[31:56] of having a measurement z given x t. So what we do here is, again, to have a Markovian
+[32:04] measurement model, meaning that the measurements only depend on the current state, but not
+[32:09] on the history of the process, with additional conditioning of having knowledge about the
+[32:16] map.
+[32:17] Sorry, just for the previous point where we were talking about the term probability of
+[32:25] the map given your state, I'm trying to interpret what that means, because I know the state
+[32:32] and the control, they have noise associated with them. But the map itself, it seems like
+[32:38] it would be deterministic to me.
+[32:40] Well, I mean, you can interpret it in terms of having a set of possible words. For example,
+[32:48] if you have a topological map, you might have, like in the room, you might have tables in
+[32:54] different positions, and you can assume the distribution of those tables is indeed stochastic.
+[32:58] That's the underlying reasoning here. Something to point out here is that this approximation,
+[33:07] it's useful, I mean, sometimes people get lazy, they don't even do this, they just say
+[33:13] the state transition model with the map conditioning is approximately the one without map conditioning,
+[33:18] that's it, and call it a day. Sometimes you do this, but it's not perfect, right? And
+[33:23] one of the reasons why this is not perfect is that basically we are considering a consistency
+[33:31] check with respect to the map that only relies on the current value of the state. Why this,
+[33:36] if you really want to be rigorous, why is this a problem? This is a problem because
+[33:41] suppose that you are here, x t minus one. Suppose that there is a wall. I suppose that
+[33:53] according to the state transition model, the next state is here. Now, this state is collision
+[34:00] free. So my consistency check says, OK, you're good to go. This transition is indeed viable.
+[34:08] But in reality, it is not because it would imply that you're going through a wall. So
+[34:12] why? Because here we are making a first order approximation that in order to account for
+[34:16] the consistency check, we only consider the current position, but not the history of the
+[34:20] process. We could, but that is again more computation. In practice, if you perform localization
+[34:27] frequently enough, meaning that you do not allow for the states x t minus one, x t to
+[34:33] be so far apart, meaning that you keep relocalizing yourself at a very high frequency, this is
+[34:39] not a problem. So every time there is a trade off in your approximation. So it's a measurement
+[34:45] model, question of forward. The only difference with respect to the bias filter, at least
+[34:50] the classical formulation of the bias filter, is that we're assuming that at each time t,
+[34:55] we have a set of measurements. In the typical bias framework, we assume that we have one
+[35:01] measurement per computation cycle. Here we have multiple measurements. Why? Because for
+[35:06] example, with a ladder, you have a point cloud measurement that basically corresponds to
+[35:10] a large set of range and bearing measurements. So the main difference is that now z t is
+[35:18] indeed a vector of a capital K measurements. The assumption that we make is that this measurement
+[35:25] condition on the state and the map are independent. This is usually a reasonable approximation,
+[35:33] and most importantly, dramatically simplifies the design of localization algorithm. As you
+[35:41] see, these algorithms entail a number of approximations. So we have to be very careful in justifying
+[35:45] all of them. This specifically is a fairly benign assumption. Cool. Once we've done that,
+[35:53] we have a notion of the state for the filter, we have a notion of the state transition model,
+[36:00] we have a notion of measurement model, and we have a notion on the map. Then the localization
+[36:03] algorithm is simply the bias filter algorithm where we plug in these four ingredients. In
+[36:10] particular, as in the standard bias filter, what we want to do is to estimate the belief
+[36:19] about the state, so the probability distribution about your state, starting from the belief about
+[36:23] our state at time t minus one, accounting for the additional information about the current control,
+[36:29] current measurement, and the map. The red here means what is new with respect to the bias filter.
+[36:34] What is new is already defined and now we have a condition with respect to the map.
+[36:37] Then what we do is exactly what we would do in the standard bias filter. We first compute
+[36:42] the prediction belief by looking at all possible states x t minus one I could come from in order to
+[36:50] get to x t. We weight those states by the relative probability of being there in the first place,
+[36:58] and then we multiply those probabilities by the probability of transitioning to x t,
+[37:01] if you use control u t, and then we sum over all these probabilities. The integral as usual
+[37:06] should be interpreted as a sum. That's how we compute the prediction belief. Second step
+[37:12] is a consistency check. We make sure that for each possible postulated value of x t,
+[37:19] we see if that postulated value of x t aligns with the measurement that I've just received.
+[37:26] If, for example, the measurement that I got is incompatible with respect to postulated value x
+[37:32] of t, then we put zero probability mass on that state. Otherwise we announce it appropriately.
+[37:42] So the only modifications you have to make are here from your
+[37:49] kinematic model. You have to discretize it, you have to add noise, you have to then write
+[37:56] in principle in closed form this density function, possibly accounting for the fact that we have the
+[38:02] extra condition with respect to the map that can be accounted for with the extra condition
+[38:06] in compatibility check of probability of x t given the map. For the measurement, basically
+[38:15] nothing changes. And that's it. Very general algorithm addresses all the problems you want,
+[38:20] position tracking, global localization, kidnapping localization, and so on.
+[38:26] Downside, as usual, x t is in general a continuous variable, so actually you cannot really implement
+[38:32] this. So you have to discretize it. But then if you start discretizing your state, then you
+[38:38] run a computational explosion. Localization is something that typically has to be done quickly,
+[38:43] sub-second level. So that's why we want to introduce approximations to make this run much
+[38:48] faster. And that's what we're going to do. So now we're going to look at the EKF, well, Gaussian
+[38:53] approximations. And on Thursday, a little bit about particle filter approximation, and then we
+[39:01] talk about SLAM. First of all, all filters, in particular bias filter, need to be initialized.
+[39:07] So the only difference with respect to the filter, the localization algorithm that I explained before,
+[39:13] with respect to the different problem instantiation, is that if you are dealing
+[39:18] with a local localization problem, then our prior is either a belief that has a mass equal one
+[39:26] at the correct state and zero elsewhere, or maybe Gaussian picked around the mean. For global
+[39:33] localization, then you may have either a multi-modal initial distribution for your belief,
+[39:37] or simply if you really have no clue about where you could be, you just have a uniform.
+[39:42] Where the notation cardinality of x means the volume of your state space. And we assume that
+[39:54] we always have some boundary conditions, so this volume is well-defined. So, for example,
+[39:59] your robot cannot leave Earth, so we have additional some boundaries with respect to where
+[40:04] the state will lie. So let's see this with an example, pictorial example. So we have Pacman
+[40:13] that is moving around in a one-dimensional domain along a wall, and there are three doors.
+[40:20] And these are the landmarks that we will use in order to localize the robot.
+[40:27] So this is an example, and an example specifically of the global localization problem.
+[40:32] So we drop Pacman at the beginning and it has no clue about where it is, so its belief
+[40:38] S here represents state. So the belief with respect to where it is, is just a uniform belief.
+[40:44] So this black line is not zero, it's one over the length of this segment. So uniform belief.
+[40:52] Then we get to see a measurement. How do we use a measurement in a clever way?
+[40:57] Let's apply the bias filter. So what do we do? We multiply the belief that we have with
+[41:04] a compatibility check. Specifically, if I were here, so here the robot is taking a measurement
+[41:13] and obviously see a door, see this door. Intuitively, that is not enough to localize
+[41:18] yourself because you could be here, you could be here, you could be here if you just see a door.
+[41:23] But importantly, if you were to be here and you get, I mean, if you postulate that you are here
+[41:31] and you get as a measurement a door, do you think that it is reasonable to postulate that you're
+[41:35] here? No, because if you were here, you wouldn't see a door. That's why after we take the measurement,
+[41:42] we increase the mass on the postulated position where it's conceivable to see a door,
+[41:49] and we lower the mass in those postulated positions whereby it is not conceivable to
+[41:55] see a door. It would be conceivable to see a door if I were here, conceivable to see a door
+[42:01] if I'm here, conceivable to see a door if I'm here, but certainly not if I'm, for example, here.
+[42:06] Mathematically, what we did was just to multiply the belief by the measurement model.
+[42:13] That is the second step of the bias filter. The resulting belief is now multimodal,
+[42:19] has three modes, three peaks. They are smeared out because we assume that we have measurement noise.
+[42:25] Okay, now we move.
+[42:31] So since we move and we know the model, the motion model for our robot, how do we update the belief?
+[42:43] We use the first step of the bias filter whereby we propagate forward our uncertainty
+[42:50] by knowing the notion of our model. Basically, what that means is that I take those peaks,
+[42:57] since the robot is moving to the right, and since it has a notion of its motion model,
+[43:02] knows that it's moving to the right, we talk to three peaks, we move them to the right
+[43:06] by approximately the amount of quantity that the robot thinks it has moved. But since we have
+[43:11] processed noise, there is some uncertainty in terms of how much the robot has moved.
+[43:15] That's why the probability distribution becomes a bit fatter. So still three peaks, but now fatter.
+[43:23] Now I get the second measurement. Again, I see a door.
+[43:30] So I take my prediction belief, I multiply it by my measurement model, and what does happen?
+[43:37] If this is my postulated state, there's a good probability that I'm here according to my previous
+[43:45] computation, and it is a conceivable state given my measurement, so I increase the likelihood.
+[43:54] For this peak, this is compatible with the measurement that I got, so I increase the likelihood.
+[44:07] For this peak here, I'm seeing a door, but I should not be seeing a door.
+[44:13] So this is not in agreement with my measurement, so I knock down that peak.
+[44:19] Here as well, if I were here, I should not see a door, but I'm actually seeing a door.
+[44:25] So again, I flatten out that peak. So the resulting belief is basically a belief with
+[44:34] a peak that is very high for those postulated states whereby there is agreement between the
+[44:41] predictive belief and the measurement model, a few peaks related to the possibility that
+[44:47] in principle being here, here, or here is conceivable with respect to seeing a door,
+[44:54] even though it's in contrast to what I've seen in the past, and then there's a small bump that has
+[45:00] been knocked down. Does that make sense? Just to give you some intuition. That's it. I mean,
+[45:06] that's really what localization entails.
+[45:08] So in this case, if you didn't make the Markovian assumption,
+[45:11] you took into account two states ago, would it be true that all those little peaks would come in?
+[45:18] Yes. So actually, your localization process would improve at the expense of computation.
+[45:29] And then you move, and again, this thing flattens out, and then the process repeats.
+[45:36] Now, the challenge is that to make the algorithm intractable, we need to add some structure to the
+[45:40] representation of the belief. Same deal as for bias filtering. And as for bias filtering, there
+[45:48] are two main ways of doing so by using parametric approximation, so basically functional forms
+[45:56] that we impose for the belief, or particle approximations.
+[46:02] So today, we're going to look at Gaussian representation for the belief
+[46:06] and see what that implies in terms of the localization algorithm. The beginning of
+[46:11] Thursday, we're going to look at the particle representation. So that will be for graduate
+[46:16] students only. So undergraduate students will have to close their ears for about 50 minutes,
+[46:21] if you want. Otherwise, you can listen. And then we resume the undergraduate planning material
+[46:26] later on. But for today, the topic is how do we leverage the Gaussian assumption
+[46:31] in order to make this filter more tractable. Now, what does it mean to
+[46:38] enforce the Gaussian approximation? What it means is that we treat the belief as if
+[46:45] it is unimodeled and is distributed according to Gaussian distribution.
+[46:50] The advantage of doing so is that then we only need to reason about its first and second moments,
+[46:56] mean and standard deviation. There are only two parameters that fully specify a Gaussian
+[47:01] distribution. Now, to make the discussion clear and transparent, for the rest of today,
+[47:11] we're going to focus on the future-based maps, whereby the features are the locations of a
+[47:17] landmark, which is a point. Think of basically beacons, for which we have a priori location
+[47:25] about their positions. We have end beacons in our room. So these are basically points
+[47:30] for which we know the coordinates with respect to global reference frame.
+[47:33] And it is given to you before you deploy your robot.
+[47:38] And we assume that we have, as usual, a range sensor that gives us the range and bearing of
+[47:44] the landmarks relative to the robot's local coordinate frame. Having this information,
+[47:50] we want to relate the local coordinate system with a global coordinate system of the map,
+[47:56] so that we know where the robot is. Of course, all the concepts that we discuss here carry forward to
+[48:02] other maps and other sensing models with fairly minimal variations. But to make things clear,
+[48:09] that's the model we will be considering.
+[48:10] Okay, so in order to go one step deeper into the math, what does the assumption of
+[48:20] range and bearing sensors entail? Well, the idea is that now we can use this additional information
+[48:27] to make it explicit what is the relation between the configuration of the robot and the possible
+[48:33] measurements that we can get, we could get. So far, we've talked in an abstract way about
+[48:39] probability of ZT given XT. Now, by exploring the fact that we have point landmarks and
+[48:46] range measurements, I want to make it explicit what that P of ZT XT looks like,
+[48:50] so that the final algorithm I give you is readily implementable. In particular, assume that we have
+[48:57] M landmarks. So basically, these are points in the plane. This is landmark J. This is our robot
+[49:18] in the cycle. This is the heading. This is the XY for the robot. This is the heading with respect to
+[49:28] a global coordinate frame. The robot doesn't know theta is what we're trying to estimate,
+[49:33] doesn't know XY is what we're trying to estimate. So what's the relation between XY and theta,
+[49:41] which again are quantities the robot does not know. We're trying to estimate them. And the
+[49:46] measurement that we get, these are quantities that we know. So we know the measurements we want
+[49:51] to estimate XY and theta through Bayesian filtering. Well, the relation is simple in that if
+[50:03] the coordinates of the jth landmark are written as MJX, MJY. So MJX is the x-coordinate of the jth
+[50:15] landmark. Then what is the range? The range is simply the Euclidean distance.
+[50:23] So it's the square root of the sum of the squares of the differences between the x and y-coordinates.
+[50:29] So for the bearing, it's the same thing. So it's basically the, so for example,
+[50:49] let's just put it a bit bigger here. So this is your robot.
+[51:05] This is XY. This is theta.
+[51:09] So this is your landmark J with position MJX, MJY.
+[51:24] This is the line vector joining the robot with the landmark. So the bearing is this angle here,
+[51:33] phi, which is equal to this angle here minus theta. So this overall angle here
+[51:47] is the inverse tangent. These are the four quadrant tangents, as you are familiar with,
+[51:53] minus theta. So this is a very simple geometry. We assume that the measurement
+[52:03] process is noisy. In particular, we add to this equation a two-dimensional vector,
+[52:09] one for the range component and one for the bearing component, which we assume is Gaussian.
+[52:16] Zero mean with the standard deviation QT. QT is a two-by-two matrix, which is diagonal.
+[52:21] We assume that we have no dependency between, well, no correlation between range and bearing.
+[52:28] So this is really our measurement model. Knowing how the measurements are related about
+[52:35] the underlying state, which is not observable, then we want to estimate XT.
+[52:43] So nothing new here. I'm just instantiating the measurement model
+[52:46] with respect to a range-bearing sensor and point-based features. Any questions?
+[52:57] All right. So note that the relation between the measurements and the state variables is nonlinear.
+[53:08] And as we discussed last week, in order to make
+[53:17] the bias filter tractable, the idea of Gaussian filtering is to represent the belief distribution
+[53:23] as a Gaussian, then approximate the nonlinearities by using a Taylor series expansion
+[53:28] arrested at first order. So what we're going to do then is, as we did for the EKF filter, is to
+[53:38] expand in Taylor series up to first order the measurement model along with the unicycle model.
+[53:47] Now, before doing so, something that is very important and actually one of the
+[53:54] biggest challenges for localization is that we needed to find a correspondence between
+[54:01] a measurement and a landmark. So in
+[54:09] this equation, rt, phi, and t were the ith measurement. And they found the relation with
+[54:14] respect to the state x, y, and theta, assuming that the ith measurement corresponds to the
+[54:21] jth landmark. This was a tacit assumption. So I get the measurement. So I get 15 meters
+[54:28] and 15 degrees. And I said, OK, so this is a range and bearing with respect to the jth
+[54:34] landmark. But in principle, you have multiple landmarks. So how do you know that this is a
+[54:40] range and bearing with respect to this landmark as opposed to another landmark?
+[54:46] Well, in reality, you don't know, which means that you have to introduce a variable which are the
+[54:52] notorious correspondence variables defined as follows. So the definition is straightforward.
+[54:58] The estimation is tricky. So cti is equal to j if I had the definition there, if ith measurement
+[55:15] at time t corresponds to landmark j.
+[55:30] j is a number between 1 and capital N plus 1. We say that the number of landmarks is capital N.
+[55:36] The reason why we go all the way to capital N plus 1 is that we also account for the possibility
+[55:41] that the measurement does not correspond to any landmark. So we just picked up some stuff that
+[55:46] does not correspond to any landmark in the map, which is also a possibility. Having said that,
+[55:52] there are two versions of the localization problem. The first one is when we assume,
+[55:56] somehow, that these correspondence variables are known. So an oracle tells you that the
+[56:02] ith measurement is related to the jth measurement. That is the case. We know the measurement model.
+[56:06] The first thing that we have to do is to do Taylor series expansion, and then we stick it
+[56:11] into the EKF localization algorithm. That's it. The second version is when those correspondence
+[56:16] variables are not known. And hence, you have to do estimation about these correspondence variables
+[56:23] as well. So estimate these correspondence variables, and then you use these estimates
+[56:29] in order to run your localization filter. In practice, as we will see,
+[56:35] the estimation is done through maximum likelihood estimation. But let's go first step. Let's first
+[56:40] consider the case whereby an oracle tells you what these correspondence variables are. So it
+[56:45] can uniquely identify, somehow, measurement to landmarks. Are you measuring yourself with
+[56:52] respect to every landmark at any time frame, or one landmark at any time frame? Every landmark.
+[56:57] So the model is that we measure, we have a sequence of range and varying measurements.
+[57:07] So we have multiple of them. But nobody says that at a given time t, I had to see all landmarks.
+[57:13] Like, for example, in this example, the landmarks, I mean, these are not point landmarks,
+[57:17] but conceptually the same. We have three doors. So here, we only saw one door.
+[57:21] So we just say we have a bunch of measurements, and we had to assign them to, it could be that
+[57:29] all these correspondence variables, c, t, i, evaluate to one. That all measurements correspond
+[57:33] to log1, for some reason. Possible. So let's assume that the correspondence variables are known.
+[57:43] So what we had to do then to apply EKF localization is to linearize the state transition
+[57:50] model, and most importantly, the measurement model. And then we can just instantiate the EKF
+[57:58] bias filter. So the equations links looks a little intimidating, but that's the point.
+[58:05] This straight application of EKF localization. So as we did for EKF localization, we have
+[58:15] a state transition model, which could be, for example, a unicycle model that is affected by
+[58:20] noise, epsilon t. And we assume that epsilon is a zero mean Gaussian, capital N means normally
+[58:26] distributed, so Gaussian. So in order to instantiate the EKF bias filter, remember from last time that
+[58:33] what we do is to expand in Taylor series our motion model around the most likely value for
+[58:41] your state, which is the expected value of the state at time t minus one. Remember what Taylor
+[58:49] expansion means? If you have a function f of x that is non-linear with respect to x,
+[58:56] you can approximate it as f of x bar plus derivative f with respect to x at x evaluated x
+[59:03] bar times x minus x bar. X bar is a fixed quantity. So basically, we have approximated our function
+[59:10] with a fixed quantity times, in general, matrix, in a one-dimensional case, a scalar.
+[59:17] The difference between x and x bar, x is the variable, so this is really a linear function in x.
+[59:24] In our case, x bar, the point around to which we linearize for the motion model, is the most likely
+[59:30] value of the state, which is the mean, and denoted here as mu t minus one. This will be the expected
+[59:38] value in your belief, which is given as the input of the bias filter at time t minus one.
+[59:43] And gt is the Jacobian, so basically the matrix with first-order derivatives.
+[59:50] Calculus is prerequisite, so you know this. Same thing for the measurement model. We have
+[59:57] a non-linear mapping between the state variables and the measurements. We'll define only if we
+[60:04] know that the i-th measurement corresponds to the j-th landmark, but for now we're assuming that
+[60:09] this correspondence is known. Somebody told us that this is the case.
+[60:13] Affected by noise, what we do is to linearize this mapping around the most likely value.
+[60:21] Remember that the measurement model is used only in the second step of the bias filter.
+[60:32] So the most likely value around which we want to linearize is what?
+[60:36] We already have a notion of prediction belief, so what we should use is the same as a KF algorithm.
+[60:44] What we should use as the most likely value? An expected value of what?
+[60:52] For the prediction belief. And that's exactly what the mu bar t is. The mu bar here is not the
+[60:58] typo, it's the expected value of the prediction belief. It's the most likely value with respect
+[61:03] to the current probabilistic characterization we have about the state. Again, this is straight
+[61:08] EKF localization that we discussed last time. So here, this is horrible to look at, but what they
+[61:14] do is for you just to derive the partial derivatives. So in particular, let's just do a few of them.
+[61:22] So the model was that the range is the Euclidean distance between the square root of
+[61:30] the sum of the squares or the differences in the x and y coordinates between the landmark and x.
+[61:36] So if I take the derivative of this thing or the first component with respect to x, what I get is
+[61:42] one over two, the square root, times two times this quantity, the derivative of this stuff inside
+[61:50] with respect to x, which is minus one. And it's exactly what I get. Evaluated at the most likely
+[62:00] state, which is mu. So take the derivative, and then the variable gets evaluated at the most
+[62:05] likely state, so x becomes mu bar. Mu bar, mu bar. Derivative with respect to y, basically the same.
+[62:13] If I take the derivative of the range with respect to theta, what should I get?
+[62:20] Zero. This is exactly what I have here. If I take the derivative with respect to the...
+[62:26] Oops, this is becoming a little bit...
+[62:33] Derivative with respect to theta, then it's minus one. And here we have a derivative with respect
+[62:37] to an inverse tangent that is slightly more convoluted. But I'll leave it to you as an
+[62:44] exercise to check that these two components are correct. I cross-checked them this morning.
+[62:48] It should be tackle-free. QT, uncertainty in your measurements.
+[62:54] We're assuming that there is no correlation between bearing and range, so basically just
+[62:58] diagonal thing. Where these numbers come from depends on your sensor. Many times it's just
+[63:05] a tuning parameter. So now we have linearized the transition model, linearized the measurement model.
+[63:13] So the EKF algorithm is really the standard EKF algorithm for bias filtering. So it looks
+[63:20] intimidating, but again, if you understand EKF filtering, this is just EKF filtering straight.
+[63:28] Specifically, we start with a belief that the battery doesn't work anymore. So we start with
+[63:34] a belief at time t minus one. This time, since we're using EKF localizations, we represent it
+[63:39] as a Gaussian. So we only need to reason in terms of the first and second moment. So expectation,
+[63:45] mu, and violence, sigma. And we have information about the current control, current state,
+[63:51] and the a priori map. As an output, we want to get the belief with respect to the state at time t
+[63:59] in terms of the expectation of the Gaussian and violence matrix. So what do we do? As usual,
+[64:05] first step, dynamics propagation. We propagate the expected value by using our motion model,
+[64:15] so g u t mu t minus one, same as EKF. And for the uncertainty, we sum the uncertainty,
+[64:23] meaning the covariance matrices, due to process noise, r t, and the covariance and the uncertainty
+[64:32] due to the fact that we had uncertainty about our localization to start with at time t minus one,
+[64:38] transformed according to our motion model. So the uncertainty at time t before account for the
+[64:46] measurement is due to two components. One, that as a move, there is process noise. And two,
+[64:55] I had some uncertainty about where I was at time t minus one to start with.
+[65:01] How these two uncertainties combine? As we saw last time for the EKF filtering,
+[65:07] in the linear modeling framework, these two uncertainties simply add. And this is exactly
+[65:13] what we have here. The uncertainty about the localization at time t minus one is transformed
+[65:21] in order to account for the motion model through the Jacobian g. What does that mean? That if
+[65:29] my uncertainty about localization looked like this one at time t minus one,
+[65:35] so I was more uncertain this direction and this direction, and I know that I'm turning,
+[65:41] the uncertainty at time t minus one should be the same ellipse, which is rotated. Makes sense,
+[65:48] right? Since I know that I'm rotating, the uncertainty should be rotated as well.
+[65:52] That's exactly what is reflected here in g sigma g transpose. Remember that g is the linearization
+[66:03] of your motion model. Just giving a robotic explanation here in interpretation, but this
+[66:09] is the same as EKF filtering. Does it make sense? Anybody on the same page? I think it's pretty
+[66:18] neat because it's also a way to better understand, I think, EKF filtering. Now we account for the
+[66:26] measurements. Only difference with respect to standard EKF filtering is that instead of
+[66:32] processing only one measurement at time step t, now we assume that we have a bunch of measurements.
+[66:39] How many? Well, I don't have the index here, say capital K.
+[66:45] Now we can process these measurements sequentially because we made the assumption
+[66:51] that these measurements are independent. So basically it's equivalent to say that
+[67:00] we process a measurement, we do zero motion, we process a second measurement, and so on
+[67:04] conceptually. If the measurements were not independent, then we could not process them
+[67:09] sequentially. We would have needed to process them in batch, which would have made computation
+[67:14] harder. So we process the measurement independently. So what we do is we take
+[67:20] the i-th measurement, we retrieve what is the landmark that measurement corresponds to
+[67:25] through the correspondence variables that we assume are given to us by an oracle.
+[67:29] Then I compute what I should expect the measurement to be, given my most likely value for the state,
+[67:40] as given to me by the prediction belief. Then I build the Kalman gain. The Kalman gain,
+[67:48] if you remember, had a term that accounted for the uncertainty in the measurement,
+[67:57] which is again the sum of two components. Uncertainly due to the fact that there is
+[68:02] noise in the measurement process given by the QT covariance matrix, a measurement due to the fact
+[68:09] that we are uncertain about where we are to start with. Again, under a linear measurement model,
+[68:16] due to the fact that we didn't analyze everything, these two uncertainty add up.
+[68:21] Then I set up the Kalman gain with these complicated equations that we said there is a
+[68:25] rigorous derivation for it. We discussed it last week. And then the new expectation with respect
+[68:33] to where I should be is equal to the expectation where I should be given before I accounted for
+[68:40] this measurement, plus the difference between the measurement that I got and the measurement
+[68:47] that I thought I should have gotten, modulated by the Kalman filter. And then the Kalman gain.
+[68:53] And then I used the Kalman gain also to update the variance.
+[68:56] I keep doing that for all the measurements, and then the result is my belief.
+[69:03] So if all the observations are independent, is the sequential coagulation
+[69:10] the best if you do all of them in a batch?
+[69:13] Yes, that's right. But doing these sequentially
+[69:17] is computationally much more efficient because I'm reasoning about much lower dimensional matrices.
+[69:24] Good. Any questions here? So again, think about the EKF filtering is exactly the same.
+[69:34] Only difference is that now we instantiated it with a measurement model with the bearing
+[69:39] sensors. We included a notion of a map, and we had multiple measurements at the same time.
+[69:44] And now the uncertainties have a clear, I think, a clear instantiation. So in the case of the
+[69:51] prediction belief, that uncertainty is the sum of uncertainty about where I think I am,
+[69:55] plus uncertainty about process noise. In the case of the measurement step or correction step,
+[70:00] the uncertainty is the sum of the certainty about where I think I am,
+[70:03] with respect to the prediction belief and measurement noise.
+[70:10] I want to give you one example, pictorial example, to show you this entire business.
+[70:15] So let's assume that we have a robot, two dimensional with heading.
+[70:17] Guess what? A unicycle. This is the direction of the heading, this thick line.
+[70:23] So this is the robot, this circle. And the ellipse is my belief at time t minus one.
+[70:30] So the first step of EKF localization is to update this belief by taking into account the motion.
+[70:41] So I use control UT that I move the robot from this position to this position. So basically
+[70:47] along a curved path. So the question is, where should be the mean at time t minus one,
+[70:53] accounting for the fact that I know the control UT, so this curved path,
+[70:57] and what should be the uncertainty around it? Well, according to the EKF localization,
+[71:05] the new mean, so the prediction mean mu t, is the result of applying the notion of the
+[71:11] statement decision model by using as input control UT, by using this argument control UT,
+[71:18] and as initial condition the most likely value at time mu t minus one. This will be mu bar t.
+[71:25] In terms of the uncertainty, the uncertainty for the prediction belief is due to two components.
+[71:35] The uncertainty that I had to start with plus the uncertainty due to process noise.
+[71:39] So these ellipse represent uncertainty due to process noise. These ellipse represent
+[71:51] the uncertainty due to the fact that I had uncertainty to start with. Note that it is
+[71:56] a rotated version because basically since I know that I move along a curved path, it makes sense
+[72:01] that the updated uncertainty is rotated. Rotation happens through the Jacobians. Finally, the
+[72:07] combination of the two uncertainties is a bigger ellipse that is given by this darker ellipse.
+[72:15] This is the prediction uncertainty, prediction belief uncertainty.
+[72:21] Now we account for the measurements. So this is the prediction belief. I removed the belief
+[72:29] for time t minus one, I'm just considering the prediction belief. That's a robot, this is the
+[72:33] heading, this is where I think I am, and this is the certainty around. Turns out that I'm here.
+[72:42] I don't know that I'm here, but for whatever reason it turns out that I was there.
+[72:49] And now we have a landmark, this point over here. Take a measurement, this is the measurement c t.
+[72:56] But I think that in the most likely hypothesis I'm here. So for example, the expected range
+[73:04] would be the length of this segment. This is more transparently portrayed here in this plot. So this
+[73:13] is basically a plot in measurement space. The x-axis is range, r, the y-axis is bearing, phi.
+[73:21] So the measurement that I think I should get is something that corresponds to say 175 centimeters
+[73:29] and minus 10 degrees. That's what I expect I should have. With associated measurement noise.
+[73:39] But I also had the uncertainty about my location to start with,
+[73:46] which compounds. So this darker ellipse is the uncertainty related to my measurements.
+[73:52] That again is the sum of two components. Measurement uncertainty and uncertainty with
+[73:57] respect to where I thought I should be. Weighted by h t, h t transpose that basically reflect how
+[74:06] the state maps into the measurement through the linearized model.
+[74:13] So that's what I thought I should have observed with the underlying uncertainty. This is what I
+[74:19] actually observed. This is called the innovation vector, the difference between z t and z bar t.
+[74:25] So what does the Kalman filter do? Well, it's fairly intuitive. So this again is what happens
+[74:32] in the measurement space. This is what happens in the real space, so xy positions. So I'm here,
+[74:39] sorry, I'm here. According to my filter, the most likely position for me is here with uncertainty.
+[74:48] I have an innovation vector that says that actually my range is shorter than what I thought
+[74:58] it should be. What does that imply for a plate in your location? So I get a measurement whose range
+[75:05] is 50 meters. And I thought that I should have gotten as a range 70 meters. So what does that
+[75:15] tell me? That probably I should revise my estimate and put myself closer to the landmark.
+[75:24] That's exactly what you do. So you just add the innovation vector. That means that you
+[75:29] put yourself closer to the range in a way that is more aligned. Not all the way to it, because you
+[75:35] don't want to discard all the information that you have from a previous computation. Just a tiny bit.
+[75:41] Of course, if you knew that this is really where you are, then you would move here. But that's not
+[75:47] something that you know. It's portrayed here only for conceptual reasons. So you just move a tiny
+[75:52] bit. How much you blend estimation due to the knowledge of your motion model and estimation
+[76:01] due to the knowledge about your measurement, you do it through the Kalman game. Does that make sense?
+[76:09] Again, here, mathematics is a little bit complicated. But intuition is very simple.
+[76:15] That's why the Kalman filter is so widely used in practice. It's very intuitive. And
+[76:21] if you think about it, it seems to do the right thing. And usually when an algorithm seems to do
+[76:25] the right thing, it usually works. All right. So a lot of stuff today. So I spare with you
+[76:37] the additional complication of estimating the correspondence variables. We will do that at the
+[76:43] beginning of the lecture on Thursday. But in a nutshell, in general, no one tells us what is the
+[76:52] relation between measurements and landmarks. So you need to estimate those correspondence variables
+[76:57] as you process your measurements and as you perform localization. How do you do that? Through
+[77:03] maximum likelihood estimation. We will see that in the next lecture. It's about a little bit more
+[77:11] mathematics. And then we'll account for adding a line in our EKF algorithm. Before we break,
+[77:18] just want to add... Well, heads up. So in this derivation, we reasoned in terms of
+[77:25] point-based landmarks. But in this way, you can use other geometric primitives. And in particular,
+[77:31] for your P set, you will reason in terms of line landmarks. So you will detect lines. That's why in
+[77:38] homework two, the one where you did... No, three, where you did the line fitting. The reason is that
+[77:47] now you're going to use lines as landmarks. So in that case, your measurements is no longer the
+[77:53] XY position of a point. It's the R and alpha coordinates of a line in polar coordinates.
+[77:59] So what we'll do next time is how to account for correspondence estimation,
+[78:06] brief overview of Monte Carlo localization, so particle filtering for localization.
+[78:11] And then we extend everything we know so far to the topic of SLAM, to do EKF SLAM.
+[78:17] Sounds good? All right, so see you on Thursday.

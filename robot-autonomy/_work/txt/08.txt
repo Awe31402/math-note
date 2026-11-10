@@ -1,0 +1,875 @@
+[00:00] So today, we're going to transition into the second module of this class.
+[00:10] And in particular, we're going to talk about robotic perception.
+[00:15] As you remember, the class is roughly divided into four modules.
+[00:19] The first one is on trajectory optimization and optimal control, traditionally the hardest
+[00:26] module.
+[00:27] You should be happy that from now on, you will be downhill in terms of difficulty.
+[00:33] Second module, robot perception, third module, localization and mapping, and finally, reasoning,
+[00:40] state machines, stochastic decision making, and so on.
+[00:44] In particular, for the next couple of weeks, as I mentioned, we will be covering robot
+[00:49] perception, basically the process of gathering information about the environment and try
+[00:54] to extract relevant features about the environment that allow the robot, on the one hand, to
+[01:02] localize itself within the environment, and on the other hand, decide what is the best
+[01:07] action to do next.
+[01:11] So in this lecture today, first, I'm going to give you a broad overview of the sensors
+[01:16] out there that the robot can use in order to perceive the environment.
+[01:20] And then we're going to focus on a specific sensor that is of pivotal importance, which
+[01:26] is the camera.
+[01:28] And in particular, for most of this class, we'll be focusing either on the cameras or
+[01:35] on ladders.
+[01:37] And indeed, the robotics platform we'll be working with is both a laser trained sensor
+[01:45] and a camera.
+[01:47] So in the second part of this lecture, I'm going to give you an introduction to cameras,
+[01:53] camera models.
+[01:54] And then on Thursday, we're going to go deeper into cameras, and in particular, we're going
+[01:59] to cover the topic of camera calibration and how to reconstruct the scene, and in particular,
+[02:05] how to measure distances by using camera images.
+[02:10] The following week, we will be then focusing on how to extract higher level information,
+[02:16] such as geometrical properties of an environment, lines, walls, and so on, and also semantic
+[02:23] information about environment, how do we detect whether there is a person, a cat, and so on.
+[02:29] So let's start from the foundations.
+[02:32] So here I'm showing you a self-driving car.
+[02:35] A self-driving car is a prototypical autonomous system that showcases a number of sensors
+[02:40] that are widely used in the field of robot autonomy.
+[02:44] For example, a self-driving car has a number of cameras, has a ladder or multiple ladders,
+[02:52] so laser sensors, as we will see next, to perceive the environment with high accuracy,
+[02:59] as radars to perceive distant obstacles, ultrasonic sensors sometimes in order to perceive objects
+[03:12] that are close by, GPS, and so on.
+[03:15] So you can see how an autonomous robot is a machine that entails a number of very different
+[03:20] sensors.
+[03:24] Once you have the entire sensing pipeline set up and you already saw some of these images
+[03:29] during the seminar of Jurg van der Berg during week one, that's how, and it's a video that's
+[03:35] already showed you, that's how a prototypical robot abstracts the environment.
+[03:43] So for example, this is the case of a self-driving car that is driving on the highway.
+[03:47] This is the image from a camera.
+[03:50] From the point of view of the robot, that's how the world looks like.
+[03:55] You have bounding boxes representing the objects that are perceived.
+[04:02] So everything gets, oops, there is some text here, some commentary.
+[04:11] By the way, so you already saw this video.
+[04:12] So the idea is to go from raw measurements all the way to semantic understanding.
+[04:19] This is really the goal of robot perception.
+[04:23] Now, the sensors can be classified in many different ways.
+[04:28] One fundamental way is whether the sensors are proprioceptive or extraceptive.
+[04:33] A proprioceptive sensor is a sensor that measures values that are internal to the robot.
+[04:39] Like, for example, the speed of the motor or the position of the joint angles for a
+[04:44] robotic arm and so on and so forth.
+[04:47] In contrast, an extraceptive sensor is a sensor that acquires information from the robot's
+[04:53] environment.
+[04:54] Like, for example, distance measurements acquired through a ladder.
+[05:01] Another important distinction for sensors is whether they are passive or active.
+[05:06] A passive sensor is a sensor that measures energy in the environment, say, for example,
+[05:12] a camera that measures the amount of light that arrives at a photoreceptive surface within
+[05:20] the camera.
+[05:21] While an active sensor is a sensor that emits energy into the environment and measures the
+[05:27] reactions.
+[05:28] And then from that measurement, the sensor tries to deduce some information about the
+[05:34] environment.
+[05:35] Typical active sensors are laser rangefinders that shoot a laser and then measure the signal
+[05:43] that is received back or ultrasonic sensors, whereby what you shoot out is an ultrasound
+[05:51] signal.
+[05:53] Now, one of the advantages of the passive sensors is that they are broadly relatively
+[06:02] cheap and very widely available.
+[06:07] But the disadvantage is that they are sensitive to the environmental conditions.
+[06:12] For example, a camera works well if you have good lighting conditions.
+[06:16] But then if you're in a dark situation, then you don't have a signal anymore.
+[06:21] In context, an active sensor is capable of working on a wider range of conditions.
+[06:28] For example, you emit light in order to illuminate the scene.
+[06:32] But generally, they tend to be more expensive.
+[06:36] So as always, there is a trade-off in terms of how you architect the sensing package for
+[06:40] your robot.
+[06:45] In terms of performance, broadly, sensors are ... yes?
+[06:49] In terms of sensor classification, if you had a system that was, say, like a camera
+[06:54] flash, would that be considered an active sensor system if you really had lights on
+[07:01] and then you had the camera viewing the environment with that light you added to it?
+[07:05] Okay, so this is a relatively broad categorization of sensors.
+[07:13] So there are not very strict guidelines.
+[07:15] But from my point of view, the flash of a camera is an example of active sensing, whereby
+[07:20] you are emitting energy into the environment in order to help with the perception process.
+[07:29] So another important way of reasoning about sensors is how do we specify the performance
+[07:35] of those sensors?
+[07:36] And basically, the performance of the sensors can be specified in terms of design specs
+[07:42] and in-situ performance.
+[07:43] Design specs are characteristics of a sensor that can be measured in a laboratory environment.
+[07:51] So basically, in the plants where the sensors are produced.
+[07:58] In-situ specifications are those that can only be measured when you filled the sensor
+[08:05] in a real-world application.
+[08:07] Let's start with the design specs.
+[08:09] The four main ones are the dynamic range, meaning the ratio between the maximum and
+[08:14] minimum input values that your sensor can measure.
+[08:17] Say for a thermometer, the maximum and minimum temperature that you can measure.
+[08:23] The resolution, so the minimum difference between two values, like one degree Celsius
+[08:30] or 0.1 degrees Celsius and so on.
+[08:32] The linearity, whether the output response is linear with respect to the input signal.
+[08:39] Usually for a sensor, you would like to have a linear response because it simplifies the
+[08:44] number of operations from calibration to the interpretation of the signal and so on.
+[08:50] And finally, the bandwidth of frequency.
+[08:51] So how quickly you get measurement updates from the sensors.
+[08:57] In some cases, you can go up to kilohertz, but from other sensors, you have a much lower
+[09:02] updates.
+[09:03] For example, from leather, usually you have updates in the order of a few hertz.
+[09:10] Another interesting set of specifications are, as I mentioned before, the in-situ specifications.
+[09:14] So those that needed to be characterized in the target environment.
+[09:19] Basically, if you have a robot, you filled it on something that emulates the surface
+[09:25] of Mars or on a cave, and then you really see how your sensor performs.
+[09:30] In particular, they're all very important.
+[09:33] So the first one is the so-called sensitivity.
+[09:37] So the ratio of output change to input change.
+[09:40] So if you change the input, say the amount of light that is coming at your camera, what
+[09:47] is the change in the signal that is coming out of your camera?
+[09:51] Ideally, you would like to have a high sensitivity, but in some cases, that is not the case.
+[09:58] And even more important specification is cross-sensitivity, basically how the output of your sensor is
+[10:05] related to quantities that are not related to your target quantity.
+[10:11] Like, for example, assume that you have a compass to measure your heading.
+[10:17] And so what you want to measure with a compass is basically the deviation between your heading
+[10:23] and the magnetic field of Earth.
+[10:25] But now let's assume that I put some magnets around the compass, then the output of the
+[10:30] compass is going to be perturbed by the fact that you have magnets around you, which means
+[10:35] that your sensor has a high cross-sensitivity with respect to quantities that are not really
+[10:41] related to what you want to really measure.
+[10:46] Of course, in general, you would like to have a cross-sensitivity that is zero, but all
+[10:50] sensors somehow are coupled with the quantities that are not directly related to those that
+[10:55] you want to measure.
+[10:56] So you have to be careful about it.
+[10:58] For example, a compass might be difficult to work with on an autonomous robot where
+[11:04] you have a number of metallic parts because that sensor might exhibit high cross-sensitivity.
+[11:10] The third in-situ specification is the error.
+[11:13] This is probably the most obvious one, which is the difference between what you measure
+[11:18] and the true value of the underlying quantity that you're trying to measure.
+[11:26] And finally, two other specifications that oftentimes are conflated are the notion of
+[11:31] accuracy and the notion of precision.
+[11:33] Accuracy refers to the degree of conformity between what you measure and the true value
+[11:43] in percentages.
+[11:44] So it's defined as 1 minus the magnitude of the error over the true value that you're
+[11:51] trying to measure.
+[11:53] Of course, if the error is zero, it means that your accuracy is 100%.
+[11:59] Precision instead quantifies the degree of reproducibility of the results.
+[12:06] So to be clear, say that x represents the target quantity that you want to measure,
+[12:19] y is the output.
+[12:22] So say that this is the true value v and this is what you measure.
+[12:32] So this difference is related to accuracy, in particular, 1 minus this distance over
+[12:39] the value is the accuracy, while if you carry out multiple measurements and you get a spread
+[12:46] of measurements, this spread is related to precision.
+[12:53] So you might have a sensor that is highly inaccurate, but very precise, which means
+[12:57] that every time it gives you the wrong information.
+[13:01] Likewise, you can have a sensor that is accurate, but imprecise, which means that basically
+[13:07] this sort of Gaussian is centered around the true value, but it's pretty fat.
+[13:15] So the key point here is that precision and accuracy are two distinct concepts, and in
+[13:19] general, you want to have a sensor that is both precise and accurate.
+[13:24] The other sensor that was just precise, but not accurate, isn't that like not the worst
+[13:28] thing in the world, because you get to figure out what the error was and you can practice it?
+[13:31] Exactly, because it's not a very good point.
+[13:35] So if you have something that is very precise, so it's very picked around a given value that
+[13:40] does not reflect the true value, then what you can do, and that's actually what is done
+[13:45] oftentimes in practice, is to estimate the bias, since the bias is very reproducible,
+[13:52] and then subtract it out from the value that you get, and now you have a calibrated sensor
+[13:57] which is also very accurate.
+[13:59] Yes, absolutely.
+[14:00] And that is oftentimes done in practice.
+[14:05] So your question brings us to the topic of errors.
+[14:08] So no matter how accurate and precise your sensor is, you're going to have errors.
+[14:14] In particular, errors are divided into two main categories.
+[14:19] So those, as you were referring to, that are deterministic, and in principle they can be
+[14:24] modeled, maybe with some sophisticated models, but actually they can be modeled, and they
+[14:29] can be corrected for, through a procedure referred to as calibration.
+[14:34] And we will talk in particular about the camera calibration on Thursday.
+[14:39] So in a way, these are the benign errors, stuff that you can correct for.
+[14:43] The other class of errors, those are the more annoying ones, are the random errors.
+[14:48] Those that cannot be predicted with even sophisticated models, so they appear as random
+[14:54] errors, for which maybe you can provide a distribution, a probabilistic distribution
+[15:01] to characterize them, but not much more than that.
+[15:04] And this is typically the case, for example, of outliers in range-finding sensors such
+[15:10] as sliders.
+[15:11] Sometimes you get a point whose distance is completely mischaracterized.
+[15:17] And that has to do with some maybe reflection in your scene that are very difficult to model,
+[15:23] so you just treat that as a random error.
+[15:27] Now, much more could be said on how we characterize these errors, and we will come back to this
+[15:34] topic later on when we talk about localization.
+[15:38] But an important task for the roboticist is to characterize the errors as other systematic
+[15:46] and random, and specifically for those errors that are random, understand how this randomness
+[15:54] propagates through your autonomy stack.
+[15:57] In general, you are putting together sensor measurements from several sensors, and they
+[16:02] are filtered, and then they are used for downstream applications.
+[16:06] So basically, these errors compound along the perception pipeline.
+[16:12] So the question is how this compounding happens.
+[16:15] And if you start with some raw sensors that have some random errors, what do you get as
+[16:23] an output after you start compounding all these errors?
+[16:26] The main result in this area is referred to as the error propagation law.
+[16:33] We will come back to this later on, but for now, I will leave it at that.
+[16:40] So having said that, let's look at some representative sensors, such as encoders, heading sensors,
+[16:46] accelerometers, and IMU, beacons, active ranging, and finally cameras, which is really the sensor
+[16:51] we're going to focus on for the next two or three lectures.
+[16:56] So first of all, an encoder is one of the most basic sensors that you can have on an
+[17:01] autonomous robot, in particular, a wheeled autonomous robot.
+[17:04] An encoder is, in a nutshell, a device that converts motion into a sequence of digital pulses.
+[17:13] The way it works is that you have a light that shines through a disk that has some slits
+[17:22] on the outer ring.
+[17:24] As this disk moves, think of this disk being rigidly attached to the wheel, then the light
+[17:30] either goes through or it's blocked.
+[17:34] And on the other end of the disk, you have a photoreceptive surface that receives a sequence
+[17:41] of pulses, the frequency of which is related to how quickly this disk is rotating.
+[17:48] So you can now think how, basically, you can translate the frequency at which you measure
+[17:54] these pulses to the speed of the wheel.
+[17:59] And once you know how quickly your wheels are spinning, then by integration, you can
+[18:05] also infer how long you have traveled, which refers to the process of wheel odometry.
+[18:12] Now, in many situations, this is accurate.
+[18:15] In many other situations, this is very inaccurate.
+[18:17] So can you imagine a situation where wheel odometry can be very inaccurate?
+[18:21] Yeah.
+[18:22] Lots of rapidly changing speeds, maybe, so you have to keep changing your integration
+[18:32] and...
+[18:33] In principle, if that is done correctly, it's not a problem.
+[18:36] Yeah.
+[18:37] Wheel slippage.
+[18:38] Exactly.
+[18:39] So, for example, notoriously, wheel odometry is not really useful, for example, in Mars
+[18:47] rovers, because on Mars you have a lot of sand, so you may have wheels that spin in
+[18:52] place, which means that your encoder correctly is measuring that your wheel is spinning
+[18:56] and gives you the right angular speed at which it's spinning, but that is not related to
+[19:01] the distance you are traveling.
+[19:02] Maybe you're just spinning in place.
+[19:04] That's why there is another technique that we're going to cover later on, which is referred
+[19:08] to as a visual odometry, whereby you try to estimate your ego motion by looking at camera
+[19:15] images, which is, by the way, what is done on Mars rovers.
+[19:18] Yeah.
+[19:19] So there are additional slits, for example, here, and additional devices that also allow
+[19:32] you to infer the direction, but here, for this lecture, I just want to give you the
+[19:38] high-level idea.
+[19:39] I don't want to go into the details of each sensor.
+[19:43] There is a few things more to make encoders work, but in a nutshell, this is a basic idea.
+[19:49] But that's a good point.
+[19:53] All right.
+[19:54] Second class of sensors referred to as heading sensor.
+[19:57] Basically, what is the orientation of your product with respect to some reference coordinate
+[20:03] system?
+[20:04] Heading sensors can be both proprioceptive or acceleroceptive.
+[20:09] A proprioceptive sensor, a very important example of a proprioceptive heading sensor
+[20:16] is the so-called gyroscope.
+[20:19] The way that a gyroscope works is that the angular momentum associated with a spinning
+[20:29] wheel keeps the axis of rotation of that wheel inertially stable.
+[20:34] So if you know about angular momentum, this is a well-known fact.
+[20:37] If you don't, no worries.
+[20:39] This is just to give you a high-level idea.
+[20:40] But the idea is that, consider this disk, assume that this disk has a substantial inertia,
+[20:46] and as this disk is rotating, then the angular momentum keeps the axis of rotation inertially
+[20:55] stable.
+[20:56] What that means is that if you mount the spinning wheel within a gimbal system, no torque can
+[21:02] be transmitted from the outer gimbal to the wheel, which basically means that this axis
+[21:06] stays inertially stable so it doesn't move.
+[21:10] So that allows you to infer what is your heading with respect to a fixed reference
+[21:17] system.
+[21:20] The other example of a heading sensor that is acceleroceptive is the same sensor that
+[21:23] I mentioned before, which is the compass.
+[21:28] Now, gyroscopes are widely used, and as we will see later on, they're used particularly
+[21:35] in the context of an IMU, National Measurement Unit.
+[21:40] There are more advanced versions of gyroscopes, for example optical gyroscopes, that do not
+[21:43] rely on mechanical devices, but they're much more expensive.
+[21:50] One of the issues with gyroscopes is that there must still be some friction on the pivots
+[21:57] of the gimbals, which basically creates a drift, basically slowly inaccurate measurements
+[22:05] in your heading.
+[22:07] Now, this is a problem because if you rely only on a gyroscope in order to infer the
+[22:13] trajectory that you have executed, since the drift, meaning the error that you have at
+[22:19] each instant in time, accumulates, after a while, you might end up in a situation whereby
+[22:24] you think you're in a position where you have a heading, but your country has a completely
+[22:29] different heading.
+[22:30] Which basically means that from time to time, you have to periodically get fixes with other
+[22:36] sensors in order to fix the drift in your proprioception sensor.
+[22:45] All right.
+[22:48] So we talked about the heading sensors.
+[22:51] Another important class of sensors is referred to as accelerometers.
+[22:54] So these are sensors that measure forces, say force of gravity is the most basic one,
+[23:01] but all sorts of forces.
+[23:03] The way they work is remarkably simple.
+[23:06] So the whole idea is to have a spring damper system with a proof mass m.
+[23:14] So m is a proof mass inside your sensor.
+[23:18] And then you have a damper, and then you have a spring.
+[23:23] So the question of motion of this proof mass is simply given by a second order differential
+[23:31] equation, whereby the acceleration of the proof mass is equal to the force that you
+[23:42] apply to the system.
+[23:44] And then you have to account also for the damping force due to the damper and to the
+[23:49] elastic force due to the spring.
+[23:51] So that's a prototypical spring mass system with an external force.
+[23:58] The interesting aspect of this device is that assume that the applied force, say gravity,
+[24:04] is a constant.
+[24:06] So what this will cause is that initially this mass will start to oscillate.
+[24:12] But since you have a constant driving force, this mass, you have a damper, a damping term.
+[24:19] Then this oscillation will dampen out, and it will reach a steady state condition.
+[24:26] The steady state condition is the condition whereby x, meaning the displacement between
+[24:31] where the mass is and the equilibrium position for the mass.
+[24:36] The steady state is when that x is a constant.
+[24:38] So if you plug x equal to constant here in this differential equation, you see that the
+[24:42] steady state value for x has to satisfy the kx over m equal to the acceleration applied.
+[24:49] Which basically means that if you can measure the steady state displacement of the proof
+[24:54] mass from the equilibrium position, and if you know the mass or the proof mass and the
+[24:59] elastic coefficient for your spring, then you can measure the acceleration that has
+[25:06] been applied.
+[25:07] So, for example, if it is gravity, then you can measure gravity.
+[25:11] Obviously, you know gravity, so you wouldn't use this in general to measure gravity, but
+[25:15] you would use it to measure other forces that are impacting your robots.
+[25:19] Does it make sense?
+[25:22] So the idea is fairly simple, to just use a proof mass whose motion is influenced by
+[25:28] external forces with the idea that if the external force is constant, almost specifically
+[25:36] is slowly time varying with respect to the time constants of the spring mass system,
+[25:42] then you can measure the force that is applied.
+[25:45] In practice, nowadays, this is implemented by using MEMS, micro-mechanical systems, whereby
+[25:52] you have a cantilever with a very small mass, and the deflection of this cantilever beam
+[25:58] is measured with other piezoelectric capacity sensors.
+[26:02] So this can be made extremely compact.
+[26:11] So MEMS are great.
+[26:12] The only problem is that they tend to be fragile.
+[26:16] And one of the issues with that is that, for example, if you have a child, and she likes
+[26:22] to play with your phone, then she likes to drop your phone on the ground.
+[26:28] And then after four or five times, the accelerometer slash gyroscope system is gone.
+[26:34] For example, when my phone, when you turn it, it doesn't turn anymore.
+[26:39] And the phone of my wife, when it turns, the image doesn't turn anymore.
+[26:43] That's because, basically, these MEMS sensors are nice, but if you abuse them, they are
+[26:47] the first ones to fail.
+[26:50] So treat your phone with care.
+[26:53] So we know how to measure headings.
+[26:55] We know how to measure acceleration.
+[26:58] Then we can put everything together, and we then are able to measure both our translational
+[27:05] motion and our rotational motion.
+[27:07] In particular, the sensor, whereby you combine both accelerometric measurements and the gyroscopic
+[27:14] measurements, is referred to as IMU, Inertial Measurement Unit.
+[27:18] So this is a sensor that you will hear a lot as you work with autonomous robots.
+[27:25] So the idea is to use a gyroscope that allows you to infer angular velocity, and then through
+[27:30] integration the orientation of your robot.
+[27:33] Then you have an accelerometer.
+[27:35] And then through repeated integration of your acceleration, then you get the velocity estimate,
+[27:42] and then you get an estimate of your position.
+[27:46] You know that velocity is the integral of acceleration.
+[27:49] Position is the integral of velocity.
+[27:54] So this is great, because assume that I give you initial condition about your position,
+[28:00] about your velocity, then by using IMU, basically measuring the accelerations to which your
+[28:10] robot is, the station that your robot is undergoing, and the angular velocities that your robot
+[28:19] is undergoing, I can estimate where I am.
+[28:23] And for example, IMUs are widely used in the context of aircraft navigation, so that at
+[28:30] any point in time, you know more or less where you are.
+[28:36] IMUs were really spearheaded after the Second World War.
+[28:44] But again, this procedure of only relying on proprioceptive information is referred
+[28:54] to as dead reckoning, where you have to be cautious because errors compound, and at some
+[29:01] point you end up in a situation that is very different from where you are.
+[29:05] For example, in the 80s, there was an airplane from Korean Airlines.
+[29:14] So basically this is Russia, this is Kamchatka Peninsula, so this is the Soviet Union.
+[29:23] So here there is Korea, more or less.
+[29:26] Here there is Alaska, United States, Alaska.
+[29:32] This was a plane going from New York to Seoul, and then stopped over in Alaska, at the time
+[29:39] there was not enough capacity to go in one shot from New York to Seoul, and then going
+[29:45] to Korea.
+[29:47] So the flight plan was to stay out of the airspace of the Soviet Union, but due to an
+[29:54] issue with the Inertial Measurement Unit, right after taking off from Anchorage, the
+[30:01] airplane started drifting, and it was night, so the pilots didn't have any other external
+[30:08] reference in order to understand that the plane was drifting.
+[30:11] So finally they crossed a peninsula, and then the Soviet planes were scrambled, then they
+[30:17] got out of the peninsula, so they were again in international waters, but then they crossed
+[30:21] another peninsula, and here they were intercepted by a military airplane from the Soviet Union
+[30:27] and shot down.
+[30:29] So unfortunately, this is an example of accidents that happen because of, well, sort of accident,
+[30:37] that happen because of a drift in an Inertial Measurement Unit.
+[30:41] But having said that, Inertial Measurement Units can be remarkably accurate.
+[30:45] But the key point is that they often need to be augmented with some procedure to fix
+[30:52] the drift from time to time, GPS, other beacons, and so on.
+[30:58] In particular, beacons are signal devices with precisely known positions.
+[31:03] So if you can measure the distance between your robot and those beacons, then you know
+[31:08] exactly where your robot is, assuming that you have a precise knowledge about where those
+[31:15] sensors are.
+[31:17] One of the most typical beacons is a lighthouse, but of course the most important beacon system
+[31:25] out there is represented by GPS, a constellation of satellites that allow you, assuming that
+[31:31] you have a GPS receiver, to pinpoint your position almost anywhere on Earth.
+[31:39] The last class of sensors that I want to discuss is the class of active ranging sensors.
+[31:44] So those sensors that emit energy into the environment in order to gather information
+[31:49] about the environment, for example, in terms of distances to objects.
+[31:55] There are two main types of ranging sensors.
+[31:58] The first one is called Time-of-Flight Active Ranging Sensors.
+[32:02] So these are sensors that emit electromagnetic waves, or sound waves, and they measure how
+[32:12] long it takes for that wave to come back to the sensor itself.
+[32:18] The second class of active ranging sensors are the sensors that use geometric properties
+[32:23] in the measurements in order to reconstruct the environment.
+[32:27] For example, emitting some pattern in the environment, see how this pattern is deformed,
+[32:34] and then from that infer properties about the environment.
+[32:37] So let's discuss each sensor in turn.
+[32:41] The idea, as I said, of a time-of-flight ranging sensor is to make use of the propagation of
+[32:46] the speed of sound or of an electromagnetic wave and measure how long it takes for that
+[32:50] wave to come back to the sensor once it is reflected by an object.
+[32:58] So assuming that you know the speed of propagation of that wave, let's call that speed c, then
+[33:04] the time it takes for that wave to travel to do the round trip from the sensor to the
+[33:10] object and back is equal to d, the distance over c, or the distance traveled is equal
+[33:18] to the speed of the wave times the time it takes for the signal to go back and forth.
+[33:31] So here's your sensor, this is an object.
+[33:36] So you emit an electromagnetic wave, it comes back, so the round trip distance is equal
+[33:43] to d, and this round trip distance is equal to c times t.
+[33:48] c is the speed, t is the time it takes from the time it was emitted to the time its reflection
+[33:55] is measured back.
+[33:56] So then once, assuming that you are able to measure the round trip time t, how do you
+[34:05] estimate the actual distance from an obstacle?
+[34:10] So what is this, the obstacle, this distance here?
+[34:15] Yeah, this was not supposed to be a particularly difficult question, that's it.
+[34:29] Of course, with the electromagnetic waves they go fast, so these times are in general
+[34:35] extremely short.
+[34:36] So the circuitry needed in order to make this idea work is rather complicated, but by now
+[34:41] this technology is widely available.
+[34:44] Prosely difficult sensors in this class is represented by ladders, laser rangefinders.
+[34:53] Now the performance of the sensor depends on a number of properties of the sensor itself
+[34:59] and of the environment.
+[35:00] In particular, you need to be able to determine the exact time of arrival, which is not easy
+[35:05] in general.
+[35:06] That's why ladders are still relatively expensive, for example, the one that you use on your
+[35:11] robot is about $8,000, so do not bring it on.
+[35:18] And the sensor also, the performance of the sensor also depends on the interaction with
+[35:25] the target, meaning if you have several different reflections and so on.
+[35:31] The second class of active-ranging sensors is represented by geometric active-ranging
+[35:35] sensors, which are fairly interesting sensors.
+[35:38] The idea is, as I said, to exploit geometric properties of the readings in order to infer
+[35:44] structure.
+[35:45] Like, for example, a particular important class of sensor in this class is represented
+[35:54] by sensors that emit structural light, so basically light with a pattern.
+[36:00] Say like dots, maybe you may not see them because maybe they are in the infrared wavelength,
+[36:06] but they emit a pattern.
+[36:07] And then you measure how you observe how this pattern is deformed, and from that you can
+[36:13] infer the shape of the objects that are in the environment.
+[36:18] So this is, for example, the technique that is used by the Xbox and also by the Intel
+[36:23] RealSense sensor.
+[36:30] Are one of these two classes of sensors more or less expensive on average than geometric
+[36:34] versus the time of flight?
+[36:37] So these sensors tend to be, they're still more expensive than cameras, but in general
+[36:41] much less expensive than time of flight.
+[36:43] Time of flight has this very complicated circuitry in order to measure time, and also they try
+[36:52] to address two different markets.
+[36:56] So these sensors is more to reconstruct structure close by, say three to four meters, while
+[37:02] with ladders you want to have a dense point cloud representing your environment several
+[37:08] meters away, which means that you have to pump more energy in order to get some signal
+[37:14] back.
+[37:15] Indeed, one of the limitations about pumping energy is that you don't want to have this
+[37:24] sensor being harmful for the human eye.
+[37:27] So that's actually kind of the upper limit.
+[37:28] In principle, you could have ladders that allow you to see farther than what is currently
+[37:33] possible, but that would imply that you have to pump more energy, and that will make them
+[37:37] dangerous for the human eye, because of the frequency at which these ladders operate.
+[37:43] So one of the current research directions in this topic, and what several start-ups
+[37:49] right now in the Bay Area are working on, is to try to use ladders at different frequencies
+[37:54] that do not interfere with the operation of the human eye, so that you can pump more energy.
+[38:01] Unfortunately, those different frequencies are difficult to generate with lasers that
+[38:06] are embedded in silicon.
+[38:08] So that's the engineering challenge, to be able to embed lasers on silicon wafers at
+[38:13] the frequencies that are not harmful for the human eye.
+[38:18] And there are a number of companies out there that try to do that.
+[38:20] So these are cheaper than time-of-flight range sensors, and this sensor also addresses two
+[38:27] different markets.
+[38:28] This is more for short-range sensing, the other one is for more long-range sensing.
+[38:33] For very long-range sensing, you would use a radar.
+[38:38] And radar, it's interesting that radars are currently being designed specifically for
+[38:44] the purposes of robot autonomy, before seeing objects at very long distances, like airplanes
+[38:52] and so on, but not so much for observing objects in structural environments like cities.
+[38:57] Now, there are many other sensors, like radars, as I just mentioned, tactile sensors, and
+[39:04] there are many other sensors that are currently emerging, like for example, artificial skins,
+[39:09] basically skins that you can put on a robot, and allows the robot to measure pressure,
+[39:13] to measure temperature and so on, or also neuromorphic cameras, so cameras that work
+[39:21] in a way that is more similar to how the human eye works, as opposed to what your current
+[39:29] camera works.
+[39:31] Anyway, so this discussion was meant to only provide a general overview of what are the
+[39:36] sensors out there, what are the benefits and disadvantages of each one.
+[39:41] And now, we're going to focus on a very important sensor for robots, which is the camera.
+[39:47] Any questions so far?
+[39:50] You should be glad that for 40 minutes, you didn't have differential equations on the
+[39:57] board.
+[39:58] Now, we go to mathematical formulas.
+[40:00] Cool, so cameras, objective for today is to give an introduction to computer vision, and
+[40:06] in particular to cameras and cameras models.
+[40:11] So my discussion about cameras is taken by three main references.
+[40:16] One is a book from Sigur Nurbakas and Scaramuzza, and the two additional books that are considered
+[40:22] references for computer vision, The Forcities and Ponds, and The Hartley and Zisserman.
+[40:30] These books go into much more details than what is needed for this class, but I just
+[40:35] provide the references for you, in case you want to get more detail about the material
+[40:40] that I'm going to explain.
+[40:43] In particular, a camera is basically a sensor that tries to replicate the sense of vision,
+[40:50] whereby through our eyes, we're able to interpret the surrounding environment using light in
+[40:56] the visible spectrum that is reflected by objects in the environment.
+[41:01] Through our eyes, amazingly, we can capture an enormous amount of information.
+[41:06] So I just try to do so in a similar way.
+[41:10] In particular, of course, the inner working of a camera is very different from the inner
+[41:15] working of a human eye.
+[41:17] In particular, the way that the camera works is that you have a lens through which you
+[41:22] capture the ambient light, and this ambient light is converted into a digital image that
+[41:28] is then processed in order to extract the relevant information.
+[41:31] So today, and on Thursday, we are going to talk about how a camera goes from capturing
+[41:39] light into converting that light into an image that we can extract information from.
+[41:46] Next week, we'll talk about how to extract information from a camera image.
+[41:51] That's the plan.
+[41:53] So let's try to get a better understanding of how an image of the world is captured through
+[42:00] a camera.
+[42:03] So the idea is as follows.
+[42:04] So here there is the sun, the light is reflected by an object, say a tree, and this is scattered
+[42:13] in many different directions.
+[42:14] So let's assume that we place a photoreceptive surface somewhere.
+[42:19] A photoreceptive surface is a surface that is capable of capturing light and translating
+[42:25] that light into a digital signal that can be then stored in your camera.
+[42:32] Now the problem with this approach, so basically just placing a photoreceptive surface, is
+[42:39] that a point on the tree is going to scatter light in many different directions, which
+[42:47] means that a point on the photoreceptive surface is going to be impinged by light rays that
+[42:56] come from several different points on the object that you're trying to image.
+[43:04] Which means that it's not possible to correlate one to one the light that you get at a given
+[43:11] position of your photoreceptive surface with a point on the image.
+[43:16] Basically this means that your image is extremely blurred.
+[43:21] It's basically the averaging of rays of light coming from several different points.
+[43:27] What you get is basically something that is not intelligible.
+[43:31] So the whole idea of a camera is to, in a nutshell, establish a one-to-one mapping between
+[43:38] points on an object and points on your photoreceptive surface.
+[43:43] And the idea to do so is to place in between your photoreceptive surface an environment
+[43:49] that you're trying to visualize a screen with a very small aperture.
+[43:59] The idea is that this screen is going to block almost all of the light, except for those
+[44:07] rays, light rays, that go through the aperture.
+[44:14] So in the limits that this hole is very, very small, only one light ray from each point
+[44:23] is going to go through this hole.
+[44:26] Which means that on the photoreceptive surface, for each point on that surface, you only have
+[44:33] a corresponding point on the object.
+[44:35] So basically you're now able to establish a one-to-one mapping between points on an
+[44:40] object and points on a photoreceptive surface that, from a physical standpoint, allows your
+[44:47] image to be very crisp and a faithful representation of your environment.
+[44:55] Does this make sense?
+[45:00] This is the simplest possible way you can explain how vision works.
+[45:06] This hole is usually referred to as a pinhole.
+[45:10] And that's literally how, at the most foundational level, a camera works.
+[45:17] So now the engineering challenge is to be able to translate these concepts into a device.
+[45:26] As many good ideas in engineering, this idea came from an Italian, Leonardo da Vinci, 1502.
+[45:36] So he was the first one to provide a very clear description about how a camera could
+[45:44] work.
+[45:45] The first known drawing of the concept of a pinhole camera.
+[45:51] So this idea of placing a surface that reflects most of the light, except for the light that
+[46:01] goes through a pinhole.
+[46:02] And then that light goes into a photoreceptive surface.
+[46:05] So the first image was published in 1544.
+[46:11] And this is basically the idea.
+[46:13] So you have an object, you have a surface that reflects almost all the light, except
+[46:17] the one that goes through the hole.
+[46:19] And then you get, at a photoreceptive surface, the image inverted.
+[46:26] So this device is also referred to as a camera obscura.
+[46:30] If you go to San Francisco, close to the Golden Gate, there is a restaurant called The Cliff.
+[46:37] If you go down the stairs, there is a small camera obscura that you can visit, just in
+[46:43] case you happen to swing by there.
+[46:47] So let's get a little bit more into the technical definition of a pinhole camera.
+[46:54] So a camera whereby you visualize the environment through this notion of a pinhole.
+[47:01] The hole, as I said, is referred to as the pinhole.
+[47:06] The distance between the surface that blocks most of the light and the photoreceptive surface
+[47:14] is referred to as the focal length.
+[47:19] The photoreceptive surface, that is the surface where you record the image, is referred to
+[47:25] as the image plane.
+[47:29] Now the way that this works is that an object in the physical space gets imaged on the image
+[47:41] plane in a way that is a scaled-down version and is inverted.
+[47:49] Oftentimes, to make the analysis simpler, one imagines a virtual image plane, which
+[47:57] is placed a distance equal to the focal length in front of the plane that is blocking the
+[48:12] light.
+[48:13] Now this is a virtual image plane.
+[48:15] The advantage of this virtual image plane is that in this virtual image plane, what
+[48:19] you get is an image that is exactly the same as the one that is actually imaged by your
+[48:25] camera but is not inverted.
+[48:27] So for mathematical conveniences, sometimes we'll be using the notion of a virtual image
+[48:36] plane.
+[48:37] I just want to make sure that the anomaly is confused by it.
+[48:46] The process through which an image is imaged is referred to as a prospective projection.
+[48:54] And this is a very important concept because it allows you to relate an image in the physical
+[48:58] world into an image into the image plane, which means that we have to dig a little bit
+[49:04] deeper in how the prospective projection works in order to go to the next step.
+[49:08] That is really what we care about, meaning how do we extract information from images.
+[49:15] So let's get a little bit deeper on how a prospective projection works.
+[49:20] I know there's a bit of notation, but the underlying idea is relatively simple.
+[49:26] So this is the mathematical abstraction of a pinhole camera.
+[49:31] O is what we refer to as the pinhole.
+[49:34] And we assume that we attach a reference system to the camera that has the origin center of
+[49:41] the pinhole.
+[49:44] The z-axis oriented along the axis that goes through the pinhole and is orthogonal to the
+[49:55] image plane, this axis is referred to as the optical axis.
+[50:00] And the z-axis for the camera reference frame has the same direction of the optical axis,
+[50:09] and the direction is in the direction of the image plane.
+[50:15] And then we have the x-axis that is parallel to the x-axis, the image plane, and then the
+[50:21] y-axis that completes the orthogonal turn.
+[50:24] This is a camera reference system.
+[50:29] The point whereby the optical axis intersects the image plane is referred to as the image
+[50:39] center.
+[50:41] Now the question is, assume that we have a point that has coordinates x, y, z with respect
+[50:50] to the camera reference frame.
+[50:53] How is this point capital P imaged into the image plane?
+[50:58] Meaning what are the coordinates of P, small p, the point that is imaged in the image plane,
+[51:07] with respect to the camera reference frame?
+[51:11] So this transformation is really what is referred to as the perspective transformation.
+[51:16] Is this setup clear?
+[51:18] We have a camera reference frame.
+[51:20] We have a point P that is the point in the physical world.
+[51:23] We want to understand how those coordinates translate into the coordinates for the point
+[51:29] that is the representation in the image plane of that point in the physical space.
+[51:36] Or in other words, if I give you information about the key parameters of the camera, how
+[51:42] do I find a mapping between uppercase XYZ and lowercase XYZ?
+[51:48] Again, lowercase XYZ are the coordinate of lowercase P, uppercase XYZ are the coordinate
+[51:56] of uppercase P, the point in the physical space.
+[52:01] As before, the distance between the pinhole and image plane is referred to as the focal
+[52:06] length.
+[52:11] Is this setup clear?
+[52:14] All right.
+[52:16] So this mapping is indeed relatively simple to derive.
+[52:23] In particular, let's look at the vectors OP and the vectors OP.
+[52:32] So Op is the vector that goes from the origin of the camera reference frame to the point
+[52:41] P, the projected point in the image plane.
+[52:49] The vector O, capital P, is the vector that goes from the pinhole to the point in the
+[52:58] real space, in the real obstacle.
+[53:01] Now as you can see, since these two vectors lie on the same line, these two vectors are
+[53:09] parallel.
+[53:11] So by definition, two vectors V1 and V2 are parallel if they can be written as V1 equal
+[53:21] to lambda V2 for some lambda in the reals.
+[53:27] That's how you represent mathematically the fact that the two vectors are parallel to
+[53:32] each other.
+[53:34] In particular, lambda represents a scaling factor, and its sign represents whether the
+[53:39] vectors are pointing in the same direction or in opposite directions.
+[53:43] In this case, these two vectors are pointing in opposite directions, so the sign will be
+[53:47] negative.
+[53:50] So in order to find the transformation, then what you do is simply to represent OP with
+[53:58] its coordinates x, y, z, O capital P with its coordinates x, y, z, or uppercase.
+[54:07] Since these two vectors are parallel, then OP has to be equal to lambda O capital P for
+[54:16] some lambda, which implies, by taking this equality component-wise, that small x is equal
+[54:27] to lambda big X, y is equal to small lambda big Y, z is equal to small lambda big Z.
+[54:39] Which means that lambda is equal to small x over capital
+[54:51] X, lambda is equal to small y over capital Y, and lambda is equal to small z over capital
+[54:59] Z.
+[55:03] And now we can then write x as lambda big X, but let's plug this in.
+[55:16] So what we get is small x is equal to small z over big Z times capital X.
+[55:28] The last step is to recognize that the vertical coordinates for the point at its image, so
+[55:37] small z, is equal to the focal length, f, by definition.
+[55:43] So this would be f, a parameter that we assume we know, in reality, it has to be calibrated
+[55:49] for.
+[55:50] We discussed on Thursday how to calibrate for the focal length, but for now, let's assume
+[55:55] that the parameters of the camera are known, and in particular, the focal length is known.
+[55:59] So in this way, we have found the mapping, for example, small y is equal to f over big
+[56:09] Z times y.
+[56:15] So these equations allow us to find a one-to-one mapping between points in the physical space
+[56:22] to points in the image plane.
+[56:26] This mapping is referred to as the perspective projection.
+[56:31] Very important, as you'll see in a second.
+[56:36] So assuming that this is how we define the reference frame, the answer is yes.
+[56:45] So just to make a consistency check, so here, this x will be positive.
+[56:50] Here the big Z will be negative, as you said.
+[56:54] The x would also be negative, and then the two sign cancel out, so actually everything
+[56:59] is.
+[57:00] As I said, a little bit of symbols, but the concept here is very simple.
+[57:08] Now this is great.
+[57:09] So basically, now we know how to relate.
+[57:12] So we know that we can capture images by using the notion of a p-hole, and we know how a
+[57:16] point in the physical space is imaged in the image plane.
+[57:22] So it seems that everything is set.
+[57:24] Now we can start talking about how to reconstruct information and so on, but there is a caveat.
+[57:32] The problem with the p-hole camera, as it is defined, is that if you have a very small
+[57:39] aperture, then in the limit you only have one ray of light going through the hole.
+[57:46] So you have, in principle, very crisp images.
+[57:50] So here I'm showing a sequence of images that depend on the aperture of the p-hole.
+[57:57] Two millimeters, one millimeter, 0.6, 0.35.
+[58:00] As the radius of the p-hole decreases, the image becomes crisper and crisper, because
+[58:06] we basically recover increasingly the one-to-one mapping that I referred before.
+[58:11] The problem, though, is that as we make the radius smaller and smaller, an increasingly
+[58:16] smaller amount of light goes through the p-hole.
+[58:21] The point is that the image gets darker and darker.
+[58:24] So in the limits that the radius gets smaller and smaller, you have a very little light
+[58:28] that goes into your photoreceptive surface, so in principle you have a very crisp image.
+[58:33] In practice, you don't see anything.
+[58:35] Second of all, you approach the diffraction limit of light.
+[58:40] So you might have other effects that perturb your image.
+[58:45] So basically, you have a trade-off.
+[58:47] On the one hand, you like to make the radius of the p-hole smaller and smaller, approaching
+[58:52] zero, theoretically.
+[58:53] On the other hand, you can't do it, because otherwise the image becomes very dark.
+[58:59] And on top of that, you run into diffraction issues.
+[59:03] How do you fix that?
+[59:04] You fix it by introducing a notion of a lens.
+[59:08] You had a question?
+[59:10] Yep.
+[59:11] So a lens is an optical element, in a nutshell, that focuses light by means of diffraction.
+[59:20] So the idea is, instead of placing a plane with a p-hole, actually the idea is to place
+[59:30] a lens that captures the rays of light coming out of a point and focuses all those rays
+[59:40] into a single point in a photoreceptive surface.
+[59:43] So the idea is the same as before.
+[59:45] Try to come up with a one-to-one mapping between points on the photoreceptive surface and points
+[59:50] in the physical world.
+[59:53] But the way it works is different.
+[59:55] Instead of forcing all the rays to go through the p-hole, or actually selecting only the
+[59:59] ray that goes through the p-hole, the idea is to actually consider all the rays, but
+[60:03] then focus them.
+[60:05] In that way, you have the same one-to-one mapping, but now you can harness many more
+[60:11] rays of light, which means that your image is much shinier.
+[60:17] And any questions about this?
+[60:19] So what we're trying to discuss now is the p-hole is conceptually appealing, but practically
+[60:27] difficult to make it work.
+[60:29] The idea is to introduce the concept of a lens in order to have something that approximates
+[60:33] how a p-hole camera works, but at the same time is implementable.
+[60:39] That's the whole idea.
+[60:40] But doesn't this have the same problem as before, where you have other parts of the
+[60:45] object that are also reflecting, also hitting the same parts of the lens, or all forms of
+[60:51] the lens?
+[60:52] Yeah, so each lens is capable of focusing images at a certain distance from a lens.
+[60:57] And the geometry of this will come clear in a second.
+[61:00] But not only that, but objects at a different distance from the lens may not focus perfectly
+[61:10] on a given point.
+[61:11] So it may look blurred.
+[61:12] So that's a problem.
+[61:13] In practice, there's not so much of a problem, as I will discuss next.
+[61:17] But that's a very good point.
+[61:20] So in order to answer the question that your colleague just asked, we had to understand
+[61:25] a little bit better how points are projected on an image plane through a lens.
+[61:32] The construction here is likely more complicated, but it's still relatively simple.
+[61:39] So the idea is as follows.
+[61:40] So we have a point in the physical space.
+[61:45] We have a photoreceptive surface, and we have a lens.
+[61:52] So the geometry of how points are mapped onto a photoreceptive surface obeys the three
+[62:00] main laws that comes from this Snell law for light propagation through medium.
+[62:06] We're not going to go into Snell law.
+[62:08] So I'm just going to give you the results of the application of Snell laws to thin lenses.
+[62:16] In particular, the rays passing through a lens obey three key properties.
+[62:20] Again, they're not obvious, and we're not doing derivation right now.
+[62:24] I just state these properties as facts.
+[62:27] The first property is that rays that go through the center of a thin lens, a thin lens is
+[62:33] a lens which is very thin, so the thickness of the lens is very small compared to the
+[62:38] radius of curvature, a ray that goes through the center of the lens is not refracted.
+[62:45] So for that specific ray that goes through the center of the lens, the geometry is the
+[62:50] very same geometry of a pinhole camera.
+[62:54] Rays that are parallel to the optical axis are focused on a point referred to as a focal
+[63:02] point, F prime here.
+[63:05] And third, all rays that are emitted by P are focused by the thin lens on a point P,
+[63:14] so they intercept on a point P, which means that if you place the photoreceptive surface
+[63:19] here, then you have a one-to-one mapping between capital P and this point here.
+[63:31] So the question now is, how is the distance between this image plane and the plane that
+[63:40] contains the lens related to the position of the object and the focal length?
+[63:48] The key issue here is that as I change the position of the point capital P, the point
+[63:56] at which the rays intersect would change.
+[63:59] And that's annoying because if the point at which the image focuses differs for each point
+[64:05] in the physical object, then where should you place the photoreceptive surface?
+[64:09] Here or here, that's an issue.
+[64:11] So what we're going to see is that for typical cameras, there is a range of distances for
+[64:18] which the point, the image is in focus.
+[64:26] And besides those range, then the image is actually out of focus or blurred.
+[64:30] But for more typical applications, out of focus images are not so important.
+[64:34] So let's first understand the relation between the distance from the lens at which a point
+[64:41] becomes in focus, the position of capital P, and the geometry of the thin lens, in particular
+[64:47] in terms of the focal length.
+[64:50] In order to do so, we use the property of similar triangles.
+[64:56] Two triangles are similar if the angles are equal, which means that the corresponding
+[65:06] edges need to be in a proportionality factor.
+[65:12] Well, more or less, I hope.
+[65:17] So you see these angles are similar in that the, so these triangles are similar in that
+[65:24] the corresponding angles are equal, which means that the corresponding edges, they have
+[65:30] to be in a proportionality factor.
+[65:34] So what triangles I'm going to consider here?
+[65:38] I'm going to consider these two blue triangles and these two red triangles.
+[65:46] Let's consider the blue one first.
+[65:48] These two blue triangles are indeed similar.
+[65:51] This angle is equal to this one, this angle is equal to this one, this one is equal to
+[65:56] 90 degrees, and this one is equal to this one, as you should easily see.
+[66:02] Then we apply the property of similar triangles as follows.
+[66:05] The ratio between this edge here, which will be small y, the y-coordinate of P, and this
+[66:29] edge here, which will be big Y, so Y over Y over big Y, has to be equal to the ratio
+[66:37] between the length of this edge and the length of this edge.
+[66:42] This is a small z, this is a big Z.
+[66:51] Then apply the same reasoning to the red triangles, which means that the ratio between this edge
+[66:58] and this edge, so Y over big Y, has to be equal to the ratio between this edge and this
+[67:11] edge here.
+[67:12] So this edge is the focal length.
+[67:17] So here we have the focal length.
+[67:20] And this edge here is equal to the length of the overall edge minus the focal length.
+[67:29] So this is Z minus F.
+[67:43] So then we can insert this here.
+[67:48] So we have that Z over capital Z is equal to Z over F minus one, which means by dividing
+[68:05] by small z, that one over z is equal to one over F minus one over small z.
+[68:15] Or in other words, we have this equation here, which is referred to as the thin length equation.
+[68:21] So what this equation tells you?
+[68:24] Let F be the focal length, which is a property of a thin length, something that you assume
+[68:29] you know.
+[68:30] Let Z be the distance of the point in the physical space from the length.
+[68:37] And small z, the point at which the physical point becomes in focus, meaning that all the
+[68:45] light rays intersect.
+[68:47] And if you were to place a photoreceptive surface here, then the image would be in focus.
+[68:52] That's the relation between these quantities.
+[68:56] Interestingly, if an object is very far, so capital Z is much larger than the small z
+[69:04] and small f, then objects that are very far away would focus on the length small z equal
+[69:13] to the focal length.
+[69:16] So what's the key point here?
+[69:17] Is that in a camera, the z and the f are in general much smaller than a capital Z, which
+[69:25] means that this approximation that objects are at infinity focus at the focal length
+[69:31] is usually well verified.
+[69:34] Which means that I can use my glasses and I'm not a blind person.
+[69:37] So all of this to say that a thin lens is a very smart way of creating a device that
+[69:50] works in a way that is very similar to a pinhole camera.
+[69:54] And the reason why it works in a way that is very similar to the pinhole camera is through
+[69:58] this thin lens equation that relates the position of a point in the physical space to where
+[70:04] the point will be focused within the camera.
+[70:09] In particular, the equations relating the position of capital P and small p are exactly
+[70:16] the same under pinhole perspective if one considers small c as the focal length.
+[70:21] This is clear because the geometry is exactly the same.
+[70:26] And if capital Z goes to infinity, then a small z is equal to the focal length.
+[70:31] So basically, we will have the same exact equations as before by using as f the focal
+[70:38] length of the lens.
+[70:43] Points located at a distance minus z from the origin and the length will be in sharp
+[70:47] focus only when the image plane is located at a distance of small z from the origin or
+[70:51] the other side of the lens that satisfies the thin lens equation.
+[70:54] We already discussed this.
+[70:56] In practice, objects within some range of distances called depth of field or depth of
+[71:00] focus will be in acceptable focus.
+[71:03] So if you have, for example, an object that is extremely close by, and that is the case,
+[71:09] it will be difficult for me to put it in focus.
+[71:12] There are more complicated lenses with multiple foci, but for normal lenses, that is not possible.
+[71:20] Similarly, if capital Z goes to infinity, f becomes the distance between the center
+[71:24] of the lens and the plane where distance objects focus.
+[71:30] This idea allows us to treat cameras with lenses in the same way that we model a pinhole
+[71:40] camera.
+[71:42] For the rest of this class, what we will do will be to develop computer vision by using
+[71:50] as a model a pinhole camera model with the understanding that in reality that model will
+[71:56] be realized through the notion of a lens.
+[71:59] But thanks to this correspondence between cameras with lenses and pinhole cameras, we
+[72:06] can accurately talk about the two and it's just mathematically more convenient to talk
+[72:10] about pinhole cameras.
+[72:12] So, a couple more things before we leave for today.
+[72:18] So now that I hope you agree with me that we can, even though every camera has a lens
+[72:22] is not a pinhole camera, we can use a pinhole camera model to model the process whereby
+[72:28] we gather images.
+[72:29] Now the first task that we want to understand is how a point in the physical space is mapped
+[72:37] into the image plane.
+[72:40] And in particular, this entails three steps.
+[72:45] First of all, we want to understand how a point, which is expressed in terms of coordinates
+[72:52] with respect to the camera reference system, is mapped into the image plane.
+[72:58] Then we want to understand how that coordinates can be mapped into pixel coordinates.
+[73:04] So that we can actually measure points in pixels, not in continuous distances.
+[73:11] And finally, we want to understand the relation between the point in the physical space as
+[73:18] expressed in the camera reference system to the same point as expressed in a word inertial
+[73:24] reference system.
+[73:25] So that once we do that, we have a complete end-to-end mapping between the point that
+[73:30] is expressed in the word reference frame.
+[73:33] Pw means word, inertial reference frame.
+[73:36] C means the camera reference system.
+[73:38] We have a mapping from Pw all the way to P in pixels, again, built into three phases.
+[73:44] We go from a Pw to Pc, we go from Pc to P, and then we go from P to pixels.
+[73:53] Is the procedure clear?
+[73:55] All right.
+[73:57] So the first step is assume that we start from a point whose coordinates are given the
+[74:02] camera reference system.
+[74:04] How do we get the coordinates for the projected point in the image plane?
+[74:10] We already seen that.
+[74:13] And in particular, x is equal to the focal length xc over cc, y is equal to f, yc over
+[74:17] cc.
+[74:18] Here, I just made explicit that x, y, and z are with respect to the camera reference
+[74:24] system.
+[74:30] The second step is, OK, so we have the point in the image plane with respect to the camera
+[74:37] reference system.
+[74:38] How do those coordinates relate to the coordinates that a camera really uses, which are basically
+[74:47] pixels?
+[74:49] So I don't want to rush it, so I will do it next time.
+[74:52] But basically, the idea is simply to translate a continuous quantity into discretized quantities
+[74:57] through pixels.
+[74:59] So that's something that we will do next time.
+[75:02] And finally, we will have the final step that we will do next time about how to go from
+[75:06] a PW to PC.
+[75:08] The only difficulty in doing all of this will be that, as we will see, where it's also clear
+[75:14] from here, that this mapping entails a division by zc.
+[75:19] So this mapping is nonlinear.
+[75:21] And dealing with the nonlinear max-links in general is difficult.
+[75:25] So we'll find a trick referred to as homogeneous coordinates that allow us to represent this
+[75:30] mapping as a linear one.
+[75:33] Once we do that, we'll be able to talk about camera calibration.
+[75:38] So how do we infer all the intrinsic parameters of a camera, such as the focal length?
+[75:44] And at that point, we'll talk a bit about how to then reconstruct the scene by measuring
+[75:49] distances to objects by using images.
+[75:51] And that will be the lecture on Thursday.
+[75:54] So we just had four or five slides left, but I don't want to rush them.
+[75:59] So we will start from here on Thursday.
+[76:03] And then we will move into the true lecture of Thursday, which is about camera calibration.

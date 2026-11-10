@@ -1,0 +1,1029 @@
+[00:00] So this week, we're going to cover two additional topics that are not really reflected in the
+[00:11] final project, nor in the homework, nor obviously in the midterms.
+[00:17] But just want to make sure that at least you have the high level concepts.
+[00:23] Want to know that these concepts are there, and two, to guide you in terms of how to best
+[00:29] choose future courses in case you're interested in getting deeper into this topic.
+[00:35] In particular, today, we are going to talk about high level decision making.
+[00:40] So not so much what exact path I should drive, but more like, is it a good time to cross
+[00:47] an intersection or should I change a lane?
+[00:50] And the problem is that when you try to reason about those high level decisions, accounting
+[00:55] for uncertainty becomes pivotal.
+[00:59] Because these decisions are affected by perceptual uncertainty, obviously, but also uncertainty
+[01:04] in your environment reconstruction.
+[01:05] For example, you have humans around you, you want to predict what they will do and take
+[01:11] that prediction into account when you compute your actions.
+[01:14] Of course, those predictions have a lot of uncertainty and you need to account for that
+[01:19] in order to compute a high level action that trades safety versus efficiency.
+[01:24] So the question is, what mathematical model we can use in order to capture decision making
+[01:30] with uncertainty?
+[01:32] And second of all, once we have a model, what type of algorithms are out there?
+[01:36] So today we'll focus mostly on the mathematical model and the baseline algorithms.
+[01:42] On Thursday, we'll focus on algorithms that are not really guaranteed to achieve optimality
+[01:50] with respect to the model, but at least they are guaranteed to be very fast and very powerful.
+[01:56] In other words, today we focus more on the topic of market decision processes and dynamic
+[02:01] programming.
+[02:02] On Thursday, we focus more on the topic of reinforcement learning, that from the perspective
+[02:05] of this class is seen more as an approximate solution to market decision making problems
+[02:11] than a standalone topic.
+[02:15] So goal today is to learn the fundamental principles behind decision making and uncertainty
+[02:21] specifically under a formulation in terms of market decision processes, and then discuss
+[02:28] the workhorse algorithm that is used in order to tackle this problem referred to as dynamic
+[02:34] programming.
+[02:35] For this lecture, I'm going to reference a book from Dimitri Bertsikas, who was a professor
+[02:44] at MIT.
+[02:45] He wrote a book on reinforcement learning and optimal control.
+[02:49] I think that if you want to get deeper into this material, this is an excellent book because
+[02:54] basically it puts within the same unifying framework two fields that have been considered
+[03:01] fairly separate.
+[03:03] The field of optimal control, mostly in electrical engineering, aerospace engineering, and reinforcement
+[03:08] learning, mostly in the field of computer science.
+[03:11] Turns out that the foundations are the same.
+[03:13] So it's very fruitful to actually reason about all these concepts together.
+[03:19] So let's start right away with the mathematical model through which we capture a sequential
+[03:27] decision making problem.
+[03:28] So the idea is that over time, we want to make actions that are optimal according to
+[03:35] some cost function.
+[03:37] So how do we concretize this high-level description into a mathematical model?
+[03:43] The idea is to set up a few basic ingredients.
+[03:48] The first ingredient, we need a model.
+[03:51] And this is very similar to our discussion in the context of Bayesian filtering.
+[03:55] Here the main difference is that we are not just interested in estimating a process.
+[04:00] We are interested in estimating a process and also controlling that process based on
+[04:05] that estimate.
+[04:06] So it's one step further, if you will.
+[04:08] So the first ingredient, similar to what we have in the context of Bayesian filtering,
+[04:12] we have a dynamics model.
+[04:15] And for now, I'm considering a setting that is deterministic.
+[04:18] So there is no uncertainty.
+[04:20] We will consider later on the setting with stochasticity.
+[04:23] But the main ideas actually can be understood in a deterministic setting.
+[04:26] So I prefer to first cover the deterministic setting.
+[04:29] So we have the dynamic system as k plus 1 equal to f of k x a u k.
+[04:45] As usual, x is the state, u is the control.
+[04:49] So what this is saying is that if at time k we are at state x of k and we apply control
+[04:54] u of k, the next time step would be at state s k plus 1.
+[04:59] So you already know this.
+[05:00] As a second ingredient, we have control constraints.
+[05:03] At each state, only a subset of the possible controls can be used.
+[05:08] For example, you can know faster than a given speed because of speed rules on a rod segment.
+[05:18] And we have a cost function.
+[05:20] The cost function has an additive structure.
+[05:24] And specifically, given initial condition, the cost function associated with a sequence
+[05:30] of controls at time 0, time 1, all the way to time n minus 1 is equal to the sum of a
+[05:36] final cost plus the summation of stage-wise costs.
+[05:40] g k is the cost of being at state x of k and enacting control u of k at time k, a sum through
+[05:48] all the time steps from time k equal 1 to the final time capital N minus 1.
+[05:53] Capital N is the horizon of our optimization problem.
+[05:57] g of n x n is a terminal cost.
+[06:00] The problem then is to, given initial condition, to optimize the controls u k for each time
+[06:09] step in such a way that the cost function is optimized.
+[06:14] Now is this open loop or closed loop control?
+[06:18] We had a discussion about open loop and closed loop in the setting of trajectory optimization.
+[06:32] Because we are optimizing over a control sequence u 0, u 1, u n minus 1, which basically says
+[06:37] that once you have computed your control sequence, u star k over k, so this is a set of controls,
+[06:47] u 0, u 1, all the way to u n minus 1.
+[06:50] Once you are at step k, whatever the state you are in, the control that you use is a
+[06:57] u star k, no matter what the state you are in.
+[07:01] So if the state you are in is actually the optimal state trajectory, that's good.
+[07:06] It's nothing to do.
+[07:07] But if for whatever reason, due, for example, to model mismatches, disturbances that are
+[07:12] not accounted for here, we deviate from the nominal trajectory, then we apply a control
+[07:18] that is completely nonsensical.
+[07:19] So say that you are driving a car, and then you know that at 10 step, you have to use
+[07:28] a speed 50 miles per hour, but for some reason, some tailwind allow you to go much faster.
+[07:36] So actually you are much farther ahead on the road where you have a speed limit of 20
+[07:40] miles per hour.
+[07:41] You still apply 50 miles per hour as a control, because you don't measure your state.
+[07:45] So that's why open loop control in general can be quite dangerous.
+[07:50] But the point here is to set up the problem in such a simple framework, because the, oh,
+[07:59] thank you, great.
+[08:02] In these simple terms, because the main ideas can be understood within the simple framework,
+[08:06] we will then make it more complicated by introducing stochasticity later on.
+[08:10] So two key points.
+[08:11] First of all, this is a discrete time model, which usually for high level decision making
+[08:16] is good enough, since we have reason in terms of macro actions as opposed to a continuum
+[08:23] of actions as it will be needed for trajectory optimization.
+[08:25] And second of all, the cost is additive.
+[08:29] So we have summing stage wise costs.
+[08:33] So this is a central assumption.
+[08:34] And we'll see why the assumption of the cost being additive is pivotal in this modeling
+[08:41] approach from a computational standpoint in a second.
+[08:45] In particular, the assumption of an additive cost allow us to dramatically simplify the
+[08:54] problem of computing the optimal control sequence, which for a deterministic setup will still
+[09:01] be possibly reasonable.
+[09:03] But once we introduce the stochastic variation of this problem formulation, it will be impossible.
+[09:09] Why is this problem difficult to solve?
+[09:11] Because in general, J doesn't have any particular structure, so it's not complex.
+[09:15] I mean, it might be.
+[09:17] But in general, you have non-convex functions, the constraints will be highly non-linear.
+[09:23] So solving this problem, at least in the most brutal way, would entail plugging in all possible
+[09:28] combinations of values for u0, u1, un-1, which will correspond to a combinatorial explosion
+[09:34] or things you have to evaluate.
+[09:37] So the question is, can we leverage some structure in this problem formulation to make computation
+[09:42] easier?
+[09:43] So instead of doing like a brute force enumeration of all possible combinations controlled sequences,
+[09:48] can we leverage some structure to actually avoid computation that for sure are not going
+[09:54] to be fruitful, meaning leading to an optimal solution?
+[09:57] So that's what the principal optimality does.
+[10:00] And I'm going to introduce the principal optimality in a fairly high-level setting just to give
+[10:03] you the main intuition.
+[10:06] So the principal optimality is a key concept that allows us to devise the main workhorse
+[10:15] algorithm behind the sequential decision-making, decision-making under uncertainty.
+[10:19] Everything else falls from this.
+[10:22] So you take like 15 classes in reinforcement learning here at Stanford, they're all rooted
+[10:26] in this idea here.
+[10:27] So I just want to make sure that the unifying ideas are clear to you.
+[10:32] Now what does the principal optimality tell us?
+[10:35] So first I'm going to introduce the notion and then we're going to discuss what is useful
+[10:39] from a computational standpoint.
+[10:41] So suppose that we have an optimal path.
+[10:45] And this is just for conceptual purposes.
+[10:46] As I said, our model is discrete, but let's assume that we reason in terms of trajectory
+[10:51] optimization.
+[10:53] So suppose that we have an optimal path that says that the optimal way to go from A to
+[10:57] E is to first go from A to B and then from B to E along these paths.
+[11:03] This is the cost to go from A to B and this is the cost to go from B to E. The cost would
+[11:10] be some weird stuff.
+[11:11] That's why we don't have a linear segment.
+[11:13] We have these curved things.
+[11:16] So this is an optimal trajectory.
+[11:19] Now, as I said, the first decision allows you to go from A to B and incur cost JAB.
+[11:26] And the remaining decisions allow you to go from B to E and incur cost GBE.
+[11:35] Since the cost is additive, the optimal cost is simply the sum of this cost and the sum
+[11:40] of the tail cost.
+[11:44] Now, so what is the principle to mind this says?
+[11:53] So assume that, so we have A, we have B, we have E, so we have JAB, JBB.
+[12:09] So let's assume that the path A, B, E is optimal, OK?
+[12:18] Now let's assume that for some reason you are parachuted at this location.
+[12:26] So instead of starting from here, you're starting from here.
+[12:30] The question is now you want to go from this point to this point optimally.
+[12:36] The question is, in order to do so, can you just use the tail control sequence of the
+[12:43] optimal control sequence from A to E?
+[12:46] Or maybe there is some other route that is going to incur a cost that is less than the
+[12:53] cost of JBE.
+[12:56] It's a valid question.
+[12:57] A priori, if I am parachuted into point B, there might be some other path that achieves
+[13:03] lower cost.
+[13:06] So the principle to mind this says that this is indeed not possible.
+[13:13] So if you have an optimal trajectory, its tails are also optimal for the subcontinent.
+[13:21] Meaning that if you are parachuted at B, it's still optimal to move along the trajectory
+[13:28] that was the tail of the optimal sequence.
+[13:33] Why that is the case?
+[13:34] Well, let's prove this by contradiction.
+[13:38] So assume that if you start at B, there is a drawing that is similar to the slide.
+[13:47] Let's assume that if you start at B, there is another path that allows you to go to E
+[13:52] with lower cost.
+[13:54] For example, a path that goes to point C. By the way, oftentimes people say there is
+[14:01] a more optimal path.
+[14:03] More optimal is a nonsensical term.
+[14:06] Something either is optimal or is not optimal.
+[14:08] So you have to say lower cost.
+[14:10] So you have a tail path that goes through C. So we are claiming by this cycle contradiction
+[14:17] that indeed the path that goes from B to C and then to E is lower cost than the path
+[14:25] that goes from B to E through the solid line.
+[14:29] So this is the path, this is the solid path.
+[14:34] Well, if this was the case, since the cost is additive, then the cost to go from A to
+[14:42] E through C would be JAB plus JBCE.
+[14:49] And the cost to go from A to E, and the cost of the problem to go from A to E without going
+[14:55] through C would be JAB plus GBE.
+[15:02] But since we are assuming by contradiction that JBCE is less than JBE, then let's call
+[15:10] this the cost of path two, cost of path one, then the cost of path two will be less than
+[15:18] cost of path one.
+[15:20] Which is a contradiction because we start as an assumption that the optimal way to go
+[15:24] from A to E is not to go through C. So the contradiction stems from the fact that we
+[15:33] assumed that indeed the optimal sequence to go from B to E is not the tail of the optimal
+[15:43] trajectory to go from A to E. Does that make sense?
+[15:48] So the principle of humanity is a very straightforward concept.
+[15:53] Sometimes it's a bit deceptively simple, so it takes a little time to be internalized,
+[15:57] and its consequences are immense.
+[16:00] So let's just pause for a second to make sure that everyone is on board with this idea.
+[16:06] Again, we proved that the tail of an optimal sequence is optimal for the tail subproblem.
+[16:17] To do that, we use a proof of contradiction where we say, well, assume by the second contradiction
+[16:23] that the tail subproblem, meaning the problem of going optimally from B to E, is solved
+[16:29] by another trajectory, which is different from the tail trajectory of the optimal sequence
+[16:35] to go from A to E. Well, if that is true, what this is saying is that the cost of going
+[16:40] through some other point C and then to E is lower than going through E without going through
+[16:47] C. But if that is the case, then we would have found, because the cost is additive,
+[16:53] a new trajectory from A that has a lower cost with respect to the one that we assume to
+[16:58] be optimal, which is a contradiction.
+[17:01] This proves that, indeed, the tail policy was optimal.
+[17:05] So very simple proof.
+[17:14] We can do it in a way that is more tailored to our discrete time framework, but the idea
+[17:18] is exactly the same.
+[17:22] So what does the principle of optimality say is more formal?
+[17:27] Well, so let's assume that we have an optimal sequence, u0, u1, un-1.
+[17:33] And this optimal sequence generates a state trajectory.
+[17:38] So if you have, so you're given u0 star, u1 star, all the way to un-1 star.
+[17:51] So x0 is known.
+[17:53] So x1 star, so the next state around the optimal sequence is f of x0, u0 star.
+[18:01] x2 star is equal to f of x1 star, u1 star, and so on.
+[18:09] So basically, by plugging in the optimal sequence recursively, then you obtain the optimal state
+[18:14] trajectory.
+[18:15] So let's assume that we start at x star k, where x star k is computed recursively using
+[18:23] these equations.
+[18:24] The question is, a problem that starts as x star k, it tries to minimize the tail cost,
+[18:33] so the cost of going from time k to time n.
+[18:42] The solution to that sub-problem is given by the tail of the optimal control sequence,
+[18:48] containing from uk star to un-1 onward, or some completely different control sequence.
+[18:57] What the principle of thermodynamics is saying is that if you consider the sub-problem where
+[19:01] we start at x star k, and we wish to minimize the cost to go, so the cost accrue from time
+[19:06] k all the way to the end of the horizon, then the tail of the optimal sequence is optimal
+[19:12] for the tail sub-problem.
+[19:13] Is it just the tail, or is it not necessarily true if you wanted to solve the front sub-problem?
+[19:23] Great question.
+[19:24] So in the context of deterministic dynamic programming is both.
+[19:28] When we talk about stochastic dynamic programming, isn't it the tail?
+[19:35] So in a nutshell, tail of optimal sequences are optimal for tail sub-problems.
+[19:41] By the way, note that the reason why we could do this contradiction proof is that we're
+[19:48] assuming that the cost is additive.
+[19:50] That allowed us to infer that if the tail sequence is not optimal, then we could find
+[19:56] a sequence that has lower cost than the one we assumed to be optimal.
+[20:03] So the structure that we really leveraged is this additive cost structure.
+[20:06] I'm sorry, for which case is the head part of the problem not optimal?
+[20:13] The stochastic one that I haven't introduced yet.
+[20:16] So for the stochastic case, actually reasoning backward and forward has a difference.
+[20:21] We can only reason backward.
+[20:23] But we'll come back to that later.
+[20:24] OK.
+[20:25] And then the second thing is, this says for deterministic systems, does this change for
+[20:29] the systems non-deterministic?
+[20:30] The principle of optimality stays the same.
+[20:34] But it has to be slightly changed, because we had to account with respect to stochasticity,
+[20:39] by basically taking an expected value here.
+[20:42] But we're going to go to that in 10 minutes.
+[20:45] Here I'm just introducing the DS in the deterministic setting that is not useful, so much useful
+[20:50] for decision making, but makes the DS much crisper.
+[20:55] OK.
+[20:56] So you might say, well, OK.
+[20:58] So this is an interesting property, but what do we care?
+[21:01] We care because it allows us to dramatically reduce the amount of computation that we need
+[21:06] in order to solve an optimal control problem.
+[21:12] In particular, it allows us to cleverly reuse the information.
+[21:17] So specifically, let's assume that we want to solve a problem whereby we want to compute
+[21:24] optimal control sequences to go to some final point f.
+[21:30] And somehow, we have computed that the optimal control sequence to go from c to f, to go
+[21:36] from d to f, and to go from e to f.
+[21:40] And the cost for each sequence is given by just star cf, just star df, just star ef.
+[21:46] Somehow we have computed this.
+[21:48] Some oracle gave us the solution.
+[21:50] So now, so you're in the midterm, and I give you this question.
+[21:55] You start from b, and you want to compute the optimal sequence to go from b to f.
+[22:02] And from b, you have three actions that are possible.
+[22:05] You can go to either c, to d, and to e.
+[22:09] And then from c to f, you have several actions to go to f.
+[22:14] From d to f, you have several actions that you have to do.
+[22:16] And from e to f, you have several actions that you have to do.
+[22:19] And you have five seconds to solve this problem.
+[22:22] So if you didn't know about the dynamic programming, well, sorry, but the principal optimality
+[22:26] idea, what you would do would be to resolve this problem from scratch.
+[22:31] So not only optimize with respect to the first actions, but also with respect to all detailed
+[22:36] actions.
+[22:37] But now that you know about the principal optimality, the only thing that you have to
+[22:40] do is to compare three cases.
+[22:45] How you go from b to c, and then you already know how to optimally go from c to f, going
+[22:51] from b to d, and then going optimally from d to f, and then going from b to e, and then
+[22:55] optimally to e to f.
+[22:56] There is no reason to re-optimize what you do past e, or past d, or past c, because you
+[23:03] are leveraging the principal optimizer that tells you that if, for example, this trajectory
+[23:08] were to be optimal, its tail would be optimal.
+[23:12] So there is no point of considering other possible tails, because for sure that will
+[23:17] lead to a lower cost sequence.
+[23:20] This is a little bit subtle, but just to clarify that if you know the optimal sequences for
+[23:28] the tails, then you have a very straightforward way of computing an optimal solution for a
+[23:34] problem that is shifted one step back in the past.
+[23:39] For the deterministic system, you could do the same going forward, but let's avoid this
+[23:43] technicality.
+[23:44] Does it make sense?
+[23:46] Make sense, make sense there?
+[23:52] So it's critical, it really allows you to save a lot of computation.
+[24:02] So this explanation also leads to what I refer to as the workhorse algorithm for sequential
+[24:10] decision making, which is referred to as dynamic programming.
+[24:15] Before stating the dynamic programming algorithm, I'm going to give you an example.
+[24:19] So the example, which is very simple, is that you want to go from some initial state a to
+[24:28] some final point h.
+[24:31] I have a different road segment that you can take, and the cost of going through each road
+[24:38] is given by a number.
+[24:39] For example, if you go from b to c, the cost that you pay is nine.
+[24:44] So the question is, how do we use the notion of principle optimality to streamline the
+[24:49] computation on optimal route?
+[24:51] If you knew nothing about the principle optimality, then what you would do would be to list all
+[24:56] possible combinations of segments, evaluate the cost for each trajectory, and pick the
+[25:00] best one.
+[25:01] Dynamic programming allows us to do this in a much more streamlined way.
+[25:05] Yeah?
+[25:06] One way only.
+[25:08] One way only.
+[25:10] Yeah.
+[25:11] But yes.
+[25:12] So I'm going to do an example about how this idea of principle optimality helps.
+[25:22] So the idea of the principle optimality from a computational standpoint is to recursively
+[25:26] solve the tails of problems until you arrive to the beginning.
+[25:31] So it's kind of awkward that you solve the problem going backward.
+[25:35] So specifically, you start from the final point.
+[25:38] So if you are at the final point, j of h, what is the optimal cost to go from h to h?
+[25:44] Zero.
+[25:45] Zero.
+[25:46] I mean, you just stay there.
+[25:49] So let's assume then instead we are at the g.
+[25:53] So what is the optimal cost of going from g to h?
+[25:57] Well, from g, you only have one action, and you incur a cost equal to two.
+[26:05] And then from h, you can just reuse the computation that we did before.
+[26:11] J h was zero, so the optimal cost is two.
+[26:16] So what is the optimal cost to go from f to g?
+[26:22] Well, from f, you only have one action, and it costs you three, and it brings you to g.
+[26:30] And then from g to h, you don't have to recompute what is the optimal control sequence.
+[26:35] You already have computed it.
+[26:37] And since you know that the tail is optimal for an optimal sequence, you can just plug
+[26:42] in j g, which was two, so this is equal to five.
+[26:48] And then we go backward.
+[26:50] So we have, for example, e.
+[26:52] So j e.
+[26:53] Now, here is interesting.
+[26:55] We have two possible actions.
+[26:58] We can and we take the minimum between the two.
+[27:01] The first one, we go directly to h, and we pay eight.
+[27:10] And the second one, we go to f, and we pay two.
+[27:19] And then from f, we had to solve a tail problem, but we have already solved it.
+[27:26] And we know that by the principle of optimality, we don't have to resolve the tail subproblem,
+[27:32] because we know that if this is an optimal sequence, each subtail will be optimal.
+[27:37] So we can just plug in the solution to the tail problem that we have already solved.
+[27:44] So gh is two.
+[27:46] So this class will be 10.
+[27:48] Jf is five.
+[27:51] So this is seven.
+[27:52] So this is equal to seven.
+[27:57] Let's keep going.
+[28:02] All right.
+[28:10] So we were at e.
+[28:13] Let's do d.
+[28:14] So jd, we have only one action.
+[28:18] So it's easy.
+[28:19] So the action is three plus je.
+[28:24] So this is equal to 10.
+[28:26] Then we have c, where we have two actions.
+[28:31] So we had to take the minimum between five plus jd, and three plus jf.
+[28:46] Did I make a mistake?
+[28:49] Which is possible.
+[28:50] Shouldn't jh be zero?
+[28:52] Two?
+[28:53] Jh is zero.
+[28:54] Right.
+[28:55] And you said eight plus jh is 10.
+[29:00] Yeah.
+[29:01] It doesn't make a difference.
+[29:05] But yes.
+[29:06] Yeah, so check me because it's kind of complicated to go back and forth.
+[29:11] So it's five plus jd, and three plus jf.
+[29:19] So jd was equal to 10.
+[29:24] So this is 15.
+[29:25] Jf was equal to five.
+[29:29] So this is eight.
+[29:31] So this is equal to eight.
+[29:34] Then we go to b.
+[29:36] So jb is equal to nine plus jc, which is equal to 17.
+[29:47] And then finally, we have g of a.
+[29:49] It is equal to eight.
+[29:51] No.
+[29:52] It's eight, right?
+[29:54] Yeah.
+[29:55] So five plus jd, and five plus jb.
+[30:10] So jd is 10.
+[30:12] So this is 18.
+[30:14] Jb is 17.
+[30:15] So this is 22.
+[30:16] So this is equal to 18.
+[30:22] So now, this is an example where the reduction in computation is not so dramatic.
+[30:26] But when you have a very large scale problem, the reduction is dramatic.
+[30:33] Of course, now that in order to compute the optimal control sequence, you will go backward.
+[30:45] So we know that the best thing to do is from a to go to here to d.
+[30:56] From d, we go to e.
+[30:59] From e, we go to f.
+[31:01] From f, we go to g, and from g, we go to h.
+[31:08] So formally, the dynamic programming algorithm, which is an algorithm that exploits the principle
+[31:14] of optimality to solve the sequential decision-making problem, works as follows.
+[31:18] We start from the end.
+[31:20] That's the weird thing about sequential optimization.
+[31:23] We solve the problem going backward.
+[31:25] We start from the end.
+[31:26] We set up the optimal cost for the tail problem that starts at the end as the terminal cost
+[31:33] in our problem formulation.
+[31:36] The functions j that captures the cost for the sub-problems are referred to as cost to
+[31:43] go functions.
+[31:45] And then we recursively compute the cost to the sub-problems by going one step backward
+[31:52] in time each time by solving an optimization problem whereby we find the optimal control
+[32:03] action at this time that optimize the summation of the immediate cost and the corresponding
+[32:12] optimal cost to go.
+[32:14] We control uk, we transition in the new state as k plus one.
+[32:19] But since we are solving this problem backward in time, we have already solved the problems
+[32:24] for all states at time k plus one.
+[32:30] And you can show, and this is basically directly implied by the principle of optimality, this
+[32:34] is the algorithm that computes the optimal solution to the problem that I mentioned before.
+[32:39] So these algorithms work backward in time.
+[32:41] So what you have to do is for each time, for each state, solve this minimization problem
+[32:47] and then move backward.
+[32:48] At some point, you eat k equals zero.
+[32:52] So you have solved the problem from the initial condition.
+[32:58] So a couple of things.
+[32:59] So first of all, the algorithm makes a lot of sense.
+[33:01] So basically what it's saying is that in order to compute the optimal cost to go from the
+[33:06] current time, you find the control that base threads of immediate gains or immediate costs,
+[33:13] depends on how you interpret cost, with future implications of your immediate cost, of your
+[33:20] immediate control.
+[33:21] The reason why I say that this makes a lot of sense is that I claim that is how a human
+[33:27] operates or should operate, meaning that every time you make an action, in your brain,
+[33:32] you're trading your immediate gains with the future implications of what you do.
+[33:38] So if counterargument, let's assume that it's not using this, then why don't you just get
+[33:45] out of this room and enjoy a little bit of sunshine?
+[33:49] That will be what really optimize your immediate cost.
+[33:52] But you know that by taking this class, you have a humongous reward in the future.
+[33:58] So that's why you stick here.
+[34:00] That's to give you sense about why this equation makes a lot of sense.
+[34:05] Second of all, it's kind of awkward that you compute backward in time.
+[34:09] But then, of course, once you have the optimal sequence, you compute it starting from the
+[34:14] controller time zero, time one, time two, which basically you compute backward in time,
+[34:18] but then you execute your sequence starting from the initial time.
+[34:22] So there was a philosopher I like to cite him usually when I mention these results called
+[34:26] Kierkegaard about 150 years ago.
+[34:30] He was one of the super pessimistic philosophers in the Romantic era.
+[34:34] But anyway, so one of his quotes is that life has to be lived forward in time, obviously,
+[34:43] but can only be understood backward in time.
+[34:46] So sometimes you didn't understand the meaning of your life when you go back into your past
+[34:53] and say, well, actually, that decision was useful, brought me to Stanford, while at the
+[34:57] time it was not clear that actually would have brought you to Stanford.
+[35:00] So basically, life has to be lived forward, but can only be understood backward in a way
+[35:05] that's what dynamic programming is telling you.
+[35:07] Is there any way to exploit this structure if your state is only partially given?
+[35:12] Let's say you took the partially given state, it's like the x and the y, where you don't
+[35:17] know your theta, like what angle your reference would be at.
+[35:21] So there's a problem with partial observability and still can be cast, assuming that the cost
+[35:28] is additive in a dynamic programming formulation.
+[35:32] Much more complicated because now you don't have direct observability with respect to
+[35:36] some state.
+[35:37] So you have to build a belief.
+[35:38] And then we come back to the idea of Bayesian filtering.
+[35:41] So you need to actually execute this recursion, not with respect to state values, but with
+[35:46] respect to probability distribution over state values.
+[35:50] So that makes the algorithm extremely more challenging.
+[35:53] Not that it's not observable, but it's that, like, let's say I give you a series of weight
+[35:59] points that are like x, y coordinates, and it says this is going to be the awful path
+[36:03] you're about to go to, but you don't have the theta to be at each point.
+[36:08] And then you're kind of like plan trajectory, right?
+[36:10] So if you knew what data you're supposed to be at, then you could just kill, you could
+[36:16] use this dynamic programming to build back the path.
+[36:20] But if you're allowed to choose the theta.
+[36:22] Yeah.
+[36:23] So in order to embed it in these formalisms, you need to, so theta is a latent variable.
+[36:28] You don't have a full knowledge of it, and still you want to reason about it.
+[36:32] So it might be the case that you have some noisy knowledge about it, like for example,
+[36:37] you have some sensors that returns theta, the true value, plus some Gaussian distribution
+[36:43] around it.
+[36:44] Or maybe you have no clue whatsoever.
+[36:46] So in order to model in this framework, you would basically assume that you have a uniform
+[36:50] distribution of all possible values theta, which means basically you know nothing about
+[36:54] theta, and then you're back into this formulation.
+[36:57] So yes, you can.
+[36:58] But it becomes more complicated.
+[37:02] So comments.
+[37:03] First of all, the problem as stated is in discrete time.
+[37:08] So if you have a problem that is in continuous time, in order to plan this machinery, you
+[37:12] will need to do time discretization.
+[37:14] Actually, there is a formulation on the principle of dynamic programming in continuous time
+[37:19] that goes under the name of the Hamilton-Berman equation, the Jacobi-Berman equation, but
+[37:25] is beyond the scope of this class.
+[37:28] Second of all, one of the known things of dynamic programming is that you have to solve
+[37:32] this optimization problem for each possible value of x at a given time step k.
+[37:37] Now, if x can assume many different values, or possibly even a continuum quantity, then
+[37:44] a challenge.
+[37:45] It's a challenge, meaning that you have to quantize the possible values of the states.
+[37:49] And then for each representative, you run dynamic programming, which also then means
+[37:53] that you have to do some interpolation.
+[37:56] Fourth point is that this algorithm gives you the global minimum, not the local or the
+[38:00] point, really the global, if you can run these algorithms to completion.
+[38:04] And finally, the constraints in this case actually helps with optimization, because
+[38:08] they reduce the number of possible control values that you need to evaluate in order
+[38:14] to solve the Bellman Recursion, which is basically this problem here.
+[38:19] Okay, so.
+[38:21] Are there common situations where the costs are not bad?
+[38:28] I have to say that actually the additive cost structure is one of those assumptions
+[38:31] that is very useful, because it allows you to leverage a structure, and also very common.
+[38:39] The situations where the cost may not be additive, even after transformation, arise, for example,
+[38:47] when you try to include some notion of trajectory long, this is more like in the stochastic
+[38:54] sense.
+[38:59] Information that really needs you to reason about the full trajectory, as opposed to just
+[39:04] some segment of the trajectory.
+[39:06] For example, if you want to compute whether a probability of the trajectory is in collision
+[39:12] with something, if you have some process noise, you can't simply chop the trajectory into
+[39:17] waypoints.
+[39:18] You have to consider the full trajectory to really compute that probability.
+[39:22] So that leads to a non-additive formulation.
+[39:25] Or for example, as we will see here, in a stochastic case, in order to account for stochasticity,
+[39:32] we take an expectation with respect to disturbances.
+[39:34] An expectation is basically a linear function.
+[39:42] So the expectation of a random variable x is equal to the sum of pi xi, where the pi
+[39:54] is the probability that the random variable takes on the value xi.
+[39:58] So if you know the pi, this is just a linear function where the outcomes are weighted by
+[40:03] these known quantities.
+[40:05] But sometimes you don't just want to optimize the expected value.
+[40:08] You may want to optimize, say, the variance of your cost.
+[40:14] So you're interested in understanding not so much, you're interested in optimizing performance
+[40:18] in the average case, but also limit the variation of your performance with respect to the average
+[40:24] case, which means that you want to count some variance term in your cost function, or more
+[40:29] in general, some risk metric.
+[40:30] Well, those risk metrics actually couple the different optimization stages in a non-linear
+[40:36] fashion.
+[40:37] That I could apply dynamic programming.
+[40:39] So the point is that the added assumption is fairly general, but there are some very
+[40:46] important classes of problems that do not have that structure, which basically means
+[40:50] that either you do some reformulation so that you have it, or you do some relaxations, or
+[40:56] you just rely on somebody to solve the problem, but you can't use dynamic programming anymore.
+[41:01] All right, so stochastic case.
+[41:03] The stochastic case is relatively similar.
+[41:06] The main difference is that now in a motion model, we include a disturbance term, wk,
+[41:12] which is a stochastic quantity.
+[41:14] So if you are a state x and we apply control u, the next state is equal to f of x u and
+[41:22] some stochastic quantity w that is chosen for u by nature.
+[41:27] We see high control constraints, but most importantly, we assume that we know the probability
+[41:32] distribution through which nature computes the disturbance values.
+[41:38] And in particular, this is a critical assumption.
+[41:41] This probability distribution only depends on the current state and the current control.
+[41:46] So wk is a random variable whose distribution is in general dependent on the current value
+[41:53] of the state and the current value of the control.
+[41:55] Critically, it cannot depend on values of the state prior to time k.
+[42:01] This is referred to as a Markovian assumption.
+[42:05] In such a stochastic setting, we are not so much interested in open loop control sequences,
+[42:10] but indeed on control policies, meaning functions and map states into controls.
+[42:16] So it's a much more complicated problem.
+[42:18] We are not solving over a control sequence.
+[42:22] We are solving the optimization problem with respect to functions, meaning functions and
+[42:26] map states into controls.
+[42:28] So much more complicated.
+[42:30] But for stochastic problems, that's what you really need.
+[42:33] Since noise brings you all the way across the state space, it's important that you know
+[42:37] what to do from each possible realization of the state.
+[42:44] The problem, similar as before, we have a terminal cost and we have stage-wise cost.
+[42:50] The stage-wise cost can depend also on the noise.
+[42:54] And this is stochastic quantity.
+[42:57] In order to make the problem amenable to optimization, we have to translate that stochastic quantity
+[43:02] into deterministic quantity that you can use in order to rank the policies.
+[43:09] So in particular, the way we do it is by taking an expectation of the random variable.
+[43:15] And the expectation here is with respect to the realization of the WK random variables.
+[43:22] The goal is then to compute a policy sequence that optimizes such a cost.
+[43:31] So key point, models still have discrete time.
+[43:35] But now we have stochasticity and in particular, the model is Markovian, which means that this
+[43:39] probability distribution only depends on the current state or the current control.
+[43:45] Do you have an idea why we need to make this Markovian assumption?
+[43:49] What's that?
+[43:53] Exactly, because remember that the principle of optimality was basically telling you is
+[44:02] that you can chop the problem into pieces and solve them independently.
+[44:08] So the cost is still additive.
+[44:09] So we can still chop the problem into pieces from the perspective of control.
+[44:13] But if we don't make this assumption that the probability distribution only depends
+[44:16] on the current state and control, we cannot really chop the problem into pieces from the
+[44:21] perspective of the trajectory.
+[44:23] So this actual assumption allows you to prove principle of optimality concept that is very
+[44:33] similar to the one that we proved for the deterministic setting.
+[44:38] The objective is to find a closed loop policy before we were concerned with open loop policies.
+[44:45] The cost is still additive, again, central assumption.
+[44:48] And finally, we are considering a risk-neutral combination.
+[44:50] So we want to optimize performance on average.
+[44:53] Sometimes, as mentioned above, you're interested in going beyond average performance.
+[44:58] We want to also count what happens in the worst case with respect to some quantile of
+[45:04] your distribution and so on and so forth.
+[45:06] This would lead to a risk-sensitive or risk-aware formulation of the problem.
+[45:12] That is actually something that we work quite a bit in my lab, but is beyond the scope of
+[45:15] this class.
+[45:16] All right, as a note, the way that I stated the problem is based on a formalism that I
+[45:25] really like, and it is rooted in control theory.
+[45:28] If you go to a class in CS, you take, say, Emma Brunski's class on enforcement learning,
+[45:32] her formalism will be different.
+[45:34] So instead of a state transition equation, you have a probability kernel that tells you
+[45:38] from state S. If you play action A, what is your next state S prime?
+[45:43] Same thing.
+[45:44] The only thing is that, unfortunately, different notations.
+[45:46] Somehow the AI community, operational research community, and control theory community have
+[45:51] developed a different notation.
+[45:54] So what do you do when you have different languages?
+[45:56] You have Rosetta Stone.
+[45:57] So if you're confused about a notation, go into this paper.
+[46:01] All this paper is about is to translate notation from one community to the other one.
+[46:08] So it's a bit boring, but useful.
+[46:10] Here you have F of X, A, U, K. No, wait.
+[46:13] In AI, it's P, S, A, A, S prime, and so on and so forth.
+[46:18] Seemed tedious, but actually it's quite useful.
+[46:21] Did you know about this paper?
+[46:23] You did, because you took two or three.
+[46:25] Cool.
+[46:26] All right.
+[46:27] You can prove that even in the stochastic setting, and the proof is very, very similar
+[46:32] to the proof I did before, the only complication is that now we had to reason in terms of these
+[46:38] probability distributions.
+[46:39] But you can prove a result that is almost identical.
+[46:43] So assume that state S, K is reachable.
+[46:48] Then consider this a problem whereby we are at X, K at time K, and we wish to minimize
+[46:52] the cost to go from time K to N.
+[46:54] Then the tail policy is optimal for the tail sub-problem.
+[47:00] The same.
+[47:01] Main difference here is A, we're talking about the tail policies as opposed to tail sequences,
+[47:08] and two, the proof is slightly different because we have to account for probability distributions,
+[47:13] but intuition is the same.
+[47:15] As I said in this class, I want to just give you intuition.
+[47:18] That's why I did it in a deterministic sense.
+[47:21] The TPA algorithm itself is also extremely similar.
+[47:26] You still proceed backward.
+[47:27] You set the terminal cost to go equal to the terminal cost of your optimal control problem,
+[47:34] and then go backward in time, you solve the Bellman equation.
+[47:38] The only difference is that now you had to take an expectation with respect to the disturbance
+[47:43] at the current time K.
+[47:44] But the idea is the same, that in order to compute the optimal cost to go from each state,
+[47:51] you compute the action that best trade-off immediate cost with the optimal cost to go.
+[48:03] So let's do an example to make this a bit more concrete.
+[48:07] An example is not really in the robotics field because I just want to distill the main ideas here.
+[48:13] This is an inventory control problem.
+[48:17] So the idea is that we have a warehouse whereby we can keep some stock and then we deliver stock.
+[48:24] So in particular, we denote the amount of stock, which is an integer number,
+[48:30] we can one unit, two units and some, as SOK, that's our state.
+[48:35] The control, the inventory UK is the amount of stock that we buy trying to predict and meet future demands.
+[48:44] And then we have a demand WK, which is a stochastic quantity,
+[48:47] is the demand of that stock that we have each day.
+[48:52] The dynamics are given by the maximum between zero and XK plus UK minus WK.
+[48:58] What that means is that if I start with an amount of stock equal to X, I buy U and I get the demand W,
+[49:06] then the stock at the next time is the difference between X plus U minus W.
+[49:13] So please step forward.
+[49:14] What I have the next time is the leftover.
+[49:16] What I have after, I have shipped the stock that is required by the demand.
+[49:23] The constraint is that the amount of stock that we can store at every single time can only be larger than two units.
+[49:32] So X plus U has to be less than or equal to two.
+[49:37] Of course, this is a very toy problem, but just to illustrate the main ideas.
+[49:41] Finally, we have to prescribe a probabilistic structure for the disturbance,
+[49:46] which in our case is the demand for the stock.
+[49:49] And we say that we have three possible levels of demand.
+[49:52] With probability 0.1, 10%, we have no demand at time K.
+[49:57] Probability 70%, we have demand of one unit.
+[50:00] Probability of 20%, we have demand for two units.
+[50:04] This probability distribution in this case doesn't change through time, it's always the same.
+[50:11] The cost is somewhat made up.
+[50:16] And basically is a combination of the cost due to the fact that we are ordering new stock,
+[50:23] and we say that the new stock costs $1, say,
+[50:26] plus a cost due to the fact that we have to store material.
+[50:31] Storing material incurs a cost.
+[50:34] Maybe we have to pay workers to take care of the stock and so on.
+[50:39] In particular, the cost is modeled as XK plus K minus WK.
+[50:42] So that's the leftover stock that has to stay overnight.
+[50:46] So we take the quantity, we square it.
+[50:48] I mean, why not two, but why not two to the power of four?
+[50:50] I mean, these will be made up to example.
+[50:54] Well, so how do we solve this problem?
+[50:56] How do we find a policy that tells you from each possible state the best thing to do?
+[51:02] So how much stock you need to order?
+[51:04] It's not trivial to really understand what would be optimal to do
+[51:08] in terms of a control policy in this case.
+[51:11] So in order to do so, what we do is to apply dynamic programming.
+[51:16] So in particular, I forgot to mention that the terminal cost is zero.
+[51:23] So if you're left with some stock, we just discard it, that incurs no cost.
+[51:28] And the problem is over three time steps.
+[51:32] Of course, the problem is very small just to solve it manually.
+[51:37] Okay, so how do we solve this problem?
+[51:39] This problem has all the ingredients of a Markov decision process.
+[51:44] So basically, the model that I described before.
+[51:47] Cost is additive.
+[51:49] Remember that additive does not mean that the immediate costs are linear function.
+[51:54] It means that I can sum immediate costs through time.
+[51:58] The probability distribution is Markovian.
+[52:00] We have all the ingredients, so we can apply dynamic programming.
+[52:04] So the first step would be to say that the terminal cost to go
+[52:09] is equal to the terminal cost.
+[52:12] In this case, J3 of X3 is equal to zero.
+[52:19] Because remember that the terminal cost is by problem definition equal to zero.
+[52:27] So now, how do we compute the optimal control policy?
+[52:32] Well, we have to carry out the dynamic programming algorithm.
+[52:35] So we go one step backward.
+[52:36] So from three, we go to two.
+[52:39] And we compute the optimal cost to go function
+[52:42] for each possible value of the state.
+[52:46] What are the possible values of the state?
+[52:51] Remember that we have this constraint here,
+[52:53] which means that X can either be equal to zero, one or two.
+[53:00] So we have to compute J20, J21, and J22.
+[53:06] Once I've done these three computations, then I go backward in time.
+[53:10] I either compute J1 for all possible values of the states,
+[53:13] and then I go back to J0, and then I've solved the problem.
+[53:17] So let's compute J20 just to do an example.
+[53:22] So the J20, according to the Bellman equation,
+[53:26] is the minimum over the feasible controls.
+[53:33] So what are the feasible controls here?
+[53:35] We go back to the constraint.
+[53:38] So the constraint says that X plus U has to be less than or equal to two.
+[53:42] We are considering as an initial state for the Taylor's problem zero,
+[53:47] which means that zero plus U has to be less than or equal to two,
+[53:51] which means that U can be either zero, one or two.
+[53:55] Make sense?
+[53:57] So this is the minimum over U2 equal either zero, one or two
+[54:05] of the expected value of the immediate cost.
+[54:12] So U2 plus zero, which is the value of the state,
+[54:18] plus U2 minus W2, plus the cost to go
+[54:27] from the perspective of the following state,
+[54:30] which we have already computed, so this is equal to zero.
+[54:33] And here I forgot the square.
+[54:38] All right, so let's do this computation.
+[54:48] All right, so this is equal to...
+[55:07] equal to, we have to compute the expectation.
+[55:11] Expectation means that we take the outcome times the probability of that outcome.
+[55:14] So what is the random variable?
+[55:16] It is W2.
+[55:18] So with probability equal to 0.1.
+[55:28] I'm balanced by this one.
+[55:33] So the expectation, so U2 does not depend on any stochasticity.
+[55:37] So we can bring it out.
+[55:38] So it is equal to U2 plus, so this is the stochastic quantity.
+[55:44] So with probability equal to 10%, W takes on the value of zero.
+[55:50] So we have...
+[55:54] So minimum over U2 equals zero, one or two of U2
+[55:59] plus U2 minus zero square, probability 10%,
+[56:06] plus plus U2 minus one square, probability 70%.
+[56:15] Plus U2 minus two square, probability 20%.
+[56:29] U2 minus two, all right.
+[56:33] So then what you do is to plug in this expression,
+[56:36] either U2 equals zero, U2 equals one, or U2 equals two.
+[56:40] You evaluate it, and then you take the minimum.
+[56:43] In this case, the minimum is obtained for U2 equal one.
+[56:50] The cost in that case, you could check.
+[56:55] Is J2 equal 1.3?
+[56:58] And then we set the value of the policy at time two
+[57:04] from state zero as equal one, which
+[57:07] means that at state zero, at time step two,
+[57:11] we had to choose control one.
+[57:14] Then I will solve G21, J22, same reasoning,
+[57:19] and then we'll go one step backward.
+[57:21] And then if you do that, you should do it as an exercise
+[57:24] that you will get.
+[57:27] OK, so any questions here?
+[57:35] This is really how you solve stochastic sequential decision
+[57:37] making problems.
+[57:39] Everything else is basically a variation on this idea.
+[57:44] In particular, why do we need variations?
+[57:46] The problem is that this problem is coarse.
+[57:48] And usually the carceral dimensionality
+[57:51] is the only one that is mentioned,
+[57:53] but in reality, you have many more courses.
+[57:56] So first of all, you have the carceral dimensionality.
+[57:58] So what is the carceral dimensionality?
+[58:00] The problem is that even the dynamic programming
+[58:02] allow you to do very streamlined computation,
+[58:06] reusing all the information from the solution
+[58:08] to the tails-up problem.
+[58:10] Still, at each time step, you have
+[58:13] to solve the Bellman equation, which is this thing here,
+[58:20] for each possible value of the state.
+[58:22] So if the state is a one-dimensional object that
+[58:26] can take on 100 values, it's fine.
+[58:29] But assume that the state is now a three-dimensional object,
+[58:34] x1, x2, x3.
+[58:36] So you have to take all the combination of x1, x2, and x3.
+[58:40] So if you have 10 values, how many combinations you have?
+[58:49] So basically, this grows exponentially
+[58:51] with the dimension, which means that you go on five,
+[58:53] six dimensions, you are hopeless.
+[58:57] On top of it, and that's what you were asking,
+[59:00] if a sum of the states cannot be observed directly,
+[59:05] what you do in order to be in this formalism
+[59:08] is to build a probability distribution around it, which
+[59:13] means, though, that you can still
+[59:14] use the dynamic programming principle,
+[59:16] but now you have to reason in terms of beliefs, which
+[59:19] means that now your optimal cost to go
+[59:22] is not related to the state, but related to the belief
+[59:26] of that state, which means that you
+[59:28] have to discretize or approximate
+[59:32] a probability distribution to run this Bellman equation.
+[59:34] So computationally, very complicated.
+[59:37] This will lead to the so-called POMDP problems.
+[59:40] Similarly, curves of modeling.
+[59:43] Oftentimes, it's very complex to get close-form expressions
+[59:52] for these probability distributions.
+[59:54] So sometimes, well, yeah, this one's here.
+[59:58] Sometimes, it will be possible to compute them,
+[60:01] but they're extremely complicated.
+[60:04] Or sometimes, they're not really known.
+[60:06] For example, if you are trying to model
+[60:08] how a human would react to your actions, that, of course,
+[60:12] is an influence in what the next state will be.
+[60:16] But who is going to give you that information?
+[60:20] So you have to learn that from data.
+[60:21] So that's so-called curves of modeling,
+[60:23] that some of the problem formulation
+[60:26] may not be given to you, and yet you want to solve this problem.
+[60:29] Finally, curves of time.
+[60:31] Oftentimes, the data of the problem
+[60:34] is given to you with little advanced notice.
+[60:37] For example, in the context of inventory control
+[60:40] or dispatching, scheduling, so not so much in robotics.
+[60:43] In the context of robotics, the problem data
+[60:46] may change as the system is controlled,
+[60:50] which means that you have to recompute these policies
+[60:52] online, possibly by recomputing some parts of the problem
+[60:56] formulation online, by adapting, for example,
+[60:59] the transition model to the model that reflects
+[61:04] the current capabilities of the robot.
+[61:07] So this has triggered a lot of interest
+[61:09] in suboptimal dynamic programming, which you say,
+[61:15] boring.
+[61:16] Let's say exciting reinforcement learning.
+[61:18] OK, so for me, it's suboptimal dynamic programming.
+[61:21] So basically, the idea is to come up
+[61:24] with approximations that make the dynamic programming
+[61:28] algorithm scalable to a number of different settings.
+[61:32] High dimensional spaces, situations
+[61:34] whereby parts of the model are not specified,
+[61:36] they had to be learned from data,
+[61:38] they're offline, online, and so on.
+[61:40] In particular, and this will be the subject of the lecture
+[61:43] on Thursday, there are basically two main ideas
+[61:46] behind suboptimal DP, or if you will, enforcement learning.
+[61:52] The idea is to either approximate
+[61:54] the problem in a value space, whereby
+[61:56] we approximate the optimal cost-to-go function
+[61:59] with some surrogate, or approximate the problem
+[62:03] in policy space, whereby we select the policy
+[62:06] from a restricted class of policies.
+[62:11] Let me just give you, in the final 10 minutes,
+[62:13] the intuition between these two classes, which, of course,
+[62:16] has been moving in several different modeling
+[62:18] approaches, algorithms, and this is
+[62:20] a very active field of research.
+[62:22] So the first approach is to, OK, solving this problem
+[62:29] allows you to solve all the tail subproblems, which
+[62:33] is very complicated, difficult, and most of the time
+[62:39] is intractable.
+[62:42] So the idea is that if you want to compute a policy at,
+[62:46] actually, your action at time k, you still
+[62:49] use the idea of a dynamic programming.
+[62:51] So you compute a policy that best trades off
+[62:54] immediate cost with the cost-to-go.
+[62:56] But for the cost-to-go, you don't use the optimal one,
+[62:59] because maybe it's too computationally intensive
+[63:01] to compute it, or you don't have enough problem information
+[63:04] to compute it, but you use a surrogate cost-to-go.
+[63:09] So something that hopefully is close to the optimal cost-to-go.
+[63:12] Well, OK, so the $100 question is,
+[63:15] how do you compute this surrogate cost-to-go
+[63:17] that still allows you to compute an action that
+[63:20] good enough?
+[63:21] Well, there are many different classes.
+[63:22] Within each class, you have many different subclasses.
+[63:25] But you can do, for example, problem approximation.
+[63:28] So to compute the optimal cost-to-go,
+[63:30] you consider a problem that is simpler
+[63:32] but has some commonality to the problem you're trying to solve.
+[63:36] In the case of motion planning, say
+[63:38] that you're computing a trajectory for your robot,
+[63:43] and the cost-to-go is the solution
+[63:44] to the optimal trajectory from some state in the future.
+[63:47] For that problem, instead of using
+[63:49] the full dynamics of the robot, you
+[63:51] consider simplified dynamics in order
+[63:53] to compute the cost-to-go, for example.
+[63:57] Second approach is to do approximate optimization.
+[64:02] A third approach that is very popular
+[64:04] is to approximate the cost-to-go with a functional approximator,
+[64:09] such as a neural network, and then learn
+[64:11] this approximation from data.
+[64:13] And then, of course, there are zillions of ways of doing it.
+[64:17] And entire classes devoted to it.
+[64:18] And then state aggregation.
+[64:20] This is oftentimes not mentioned in classes.
+[64:24] But the idea is, instead of reasoning
+[64:26] in terms of individual states, you
+[64:29] reason in terms of macro states, so that you
+[64:31] reduce the dimensionality of the state space.
+[64:34] With the idea that, OK, you don't know anymore
+[64:38] what you have to do if you are exactly at a given
+[64:41] latitude and longitude.
+[64:42] But if you are within a circle on a given latitude and longitude,
+[64:46] you know more or less what to do that is good enough.
+[64:50] So the other approach, as I mentioned,
+[64:51] is approximation in policy space.
+[64:53] So I suppose, when we do policy optimization,
+[64:58] so when we tend to compute the optimum policy,
+[65:00] we are not putting any restriction in the policies
+[65:02] we are computing, which makes the problem very complicated.
+[65:06] So a popular approach is basically
+[65:09] consider a parameterized class of a policy.
+[65:12] So basically, functions that depends on some parameter rk.
+[65:17] And then by using, for example, data, so in a learning context
+[65:22] or some other technique, you optimize over those parameters.
+[65:27] So what's the main difference is that you are transforming
+[65:29] a problem from an optimization of the space of functions
+[65:32] over a problem in terms of optimization over parameters.
+[65:35] So finite dimensional objects.
+[65:37] So what we do on Thursday will be
+[65:39] to go deeper into these two approaches
+[65:42] to scale up stochastic optimization
+[65:47] and dynamic programming to problems
+[65:49] where either the state space is too large
+[65:52] or some of the problem data is not available
+[65:56] and have to be learned online.
+[65:59] Which means that the topic of Thursday
+[66:01] will be reinforcement learning.
+[66:03] Now, so as I said, this is the final week.
+[66:07] So Friday, we'll have the final project demo.
+[66:11] So I hope that you're having fun with the final project.
+[66:16] Please provide your comments and suggestions
+[66:20] in your course evaluations.
+[66:22] This, I think, one of the most difficult classes to teach.
+[66:26] Definitely the most difficult class to teach,
+[66:28] that I teach here at Stanford.
+[66:30] Because material per se is rather sophisticated,
+[66:34] but also has a very strong software component.
+[66:37] So you're not just writing a script.
+[66:39] You are interacting with a complicated software
+[66:42] infrastructure, which I think is a very good learning
+[66:45] opportunity.
+[66:45] But of course, it's difficult to establish.
+[66:47] Plus, you have also hands-on hardware.
+[66:50] So every year, I really take into serious account
+[66:53] the feedback that I receive from your colleagues
+[66:56] in order to improve this course.
+[66:57] This course basically changes every year
+[66:59] by taking into account the feedback from the previous years.
+[67:02] All this to say that I really value your feedback.
+[67:04] So try to put some time in providing feedback
+[67:08] that is really constructive.
+[67:11] So if there are aspects that you don't like, fine.
+[67:14] But try to be constructive.
+[67:16] Also, there is some discussion within the School
+[67:19] of Engineering about the best way
+[67:21] to evaluate and provide comments for a class.
+[67:26] So this year, I have opted in for an additional layer
+[67:32] of evaluation that asks you questions
+[67:34] in a slightly different way.
+[67:35] So there was some concern that with the previous questions,
+[67:40] people were introducing biases.
+[67:43] Some biases were quite surprising to me.
+[67:45] For example, on average, classes instructed by female professors
+[67:49] had much lower ratings.
+[67:52] And classes instructed early morning had lower ratings.
+[67:58] A lot of weird biases.
+[67:59] So basically, there was a task force within the School
+[68:01] of Engineering to change a little bit how questions
+[68:04] are asked in order to see if there is
+[68:06] a way to eliminate these biases.
+[68:09] So the point being is that you have
+[68:11] to fill out not just the standard course evaluation,
+[68:14] but also an additional experimental course evaluation
+[68:17] that we'll make available to you this week.
+[68:21] Third, unfortunately, on Thursday,
+[68:24] I won't be able to be here.
+[68:25] I had to be at a meeting at NASA.
+[68:27] I tried to get out of it as much as I could, but I'll be
+[68:30] kidnapped at NASA Ames from 9 to 5.
+[68:34] So my thoughts will be with you, but the class
+[68:37] will be given to you by one of the CAs
+[68:40] on the unfortunate learning.
+[68:42] And what else?
+[68:44] So I mean, from now on, if you have
+[68:47] any questions about robot autonomy, both the algorithms
+[68:50] or what classes you could take or what type of experience
+[68:54] you could have, please feel free to email me.
+[68:56] I like to say that after you take a class with me,
+[68:59] you are under a lifelong policy of assistance from myself
+[69:04] as much as I can.
+[69:06] In the winter, together with two other professors
+[69:09] from computer science, I'm going to teach
+[69:12] an advanced version of this class, which
+[69:14] is going to cover techniques that are really
+[69:18] at the forefront of the science on robot autonomy,
+[69:22] mainly human intent inference, learning-based perception
+[69:28] control, verification and validation,
+[69:30] mobile manipulation, and so on.
+[69:32] It will be an experimental class, the first time
+[69:34] we teach it.
+[69:35] So just a word of caution.
+[69:38] You will be part of this experiment,
+[69:42] and I will also be part of this experiment.
+[69:45] It will be a fun class.
+[69:47] Of course, it will be an experimental class,
+[69:48] so less structured than this one, more, how can I say,
+[69:54] laid back.
+[69:56] But it will be a lot of fun.
+[69:57] So you'll be helping us in building
+[70:00] this new version, the advanced version of this class.
+[70:03] Arguably, there is not much there
+[70:06] in the world about the material that we're going to teach.
+[70:09] So I think it's going to be a good opportunity
+[70:11] if you want to get deeper into this topic.
+[70:15] All right.
+[70:15] So any questions?
+[70:24] No?
+[70:25] I think that usually people after this class for a while
+[70:29] still have nightmares about debugging Python scripts
+[70:32] and validation gates and so on.
+[70:35] But as I said, later on in the future,
+[70:38] you'll see that this has been, hopefully,
+[70:40] a worthwhile learning opportunity.
+[70:44] Or in other words, in the spirit of this lecture,
+[70:50] the mere cost I acknowledge has been probably very large.
+[70:54] But don't focus so much on the immediate cost.
+[70:56] Think about the optimal reward to go.
+[71:00] That's my message, my legacy.
+[71:03] All right.
+[71:03] So I'll see you on Friday for the final demos.

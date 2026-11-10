@@ -1,0 +1,874 @@
+[00:00] So today, we're going to continue our discussion on computer vision. In particular, last week,
+[00:13] we talked about the mathematical transformation that allows us to map points in a 3D world
+[00:22] onto a camera image. And most importantly, how to leverage that mathematical mapping
+[00:30] in order to reconstruct the environment in 3D once we have access to 2D images. Now,
+[00:39] this is a very important process because one of the most fundamental tasks that you want
+[00:43] to achieve with a vision sensor is that of reconstructing the environment. But that is
+[00:50] only one of the tasks that you want to achieve with a vision sensor. There are many more.
+[00:55] And in particular, through vision, you are interested in detecting objects that can be
+[01:02] used in order to reason semantically about environment. In particular, is a blob a human
+[01:10] or an object? And what are the implications in terms of decision making? So in order to
+[01:16] do so, we have to dig a little bit deeper about how to extract information from images.
+[01:24] In particular, the topic of today is to learn how to, first of all, filter images in order
+[01:31] to remove, for example, noise that might affect the information that we extract from an image.
+[01:38] And second, how to detect and describe key features of an image such as a corner, edges,
+[01:45] and so on. On Thursday, we'll see how to use this information in order to reason at
+[01:51] a higher level about the reconstruction of environment, like how do we start extracting
+[01:57] lines that can be used for localization or how do we identify whether there is a person
+[02:02] in an image and so on. So today is mostly a geometric understanding. On Thursday will
+[02:07] be mostly a semantic understanding. Now, how do we represent images? Well, the
+[02:16] raw output of an image sensor is a collection of pixels. But in practice, we want to describe
+[02:23] the images in a more succinct way. And in particular, in terms of features that can
+[02:28] be used, for example, to match points of interest across images and can be used in order to
+[02:37] detect whether a certain part of an image corresponds to a person, an object, and so
+[02:42] on and so forth. Typical features that you would like to extract are, for example, corners,
+[02:47] edges, blobs, and so on and so forth. So for example, here in this image of a butterfly,
+[02:54] I'm showing the typical output of an image detector. Well, you can see how the image
+[03:00] detector in question is picking up a number of salient features or key points of the image
+[03:07] that can be used later on in a downstream application in order to do semantic understanding.
+[03:14] Now, an image processing pipeline, at the end of the day, consists of four main steps.
+[03:22] The first step is the step of image filtering. Basically, we want to clean up or, in other
+[03:30] words, modify the image in order to ease the downstream task of future detection, description,
+[03:39] and later on, high-level processing. At the very least, we want, for example, to remove
+[03:45] noise from an image. The second step is the step of detecting key
+[03:53] features or equipment referred to as key points. As I said, corners, edges, and so on. They
+[03:59] can be used across images for stereo correspondences or for structure from motion, or it can also
+[04:06] be used in order to detect objects. The third step is a step of future description.
+[04:14] Once we have detected a feature, we want to be able to describe it with photometric quantities,
+[04:21] like for example, local gradients around it, in a way that allows us to match that feature
+[04:28] with the same feature in another image. For example, we take an image and then we
+[04:33] take another image from a different pose. The point is that if there is a corner that
+[04:39] we want to track, we want to be able to establish a correspondence between that corner and the
+[04:44] first image and the corner in the second image. To do so, we need to be able to describe
+[04:48] locally what that image looks like in order to have a robust matching between the same
+[04:54] feature and two different images. Make sense? Future detection means there is
+[05:01] a corner. Future description means this corner has specific properties. For example, there
+[05:06] is a lot of yellow around it, so that when I see another corner in another image with
+[05:11] a lot of yellow around it, most likely those two corners are indeed the same, just imaged
+[05:17] into different images. Based on that, then we can have matching pairs that can be used
+[05:22] for a number of applications, for example, serial reconstruction.
+[05:26] The fourth step, and this is the step that we'll look at on Thursday, is the one over
+[05:31] high-level processing. Now that we're able to detect features, robustly track them across
+[05:37] images, how do we use them for high-level processing such as localization or object
+[05:44] detection and so on? Today we're going to focus on the first three steps, and on Thursday
+[05:50] we're going to focus on the fourth step. Let's start then with the first step, which
+[05:56] is the step of image processing that in a nutshell entails accepting or rejecting certain
+[06:05] frequency components. If you're familiar with signal processing, this is very similar to
+[06:09] what is done to signals, like for example, electromagnetic waves. You filter them out
+[06:17] in order to keep some frequency components in order to, for example, remove noise or
+[06:22] for example, make sure that within the same channel you can transmit multiple signals
+[06:26] at different frequencies. The difference here though is that instead of dealing with a signal
+[06:33] in time, we're dealing with an image. The idea of filtering practically corresponds
+[06:41] to finding a new image whose pixels are a combination of the pixels of the previous
+[06:47] image. In particular, the key idea is to represent an image as a two-dimensional function that
+[06:55] maps row coordinates and pixel coordinates into intensity values. So for example, consider
+[07:04] this image here, which is in grayscale. This image is a bunch of pixels. Each pixel is
+[07:12] labeled by a row, referred to as i, and a column, referred to as j. And each pixel is
+[07:22] stored in the computer with a number, which represents the gray level, typically between
+[07:29] 0 to 155. So 0 corresponds to black, 255 corresponds to white. If you have colors, then you should
+[07:42] think of having three of these tables, one on top of each other, each one for the three
+[07:48] fundamental colors, like red, blue, and so on. Any question about this? It's fundamental.
+[07:55] So an image from the purposes of the image processing pipeline is represented as a two-dimensional
+[08:01] function that maps each row, column, value into an integer that corresponds to the intensity
+[08:11] value for that pixel. If you use grayscale, it would be a number between 0 and 255. Then
+[08:18] with this interpretation, filtering corresponds to producing an output image that takes as
+[08:26] an input image and applies some transformation of the pixels in the input image, according
+[08:32] to some rules that I'm going to discuss in a second.
+[08:36] All right. So filtering can be done in fundamentally two ways, either in the frequency domain or
+[08:47] in the spatial domain. Again, if you're familiar with signal processing, you know that oftentimes
+[08:52] filtering is done in the frequency domain, whereby you take the Fourier transform of
+[08:57] your signal, then you operate in the Fourier domain, and then you transform back the signal
+[09:03] to the time domain. If you're not familiar with the Fourier transforms, it's not a problem
+[09:09] because in this class, actually, we're going to focus on filters in the spatial domain,
+[09:15] meaning without leveraging Fourier transforms.
+[09:18] Fourier transforms are indeed quite useful. For example, when I was working at JPL, I
+[09:25] was doing a lot of image processing on the images taken by the orbiter Amaro around Mars.
+[09:32] In order to make computation efficient, what I was doing was to take discrete Fourier transforms
+[09:37] on the images, do all the image processing pipeline in the Fourier domain, which is much
+[09:41] faster, and then convert it back into the spatial domain.
+[09:44] But anyway, this is beyond the scope of this class. In this class, we're going to focus
+[09:49] on spatial filters. Spatial filters are relatively simple, and they consist of two main ingredients.
+[09:57] The first ingredient is the neighborhood of a pixel under examination, which I refer to
+[10:03] here as S subscript of x, y. S of x, y is a neighborhood that for a given pixel with
+[10:10] the coordinates x, y, associates a set of neighboring pixels. For example, this could
+[10:18] be a rectangle with a three by three neighborhood. The pixel x, y itself, and then one pixel
+[10:26] to the right, one pixel to the left, and these three on top, and these three at the bottom.
+[10:32] The second step is then a predefined operation on the image pixels encompassed by that neighborhood.
+[10:44] So for example, here, I'm taking this image as an input with some coins, I consider a
+[10:51] rectangular neighborhood, and I consider as operation that of smoothing. So in particular,
+[11:01] the operation S x, y entails... So say that S of x, y is a three by three neighborhood
+[11:16] with the pixel with the coordinate x, y at the center. Then a possible operation is to
+[11:28] multiply each one of the intensities of the neighborhood pixels, including x, y pixels
+[11:34] by one, and then divide by nine, the size of the neighborhood. So what we're doing here
+[11:41] is basically just taking the spatial average of the intensities around pixel x, y. So this
+[11:47] corresponds to smoothing, and we'll see that more formally later. So the end result will
+[11:54] be this image, which looks a bit blurred. So you might say, why on earth you buy an
+[12:01] expensive camera in order to get an image that is very crisp, and then through image
+[12:06] processing you get something that is blurred. You have an idea why that could be useful?
+[12:14] Well yes, down sampling could be one reason. Exactly, remove noise. So as you will see,
+[12:22] in order to detect features, like for example edges, you're trying to look at parts of an
+[12:27] image where you have discontinuity in the intensities, which basically entail looking
+[12:34] at the notion of a derivative for an image. But as you may know, taking a derivative amplifies
+[12:41] noise. So before taking a derivative, you want to smooth out your input, for example
+[12:46] with an average filter. Specifically, within the domain of spatial filters, spatial filters
+[12:57] can be either linear or non-linear. Linear means that we perform an operation over the
+[13:03] neighborhood of pixels that is linear. Non-linear means that we perform a non-linear operation.
+[13:09] In this class, we focus on linear filters. So we focus on spatial linear filters. In
+[13:15] particular, linear filters are filters that can be written as a correlation between the
+[13:21] input image denoted as I and a mask or kernel or window denoted as F. So the notation could
+[13:31] be a bit cumbersome, but the notion is very easy and I will give you an example in a second.
+[13:38] So just to fix the nomenclature, capital N is specifically 2N plus 1 is the number
+[13:47] of rows of the filter mask, and 2N plus 1 is the number of columns on the filter mask.
+[13:54] The filter mask is basically another matrix that is smaller usually than your input image.
+[14:05] For example, in the case of the example that I just gave you, it was the matrix three by
+[14:12] three with all ones. So what that formula is saying is actually encoding the operation
+[14:22] that I just mentioned before. You multiply each pixel in the neighborhood for the corresponding
+[14:27] component in the mask, and then you sum them out. So it's an average. Basically, a correlation
+[14:35] you can see as an average of the insensities in the pixel neighborhood. Of course, nobody
+[14:43] tells you that you need to have all ones. You can give weights that are different, and
+[14:49] we will see later on how different filters give different weights and how that corresponds
+[14:54] to different operations. So just to make sure that everyone is clear with this concept,
+[15:01] so let's consider this image where you have, say, one, two, one, two, one, two, one, two,
+[15:13] one, two, one, two, one, one, one, one, two, one, two, one, one, one, one. So that will
+[15:35] will be your input image, which we denote as i.
+[15:50] Let's consider as a mask f, the mask 3 by 3,
+[15:57] where all the numbers are 1.
+[16:01] Which basically means that we consider a neighborhood that
+[16:04] is just a 3 by 3 neighborhood, basically a rectangular
+[16:08] neighborhood.
+[16:09] So let's assume that the idea is to process each pixel one
+[16:12] by one.
+[16:14] Let's assume that we are processing this pixel here.
+[16:17] So how is this pixel mapped into the output image y prime?
+[16:24] So what's the value of this pixel?
+[16:29] So this will be the pixel with the second row
+[16:32] and the third column.
+[16:34] So in the output image, what is the value
+[16:37] of the pixel second row and third column?
+[16:41] If we apply this mask, and we consider
+[16:45] the process of correlation.
+[16:48] What's that?
+[16:49] Is it 13?
+[16:50] So we have 2, 2, 2, 2.
+[16:53] So this is 8, 9, 10, 11, 12.
+[16:59] It's OK.
+[17:06] So what is a bit awkward here is that by applying this mask,
+[17:14] we are actually increasing the intensity uniformly.
+[17:17] We'll see later on how actually the average filter should
+[17:21] be normalized in order to make sure
+[17:23] that if you apply it on a patch that has uniform intensity,
+[17:28] you get the same intensity as an output.
+[17:31] But this is just to give you an example of what
+[17:33] mathematically this formula means.
+[17:39] A natural equation is, what do you do at a boundary?
+[17:42] So if you are here, say, you can think
+[17:48] of applying this mask as a superimposing
+[17:51] this mask on your image.
+[17:53] And then multiply the corresponding components.
+[17:59] So here, we're getting out.
+[18:01] The neighborhood is getting out of the domain of the image.
+[18:05] So what do we do?
+[18:07] So what do we multiply this number here and this number
+[18:10] here and this number here in terms of the corresponding
+[18:13] input image i, since I don't have values for the input
+[18:16] image i here?
+[18:18] So this is a limit of a convention.
+[18:20] In reality, the image is much larger than the mask.
+[18:23] So what happens at the boundary is not that important.
+[18:26] But you had to code something for your code to run.
+[18:29] So you have a number of options.
+[18:31] The easiest one, and the one that you would use in your pset,
+[18:34] is just pad the image with zeros.
+[18:40] So just a larger image so that your correlation operation
+[18:43] is well-defined also along the boundaries.
+[18:48] But you can do also other stuff.
+[18:49] You could, for example, crop the image.
+[18:52] So just consider this subimage here,
+[18:59] and then work on the restricted image
+[19:01] so that the boundary is well-defined.
+[19:04] Or you can extend it by using some more defined notion
+[19:07] of extrapolation.
+[19:09] Or if you have a little bit more imagination,
+[19:11] you can think of warping the image such
+[19:14] that this boundary becomes attached to this boundary.
+[19:22] Sometimes it might make sense.
+[19:23] Basically, you would wrap it in this direction
+[19:25] and in that direction.
+[19:28] In reality, just padding with zeros
+[19:30] is the more natural option.
+[19:32] So it is clear.
+[19:33] Just want to make sure it's clear.
+[19:34] Because if it's not clear, then everything else
+[19:36] is going to be very confusing.
+[19:43] So the easiest way of thinking about correlation
+[19:47] is that we have an image, which is represented
+[19:53] as a two-dimensional function.
+[19:59] And then we consider a mask.
+[20:11] And then for each element of the mask,
+[20:13] we multiply the corresponding elements of the image.
+[20:19] And then we center the mask at each pixel of the input image.
+[20:22] So basically, this is a moving mask
+[20:25] that goes throughout, that is laid throughout the image.
+[20:29] Yeah?
+[20:30] So is this the conclusion?
+[20:33] No.
+[20:34] Convolution, as we will see in a second,
+[20:37] is when instead of having a plus here,
+[20:40] we have a minus, which in other words,
+[20:42] corresponds to do a correlation with a mirrored version
+[20:46] of the mask.
+[20:47] It's a tiny detail.
+[20:48] But it turns out that the convolution is still
+[20:53] a linear filter.
+[20:54] So it's still under the purview of this class.
+[20:57] But it turns out that that slightly different definition
+[20:59] of mathematical operation provides
+[21:02] a very important property that is that of associativity
+[21:05] that we're going to see in a second.
+[21:06] But strictly speaking, this formulation
+[21:08] is a formulation of correlation.
+[21:09] All right.
+[21:14] So let's look at some examples.
+[21:15] First example is the moving average filter,
+[21:20] whereby the output image has pixel values that
+[21:26] represent the average values of the pixels
+[21:30] as weighted by the mask.
+[21:32] In particular, the mask in the case of 3 by 3
+[21:35] is a mask with constant values, which
+[21:37] is normalized in order to make sure
+[21:39] that the background intensity stays the same.
+[21:41] So if you apply this moving average filter
+[21:43] to an image with a constant intensity,
+[21:46] say all equal to 50, as an output, we still get 50.
+[21:49] An image with all pixels equal to 50.
+[21:51] So when you put an output value, do you just round it,
+[21:56] or is it something the same?
+[21:57] Well, the intensity are always rounded.
+[22:01] Yeah.
+[22:04] All right, so this is an important filter.
+[22:08] But one may argue that it's a bit weird
+[22:12] that when we take the average, we give the same weight
+[22:16] to the pixels at the boundary of the neighborhood
+[22:19] as we give to the pixel whereby this mask is centered at.
+[22:25] So a more common smoothing mask is the so-called Gaussian
+[22:32] smoothing mask, whereby the idea is to have, as a mask,
+[22:37] something that gives more weight to the pixel where the mask is
+[22:41] centered and less weight to the pixels that
+[22:44] are far from the center in proportion
+[22:47] to an underlying Gaussian distribution.
+[22:50] So think of a two-dimensional Gaussian
+[22:53] whose formula is given here.
+[22:55] As usual, sigma is the standard deviation
+[22:59] and controls how fat your distribution is.
+[23:04] The Gaussian mask is simply obtained
+[23:06] by taking the two-dimensional Gaussian distribution
+[23:09] and sampling it.
+[23:11] Like, for example, if you use sigma equal to 0.85,
+[23:14] this is the Gaussian mask that you get,
+[23:15] which is a very typical one.
+[23:18] Changing sigma basically changes the values of these weights.
+[23:23] But the intuition is the same, that you give more weight
+[23:27] to the pixel where the mask is centered and less weight
+[23:31] to the neighborhoods.
+[23:33] As usual, the mask is normalized.
+[23:35] If you sum all these numbers, you get 16.
+[23:37] So when you divide by 16, you still get 1.
+[23:40] In order to ensure that if you apply this mask to something
+[23:43] that has a uniform intensity, you
+[23:45] get as an output something with the same intensity value.
+[23:49] Now, as we were mentioning before,
+[23:53] one of the most fundamental operations in image processing
+[23:56] is to take derivatives, which means
+[23:58] that since derivatives, as discussed,
+[24:01] might amplify noise, as we will see more explicit in a second,
+[24:06] the first step is actually to smooth or to blur that image.
+[24:11] The Gaussian mask is the most typical way of doing so.
+[24:15] So pretty much in any image processing pipeline
+[24:18] that uses classical techniques, as opposed
+[24:20] to neural networks, that's the first preprocessing step.
+[24:27] Any question about correlation?
+[24:29] As I said, the concept is simple,
+[24:31] but if you are confused about the notation,
+[24:34] then everything else becomes confusing.
+[24:37] In the p-set, I will ask you to do by hand
+[24:40] a couple of correlations so that becomes super clear.
+[24:45] Convolution.
+[24:45] So convolution is another natural spatial filter.
+[24:50] It's very similar to correlation.
+[24:53] The only thing is that we replace the plus with the minus.
+[25:01] So instead of weighting the, so if this is our xy,
+[25:14] so instead of weighting, so this will be our ij.
+[25:24] Well, instead of weighting this pixel by this pixel,
+[25:31] we actually flip the way this weighting is done.
+[25:37] Flip means mirrored.
+[25:40] So it turns out, so this operation
+[25:42] is conceptually the same.
+[25:43] It's just that we are flipping the indices.
+[25:45] It turns out that this operation has the associativity property,
+[25:49] meaning that convolving a mask with the image input i
+[25:55] and then convolving the resulting image with f
+[25:59] is equal to first convolve the two masks, f and g,
+[26:04] and then use the convolved mask to convolve it with i.
+[26:09] The result is the same.
+[26:12] So you might say, who cares?
+[26:13] So it turns out that depending on the sequence with respect
+[26:16] to which you carry out convolution,
+[26:18] you might require less operations.
+[26:21] So it turns faster.
+[26:24] And in particular, when we try to detect the edges, what we do
+[26:27] is to smooth the image and take a derivative.
+[26:30] So instead of smoothing the image
+[26:33] and then take the derivative of the smooth image, what you do
+[26:36] is to take the derivative of the smoothing mask
+[26:40] and then use that mask in order to detect an edge.
+[26:45] We will see that in a few minutes.
+[26:48] Yeah?
+[26:52] The associativity property, why it's
+[26:55] used so much in applications like machine learning?
+[27:00] Well, in the case of an image processing application,
+[27:04] it's one of the reasons, yeah.
+[27:07] When you say discrete, is it a result of the image?
+[27:10] We were going to define that formally.
+[27:14] Of course, since the image is a discrete function,
+[27:18] whereby the domain is discrete and the output is discrete,
+[27:22] the derivative cannot be defined in the same way that
+[27:24] is defined in calculus, because the notion of limit
+[27:26] for the increment that tends to 0 is not well-defined.
+[27:29] So we will consider a discrete definition for the derivative.
+[27:33] I guess the question I was more thinking about
+[27:34] is the fact that there's both an x and a y dimension,
+[27:36] so it don't need like a derivative or a gradient?
+[27:39] Oh, yeah, sure.
+[27:39] Of course.
+[27:40] Yeah.
+[27:41] That concept carries forward here,
+[27:43] because we're reasoning in terms of a two-dimensional function.
+[27:47] All right.
+[27:48] So it turns out that some masks are separable,
+[27:52] which means that they can be written as the convolution
+[27:55] of two sub-masks.
+[27:58] Sometimes this is useful, because applying
+[28:02] and exploiting associativity property,
+[28:05] it's often cheaper to first apply f1 followed by f2,
+[28:09] rather than applying f directly.
+[28:11] So these are just some tricks that people use in order
+[28:13] to speed up the image processing pipeline.
+[28:19] So there is a particular case whereby
+[28:24] a mask is presentable as an outer product of two vectors,
+[28:28] which corresponds to two-dimensional convolution.
+[28:31] So outer product will be the product of, say, this vector
+[28:35] and this vector.
+[28:37] Say, 1, 1, 1, 1, 1, 1.
+[28:43] What is the result of this outer product?
+[28:46] f.
+[28:47] Capital F, so basically the moving average,
+[28:51] unnormalized moving average matrix.
+[28:54] So why is, so we started with an f that was a matrix.
+[28:58] We represented it as an outer product of two vectors.
+[29:02] Why is that useful?
+[29:04] So suppose that we want to again carry out the same operation.
+[29:13] We have convolution.
+[29:15] So in general, let the mask be m by m.
+[29:22] And let the, I want to make sure I use the same notation,
+[29:24] the image has size w times h.
+[29:28] w is the width, the number of columns,
+[29:31] h is the height, the number of rows.
+[29:34] So if I apply the moving average mask with size m by m
+[29:42] to an image with size w times h,
+[29:45] how many operations do I have to carry out?
+[29:49] So per pixel, I need to carry out m square multiplications.
+[29:59] Is that right?
+[30:02] Because I have to carry out one multiplication
+[30:05] for each component of the mask.
+[30:07] You're assuming that the mask has size m times m,
+[30:11] which means that I have m square components.
+[30:13] So per each pixel in the input image,
+[30:16] I had to carry out m square multiplications.
+[30:19] And then an addition.
+[30:22] Since how many pixels do I have in the input image?
+[30:27] W times h.
+[30:30] So in total, I had to carry out m square w h operations.
+[30:36] But now we are smarter and we recognize that actually
+[30:39] the matrix with all ones are normalized.
+[30:44] If it is normalized, then we would just add a scalar here.
+[30:47] It wouldn't make any difference.
+[30:48] It can be written as the outer product of two vectors.
+[30:52] So let's first apply convolution of the input image with respect
+[30:56] to this vector, which can be considered a mask.
+[30:59] It's a trivial mask because there's only one row,
+[31:02] but still it's a mask.
+[31:03] And then we apply the convolution of the resulting,
+[31:07] and then we consider a convolution of the resulting image with this mask.
+[31:12] So when we first take the convolution with respect to this vector,
+[31:14] how many operations do I need to carry out?
+[31:20] Per each pixel, now I have a mask with three elements.
+[31:25] So I need to carry out three operations.
+[31:27] In general, with m elements, I have to carry out m operations per pixel.
+[31:31] And again, I had to repeat this procedure,
+[31:34] w times h times.
+[31:39] And then I have to convolve the resulting image with this column vector,
+[31:46] which entails mwh operations.
+[31:50] So in total, I need to carry out two mwh operations.
+[31:55] So in general, m square is much larger than 2m,
+[31:59] which means that actually recognizing that in the case
+[32:03] of the moving average filter, the filter is separable,
+[32:06] would lead to dramatic computational savings.
+[32:10] Yeah?
+[32:11] But also, aren't all these filters based on some sort of localness?
+[32:16] So m is not going to get too big, right?
+[32:17] So this doesn't give too dramatic of a savings.
+[32:20] Well, still, 3 by 3 is a very small thing.
+[32:23] So it could be, say, the order of 5 or 6.
+[32:28] So the difference between m square and 2m is seen.
+[32:33] It's sizable, especially because you're multiplying by wh,
+[32:37] which will be quite large.
+[32:39] So even a factor of 10 or a factor of 50?
+[32:42] Do you have 20 pixels to get a factor?
+[32:43] Yeah, yeah.
+[32:47] And it costs you nothing.
+[32:49] So that is also the other thing, right?
+[32:52] It's just that for this example, the convolution is equal to the other product.
+[32:56] Yeah, yeah.
+[32:59] No, so not all masks are separable.
+[33:01] But it turns out that a lot of them are.
+[33:05] In particular, besides the moving average, also the Gaussian smoothing is separable.
+[33:11] And this is due to the fact that the Gaussian distribution can be broken into its x and
+[33:19] y Gaussian distributions.
+[33:22] So for most practical cases, we can use leverage separable masks.
+[33:28] But you're right.
+[33:29] You're right, you're right, you're right, you're right.
+[33:35] So we talked about filters, spatial linear filters.
+[33:40] We considered two main classes, correlation and convolution, which basically are brothers.
+[33:46] One is just a flipped version of the other ones.
+[33:49] We consider, as example, smoothing filters out of the moving average of the Gaussian
+[33:54] smoothing filter.
+[33:56] But a very, very important additional example of a linear filter is the one whereby the
+[34:03] mask implements the notion of a derivative of an image.
+[34:08] Now, how do we define the derivative of an image?
+[34:10] Since an image is a discrete function, meaning that the domain is basically the rows and
+[34:19] columns of an image, so it's a discrete domain, the output is discrete as well at the quantized
+[34:25] levels of intensity, we cannot really use the standard notion of derivative for the
+[34:31] council calculus.
+[34:32] We have to consider a discrete version of a derivative.
+[34:36] Now in the case of a discrete definition of a derivative of a function, we have actually
+[34:45] quite a bit of freedom as we can define the derivative of a discrete function.
+[34:51] Another possible way is to define the derivative of an image with respect to X, X means in
+[35:01] the horizontal component, so the column-wise component, as, actually sorry, it means in
+[35:11] the row-wise component, E I of X plus Y Y minus I X minus 1 I.
+[35:21] So basically if we have our image, so this is our X Y, say that this is 4, this is 8,
+[35:37] this is 10, what is the derivative in the row-wise direction?
+[35:44] Two, yeah, no it's not meant to be a tricky question, just two.
+[35:54] So then in the output image at the corresponding X Y location, I will put two.
+[36:02] Which makes sense, the derivative encodes the notion of change in a signal.
+[36:08] Here we cannot really reason in terms of differential increments, but still we can reason in terms
+[36:14] of the finite differences.
+[36:16] So the derivative of an image is really defined as a finite difference in the pixel space.
+[36:21] You say there's multiple ways to do it, but is there a reason we consider we're looking
+[36:25] at the indices of either side versus the one we're at?
+[36:29] Yeah, so another way is to consider one-sided derivatives, like whereby you could define
+[36:36] this as I X I X plus 1 Y minus I X Y.
+[36:43] So this is the one-sided derivative, or also Y X Y minus Y X minus 1 Y, it will be up or
+[36:51] down.
+[36:52] In reality this is generally a little bit more robust because it considers values in
+[37:01] the neighborhood, both sides of the neighborhood of the pixel equation.
+[37:07] But this prompts the question about can we consider even more robust definition of a
+[37:16] derivative or a computational derivative, which leads to the so-called Sobel masks that
+[37:21] are really the ones that are used in computer vision to take derivatives.
+[37:25] The point with the Sobel mask is try to provide a more robust definition of derivative by
+[37:33] taking into account not just the difference with respect to a single column, so column
+[37:40] Y, but also the differences, discrete differences in neighboring columns, and then take an average
+[37:48] of those differences in an effort to have something that is more robust to outliers
+[37:52] noise and so on.
+[37:55] So for example, on the X direction, Sobel consists of a three by three mask where we
+[38:06] take derivative in three neighboring directions.
+[38:12] We give more weight to the one where the pixel equation lies and less weight to the rows
+[38:20] which are in the neighborhoods of that pixel, similar to what we do with the Gaussian smoothing
+[38:25] mask.
+[38:26] Is there a reason why all of these filters are three by three or you can choose?
+[38:34] Usually they're larger.
+[38:35] I do three by three simply because it's easier to print it, easier to explain it, and when
+[38:40] you do computation by hand it's easier.
+[38:43] But no, in general it's left a little bit up to the user to decide what is the width
+[38:47] of the mask.
+[38:50] That's a good question.
+[38:53] So view Sobel masks as just a more robust implementation of the two side discrete difference
+[39:01] definition of the derivative of a mask.
+[39:03] But the key point is that basically you take differences of intensities.
+[39:07] So what's the direction of the X orientation?
+[39:13] So X here, this will be the row.
+[39:17] So it will be in the vertical direction.
+[39:21] Here it will be in the Y, so this will be in the column wise direction.
+[39:29] Keep in mind that we're doing a convolution here, so these are mirrored.
+[39:37] So the filters can also be used for detecting similarities.
+[39:47] In particular similarities between two images in order, for example, to detect correspondences
+[39:54] that are useful for structural motion.
+[39:56] Two popular ways of detecting similarities are to take differences in intensity values
+[40:04] in the neighborhood of each pixel and then take the absolute difference or take the square
+[40:10] of the difference.
+[40:11] The first approach is referred to as sum of absolute differences.
+[40:14] The second one is referred to as sum of square differences.
+[40:17] They're just two definitions.
+[40:22] All right.
+[40:23] I think this is good background in terms of filtering.
+[40:27] Now how do we make filtering useful?
+[40:29] Well, as I said, the second step in the image processing pipeline entails detecting local
+[40:36] features, that is the patterns that differ from the immediate neighborhood, such as an
+[40:46] edge, a corner, a blob, and so on and so forth.
+[40:50] In particular in this class, we will focus on edge detectors and corner detectors.
+[40:55] Edge detectors will be useful because they will allow us to detect lines that we will
+[41:00] use as a geometric primitives in order to build a localization module for your robot.
+[41:08] Now why are detectors descriptors useful?
+[41:11] Well, first of all for stereo reconstruction, as already mentioned.
+[41:16] Second of all, they can be useful in order to reconstruct transformation and hence they're
+[41:23] very related to the notion of structure for motion, if you were in the lecture on Friday.
+[41:27] Beyond robotics, they can be used for other computer vision tasks such as panorama stitching.
+[41:32] You take the images of a mountain from two different perspectives and then you want to
+[41:38] stitch them in order to have a broader view.
+[41:41] You detect points that correspond to each other and then you use them as anchors in
+[41:47] order to stitch the two images or even to detect objects, as we will see next time.
+[41:54] So as I said, the first feature that we want to detect is an edge.
+[42:04] An edge is defined as a region of an image where you have a stark difference in intensity,
+[42:13] saying from white to black or from black to white.
+[42:17] Now for you, I mean for the human eye, detecting an edge is relatively simple, but for computer
+[42:23] vision, it could be quite tricky.
+[42:27] In particular, from a mathematical standpoint, an edge is a region of the environment whereby
+[42:33] you have a large difference, a large value for the first order derivative and a very
+[42:40] small value for the second order derivative.
+[42:43] A very large value for the first order derivative is obvious because you have this discrete
+[42:50] jump in intensities.
+[42:53] The reason for the second order derivative to be small will be seen in a second.
+[42:59] The point is to exploit this fact that an edge corresponds to a dramatic difference
+[43:07] in intensity and hence high value of the derivative in order to detect them.
+[43:10] So in particular, we will implement a derivative filter and then we apply it to the input image.
+[43:17] We get an output image that corresponds to the derivatives, so the differences in intensities.
+[43:22] And then we say that there is an edge where those derivatives are very large.
+[43:28] So it's pretty simple.
+[43:30] Make sense?
+[43:33] So there are a number of criteria for having a good edge detection algorithm.
+[43:40] First of all, we want to have accuracy, meaning that we want to minimize a false positive
+[43:46] detecting an edge when actually there is no edge, or false negatives, missing real edges.
+[43:53] Localization, we want to make sure that once we detect an edge, we also localize that edge
+[44:00] in the same position where that edge really is.
+[44:04] And third, we want to have single response, so we want to make sure that one edge is detected
+[44:09] as a single edge as opposed to multiple edges.
+[44:13] Now the approach entails basically two steps that are already alluded to.
+[44:18] First, we will apply a smoothing step in order to remove noise, and then we will take a derivative
+[44:24] with respect to the smooth image.
+[44:26] Eventually, we realize that the entire procedure encompasses a convolution.
+[44:33] So by using the associativity property, we will differentiate the smoothing filter and
+[44:38] apply the resulting mask to the target image.
+[44:42] So to make things concrete, let's assume that we have just a one-dimensional image.
+[44:48] So basically, we have an image that is just a row vector with intensities, say 50, 70,
+[45:01] in this case it would be 50, 50, 50, and then all of a sudden 120, 120, and so on.
+[45:12] So basically, we have a one-dimensional image which corresponds to just a row, and we have
+[45:21] low intensity and a discrete jump, and then we have high intensity.
+[45:25] But in general, in the intensity values, we have some noise.
+[45:30] It's not that you have 50, 50, 50, but maybe you have 51, you have 48, 52, and so on.
+[45:38] So if you were to differentiate this image directly by applying the finite difference
+[45:43] scheme that I mentioned before, this will be a typical output.
+[45:48] X here denotes the index of the vector.
+[45:53] Y is the value of the intensity.
+[45:55] As you can see, by just looking at the output of the differentiated image, it's impossible
+[46:01] to see where the edge really lies.
+[46:04] Why is it the case?
+[46:06] It's that since we had all this noise, this noise, by taking the derivative, gets amplified.
+[46:12] So basically, the differences that you can take here per pixel are very similar to the
+[46:17] differences that you can take here per pixel, and so what you get as an output is something
+[46:21] that is not usable.
+[46:26] So what you do is actually to filter the image out.
+[46:31] So again, we have an input image, which entails this step in intensity, but it's a bit noisy.
+[46:39] So what we do is to consider a Gaussian smoothing mask that, as you remember, averages the pixels
+[46:50] in the neighborhood, but gives more weight to the pixel where the mask is centered at,
+[46:56] and then less weight to the tail of the mask.
+[47:01] And of course, the idea is that you apply the average operation here, then you move
+[47:06] one step to the right, and then you keep going.
+[47:09] The result will be the smooth image here at the bottom, which is the result of applying
+[47:15] the smoothing Gaussian kernel or mask with the input image.
+[47:21] At this point, you apply the derivative filter, and then what you get is magically one blimp.
+[47:31] So one patch of the image where you have a high gradient, and here the second derivative
+[47:37] is zero.
+[47:40] Because first you go up and then you go down, so that's why you have.
+[47:44] So now it will be very easy to detect where an edge is.
+[47:48] You just look at the peak of the derivative, and that's where the edge is, which corresponds
+[47:55] more or less where the actual edge really is.
+[47:57] Does that make sense?
+[48:02] Good.
+[48:03] So as I said before, what we've done will work fine, but for computational reason, it's
+[48:10] easier to exploit the property of a convolution that says that the convolution is associative.
+[48:17] Which means that instead of first moving the image and then taking the derivative of the
+[48:22] image, what we can do is to first take the derivative of the smoothing mask and then
+[48:30] apply the resulting mask that I refer to as a G prime to the input image.
+[48:36] The advantage is that we only do the convolution with a big two by two matrix, the image only
+[48:43] once here.
+[48:44] Instead of here, you would do it twice.
+[48:46] When you do the derivative of the mask, do you need to pad the mask with zeros?
+[48:52] Yeah.
+[48:53] Every time you have to do, you have to account for the multiple conditions, yes.
+[49:01] So here, you see how here actually the width of the mask is quite large.
+[49:05] So we have about 400 values.
+[49:09] So remember what the smoothing Gaussian mask was.
+[49:14] It's just a Gaussian, just a peak.
+[49:16] Of course, it's discretized.
+[49:18] So what is the derivative?
+[49:20] Here the derivative is positive and here the derivative is negative.
+[49:23] So how does this derivative of the smoothing Gaussian mask look like?
+[49:29] Like this.
+[49:31] First the derivative is positive and then the derivative is negative.
+[49:34] So then if you apply the derivative, differentiated Gaussian filter to the original input, we
+[49:44] get the same output.
+[49:46] Isn't that neat that we do this and what's that?
+[49:53] Now in reality, what we care about are the two-dimensional images.
+[49:57] So what we had to do is to smooth the image in two dimensions.
+[50:04] So basically, accounting for the two-dimensional Gaussian smoothing mask, the one that was
+[50:11] here, this one here, this is two-dimensional.
+[50:16] Basically, you can view it as a Gaussian in two dimensions.
+[50:22] And now you have to take derivatives in two directions, horizontal and vertical direction.
+[50:32] As you were saying, you have to account for variations not just with respect to the rows
+[50:37] or the columns, but with respect to both the rows and the columns, because the edge obviously
+[50:41] can be oriented in any possible way.
+[50:47] So this is just a straightforward generalization of what we did before.
+[50:50] Again, the idea is that instead of performing the smoothing of the image, we first take
+[50:58] the derivative of the smoothing mask and then we convert that to the input image to
+[51:02] save on operations.
+[51:06] So you do that and you get as an output image two images, one which encodes the derivatives
+[51:19] in the x direction and the other one that encodes the derivative in the y direction.
+[51:27] And pixel by pixels, you take the square values and you sum them, the result is still an image.
+[51:36] And then you look at those pixels in the resulting image that has a maximum value.
+[51:46] There is a little bit more to that, but we will see that in the next slide.
+[51:50] Does it make sense?
+[51:56] So this is in particular how the Gaussian filter looks like in two dimensions.
+[52:02] When you take the derivative with respect to the x direction, again, here it's going
+[52:07] up, so the derivative is positive, here it's going down, so that's why you have a ballet.
+[52:12] And then when you do the y, it will be in the orthogonal direction.
+[52:18] So this is the filter that you will have here and the one that is rotated by 90 degrees
+[52:24] is the filter that you have here.
+[52:26] How does this work for diagonal edges?
+[52:30] Is it the same thing or?
+[52:32] Yes, because that is accounted for here.
+[52:36] That's why at the end you have to take basically the square root of the squares of both.
+[52:42] All right, so let's see it in practice.
+[52:46] So let's get the image of this person first.
+[52:50] We use the differentiated Gaussian filter.
+[52:56] This will be the output with respect to y, that will be the output with respect to x.
+[53:01] These are the two images, sx and sy, that I mentioned here.
+[53:07] At this point, I combine them by taking the square root of sx squared plus sy squared.
+[53:13] That is pixel per pixel, so that's why as an output I still get an image.
+[53:17] I only select those pixels such that the value is greater than a certain threshold,
+[53:27] which is a designer choice.
+[53:28] Everything else is set equal to zero.
+[53:31] And finally, in order to have a crisp result, I apply a last step, which is the non-maxima
+[53:38] suppression.
+[53:39] Basically, I look in each neighborhood and for each neighborhood, I only consider the
+[53:45] points that are at a maximum, in order to have basically lines that are thinner.
+[53:52] Yeah.
+[53:53] Is this value h that we're dropping out all the things that are below a certain threshold,
+[53:59] is that sort of what you set on like an image slider for image trace?
+[54:03] For example, yes, because basically if you make h very high, then you don't get very
+[54:13] much.
+[54:14] On the other hand, you don't classify as an edge, something that is not an edge.
+[54:19] If you say you're making very low, then there is the risk that you're classifying as an
+[54:23] edge, something that is not an edge.
+[54:25] So it's really a threshold that you get, that you tune in order to find a good trade-off
+[54:29] between false positives and false negatives.
+[54:33] So that is worth a bit of tuning.
+[54:36] In any case, does the entire process pipeline make sense?
+[54:49] The concept, as I said, is quite simple.
+[54:52] You just take this smoothing in order to remove noise, then you take differences in y direction
+[55:01] and x direction, and then you have two images.
+[55:05] For each pixel, you have the differences in one of the two directions.
+[55:10] Then you combine them by basically summing them by making sure that you square this one,
+[55:14] you square the other one, you take the square root, that will be the output.
+[55:18] And then you do a little bit of post-processing in order to retain only those gradient information
+[55:24] that passes a threshold test in order to find good trade between false positives and
+[55:30] false negatives.
+[55:31] All right, so it was for edges.
+[55:34] Let's talk about corners.
+[55:38] So corners are also very useful features, especially for matching, for example, for
+[55:45] stereo vision.
+[55:46] Similar to edges, we have a number of criteria that we would like for a corner detector to
+[55:51] have, like repeatability, same feature can be found in multiple images despite geometric
+[55:57] and photometric transformations, and distinctiveness, meaning that information carried by patch
+[56:03] surrounding the future should be as distinctive as possible in order to make sure, again,
+[56:08] to make sure that you have consistent matching pairs across images.
+[56:14] In particular, in terms of repeatability, if you pick some corners here, then for whatever
+[56:24] reason you cannot pick on an image with slightly different pose, then you cannot find any matching.
+[56:33] So here is a case where this corner was not detected.
+[56:38] Actually none of these corners were detected, and other corners were detected.
+[56:44] And now we cannot find the matchings anymore, which means that we can do anything in terms
+[56:48] of processing these two images.
+[56:49] So this will be bad performance.
+[56:52] The other one is to be distinctive.
+[56:56] So if I detect this corner here, but I cannot describe it in a way that is distinctive enough
+[57:08] in order to understand whether this corner really corresponds to this one, this one,
+[57:12] this one, and this one, then again, I cannot do any sort of matching.
+[57:20] So do you have any intuition about how we could detect a corner?
+[57:24] So we said that an edge corresponds to a region of an image, whereby we have a sudden change
+[57:29] in intensity in one direction.
+[57:32] Exactly.
+[57:33] So a corner is basically defined as part of the image where you have changes in all directions.
+[57:48] And you exploit this definition in order to design a corner detector.
+[57:55] I'm not going to go into the details of how to design a corner detector, but by now you
+[58:02] get corner detectors already implemented for you in visual libraries.
+[58:06] But I just want to give an intuition.
+[58:09] The idea is to take a window, say a mask, and then you slide it around each pixel.
+[58:19] So if you are in a region that is flat, meaning the intensity is uniform, if you shake this
+[58:25] window around, the response is the same.
+[58:28] So here there is not an edge nor a corner.
+[58:32] If you said that you're close to an edge and you move the window up and down, then
+[58:40] the response is the same.
+[58:41] But when you move it in the orthogonal direction, then you have this drastic change in intensity,
+[58:48] which means that you have an edge.
+[58:50] If you're here, no matter how you move the window, you have a drastic change in intensity,
+[58:55] which means that you have a corner.
+[58:57] That's basically what a corner detector exploits in order to detect a corner.
+[59:04] Now one very popular corner detector is the so-called hardest detector that exploits this
+[59:12] notion that if you move a window locally in all directions and you have changes of intensity
+[59:20] in all directions, then you have a corner.
+[59:22] So that detector is referred to as a hardest detector.
+[59:25] What a hardest detector does is really to translate this notion of shaking around the
+[59:29] window into a mathematical test that essentially entails taking some derivatives and then processing
+[59:40] those derivatives through an uninvited composition in order to find the corners.
+[59:47] So here you can see how the hardest detector detects corners with remarkable repeatability,
+[59:59] even though the image is taken from a very different perspective and there are significant
+[60:09] intensity differences.
+[60:10] This is much more gray than this one.
+[60:16] In particular one can show, and this is due to the fact that the hardest detector reasons
+[60:21] in terms of eigenvalues, that the hardest detector is invariant to rotation.
+[60:27] So if you rotate the image, the hardest detector will pick up the same corners, which is great.
+[60:34] And it's also invariant to intensity changes.
+[60:38] So if you uniformly scale your image by the same quantity, so you add 50 to all pixels,
+[60:45] the hardest detector will pick the same corners, which again is great.
+[60:53] The problem though is that the hardest detector is not invariant to scale changes.
+[60:58] This is annoying.
+[61:00] So meaning that if I move away from an object, there is a danger that the hardest detector
+[61:05] does not pick the same corners that they picked with the previous image.
+[61:10] The reason why is that the case is that since the hardest detector uses a window with a
+[61:14] fixed size, at some scale something may look like a corner, but at another scale the very
+[61:22] same feature, but the very same geometric entity in the image may look like an edge.
+[61:32] So for example, let's say that this is the original image and you have this line.
+[61:37] You plan your window, you move it around, in all directions you have changes, we classify
+[61:43] it as a corner.
+[61:44] Now we get closer to the line, we apply this window with the same size.
+[61:50] So now, as I move the window around, I get change in this direction, but not so much
+[61:54] in this direction.
+[61:55] So now I classify this as an edge, which is disastrous.
+[62:04] Because if you do it for all corners, then you don't have any matching anymore.
+[62:08] And so stereo vision and then, for example, for robots, visual odometry, whereby you use
+[62:17] sequences of images in order to understand how much you have moved, can't be done anymore.
+[62:24] So this triggered a lot of research on how to find detectors that not only are rotation
+[62:30] invariant and intensity invariant, but they're also invariant to scale changes.
+[62:39] Some of the very popular ones are an extension of the Harris detector, referred to as Harris
+[62:43] Laplacian, or the SIFT detector, which is also very, very popular.
+[62:50] We won't go into more details about detectors, this is not really a class only on computer
+[62:55] vision, but I just want to make sure that you know the relevant terms in computer vision
+[63:00] for the main detectors, for example, SIFT.
+[63:03] So far we've talked about detectors.
+[63:07] Once you have detected a feature, you want to make sure that you describe it so that
+[63:11] you can associate it with the same feature in another image.
+[63:16] That's the role of a descriptor.
+[63:19] Descriptor describe the key points on features so that we can compare them across images.
+[63:24] The most unique way of coding a descriptor is just to detect a feature and then use as
+[63:35] descriptor the pixel intensities in the neighborhood of that feature.
+[63:47] Now today's descriptor is that we associate with a given key point an n by m window of
+[63:53] pixel intensities centered at that key point.
+[63:56] For example, here we have this blob, we consider as descriptor just the intensities of the
+[64:03] neighboring pixels.
+[64:06] Now the main drawback of this descriptor is that it's very sensitive to scale.
+[64:15] So if we get closer to this lump, then everything in the neighborhood will look very bright.
+[64:22] And then again, that is not a very good way of matching.
+[64:26] So it's very sensitive to scale, it's sensitive to poles, and it's also poorly distinctive.
+[64:33] So there are much better descriptors out there.
+[64:36] Again, SIFT is one of the more prominent ones.
+[64:38] SIFT is both a detector and a descriptor.
+[64:41] So SIFT is a detector and a descriptor, and as a descriptor, essentially relies on the
+[64:50] local distribution of image gradients around key points.
+[64:56] It takes many, many gradients, and indeed, the descriptor is a 128-dimensional vector.
+[65:02] So actually, the SIFT detector and descriptor is a very heavy weight descriptor.
+[65:10] So that's a disadvantage.
+[65:11] The advantage, though, is that it has a number of very appealing properties in terms of scaling
+[65:17] variance and the variance of rotation and so on.
+[65:20] There are many others out there, like orb risk.
+[65:25] For my work on visual geometry for navigation, asteroids for robots, I was using, for example,
+[65:32] orb.
+[65:33] You have very robust situations whereby you have dramatic changes in intensity.
+[65:41] So you're basically jumping on an asteroid, and you have a pitch black of the universe,
+[65:46] and then you have the very shiny white reflection of the sand.
+[65:54] And as you bounce, you have this pitch black or very bright white.
+[65:58] So you need to have a detector that is very robust with respect to these sudden changes
+[66:02] in intensity.
+[66:03] So orb works very well for us.
+[66:05] I mean, the point is that if in the future you need to reason at a level of detectors
+[66:13] and descriptors, there are a bunch out there.
+[66:16] Most of them are already implemented in visual libraries.
+[66:20] So what you would do is first look at the literature about what people say in terms
+[66:23] of advantages and disadvantages.
+[66:25] But most importantly, you would try them all and see which ones work best.
+[66:32] Now since 2010, 2012, a new paradigm has emerged in computer vision that relies on neural networks,
+[66:43] in particular in convolutional neural networks.
+[66:45] This is a completely different paradigm that in a nutshell implements the same functionalities
+[66:56] that we described before in terms of filtering, in terms of detecting features, describing
+[67:03] features, and so on.
+[67:05] But it does so in a completely different computational paradigm, which is the paradigm of neural
+[67:10] networks.
+[67:11] We won't be covering neural networks in this class, so if you're interested, then you
+[67:15] should take 274B, so principal robot autonomy 2, whereby the first module will be about
+[67:23] learning-based and neural network-based vision and control.
+[67:28] And in particular, we have one week where we will discuss how neural nets can be used
+[67:33] to do a lot of the tasks that I explained before.
+[67:39] And in particular, what they do very well is the fourth task, that of semantic understanding.
+[67:45] For example, detecting images, putting bounding box around objects, and so on, to the point
+[67:50] that neural nets have become the de facto standard for computer vision applications
+[67:56] in robot autonomy.
+[67:57] The disadvantage, well, first of all, they need a lot of data to train this more learning
+[68:04] procedure as opposed to mathematical computational procedure.
+[68:09] But that is not so much of a problem.
+[68:12] Right now, there are very large data sets to train neural nets.
+[68:17] But the problem is that sometimes it's very hard to understand how exactly neural nets
+[68:26] really work after they have been trained.
+[68:28] For example, you can see how in the first layers, you can see that, so these are basically
+[68:33] the visualized initial layers of a CNN.
+[68:37] You can see they can be interpreted as a mask, whereby, for example, here it looks
+[68:42] like you're taking differences, and then you're taking energies for a small thing.
+[68:46] So these basically are masks that are learned from data in order to classify objects and
+[68:54] so on.
+[68:56] But they're not super interpretable.
+[68:57] I mean, sometimes they are, sometimes they're not.
+[69:00] To the point that it's an open question of how much one can trust a neural network application.
+[69:06] If I tell you that in order to detect an edge, I use a Gaussian filter and a derivative
+[69:10] filter, you know exactly what they're doing.
+[69:12] Here it's a little bit less clear.
+[69:14] So now you're in an airplane that is trying to detect other objects on the runway, and
+[69:22] it's based on a neural net, and you know exactly what are the computations that a neural net
+[69:27] is doing in order to detect other objects.
+[69:29] So the question is, am I relaxed, I sit back and relax, or am I going to be concerned?
+[69:35] To the point that, for example, a number of agencies in the United States such as NASA
+[69:42] and DARPA have specific programs in order to improve the interpretability of neural
+[69:49] net pipelines for visual processing and for control.
+[69:53] At the same time, try to reason in terms of assurances of properties that this system
+[69:59] has.
+[70:00] For example, I work on a program with DARPA called Assure Autonomy, where the problem
+[70:04] is very simple.
+[70:06] So the problem is that you have a plane that is maneuvering on the tarmac on the runway.
+[70:12] It's trying to align itself with the center lane in order to take off.
+[70:17] So it's relying on a camera in order to detect the center lane for the runway, and then on
+[70:24] a simple proportional derivative controller in order to make sure that the airplane is
+[70:29] aligned.
+[70:30] So you have as an input an image, as an output you have steering control for the front wheel.
+[70:35] In principle, with the classical approach, this is super easy.
+[70:38] You just put the edge detectors that I show you today, they're trivial.
+[70:43] On the other hand, if you use a neural net, the question is, how do you ensure that from
+[70:47] time to time the neural net doesn't give a crazy output, maybe because there is some
+[70:52] snow or some reflection or something?
+[70:54] What type of assurances you can give?
+[70:55] Well, this is a very active problem of research.
+[70:57] So if you are interested in this kind of research, let me know.
+[71:01] All right.
+[71:02] So these are all I wanted to say in terms of filtering, detection, and description.
+[71:07] Obviously, as it is usual for all the other topics in this class, there is more to it.
+[71:12] I gave you some readings at the beginning of the lecture.
+[71:16] You can ask me if you're interested in getting deeper.
+[71:18] Here, I just wanted to give you a general idea of the first three steps.
+[71:22] And on Thursday, we will look at this type of extracting more large-scale features that
+[71:30] might have also semantic meaning in order to A, inform localization and B, inform decision
+[71:37] making.
+[71:39] So I'll see you on Thursday.

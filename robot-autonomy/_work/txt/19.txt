@@ -1,0 +1,583 @@
+[00:00] All right. So today we're going to move on to the fourth module of this class that deals
+[00:13] with reasoning and decision making. And in particular, today we're going to cover one
+[00:20] of the most basic tools in order to endow a robot with basic reasoning capabilities,
+[00:27] number two as state machines. In one another, you have already encountered state machines,
+[00:34] at least implicitly in the past. Today we're going to discuss them a little bit more in
+[00:41] detail. The topic of state machines is fairly simple. On the other hand, when you go to
+[00:49] industry, most likely a lot of your time will be spent debugging state machines. Turns out
+[00:56] the state machines can get extremely tricky and give rise to undesired behaviors that
+[01:01] you will try to discover and correct, but the process will be very time consuming. Fortunately,
+[01:10] there are some basic techniques and design patterns that you can use in order to engineer
+[01:19] state machines that are less prone to errors. This is somewhat the objective of this lecture.
+[01:26] So the key concept is simple, making them work on practical robots is quite complicated.
+[01:32] In particular, the objectives of today's lecture are to introduce the notion of state machines,
+[01:39] discuss the relevance in terms of strengths and limitations, and finally introduce some
+[01:43] tools that you can use in order to properly set them up. Most of this lecture is taken
+[01:51] from a lecture at MIT from Leslie Kebling and colleagues in a basic class taught in
+[02:00] the EECS department at MIT. Now, a function in general is a map between
+[02:11] an input and an output. A state machine instead is a methodology in order to model a system
+[02:21] whose output depends on the entire history of the input. So in a map, you have an input,
+[02:29] that input gets transformed, perhaps very non-linearly, into an output, but there's
+[02:34] no notion of a history of an input. While in a state machine, the notion of history
+[02:38] of an input is the defining concept. So we can basically define a state machine as a
+[02:45] computational model for systems whose output depends on the entire history of their inputs
+[02:51] at a very high level. Now, a state machine per se is not an algorithm,
+[02:56] it's just a modeling framework. The same way you would use market decision processes or
+[03:01] probability densities in order to model a problem. We look at probability formulations
+[03:09] of filtering as a modeling tool, but then we have to divide algorithms. We use market
+[03:14] decision processes as a modeling tool for decision making. Actually, we will see that
+[03:19] in the next lecture, but then you have to design algorithms. Similarly, for finite state
+[03:23] machines, they are a modeling tool, but then you have to design algorithms in order to
+[03:27] manipulate them. Now, state machines can be used in a variety
+[03:33] of ways, for a variety of tasks. First of all, and this is the most basic application
+[03:39] of state machines, you can use them synthetically in order to specify a program for a robot.
+[03:48] Like for example, a simple robot could be an ATM machine. Behind the hood in the ATM
+[03:54] machine, there is a state machine that says, if I send a card in the card reader, I should
+[04:00] ingest the card, then I should read the numbers, then I should some other operations. All of
+[04:05] that is encoded into a state machine. But another way of using state machines is
+[04:12] in terms of analysis. Like for example, you can use a state machine to model the interaction
+[04:19] between an autonomous agent and some other agents in the environment, say a self-driving
+[04:25] car and some pedestrian, and try to reason about the possible failure modes that your
+[04:31] control algorithm for the autonomous agent could give rise to. So this is more for analysis
+[04:37] as opposed to control synthesis. Finally, you can use a state machine in order
+[04:42] to predict the behavior of other agents in order to simulate, for example, the safety
+[04:48] and efficiency of the autonomous stack of a robot. For example, it's very typical to
+[04:53] model pedestrians in simulation by using a finite state machine, and then test in simulation
+[04:59] and the behavior of your autonomous car when it interacts with the pedestrian, where the
+[05:03] pedestrian is going to interact with your autonomous car according to some state machine.
+[05:11] So there are many different ways you can use a state machine, all of them quite important,
+[05:15] to the point that if you stick with robotics fields, you'll be working with state machines
+[05:20] for the rest of your life. Most likely, unless deep learning takes over everything and state
+[05:28] machine becomes obsolete. Now, state machines are useful quite a big
+[05:36] deal to the practitioner for all the reasons that I've just discussed in order to synthesize
+[05:40] a controller, in order to analyze a controller, in order to predict the behavior of other
+[05:45] agents on the roads. But it is also of interest to researchers, there is still quite a bit
+[05:51] of work on developing new tools for state machines, for example, in order to prove their
+[05:57] correctness in order to learn them from data and so on and so forth. For example, here,
+[06:04] we just pulled up a paper from Chris Manning, who is a professor here in computer science
+[06:09] from 2019, doing some work blending the field of learning with the field of state machines.
+[06:16] So it's still, even though it's a very old topic, probably one of the oldest topic in
+[06:21] the field of robotics, it's still an active field of research.
+[06:26] Now, what is a state machine from a mathematical standpoint? To specify a system whose output
+[06:35] depends on the history of an input. In principle, we could have a very complicated function
+[06:41] that for each possible history of an input, it maps a given output. But that function
+[06:48] will be very difficult to specify because the space of possible histories grows exponentially.
+[06:55] So you will need to specify the behavior of that function for an exponentially large number
+[07:00] of possible inputs. That from a practical standpoint will be horrible.
+[07:05] So the approach of a state machine, which is, by the way, the approach that we've already
+[07:09] seen in most of this class, this quarter, is to introduce the notion of a state that
+[07:16] in a compact way captures whatever it matters in order to predict an input based on the
+[07:24] history, predict an output, well, output and information based on the input sequence.
+[07:30] In particular, a state machine comprises a set of states, a set of inputs called the
+[07:38] input vocabulary, and a set of outputs called the output vocabulary. Then comprises two
+[07:46] key maps. One is the state transition function, very similar conceptually to the state transition
+[07:52] model that we use in order to specify the dynamics of a robot. This is a map that maps
+[07:57] the current input and the current state into a new state. And then an output function,
+[08:05] a map that maps the current input and the current state into an output level. Note that
+[08:12] here there is no dependency on the entire history of the inputs because the idea is
+[08:16] that all that dependency is encapsulated into the notion of a state, S of T.
+[08:24] This is in general a key theme in modeling and control. You have two different approaches.
+[08:34] One is a purely input-output and another one is a state space approach whereby you introduce
+[08:39] a notion of a state in order to simplify the map from the input to the output through the
+[08:45] notion of the state. And of course, you also have to specify an initial state, S of zero.
+[08:52] For the very abstract level, then the way that the state machine would look like is
+[08:55] that we have a bunch of states. In this case, we have three states. We have an input vocabulary.
+[09:02] In this case, we have three possible inputs. And then we have the space of outputs. That's
+[09:08] the output vocabulary. And then we had to specify the two maps, the input map and the
+[09:12] output map. The input map from a graphical perspective is represented via arcs. So an
+[09:19] arc means that if you are in state S of zero and you apply input I one, then you transition
+[09:26] to state S of one. If instead you apply input I zero, then you transition to state S of
+[09:32] two. So again, here, conceptually nothing new. In a way, this is the very same model
+[09:39] we use in order to model the state evolution of a robot. The point here is that the same
+[09:45] model can be used much more generally to specify the high level behavior of a robot
+[09:52] or any automated machine for what matters, for example, an ATM machine.
+[09:57] As I said, we have a second map, which is the output map that specify the output that
+[10:07] the state machine would provide when from a given state, you transition to another state
+[10:14] and a given input. So for example, if you are in state S of zero and you apply input
+[10:19] I one, then the state machine outputs a level O one. We'll see some example later on that
+[10:27] will clarify this concept. And actually, let's see an example right away. So this is a fairly
+[10:33] simple example, but actually a very real example. Let's assume that you are at a gate and at
+[10:39] the gate is a bar that can be in three possible positions, either the top, meaning that the
+[10:46] bar has been raised, at the bottom or somewhat in the middle, meaning that the bar is either
+[10:51] raising or lowering. Now, there is a sensor that tells us if the car is in front of the
+[10:59] bar or if the car has just passed through the bar. And the gate can take the following
+[11:07] actions. It can raise the bar, lower the bar or do nothing, waiting, for example, for
+[11:15] the next car. Now, as you can imagine, we want a behavior that looks something like
+[11:20] if a car wants to enter, then the bar should go up. In reality, it will be more complicated.
+[11:27] Most likely we need to enter a ticket or something. But let's assume that this is free parking.
+[11:33] The only thing is that you want to regulate the rate at which new vehicles enter the parking.
+[11:39] The gate has to stay open until the car has gone through the gate. And finally, the gate
+[11:44] has to lower the bar once the car has gone through the gate. So how do we model this
+[11:51] behavior by using a state machine? Well, first of all, we have to introduce the notion of
+[11:56] states. And here there is some freedom. I mean, we can specify a state machine in many
+[12:03] different ways. Obviously, you would like to have a state machine where the number of states
+[12:07] is as small as possible. Copy occupies less memory, but most importantly is easier to
+[12:14] understand and easier to verify its correctness. But having said that, sometimes there is some
+[12:20] flexibility. So coming up with good set machines is actually an art. So in this case, it's quite
+[12:27] simple. So the states, you can think of them as being waiting for the next car, raising the bar,
+[12:35] the bar has been raised, or we're logged in the bar. So four states. Inputs are a little bit more
+[12:40] complicated. And again, here you can see how there is some freedom. The key question is that machines
+[12:47] is trying to find a minimal representation in terms of states and inputs that produce a
+[12:50] desired behavior. More on this later. But in this case, we choose to use as inputs the no car at gate,
+[12:58] car at gate, gate at top, not gate at top, gate at bottom, no gate at bottom, car just exited,
+[13:04] no car just exited. And then the output, think of this as a sort of a display that the gate is
+[13:11] given to the driver or any bystander, is whether the gate is raised, lowered, or not. Not means
+[13:18] no operation. So we're just waiting for the next car. So there is no car at gate.
+[13:33] You only get one of those inputs per time set, or do you get multiple of those inputs per time set?
+[13:38] No, you get, so in a given state, you have one input only that allows you to go to the next state.
+[13:45] Yeah. So when the gate is at top, the car has to be there. Otherwise,
+[13:51] the gate will be not at top. And that's exactly what the state machine.
+[13:55] Maybe something messed up.
+[13:56] Yeah, that's a very good point. So when you analyze the state machines, usually you also
+[14:04] have to introduce additional states that then capture the notion that there is some anomaly.
+[14:12] Like, for example, here the idea, as we will see in the state machine, is that we are constantly
+[14:18] polling the sensor to check whether there is a car. What if the sensor is not returning any value?
+[14:24] We're not capturing that here. But in principle, we should capture that.
+[14:28] And that will lead us into another state that we don't have here for simplicity,
+[14:32] which is we have an anomaly. Or what if we have some inconsistency in
+[14:40] the states that we observe? Absolutely. But for simplicity here, I just want to convey the notion
+[14:45] of what the basic state machine looks like. So the state machine then, as I said, is represented
+[14:50] as a graph where nodes are the states, and then the arcs are leveled by the input
+[14:57] that triggers the transition from a given state to the next one, and the corresponding level.
+[15:02] Like, for example, if you're waiting, we constantly poll a sensor. If the input is not
+[15:10] car at gate, then we do nothing, and the level is no operation. If instead there is a car at gate,
+[15:18] then the level is raised, and we go into the state where we are in raising mode.
+[15:24] Then we constantly poll the sensor to measure the angle of the gate. If the gate is not at top,
+[15:35] keep raising it. Basically do nothing. Well, actually keep raising it. And once we're at top,
+[15:41] we transition into the state that says raised. Say that we poll the sensor every second or so.
+[15:49] And then again, we have these loops waiting for the car to go through, or once a car goes through,
+[15:55] then we go into the lowering, then it takes some time to go into lowering, and then we go back to
+[16:00] the waiting. What are the tricky things that can happen? Like, for example, maybe there is a car
+[16:05] that is tailgating, and the sensor has not detected that. So we might have a car that is
+[16:12] going through where the bar is lowering, and in the state machine we have no provision to handle
+[16:16] that gate. So you can see how immediately state machines can become quite complicated. You might
+[16:22] find the failure modes that maybe you do not consider when you first design a state machine.
+[16:29] So that machine is actually, architecting a state machine is a bit of an iterative process.
+[16:34] The state machine, you test what happens. Most likely you forgot to account for some failure
+[16:40] mode. You add new states, new inputs, new outputs, and you keep iterating. And we'll see, even though
+[16:48] again, state machines are not the sexiest, most popular topic in robotics. You'll see that when
+[16:55] there are open source projects, many of the complaints or open tickets are about the behavior
+[17:01] of the underlying state machine. And then we'll give an example later on. Now, state machines
+[17:09] allow us to specify the behavior for a very broad class of tasks we're interested in,
+[17:16] but not for everything. Like, for example, let's assume that we want to devise a state machine that
+[17:22] tells us whether a given string of arbitrary length has a number of parentheses that is
+[17:30] balanced, meaning that you have an equal number of opening parentheses and equal number of closing
+[17:35] parentheses. Simple task, right? Now, the problem is that we're saying here that the string can be
+[17:45] of equal length. And so you might have cases whereby you keep counting and you have a certain
+[17:52] number of parentheses and a bigger number of parentheses that are opening, bigger number of
+[17:56] parentheses that are closing. The problem is that, as you may try to convince yourselves,
+[18:01] is that devising a state machine for this task will require an infinite number of states, which
+[18:07] is in contrast to our assumption of a finite state machine where we have a finite number of states.
+[18:13] And in reality, it turns out, and here it will be quite brief, that the state machine are a
+[18:20] computational method in order to specify behaviors. But in terms of its modeling power,
+[18:26] they're quite low in the stack of the possible tools that you will be using.
+[18:34] Turing machine, if you're aware of it, is basically at the top in terms of
+[18:41] modeling computational power. Finite state machines are more or less at the bottom of the ladder.
+[18:46] Having said that, are still very useful and widely used.
+[18:52] All right, so the concept of a state machine is relatively simple. But as I already mentioned,
+[19:00] a key challenge is how to architect them in a way that they are not overly complex.
+[19:07] And second of all, they're correct. One of the most basic tasks that
+[19:12] one has to deal with when architecting a state machine is try to reduce the number of states
+[19:21] in your state machine without losing any behavior that you would like the state machine to generate.
+[19:29] Now, there are different ways of architecting a state machine in a principal way. The first way
+[19:36] that deals with the problem of reducing the number of states encompasses a set of algorithms that
+[19:43] take as an input a state machine and as an output produces a state machine that produces the state
+[19:48] behavior, but with a number of states it is minimized. Basically, the idea is to remove
+[19:53] redundant states. And we'll see an example in a second. A second approach for architecting a
+[20:01] state machine in a principal way is to use hierarchical decompositions, whereby you put
+[20:07] together some states into super states and this hierarchical composition allows you to
+[20:13] better understand the behavior of the whole system without losing any information.
+[20:19] And finally, using some common design patterns in order to architect state machines in a way
+[20:25] that is as modular as possible. First of all, in order to have interpretability. Second of all,
+[20:30] in order to possibly swap different modules if you want to update some part of your autonomy stack.
+[20:36] So let's look first at the notion of reducing the number of states of a state machine.
+[20:43] So the idea of, and there are different ways to do it, but the idea is to identify combined states
+[20:50] that have equivalent behavior in an effort to reduce the size of a state machine. Equivalent
+[20:56] states, broadly speaking, are those states that produce the same output and for all input
+[21:03] combinations, they transition to the same states or equivalent states. So basic idea is if by
+[21:10] mistake, and that happens when state machines become very complex, you have redundant states,
+[21:16] you duplicate states, you try to remove them. So there are different algorithms to do that,
+[21:21] but one of the most, one of the simplest ones proceeds by first placing all states into
+[21:29] an equivalent class of states. This is, of course, a coarse simplification. It means that
+[21:34] you start with the hypothesis that your state machine can be modeled with a single state,
+[21:39] which in general is not true. And then you start partitioning this coarse state by dividing into
+[21:47] sub-partitions of states that are not equivalent to each other. And particularly the way to do it
+[21:54] is to partition this initial set based on how to behavior, meaning states that produce different
+[22:01] outputs should belong to different classes, they are not duplicates. And second, you continue
+[22:07] partitioning the superset by forming subsets that transition to different states. So the
+[22:16] idea is that you have a big state machine, you collapse everything into one state that in general
+[22:22] is too coarse, and then you start partitioning. We're going to see an example. The good news is
+[22:28] that these algorithms are relatively fast. Let's see an example. So here the task is to
+[22:36] detect a given sequence. Basically, we are given as an input a sequence of 0, 1 numbers. We want
+[22:46] for the state machine to output after it has seen the third number, whether one of those two
+[22:52] sequences have been detected. So if you give us an input sequence to the state machine 0, 1, 0,
+[23:00] it should output true. I recognize it. And we symbolize that with a 1. If we see instead 1, 1, 0,
+[23:10] we should also output 1. If we see any other three number, three digit sequence,
+[23:17] we should output false. We have not recognized that sequence. So how would you design a state
+[23:22] machine for this problem? Well, the most obvious way is to consider a tree structure whereby
+[23:31] you start at a state s of 0. That's an initial state. At this initial state,
+[23:38] you can see two possible inputs, either the digit 0 or the digit 1. This will be the first
+[23:44] digit in the sequence. So if you see 0, then you go into a new state. And if you see 1, then you
+[23:55] go into the other state, s2. Then you get to serve the second digit. So again, you split into two
+[24:03] possible states, s3, s4, s5, s6. So this is if you get as an input 0, this is if you get as input 1,
+[24:18] input 0, input 1. Now we want to detect input sequences 0, 1, 0 or 1, 1, 0.
+[24:31] So in the third, we consider further the third digit.
+[24:38] So this will be 0, this will be 1, this will be 0, this will be 1, this will be 0,
+[24:43] this will be 1, this will be 0. These numbers are the inputs that I observe.
+[24:49] And then finally, we reset the state machine to, again, the initial state at 0. After we've seen
+[24:57] three digits, either we recognize the sequence or not, whatever, we go through the initial state.
+[25:04] Now, here we have just to specify the behavior in terms of state input next state mapping.
+[25:11] What about the outputs? Well, we want to detect a sequence at either 0, 1, 0 or 1, 1, 0. Let's
+[25:17] consider 0, 1, 0. The sequence 0, 1, 0 will be detected if we are in this following path.
+[25:24] So if we had this transition, then we output 1, which means that we've seen the sequence,
+[25:31] but all the other transitions should output 0.
+[25:37] While for 1, 1, 0, it means that we are here. So here we output 1, but here we output 0, 0, and 0.
+[25:45] Does it make sense? So this is a state machine that would detect a sequence at 0, 1, 0 or 1,
+[25:53] 1, 0. I would say that the sequence is 0, 0, 0 as an input. So I start here, first digit brings me
+[26:02] to S1, second digit brings me to S3, second digit brings me to the initial state, and it outputs at
+[26:13] 0, which means that this sequence was not recognized. Yeah?
+[26:18] Instead from S1 down to the S3, S4, just to go to S2, because that's also the state 1.
+[26:28] If you go from S0 to S1, that's taking a 0, and you know the state S.
+[26:33] That's exactly right. And that's the point of this example.
+[26:37] This is the most trivial way of setting up the state machine,
+[26:40] but it uses a number of states that is not minimal. Actually, we can find a state machine
+[26:45] that produces the same desired behavior with a lower number of states. And as you correctly
+[26:51] mentioned, notionally, S1 and S2 do not need to be split, because they capture the same notion.
+[27:01] So they could be actually put together as equivalent states. And that's exactly what
+[27:06] the algorithm does. What the algorithm does is to start by putting all states
+[27:14] into an equivalent class of state. So essentially we're saying, let's try to see if actually we can
+[27:21] run the state machine with the same input output behavior with only one state.
+[27:25] But in general, this is not true. And in particular, the first way to split
+[27:29] this partitioning is to note that states S6 and S4 produce as an output something that is different
+[27:39] from the other states. So obviously, we needed to split this partition into two equivalent classes.
+[27:49] Now, the question is, can I then use these two states in order to craft the state machine,
+[27:56] or in order to keep splitting? Well, we have to see again if indeed all the states here belong
+[28:03] to the same equivalent class, or actually they model different behavior. Well, let's first see
+[28:11] the next state behavior. So in case of S0, S0 goes to S1, S2. So the same partition.
+[28:23] Okay, so that's fine. S3 goes to S0 that belongs to this partition, and S5
+[28:31] goes to this partition. So these are compatible with this partition. But S1 goes to either S3 or
+[28:39] S4. But S4 belongs to the other partition. So actually, it does not belong to this partition,
+[28:45] I have to introduce a new class. And then I keep going. And as a result, if I do this algorithm,
+[28:50] and one should do a proof that actually this algorithm produces the right results,
+[28:56] I find the four states that allow me to specify the state machine. In particular,
+[29:03] the state machine in terms of those four states looks like this, which is basically
+[29:07] what you were saying. So we go from S0, no matter what output, I say x, x means that the output,
+[29:16] no matter what input, x means that the input can be either 0 or 1. We go to S1 prime.
+[29:26] This will be the set, the modest equivalent class, S1, S2, exactly what you were saying.
+[29:33] Then from S1 prime, we can go to S3 prime or
+[29:39] S4 prime. Then from S3 prime, we go, no matter what the input, to S0. So there is that.
+[29:56] Well, from S4 prime, in the case of the input 1 and 0, we also go to the reset. But in the
+[30:09] case of input 1, also in the case of input 0, we output 1. Otherwise, we output 0.
+[30:20] So let's see if this reduced state machine produces the same behavior. Like, for example,
+[30:27] let's assume that we want to detect 0, 1, 0. So whatever the first digit, we go to S1 prime,
+[30:34] exactly what you were saying. Also, this is 0, this is 1. If we get 1, we go into this state here.
+[30:41] And then if we get 0, we output 1. We have recognized this sequence.
+[30:45] So let's look at 1, 1, 0. We go to S1, we go to here. Again, we see S0, so we output 1.
+[30:55] So we have recognized this sequence. Everything else will be recognized as
+[31:00] another sequence, so not recognized.
+[31:03] I thought in the previous slide, it was written that this algorithm will take polynomial time.
+[31:09] But if you have to generate the tree and then kind of split from the tree outwards,
+[31:18] would that be a polynomial explanation?
+[31:20] Yeah, I mean, it's polynomial in a number of states.
+[31:24] So the polynomialities refer to the number of splittings.
+[31:30] No, the generation of the tree is something that you have done,
+[31:33] but it's not part of the algorithm. So now there should be proof to show
+[31:36] that actually this algorithm is correct. Turns out it is correct, and there are tools out there
+[31:40] to take a state machine as an input and produce one with minimal dimensionality, which is pretty
+[31:46] cool. Another way, and here we'll be quite brief, of probably architecting a state machine
+[31:54] is to introduce hierarchical decomposition, whereby basically you aggregate states into
+[32:03] super states, and then you have transition in between super states. This is basically to have
+[32:08] more interpretability for your system. Again, there are tools out there, but I won't go into
+[32:15] further details. And finally, a principal way of architecting a large state machine
+[32:21] is try to modularize it. So to have small state machines that take care of individual behaviors,
+[32:29] and then you compose them according to some basic operations. The three basic
+[32:34] operations entail sequential decomposition, whereby the output of one of the state machines
+[32:39] becomes input for the next one. Of course, here we're assuming that the output vocabulary for
+[32:45] the first state machine corresponds to the input vocabulary for the second state machine.
+[32:52] This is the so-called cascade combination. You can also do a parallel combination,
+[32:57] whereby the assumption is that the input vocabulary for the two state machines is the
+[33:01] same, and then the output is simply the concatenation of the two outputs.
+[33:09] And again, here's not much magic, it's more like a design pattern. Try to think in a modularized way
+[33:14] in order to ease the convection certification process. And finally, the feedback construction,
+[33:23] whereby the output is fed back as an input. This is, for example, used in order to
+[33:31] have counters or this kind of state machines. All right, so
+[33:40] state machines, as I already said, are relatively easy to grasp. But designing good state machines
+[33:48] is remarkably hard. So now one of my PhD students, Pinoy, is going to give you some hands-on
+[33:56] guidelines about how to properly design a state machine. In particular, as it is in the spirit
+[34:02] of this class, we are going to introduce a tool that is available within the ROS environment
+[34:08] that allows you to design state machines in ROS.
+[34:12] OK?
+[34:19] You had his rights, right?
+[34:19] Sorry?
+[34:20] You had his rights?
+[34:21] Yeah. I should probably get through this.
+[34:25] I had the mic.
+[34:31] All right. OK, so just bear with me for a second.
+[34:34] Sweet. OK. So thank you, Marco, for the interest. Yeah, so for those who don't know me, I'm
+[34:42] Pinoy. I'm one of Professor Pavone's PhD students. And so, yeah, we'll talk a little bit about
+[34:48] implementing these state machines. And we'll look at code, which I think is exciting. So
+[34:52] we'll look a little bit at kind of, practically speaking, how we can leverage some of these tools.
+[34:58] And, yeah, so first, basically a common strategy. So, yeah, let's just backtrack a little bit for
+[35:06] one second. Basically, what I'm going to try to convey in this section is a couple of things.
+[35:11] So first, make it clear that all the tools that I'm presenting here are optional. So unlike a lot
+[35:18] of things when you're designing your robot, you don't have to actually use a tool for, like,
+[35:24] an existing tool to design your state machine. But it is nice to know that there are
+[35:29] both existing tools out there to help you. And there's also not only existing tools,
+[35:33] but very, very common ways of implementing it that you should get kind of more familiar with.
+[35:38] Mostly because, chances are, if you join, like, Zoox or Waymo, one of the first thing you'll have
+[35:44] to do is just look at their ginormous code base and then try and navigate your way around and find
+[35:48] where their, basically, state machine is. And so there's a lot of, kind of a lot of this that
+[35:53] you'll probably have to do. So recognizing the kind of, like, usual patterns is a good thing.
+[35:58] So yeah, so one of the thing that most people do for is to leverage, basically,
+[36:02] object-oriented programming. I mean, everyone does this nowadays. So you basically will build,
+[36:07] like, a class that will kind of abstract your state machine. And that class is going to keep
+[36:12] track, for example, I mean, a common way is to keep track of kind of your state and, for example,
+[36:16] like, a variable that stays in that class. And then you'll have some sort of fixed rate that
+[36:23] will, you'll have some sort of method that will be run at some fixed rate that will update your
+[36:28] state, update your transition, get your inputs, do all the kind of transitions that you need to
+[36:34] actually run your state machine. We'll look at things a little bit more concrete, just to give
+[36:40] you a sense. So this is the state machine for the flight mode of PX4. So for those who don't know
+[36:47] what PX4 is, it's basically one of the most popular, probably the most popular open source
+[36:54] flight software for drones. So it can do quadrotors, fixed rings, a lot of things. So if
+[37:00] you ever have to fly a robot, you probably will find out about PX4. And so one of the things that
+[37:07] they have in their documentation to just kind of convince you that this is, you know, these ideas
+[37:11] of finite state machines actually being relevant is that basically that their transition diagram
+[37:15] for their flight modes. And there's a lot of care that goes into this and making sure that it's
+[37:20] simple and making sure that it also reflects the code properly or that the code that you're
+[37:25] implementing reflects the state machine properly. But yeah, it just gives you a sense, for example,
+[37:29] in this, like, they have the different flight mode that they describe as, you know, for example,
+[37:33] RTL is returned to land. Then it tells you that, you know, you have a state that corresponds to
+[37:38] being landed or to landing. And then you have a state that corresponds to loitering,
+[37:45] which is just like kind of staying in the air. So if you go look at kind of any existing
+[37:50] robotics stack that runs on robot, chances are you will be able to find a finite state machine
+[37:57] diagram like this. And we'll look a little bit, so, and then if you go look in the actual code,
+[38:03] so I'll go around a little bit and try to find a little bit kind of the specific lines of what
+[38:08] I'm talking about. So if you look in the PX4 flight stack, they'll have a file, for example,
+[38:13] commander.cpp. That's just like a C++ file that essentially has this for loop that I'm talking
+[38:19] about. So in that class, you have a for loop that gets executed, and you can think of this as, like,
+[38:24] the main loop of the robot, of the drone that's flying. It's just going to execute that at some
+[38:28] fixed rate. And then do, inside that loop, do all this state transition among a different state
+[38:33] that you need. And it's, the state machine abstraction is helpful enough, was it helpful
+[38:38] enough to, like, the hundreds of developers on PX4 that they, you know, they have abstracted that as,
+[38:44] like, kind of a helper function. So they even, if you just go and kind of try to track how they're
+[38:50] actually implementing a state machine, they have, like, their dedicated tools to just do that.
+[38:54] And so you go look at, for example, in their state machine implementation, they'll have something
+[38:58] that will check, you know, for a given state. If, like, the given input was, in that case,
+[39:06] it's asking it to change the navigation mode into acro mode, then it will try to update the vehicle
+[39:13] status to say that you're in acro mode. So this is obviously, like, very simple. Usually you do,
+[39:17] like, I mean, this implies, this actually triggers a whole bunch of other things, but this is, like,
+[39:21] the simplest version you can think of a transition. For those who are curious, acro mode is the ones
+[39:26] that people used to do backflips and things, so you might not want to trigger it by accident.
+[39:31] If you go look, so something that Professor Pavone mentioned, I was kind of curious to see
+[39:36] how mature their state machine was, and on PX4, and see if you just go look at, like, the issues
+[39:42] on their state machine for, for PX4. There's a lot of them that are still open. There's about,
+[39:49] yeah, about, like, 14 or 15 with very intense discussions and back and forth with 24 comments
+[39:56] and people screaming at each other about how it's the right way of doing this. So it's very
+[40:01] interesting, and it's all open source, so if you're curious, and if you want to help out designing
+[40:05] this, feel free to jump in. There's another implementation of the state machine, of a state
+[40:11] machine that you probably have seen. Have you guys looked at navigator.py in the homework? You have?
+[40:16] Okay, sweet. So that's your state machine, right? And it's, like, the simplest probably
+[40:21] state machine you could possibly come up with for a robot that does something interesting.
+[40:25] But if you go look at just how it's implemented, you basically have, right, you have this run
+[40:30] function, and then in that, your run function, you have a bunch of LF statements, which gives you,
+[40:37] tells you basically, you know, given that you're a certain mode, so a mode in our case would probably
+[40:41] corresponds to a state, right, of our state machine. It will check different things, whether,
+[40:46] for example, you're aligned or whether you're near your goal, and then it will switch your,
+[40:49] your mode in the right, to the right mode. Okay, let's talk a little bit more about ROS,
+[40:58] like ROS tools specifically for state machines. So something that you might not know is that ROS
+[41:05] actually comes with, yeah, a tool that allows you to do that. So that's also one of the reasons
+[41:12] why we teach, I guess, like, the concept of state machine is because, you know, at the beginning of
+[41:17] the class, we basically explained that ROS comes with all these tools that do all these magic
+[41:21] things that you can leverage. That's only true if you can cast your problem to the format that
+[41:26] those tools want, right? And so if you can think of your problem in terms of, like, designing a
+[41:32] formal state machine, then DAL actually allows you to use some of these tools. So the part that
+[41:37] you understand kind of, like, the first part of that lecture, so you can think of your problem,
+[41:40] okay, you recognize it, that this, I'm designing a finite state machine right now, and then maybe
+[41:44] it's, like, worth for me to think about, like, the transitions and the actual, like, formalism of it,
+[41:48] so then you can use tools like SMAC, which stands for state machine, and then, and then, yeah,
+[41:55] kind of have, like, a whole bunch of tools with that. So not only does it allow you to kind of
+[41:59] implement this in, like, a very clean way, in an abstract way, and if you actually use SMAC,
+[42:04] then it also comes with visualization tools, so you can monitor your state machine so that you can,
+[42:08] you know, share your state machine amongst each other, or even, like, include it in a
+[42:12] report, on that final report, for example. So we'll go a little bit into, like, how SMAC works,
+[42:18] the basic syntax, and we'll look at code as a promise. So the SMAC, like, framework
+[42:26] is, basically comes with, like, these two main components, which are basically state and
+[42:32] containers. So a container, you can think, so a state is a state, I mean, exactly what you'd
+[42:38] expect it to be. A container is, for example, a finite state machine. So they have a slightly
+[42:43] more generic version of what a state machine is, just because they do kind of fancier things with
+[42:48] it, but you can think of, yeah, a container as a state machine, and, and I'll explain how you can
+[42:54] use that later. So the state, basically, yeah, so the state corresponds one-on-one with the state
+[43:00] that we described earlier. You, basically, when you implement state, and I'll show you example
+[43:05] code of this, you'll inherit from SMAC that state, which basically only requires you,
+[43:12] so Python has no way of actually enforcing you to do that, but you should implement two functions,
+[43:16] which is the constructor, and then the execute function, which will basically execute the state.
+[43:23] And then the requirement is that you execute returns outcomes.
+[43:29] Let's, yeah, okay, so this basic syntax, literally, you know, taken from the documentation, a lot of
+[43:35] this is online, so we're just going to walk through some of this, so that we can, you know, if you have
+[43:39] questions, you can just ask. And so, as I said, basically, you'll have the constructor, you can do
+[43:45] kind of arbitrary initialization, which you'll have, the important thing is that when you, in your
+[43:49] constructor, you'll want to define what the potential outcome of your state is, you'll see
+[43:54] where the outcome come in. Basically, you can think of outcome, like a common outcome would be,
+[43:58] like, success or failure, so let's say you're running a state, and you have, like, a success,
+[44:02] successful outcome, or a, like, failure outcome, then that could map to, for example, a different
+[44:08] transition. And then your execute, basically, just does what it needs to do, so do a backflip,
+[44:14] and then outcome success or failure, for example. So pretty simple.
+[44:22] So now the container is basically the state, the state machine, the state machine abstraction,
+[44:26] and then what you're going to do is you're going to essentialize a container, and then
+[44:30] you can add state to it, and then add, basically, the transition to that. So if you go look at,
+[44:37] basically, the basic example also, so if you create a state machine, which just is that
+[44:42] container, essentially what you'll want to do is then create, so foo in that case is, for example,
+[44:46] the state that I just showed you, so that'd be, like, one of the state implementation,
+[44:50] and bar would be a different state. After you've created a state machine, you would basically add
+[44:55] two different, the two different state, foo and bar, and then you could, you'd say, okay, outcome
+[45:00] one, which could be, for example, success, what you're going to want to do is transition back to
+[45:04] bar, and then, you know, failure could be a different outcome. You can also map to outcomes
+[45:09] of the state machine. It might be clearer in this diagram, actually. There we go. So what you just
+[45:15] saw basically corresponds to this state machine, so the two state, whether the outcome one basically
+[45:20] means that you're going to go to bar, so you can take outcome a little bit as corresponding to,
+[45:25] like, the input formalism that we had before in the state machines, and then outcome two will do
+[45:30] the other transition, and some of the outcomes are basically, like, outcome of the container,
+[45:34] not of the state, but you don't really need to worry about this.
+[45:41] Let's maybe look at the actual code of this, and then let's look at composition, and then we'll
+[45:50] look at code. So two things, so you, all these things that we talked about, so the composition
+[45:56] that we talked about, sequence, cascade, parallel, and feedback, sorry, they actually have basically
+[46:02] one-on-one correspondence with smack, basically, a container. So what you can do is you can create
+[46:09] basically containers, like a sequence container, which is basically you're going to give it, like,
+[46:13] two state machine, and you're going to basically, that state machine, the resulting state machine
+[46:16] is now, like, the cascaded version of the state machines, and you can look up in the, I won't,
+[46:22] you know, we're not going to go into too much of details of the syntax for this, but just
+[46:25] suffice to know that, you know, if you can break down your state machine and kind of that with
+[46:30] these different patterns, then it makes it super easy to use smack and design the overall state
+[46:35] machine. And the other thing, we'll look at visualization a little bit, but smack allows you
+[46:39] to visualize very easily. So let's look at code because that's more fun. Okay, let's look at,
+[46:46] like, the simple example, the foo bar, right, that we just looked at, just so that you see
+[46:50] basically what this would look like, this would look like, does, can everyone see this?
+[46:54] Is it, like, big enough? Okay, so this is literally just, like, the example that we had earlier.
+[47:01] This is a state, maybe I'll start with this section here. So in our main function, right,
+[47:07] what we're going to do is we're going to initialize our node, as we always do, then we will create a
+[47:12] state machine container, and we'll specify, you know, those are the outcomes that are basically
+[47:16] the outcomes of the state machine. And then, is everyone familiar with the width syntax?
+[47:25] Probably not, right? It's, like, weird syntax. Okay, so all this does, so you have to use this for
+[47:30] smack, but basically it defines a block that sets, like, a context, essentially. So it's very, it's
+[47:36] really just a fancy way to, for, to tell Python to basically go look at this class, and then this
+[47:44] class basically has a couple of functions that will set up things in the background for you,
+[47:48] and then even if your code here fails, it will tear it down. So, like, a classic example for this
+[47:55] is, like, a file. So you could think of, like, you could say, okay, with, like, this file opened,
+[48:00] go write this code in the file, and then maybe your writing code fails, and you want to make
+[48:05] sure that the file gets closed, basically, so it doesn't stay open, and your your crash program is,
+[48:10] like, holding on to open resources on your computer, then that'll allow you to do that.
+[48:14] But that's kind of, you kind of don't really need to understand any of this to just use it.
+[48:20] You suffice to just, like, remember that this is how you make sure that you basically say that,
+[48:26] like, that state machine is the state machine that all these states are being added to.
+[48:30] So you're basically saying with state machine, I'm going to call add, so I'm going to add those
+[48:35] two states, foo and bar, and then I'm going to execute the state machine. So executing will
+[48:41] basically start in an initial state, and then will the first state that you added, and then will
+[48:49] will do the transition until it exits, until there's basically no more transition to do.
+[48:54] And we can run this code very easily, and feel free to run it yourself too.
+[48:59] So we're just going to start a little raw score,
+[49:03] and it will give us a bunch of very little useful info here that just telling us basically
+[49:09] the different transition that we implemented. So it's basically telling us, you know,
+[49:16] just a setup code. Essentially all of this is just telling us what, like, what you've just built.
+[49:21] And then this is telling you, like, the state, so it's executing the first state foo,
+[49:25] and then basically it's saying that foo gave the outcome, outcome one, which the state machine
+[49:31] knows that means it needs to transition to state bar, and then as expected you're executing the
+[49:35] state bar after. Okay, I know this is not interesting, but I will just show you something
+[49:40] now that is probably way more interesting, because it's relevant to your final project
+[49:45] that you will need to implement. So I think this is interesting, but maybe not an interesting
+[49:50] example. So the, something that we can do, right, so as like I said that basically navigator l pi
+[49:59] is a state machine, and I was curious to see if, you know, would it be possible to rewrite
+[50:06] basically our navigator in the smack framework, and what that would kind of look like. So just
+[50:12] having a kind of a crack at it, and this is not like the only implementation obviously you can do,
+[50:16] but I'm going to show you a little bit what, you know, you could do for your own, for example,
+[50:21] final project if you're trying to do something that's more complicated. So I didn't include all
+[50:25] the states, but I included some of them, but if you were trying, for example, to implement
+[50:29] something that does way more complicated states. So one thing that happened a lot in the previous
+[50:35] years is people would have things like they would get stuck in a corner, and then their state
+[50:40] machine was not, was basically just stuck there. It had like no kind of detection of the fact that,
+[50:44] you know, their EKF was going haywire, or that their sensors were all bad. Well, really all
+[50:50] they should have done is just, you know, reset all the localization, get to a state that just
+[50:53] restates everything, potentially like moves backwards a little bit, and then keep going.
+[50:58] So, you know, implementing these sort of like failsafe state can get you very, very far for
+[51:02] the final project, and SMAC can help you do that more effectively. So if you look at just kind of
+[51:07] what we implemented for the kind of navigation, there's basically just kind of three states,
+[51:13] right? So waiting state, that's just like your total bot, your total bot is going to be waiting
+[51:18] and kind of not doing like anything other than just waiting for commands.
+[51:22] And so, you know, executing that state essentially means that all you're doing is,
+[51:27] you know, you're sending zero velocity to your actuator. And then there's going to be another
+[51:33] state, which is going to be the planning state. So the planning state will basically define a couple
+[51:40] of outcomes, right? So we've successfully, which corresponds to basically whether the planner has
+[51:45] been, what the planner thinks just happened. So the outcomes could be a success, so you've
+[51:50] successfully computed a plan for your total bot, failure, you've received a new command that is
+[51:56] basically giving you like a new goal, right? Or you've received a new map, which probably
+[52:00] means you should re-plan, or you have an error, like when you computed it. So if you look at like
+[52:06] the code inside, this looks a lot, I mean, it's basically, you know, what your like re-plan
+[52:10] function and navigator is doing. And then we're going to have a third state, which is a tracking
+[52:15] state. And the tracking state is going to be basically you're, you have an existing plan,
+[52:21] and all you're doing is just kind of following it until you, until you reach the end. And I think,
+[52:26] so the state individually, there's a lot of like, little like syntactic details here, which I think
+[52:31] are not super interesting. But what's interesting is this, I think. So if you take time to actually
+[52:38] write your state of your total bot in kind of this nice abstracted framework, then when you're
+[52:43] designing your transition, they could basically just boil down to these couple of lines. And it's
+[52:47] super clean, it's super simple, it's easy to change, modify, to do whatever you want to test.
+[52:53] So for example, right, all I'm doing, creating a state machine, I'm saying, if you're in the
+[52:58] waiting state, and you know, the output is like, nothing happened, then stay in the waiting state,
+[53:06] right? But if you have a new command, if you're in the waiting state, and you're getting a new
+[53:10] command from someone on Rvis, for example, then you should probably switch to mode planning,
+[53:15] you should plan something. For example, or planning, if, you know, you're, if you're
+[53:21] planning and you have a success, then you should start tracking it. Or if you have a failure,
+[53:25] then you should probably just stop and wait, because you don't have any good plans, you should
+[53:29] probably just hang tight. And so you can like define all these, or for example, that's like a
+[53:34] nice little, makes it easy for you to define like, this transition without having to like,
+[53:39] think about too much of the details, it's like, okay, I will make sure that like, that state,
+[53:43] when it detects like, the plan is old, or the tracking state, so the state that's tracking
+[53:49] controller, that's tracking the existing path, right? If it detects that it's old,
+[53:53] for whatever reason, like maybe you're far from your start, or the timer has expired,
+[53:59] then I'll just say that the plan is expired. And then like, whoever is defining the state machine
+[54:02] is going to decide what to do. Maybe you re-plan, right? Or maybe when the plan's expired, you just
+[54:07] like, stop and you wait. So yeah, so super easy to like, abstract and kind of think about this
+[54:12] in like, very much like, the same framework, like some very like, theoretically grounded framework
+[54:17] that we just talked about. So I'm going to run this and just show you something else that you
+[54:22] can do that I think is useful. So I basically just have this launch file that's running this like,
+[54:35] modified navigator along with like, all this simulation stuff.
+[54:42] And then, so I have Rvis, and then what I'm also going to finish with is basically just talk about
+[54:48] this other tool now that this allows you to do, to use, which is a visualizer, which is called
+[54:55] smack viewer. And so if you run this, so if you install this tool, it's called smack underscore
+[55:02] viewer, and then you can run it. Basically what it allows you to do is, without like,
+[55:08] any additional work on your part, because you use the right formalism of state machine,
+[55:13] and because you use the right tool, you basically get this like, nice little visualization
+[55:18] of what your state is. And sorry, that trackpad is horrible.
+[55:32] And now, not only does it give you a visualization to like, make sure that, you know,
+[55:38] now you can inspect your state machine, and you can argue for hours with your teammate whether,
+[55:44] whether, you know, the error after waiting should transition to tracking or should transition to
+[55:49] planning. But when you're executing your state machine, for example, by giving your robot
+[55:53] a new plan, you can actually see the state evolve on your state machine, right. So it went to
+[55:59] tracking, so it went very quickly to planning, and then because it's super easy plan, it went
+[56:04] to tracking almost immediately. But then, and then you knew the entire time that it was in that
+[56:09] state. And as soon as it transitioned back to the waiting state, then, you know, so that's,
+[56:14] I think it's a super powerful tool when you're instead of sitting there and just kind of
+[56:18] wondering what is my turtle bot doing, just kind of trying to running over that fence,
+[56:22] and I have no idea what's going on. Having something like smack viewer running and just
+[56:26] telling you, oh you're in this state, looks like this transition is not being triggered,
+[56:29] that can give you a lot of insight and it can save you a lot of time. It's also just like a nice way
+[56:34] to document for other people jumping in and just kind of trying to figure out what you implemented
+[56:38] over the weekend. So, so yeah, that's it. Do smack is good. There's obviously open source software,
+[56:44] there's always little quirks here and there, but I think generally it's like basically there. We're
+[56:49] happy to help you guys kind of figuring out how to set it up for your project if that's needed,
+[56:53] and then smack viewer just like basically comes for free, right? It gives you awesome visualization
+[56:58] and just like good monitoring. So yeah, that's it. If you guys have questions,
+[57:02] I'm happy to answer anything. So yeah, so I recommend you to use smack. So traditionally
+[57:15] what happens in the final project is that the state machine that the students architected
+[57:21] were fairly simplistic, not accounting for failure modes and so on. And then in the
+[57:32] rush and under pressure, it was very difficult for them to debug errors. They had this monolithic,
+[57:38] humongous navigator.pi file, very difficult to understand what was going wrong, what type of
+[57:43] transition was creating issues and so on. So having said that, I encourage you to be
+[57:48] more disciplined in programming. That is one of the key learning objectives of this class.
+[57:54] And in particular, I believe that smack is a relatively easy tool to use, but also quite
+[58:00] powerful. So give it a try if you have time. So what we're going to do next time is then to
+[58:06] move to the topic of decision-making and uncertainty. So for now we have been talking
+[58:12] about uncertainty only from the perspective of localization and mapping. We're going to talk
+[58:19] about how uncertainty can be accounted for in order to compute decisions. That will lead to
+[58:27] the topic of Markov decision processing and in particular dynamic programming and
+[58:32] approximate dynamic programming. Based on that, we'll have a final lecture after the Thanksgiving
+[58:38] on reinforcement learning. Of course, it's just a preview of what you will see if you enroll in
+[58:45] 274B about the topic of learning-based perception and control. All right, so see you next time.

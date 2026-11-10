@@ -1,0 +1,871 @@
+[00:00] So today we're going to talk about ROS, the robot operating system. This is the software
+[00:13] environment in a way that we'll be using in this class to architect the autonomous tech
+[00:18] that we will be incrementally building throughout the quarter. I cannot under emphasize or overemphasize
+[00:24] actually the importance of ROS in the robotics community. If you will eventually become a
+[00:31] roboticist and have a career in robotics, the chances that you will be using ROS will
+[00:36] be extremely high. And that's one of the main objectives of this class is for you to familiarize
+[00:41] with ROS, the robot operating system. So the lecture today is going to be given by one
+[00:47] of the PhD students in my lab, Pinoy. He's a senior PhD student in my lab. He's a veteran
+[00:55] in ROS, in the robot operating system. So he's first going to give you an overview of
+[01:00] what ROS really is. He's going to give you a demonstration of ROS. And of course, in
+[01:11] the following weeks, by attending the sessions, you will become increasingly more exposed
+[01:16] to ROS to the level that you'll be able to build your own autonomous tech in ROS and
+[01:20] finally deploy it on a robotic platform that we'll be using in this class. So any questions
+[01:27] before we start? No? Good.
+[01:32] Cool. Okay. Thank you, Marco. Okay. Nice. I haven't done a CPT before, so cool. So yeah,
+[01:46] so today we're going to talk about the robotic operating system. And that's a bit of a different
+[01:49] lecture than what you're going to do for the rest of the quarter. So in case you guys are
+[01:53] still kind of shopping around for classes and everything, so this might be just slightly
+[01:57] different than the rest of the quarter, but it's still a very important class. The reason
+[02:00] is because most of the classes that Sipavonnya is going to teach are about algorithms, and
+[02:06] today we're talking about software, not necessarily algorithms in general. And so we'll dive in.
+[02:13] So writing software for robotics, it turns out is actually an extremely complicated task.
+[02:18] This is a picture I really like. This is actually from the DARPA Robotics Challenge, which happened
+[02:23] a couple of years ago. And this is a team that is operating a robot that is the Atlas
+[02:27] robot. It's actually the human robot that you see there. And there's a whole bunch of
+[02:32] people in the room, and they're all kind of monitoring. You can see, I think there's eight
+[02:35] screens over there. And I promise you they're all needed, and there's probably more screens
+[02:39] that you're not seeing that are doing different things. And that's just to basically get that
+[02:44] robot not to do anything that complicated. It's probably trying to walk up stairs or
+[02:49] doing just not hitting things. So actually, it's very complicated to run a robot, and
+[02:55] it's obviously very complicated to write software that runs robots. And something to
+[03:01] keep in mind is that, and one of the reasons we're emphasizing this is actually that you
+[03:06] will write real robotic software in this class over the quarter, and this is probably going
+[03:12] to be the class where you're going to interact with software that's the most complicated
+[03:15] you've ever seen. It doesn't mean it's going to be overwhelming. We're going to take you
+[03:20] through it, and there's a super phone that's kind of, you know, has an expertise now in
+[03:27] like taking people through kind of the process of learning this. But it's probably way more
+[03:32] complicated than software if you interact with it in CS229 and ML where everything was
+[03:36] self-contained in one little script, and you're just running it, and it kind of works. It
+[03:40] might depend on one library. Here, you're going to have a lot of moving parts, and it's
+[03:44] going to be just a little bit more complicated. But we're going to teach you the tools that
+[03:48] how to deal with that. So in general, how people deal with the complexity of robotics
+[03:54] system is with a very popular strategy, which is modularity. So basically, the idea is pretty
+[04:00] simple is that, you know, we're going to basically break down this very complicated system instead
+[04:04] of, you know, writing it as one big program. We're going to build it. We're going to break
+[04:07] it down in kind of separate little modules. And the way that we're going to do this is
+[04:11] by following something called a design pattern. So I don't know who here has taken like a
+[04:16] principle of software engineering or a class like that that probably is thought at Stanford
+[04:21] that define what a design pattern is. So there's this, you know, definition at ISOL from Wikipedia,
+[04:27] which is basically just a reusable solution. It's just like a way of designing solution
+[04:31] that is very, very general and that can address kind of similar problems that keep coming
+[04:36] up. So the problem that keeps coming up in robotics is that these pieces of software
+[04:42] are very complicated. And so we've got to break them down in modules. And then the way
+[04:46] to do that is we're going to use a specific design pattern. The specific design pattern
+[04:50] that we're going to use here that we're going to talk about today is the PubSub design pattern.
+[04:56] So what that means is basically we're going to take, again, our software, we're going
+[04:59] to break it down into different components. And then what that design pattern tells us
+[05:03] to do is to basically define something called a topic. And what topic are is a little bit,
+[05:08] you can think of chat rooms. I might be too old now to teach this, but I don't know if
+[05:15] people still have chat, still remember what chat rooms are like, but they're basically,
+[05:18] you know, these like forum essentially where everyone could just, you could go on a topic
+[05:21] that let's say cars and everyone could just write anything. And then anyone who's following
+[05:25] the topic cars could just get the pose that someone else is listening to. So we're going
+[05:28] to define these topics and then each of the modules, now that we've broken down our software
+[05:33] into can do one of two things. It can either publish to a topic. So that means send a message
+[05:39] on a topic or it can subscribe. So that means that it will say that anything, anyone who's
+[05:44] publishing anything on a specific topic, I want to get a message from there. So that's
+[05:49] a design pattern that basically defines the design pattern. And that design pattern is
+[05:52] something we call PubSub. So just a little diagram of that. Our client are like those
+[05:57] modules that I'm talking about. The topics are just kind of like this abstract idea,
+[06:02] which are, you know, Slack channels would be a topic. That might be the more modern
+[06:06] equivalent that you guys would know. And then the, you know, the messages being passed around.
+[06:12] There are many different ways of implementing this design pattern. That's something to keep
+[06:16] in mind. And you also already use PubSub a lot every day. And yeah, we have a question.
+[06:23] Yeah, yeah. So in this specific example, you only have one client that publishes and two
+[06:34] of them that are subscribing, but really PubSub allows anyone to publish and anyone to subscribe.
+[06:41] And so there's already actually a very common example of PubSub that you're already using
+[06:45] every day. And I don't know if someone can come up with an example. There's something
+[06:49] that I'm thinking about. Reddit would probably be on a thread. That would probably be a good
+[06:54] PubSub if you subscribe to a thread. Yeah, the back.
+[06:57] Are you giving this lecture?
+[06:59] Interesting. Yeah, maybe. That's an interesting example. Yeah, if I, if maybe if I let everyone
+[07:07] talk, then it would be something like PubSub. The thing I had in mind is actually mailing
+[07:12] lists. You guys are probably signed up to like your volleyball club mailing list or
+[07:16] to Stanford like cycling mailing list or something. That's PubSub. So you have this
+[07:20] topic that is a cycling mailing list, right? And then anyone can send an email to this
+[07:25] and everyone else who subscribed to the like cycling mailing list will get a message that
+[07:30] about like a bike that you want to sell or something like that. So PubSub is everywhere.
+[07:34] Not just in robotics, not just in ROS. And there are alternative ways of obviously dealing
+[07:40] with that modularity and that complexity. There's different things. So there's for example,
+[07:44] you could do request reply so that you could design or data binding so that you can have
+[07:51] like a shared, a shared basically object that you know you're sharing data over. So you
+[07:58] can think if we're taking the mailing list example and we're implementing it as with
+[08:01] a data binding pattern that would be, we would have for example like a chalkboard in a hallway
+[08:05] and all writing things on it. And then everyone is kind of seeing what everyone else is writing
+[08:09] on it. So that would be a different way of doing things than through PubSub. So that's
+[08:13] just something to keep in mind. That's like a choice that we're deciding to basically
+[08:17] teach you is like PubSub is one way of dealing with that complexity. And let's just start
+[08:24] on what is ROS, which is really what this lecture is about. So that sounds like maybe
+[08:28] a little contrived way of going about it. But the thing to really understand and that's
+[08:34] like really what I think if there's one thing you kind of have to remember from today, you're
+[08:37] probably not going to remember the syntax that I'm going to show you. But just remember
+[08:41] that what the PubSub architecture is and then the fact that ROS, the robot operating
+[08:46] system is just an implement at its core, at its most basic definition is an implementation
+[08:52] of the PubSub design pattern. So it's really just a very like someone basically took that
+[08:57] design pattern and implemented it. It's specifically geared to robotics and it's network aware,
+[09:03] but all of these are kind of like a little bit, you know, fuzzy things. And then there's
+[09:09] another thing too. So the part where it gets a little complicated is that, you know, if
+[09:13] you're trying to be like very pedantic, that's why they'll say that it's just an implementation
+[09:16] of PubSub. But usually in practice, and that's, you know, this is a very practical class.
+[09:21] So I'm going to try to teach you a little bit also kind of what people mean when they
+[09:24] say ROS. They don't usually just mean the PubSub implementation. They also usually mean
+[09:29] the set of tools that people have developed over time that use ROS. And by ROS, like by
+[09:35] that I bet use like this PubSub implementation. So when people are saying, oh, I'm using ROS,
+[09:40] that might mean that they're using this PubSub implementation, but that probably also means
+[09:44] that they're using some of the, you know, super popular packages that are supported
+[09:48] in ROS. So that's like, you know, the very kind of like everyday definition is this set
+[09:54] of tools. But if you really want to be very strict about your definition is just an implementation
+[09:59] of PubSub. And there are alternatives to ROS. Although, I mean, some of them will qualify
+[10:06] as an alternative only for part of it. But for example, LCM is a more lightweight version.
+[10:10] Drake is also an alternative more for like the tools part. And there's plenty of other
+[10:15] things. So ROS is not the only solution to or the only implementation of this PubSub
+[10:21] pattern or of these alternative design pattern. But why then is ROS so popular? For a couple
+[10:28] of reasons. I mean, it's not it's not that it's like faster or that it uses some magic,
+[10:33] you know, parallel processing or anything like that. There's very kind of like down
+[10:36] to earth reason why ROS is so popular in industry. One of them is just because people generally
+[10:42] don't want to reinvent the wheel. So if someone has already done kind of a pretty good visualizer,
+[10:48] it's probably a good idea to just use that instead of spending, you know, your like half
+[10:53] of your seed fund to just develop that. So there's definitely just this kind of reusability
+[10:58] part that people definitely bank on. ROS has been around for a while. That's one of
+[11:02] the first one. And so the maturity of the software is just, you know, it's a common
+[11:06] thing that people will look for. And also, it's just adoption, essentially. There's a
+[11:11] lot of like very good group of roboticists that use ROS. And so and they publish a lot
+[11:17] of open source software. So software is free for you to grab online. And so because of
+[11:22] that, it's nice to be able to use to basically, you know, leverage other people's work. And
+[11:28] if they happen to have implemented everything on top of ROS, then you can use that very
+[11:31] easily. But obviously, we're not industry here. This is a class. So why are we using
+[11:36] it? For a couple of reasons. I mean, because it's used in industry, we'll use it here,
+[11:42] just because it prepares you pretty well, I think to kind of the reality that that is
+[11:46] going to be there. I can at least vouch for the fact that if you're going to work on a
+[11:53] real robot, you will maybe not use ROS, but you will almost guarantee that you will work
+[11:59] on something, that you will use something that is very similar to ROS. And that's going
+[12:03] to be like a very good thing for you to just kind of always fall back on in terms of like
+[12:07] what you expect, how things are generally designed. And it's also just an insurance
+[12:12] policy for you, which is, you know, teaching you kind of the most popular thing, the most
+[12:17] stable software. And yeah, what's closest to basically an industry standard. It also
+[12:22] means that there's a ton of resources online. So we can only teach so much and the TAs are
+[12:28] doing a great job in like bringing up material and putting material on the website. But that's
+[12:32] going to be limited. And you're going to have questions are going to be outside of the scope
+[12:34] of necessarily, you know, the notes that Professor Provone writes up. But there's, you know,
+[12:40] literally books that are written from people from Stanford and from outside of Stanford
+[12:44] on this topic. So there's a ton of documentation. That's not necessarily true for all these
+[12:48] other alternative framework that I talked about. Is there questions before we go a little
+[12:55] bit, there's just kind of an overview of what ROS is. Cool. Okay, so we'll go into a little
+[13:01] bit more kind of concrete stuff about ROS. So just real quick history. So ROS came out
+[13:06] of Stanford, well, in part out of Stanford of the project on the called the STAIR robot.
+[13:13] But really kind of the people, the main people is like a, you know, the magic group of people
+[13:17] is the Willow Garage group that was funded by Scott Lassonde, who did a lot of awesome
+[13:24] things. But one of the probably one of his biggest contributions to the field was definitely
+[13:29] to start Willow Garage that put a lot of things out there including the PR2 robot, which you've
+[13:34] probably seen before. It's, I should have included a picture here. But it's, you know,
+[13:38] this kind of looks like a fridge and it has two arms and it looks a little clanky now.
+[13:44] There's those incredible back in the days and it's still in a pretty good platform.
+[13:49] But Willow Garage basically was kind of a startup, but it is almost kind of a nonprofit
+[13:53] startup in the sense of if you look at everything that they've done for the community in general,
+[13:57] it's pretty incredible. And now if there's kind of a descendant of what Willow Garage
+[14:02] was is probably the open source robotic foundation, which is actually in the Bay Area. And that's
+[14:08] a nonprofit that is basically trying to make sure that we're funding people that are developing
+[14:12] for Rust and are developing tools for Rust and Gazebo and things like that. So Willow
+[14:17] Garage is probably like kind of the, you know, magic word behind Rust, if you have to think
+[14:22] of one. And OSRF is the modern equivalent of this.
+[14:28] Cool. And also Rust has a lot of existing, like an existing project that it's integrating.
+[14:35] So a lot of the things that you're probably using now if you're working in like computer
+[14:38] vision, for example, I suspect a lot of the libraries that you're used to, if you just
+[14:43] look for like a Rust wrapper, so it's a way of integrating whatever libraries you're working
+[14:47] on, like for example, OpenCV or OpenSOM, if you're doing navigation, a lot of them are
+[14:53] people have spent time making sure that they integrate with Rust very easily.
+[14:56] Okay, in terms of actually now, like if we're looking at what Rust code actually is, then
+[15:05] it's basically based on two components. So we had, you know, we had these, like, these
+[15:08] nodes and these topics, and those are kind of like abstract concept. This is more like
+[15:13] what if you look at like the source code of Rust, like this is what you'll find. It's
+[15:18] basically two things, really. I mean, the core of it is two things. So master and nodes.
+[15:25] So the nodes are exactly what you'd expect from this PubSub architecture. So there are
+[15:30] basically these modules that can either publish or subscribe to topics, and they talk over
+[15:38] these topics with these message abstractions, which they can be, for example, they can represent
+[15:42] camera images or laser scan data or motion control, and all of the things we're going
+[15:49] to talk about in 2.74 essentially probably have like a message equivalent in Rust that
+[15:54] you can go and find, like a pose estimate or, you know, an edge detection image.
+[16:01] So yeah, so we'll get a little bit, I'll talk a little bit about master later. We'll dive
+[16:07] in a little bit into what the nodes look like first. So what's a node? So node is a process
+[16:15] that runs on computation. I guess it's like the most general way of calling this a piece
+[16:18] of software. But essentially you can think of it like if you're in Python, it's really
+[16:23] just kind of your little Python script with your main function, right? That's like what
+[16:27] like a Rust node would look like. It's an individual process, and it'll run some algorithm.
+[16:33] And most likely it'll run some of the algorithm that you'll learn in this class. It's the
+[16:37] fundamental building block. So basically if you have to tell me what your robot runs,
+[16:42] you're probably going to describe it as like what the software of your robot looks like.
+[16:46] You'll probably describe it as just a bunch of nodes. And that'll basically be enough
+[16:49] for me to understand how your robot is architectured. Again, as a subscriber, as a publisher, note
+[16:58] again talking with each other over what we call topics, which is again, that is referencing
+[17:02] to this PubSub design architecture and the way to run it to their specific command. So
+[17:07] you, as part of the workshop classes, so that's, I think it's going to start tomorrow if I'm
+[17:15] correct on, you're going to do the Rust workshops on Fridays?
+[17:17] No, no, Monday.
+[17:18] Oh, Monday, okay.
+[17:19] No more for sections.
+[17:20] Right, sections, sorry. Oh, this class is like expanding every year. That's awesome.
+[17:25] So you're going to install the Rust package. So you're just going to install the software.
+[17:31] You know, it's an installer online, kind of like you've installed like Microsoft Word
+[17:34] or whatever. And then with that was going to come a bunch of commands that you can run.
+[17:39] And one of them is going to be, for example, Rust run. You're going to say a package, for
+[17:43] example, like my navigation package, and then a specific, the name of the node that
+[17:46] you want. So let's say like a LIDAR driver, like that could be a node. And there's a specific
+[17:53] command to initialize them. We'll go a little bit into code later, so you get like an even
+[17:56] more concrete idea of what Rust looks like. But it's important to understand that like
+[18:02] now these nodes can kind of give you this like nice little way of breaking down your
+[18:07] system into these parts. And so in the, that's like one example of the type of nodes that
+[18:13] you'll have in like a system is going to be nodes that correspond to specific sensors.
+[18:17] So like I said, LIDAR. So on the, you know, an Atlas robot like this, which is, that's
+[18:21] the old version, but you know, a giant robot, it has a ton of sensors, right? It has, you
+[18:26] know, a fisheye camera, it has a LIDAR, it has an IMU, strain gouges for pressure in
+[18:34] the feet. All these things basically in the software can be, all the individual sensors
+[18:39] can be abstracted as nodes. And then the same for actuators. So a motor in Atlas, if you're
+[18:46] building your software with Rust, would probably be a node, like an individual node. And that's
+[18:53] also true. So now, you know, a sensor can be a node, but that's also true of things
+[18:59] that are a little more abstract. So algorithms could be a node. So now you've learned, I
+[19:04] think you've done kind of, you know, a dynamics model for your robot. So you might have a
+[19:08] node that is actually just really good at, you know, predicting what the dynamics of
+[19:12] your robot is. We're like simulating forward your robot essentially. And that can also
+[19:16] be a node. So it's kind of weird, right? You have this architecture that is just made out
+[19:19] of a node. Some of these nodes are running like a motion planning algorithm that's pretty
+[19:24] abstract. And it's, and then another node beside that, that looks almost the same in
+[19:30] your architecture is actually running like a piece of hardware, like a motor that's in
+[19:34] the physical world. So it's pretty awesome. Now you have like this architecture that has
+[19:38] both parts that are abstract and parts that are actually like physical real world components
+[19:43] that are talking to each other. And it's like a very easy way to think about, Rust gives
+[19:47] you just kind of very easy way to think about, like organize them together.
+[19:50] You mentioned earlier we can think of nodes sort of as like individual scripts, but since
+[19:55] they're running independently of each other, if you have one node for dynamics and one
+[19:58] for sensors, how do they communicate with each other and make sure that they still run
+[20:02] simultaneously?
+[20:03] Yeah, that's a super good question. So that's where the pub sub really is what gives you
+[20:08] kind of that ability, right? So you could think of like the dynamics, if you have like
+[20:14] a simulation that simulates forward your dynamics of your robot node, could just be basically
+[20:19] running independently, but all it needs maybe as input is like your current, or some current
+[20:24] sensor measurement of like where you are, and then it rolls out the future prediction.
+[20:28] So all it really needs to know is kind of what it subscribes to, and then what it needs
+[20:33] to publish. So as long as that's well established for each node, you don't necessarily have
+[20:38] problem in synchronizing, but it is, it can be difficult to like synchronize obviously
+[20:43] like sometimes you'll be, well, one node needs to communicate to another node that I need
+[20:47] this specific information and you're not sending it. And this becomes like the art of, you
+[20:51] know, engineering the system. But in general, like pub sub has pretty good solutions for
+[20:55] that. Yeah.
+[20:56] So is like the frequency of a topic limited by the nodes, or is there like a Ross, also
+[21:03] a Ross, that's the answer?
+[21:06] So you definitely have like a, like your computer can only like run at certain speed. Obviously
+[21:10] that's like a bottleneck at some point. But yeah, individual node is basically going to
+[21:14] decide, and you'll see that in the code, that's like actually something that you set, even
+[21:17] like the most simplest node that you can write, that's like something that you can set. So
+[21:22] the nodes just decide like, I'm going to publish this at like a hertz, one hertz and
+[21:26] then, and then the other ones can, can, I mean, that might be good or bad depending
+[21:30] on kind of what you need that, that node to be doing. But yeah, it's basically up to you
+[21:34] like as a designer.
+[21:35] But I mean, does Ross have a limit on hertz?
+[21:38] Like throttle, different.
+[21:39] Like if you have a five-entry hive, it's not going to be able to have a limit.
+[21:43] Yeah, there's definitely, yeah, there's a point at which point like the, I mean, it's
+[21:46] mostly like your networking architecture. That's not going to be able, that's going
+[21:49] to be bottleneck, but there's nothing, as far as I know, there's no mechanism in Ross
+[21:52] that throttles the internal nodes. Yeah.
+[21:54] So in this schematic, the white box is the nodes and the green one is the topics, or?
+[22:03] Oh, yeah, good question. I'd say this is a little bit, yeah, I wouldn't say this corresponds
+[22:10] one-on-one to necessarily a node and topic. It's more like the, the white box would be
+[22:14] nodes, probably, if you were to like design something, and then probably more like the
+[22:18] blue arrows would be different topics. But yeah, I guess it's a little weird because
+[22:23] they're also linked in the, in the green cube. But I wouldn't necessarily read too much into
+[22:26] this diagram. This is just like to say that, you know, individual like algorithms are,
+[22:30] can be nodes and, and individual sensors can also be nodes. So it's just kind of like this,
+[22:35] this very generic thing that, that generalize across both software and hardware. Some specific
+[22:41] examples of this, you know, like very, very concrete, you know, you can have a lighter
+[22:45] one, you can have a lighter node, you can have a node that corresponds to a camera that's
+[22:48] publishing your images. That's, that's like the topic that's sending out is some, some
+[22:52] image topic. You can have, you know, some IMU that's sending out odometry data. So that's,
+[22:59] you know, acceleration and, and yeah, razor rotation, LIDAR. So all these things are actually
+[23:07] things you're going to deal with in this class. I think every single one of them. Yeah, that's
+[23:12] kind of cool. And especially LIDAR, because that's super expensive. And then somehow Professor
+[23:17] Pavone has some that you guys can use. Yeah. Okay. ROS master. So that's basically it for
+[23:24] node. Are there questions for nodes? We'll go into also like code in like a little bit.
+[23:30] That might help make this more concrete, but we're just going to talk about ROS master
+[23:34] a little bit. So ROS master doesn't really have an equivalent in the, in the, like, if
+[23:39] you think of this PubSub design that we're talking about, where we have these nodes and
+[23:43] some of these topics, the ROS master is not really like a part of that architecture. It's
+[23:47] just kind of a necessary evil that a little bit of like, once you actually start implementing
+[23:52] this, someone has to manage the forum. Someone has to manage the site channels basically
+[23:56] or the mailing list. So you can think of that. That's like, that's what ROS master is. It's
+[24:00] really just this process that basically you have to start every time you start your stack.
+[24:05] And what it'll do is it'll, it'll, it'll coordinate the nodes. It'll coordinate the publishing
+[24:09] the subscriber. You always only need one on a network. So as long as like you want
+[24:15] to every node to talk to each other, one ROS master is enough and something to, to keep
+[24:22] in mind. So that's, that, that becomes like a pretty common pitfall in the way that I've
+[24:25] had like very, very experienced roboticists, you know, make that mistake to think that
+[24:32] the messages go through the ROS master. They don't. And that's like important. Basically
+[24:38] like what ROS master is going to do is going to set up the topic. So if you have a node
+[24:41] that's subscribing and a node is publishing, like it's going to set them up on some topic.
+[24:47] And if you want to, you know, the, know the details, it's like, it's really just putting
+[24:50] like TCP connections between the two, but it's going to connect them. And then it's
+[24:53] basically going to back off. So your ROS master, and that will, I promise you just will like
+[24:58] come up in your final project. You'll be like, oh, it's cause my master is like the bottleneck
+[25:01] or something. Like all the networking is trying to go through ROS master and ROS master is
+[25:05] too slow and it's not what's happening. Like ROS master is just like setting up connections
+[25:10] and then backing off and letting the nodes talk to each other. Yeah. Yeah, good question.
+[25:21] Yeah, not really. You could do either. Like, I mean, the only thing maybe that matters
+[25:27] is that in reality, your robot's probably going to crash a bunch. So it can be nice
+[25:33] to not have ROS master on the robot, just so that, that way it's always kind of running
+[25:37] somewhere and you don't have to like restart it and everything. But that's like a very,
+[25:40] like in theory, it doesn't matter in practice because robots crash all the time. You might
+[25:45] want to put it somewhere that's like safe. Yeah.
+[25:47] It's just for initially connecting all the nodes and why is there a process? Why can't
+[25:53] it just get initialization sequence and then it's just done?
+[25:58] Yeah, great question. In theory, you could. The thing is a lot of these, a lot of these
+[26:05] systems have nodes that will like appear and disappear at runtime. So as you're running
+[26:09] your robot, like in my, like, Oh, actually I'm in this new mode of operation. So like
+[26:14] maybe now I'm running, you know, I'm at like a, I'm at a, I'm in like a self-driving car
+[26:18] and I'm at a stop sign and now I want to start a node that's actually like tracking pedestrian.
+[26:23] And that was not something I was doing before because I was on the highway. And so you're
+[26:26] bringing up this node and then that node needs to make sure that it's telling your
+[26:30] path planner that there are pedestrians around. So for these types of reason that like nodes
+[26:34] come in and out of the system online, a whole bunch. In general, like you'd want to have,
+[26:40] I mean, it won't, Rust won't even let you run without Rust master. So you'll, you'll
+[26:43] need it. But, but that's like, that's the practical reason for that. The nodes kind
+[26:49] of appear and disappear all the time. Is that good? Cool. Okay. Let's look at code.
+[26:58] Code's fun. Yeah. So this is a little bit like just, you know, the lines, you're going
+[27:03] to write this a whole bunch over the quarter. Basically that's what it looks like if you're
+[27:07] in a node, which in this class, you guys are gonna use Python. You, but just for the record,
+[27:13] Rust also has, you know, C++ libraries. It even has, you know, like Julia libraries,
+[27:19] which I'd encourage you to look up. But the Python, the Python interface looks something
+[27:24] like this. So on your Python script, you know, sending a message is as simple as making sure
+[27:30] that you're creating a publisher. And then you create a message, which is basically going
+[27:35] to look something like, you know, just creating like a Python object and putting like a string
+[27:38] in it essentially. And then you're going to use your publisher to publish the message.
+[27:43] And that's it. It's out on your topic. And whoever is listening for your trajectory that
+[27:47] you've just generated is, you can receive it. Cool. Let's look a little bit at what
+[27:54] the talker would look like. So actually, yeah, let's look at the publisher and the subscriber
+[28:01] first. So just going to go a little bit line by line on a publisher and a subscriber, and
+[28:05] then we're going to actually run it on the slap top. So essentially it's just Python
+[28:10] script. I'm sure, I'm pretty sure Python is a prereq for this class. So yeah, okay,
+[28:15] the two of you guys are giving me a thumbs up. So you guys should all be able to read
+[28:21] this. But this is just a generic Python script that you guys recognize. And then so all this
+[28:27] is doing essentially, you have, you know, your main function, and then it's talking
+[28:31] talker. And then your talker now is a node that is, we're going to make it explicit to
+[28:36] the publisher. We could also make it a subscriber, but this particular node is going to be a
+[28:40] publisher only, just for the sake of making this simple. So what this looks like. So the
+[28:46] first thing that we're going to do is just we're going to say that, like, hey, this Python
+[28:48] script is a ros node. So that's basically what that first line is doing, is basically
+[28:54] just saying, I'm a ros node, I'm called talker. You probably want to come up with better,
+[28:59] more descriptive names than that when you're actually going to implement this. The anonymous
+[29:04] keyword is basically, it's just basically that so that you can have multiple nodes with
+[29:10] that name. Ros is going to make sure that basically like that doesn't conflict, because
+[29:14] otherwise each node has to have a different name if you set anonymous with false. You're
+[29:18] going to create a publisher. The first argument here is basically just saying what the topic
+[29:22] is. So, you know, that big like blue colon, essentially, like that has, you know, that's
+[29:27] like the topic, that's like the Slack channel or the mailing list. So in this case, there's
+[29:31] going to be a topic chatter, which is going to be super interesting. And then the message
+[29:36] type. So in that case, it's a string. Something you notice, this is not a Python string object.
+[29:41] It's a ros message string. So at the top, we actually imported something from the standard
+[29:45] message library, which is something that comes with ros. And so it's basically saying, okay,
+[29:50] we're going to submit over chatter, we're going to submit, we're going to be sending
+[29:54] string type messages. And then we have a queue size, which is basically just saying like
+[30:01] if for whatever reason, for networking reason, this is, you know, for your point earlier,
+[30:03] if you ever get throttled, if you're kind of trying to send things too fast, that node
+[30:07] is going to make sure that like, okay, I might drop like the old messages and like at what
+[30:11] point do I start dropping messages or at what point do I, like how many do I keep, you know,
+[30:15] if I'm, I get a bottleneck from the network. Then it's going to get a param, which a parameter,
+[30:21] which is the rate at which it's going to publish. So again, to your point earlier that like
+[30:25] that's actually a parameter. In that case that we made it that you can set it from somewhere
+[30:29] else in your system, but that could also just be a hard coded, just basically saying ros
+[30:32] is going to run at this rate. This also, maybe some of you wouldn't be tempted to implement
+[30:37] this, you know, like in terms of like, oh, I want to run this loop. And I mean, you guys
+[30:42] have done plenty of coding. You might be like, okay, I'm going to import like time and I'm
+[30:45] going to, you know, have like a timer that starts and stops. You don't want to do that.
+[30:49] And the reason for that is the reason you want to use the ros rate is because you might
+[30:53] actually connect this to, for example, a simulator and your simulator might not be running in
+[30:57] real time. So it's a bit of like a subtle thing, but essentially like your simulator
+[31:02] might be running like slower than real time or even faster. And if that's the case, then
+[31:07] you want to make sure that all the other nodes that are like talking to simulator are using
+[31:11] the same like time. So that's why ros is kind of using its own clock essentially. And that
+[31:16] clock usually is, you know, the same as the clock on your wall, but for some specific
+[31:21] application, sometimes you want to make it run slower or faster in real time. Yep.
+[31:27] Do you mean like which argument was it a topic? So in that case it would be a chatter. So
+[31:36] yeah, the first like argument of when you submit, then you create a publisher is like
+[31:39] what topic is going to publish on. And then we're just going to log some information that's
+[31:44] essentially the equivalent of like your print line statement, right? Which you've probably
+[31:47] done a whole bunch of. And then all this is doing is going to put the message, which
+[31:52] in our case is also just a string. Sometimes you might like have to like this message might
+[31:57] actually be an object like a dictionary, right? Which has like your INU measurement in it,
+[32:02] like your accelerometer measurement, your gyro measurement, and then you'll have to
+[32:05] like fill all of these up. And then all you do is you publish it and then you wait for
+[32:08] whatever amount of time that you need to wait and then you just repeat. And that's it. That's
+[32:12] like an anatomy of like a super simple node. Yep.
+[32:15] So do you think you can sort of construct these nodes just with a function as opposed
+[32:19] to like actually creating an object that's of a certain class and giving it attributes?
+[32:25] This is like as simple as you could do it. I would say that in practice, yeah, probably
+[32:30] like I don't know. I mean, that's like very much like I guess the style thing, but like
+[32:34] 80% of the time I probably have some sort of class wrapper. Some of the things that
+[32:38] might happen is like, for example, like one, one of these class might actually contain
+[32:42] like a photo publishing a subscriber. So it's one node, but it can both publish and subscribe.
+[32:47] And so like you might be subscribing to the topic. You want to store it out in that class.
+[32:51] And then maybe you're running some path-bounding algorithm that's using this data and then
+[32:54] publishing it again at some rate. So it's actually, yeah, pretty common to like had
+[32:58] some, some class that wraps things. But yeah, that's a, it's a good point. It's good way
+[33:03] to organize your code too in general. But like for this, it's just to make it simple
+[33:06] basically. Yeah.
+[33:07] We added rostrate.sleep is like common practice. Or do we typically use like state machines
+[33:14] to make sure that it's constantly checking for interruptions though?
+[33:18] Yeah, so if you're, it depends on if you're writing. If you're doing anything that has
+[33:22] to run at a certain rate, then yeah, doing this kind of like this rostrate.sleep is probably
+[33:28] the way to go. Sometimes, so you'll see on the subscriber that I'll show, I'll show next.
+[33:35] That's maybe more what kind of you have in mind where you'd have like an interrupt. Like
+[33:38] you might want to just do something when you get a message. And then, and then, then that's
+[33:42] like probably more like a subscriber. But yeah, it depends what you're doing basically.
+[33:48] I would say that's probably the most common version, but it's an excellent point that
+[33:52] some stuff you might not want to run at 10 or some stuff you might just want to run whenever
+[33:55] you get an image in, you want to run some, some like computer vision on it. You will
+[33:59] see in the stack that you use, like the, for the final project, you'll have both of
+[34:04] these things. Like they'll be all over the place. Cool. So okay, we have this node that's
+[34:11] publishing and there's, you know, now you might want to know what is publishing or what
+[34:18] rate is publishing. And so there's a bunch of tools that come with ROS to help you do
+[34:21] that. So ROS topic list, ROS topic echo, which you give the name of the topic, we'll print
+[34:25] it. ROS topic Hertz, super useful for your final project. Cause you'll be like, why is
+[34:30] my state estimation all wrong? And then you'll find out that your LIDAR is sending you measurement
+[34:34] at like 0.01 Hertz. So you get one every, what is that? 10 seconds or no a hundred seconds.
+[34:40] So yeah, that's probably why. And so, yeah, all of these are useful. You probably won't
+[34:45] remember them now, but I'm just putting them here in the slide. So you have them as reference.
+[34:49] There was a question in the back, but sure.
+[34:52] On the previous slide, where exactly was the master being involved in that process?
+[34:57] Nowhere here. Well, okay, so you'd start it separately. This here, like the init node
+[35:04] is what like, and like at the back is Paul is talking to ROS master and like sending
+[35:09] up the sending itself, like registering itself as a node of the system. But there's not no
+[35:15] way here that like you're, you're running master. I'll show the demo, but you'll see
+[35:19] like when you start master separately and then you start your nodes, essentially like
+[35:22] the process and it, and they, they like registered itself with mastering on that first node.
+[35:26] Those are at the back.
+[35:28] Is it possible to go over the purpose of defining rates and to arguments that go into the get
+[35:33] parameter function in the definition of the rate?
+[35:36] Yes. You mean this? Okay. So to be clear, like this could be, okay, so this is, this
+[35:47] is basically just to say you want to use like a ROS rate object. So that's like the, what
+[35:51] I was talking about, like you might not want to use like a real, real clock. You want to
+[35:55] make sure that like you're saying I'm using the ROS clock. So that's why this is a different
+[35:59] rate object. The top one, essentially, what it's saying is like look up for a parameter
+[36:04] that's called rate. So you have like a central like ROS master, also there's a whole bunch
+[36:08] of other little tasks to coordinate everyone. One of the thing it does is store parameters
+[36:14] for your system. And so one of those parameters that you could store is like rate. And so
+[36:18] what this is, is if you've used dictionaries before, you know, this is literally like looking
+[36:22] up a dictionary and telling you if you don't find that entry, fall back on this default
+[36:27] value. Yeah.
+[36:28] What's anonymous?
+[36:29] So that's what I was saying earlier. Basically, if you have different node, if you have different
+[36:40] node that have the same name, but they're created as anonymous, then ROS is going to
+[36:46] be okay with it. Basically, it'll add like a unique ID to the end of each name of each
+[36:51] node. And so they can run like with all the same name. But otherwise, if you, if you set
+[36:56] anonymous to false, ROS is going to, the ROS master is going to make sure that like no
+[36:59] node has the same name. And like basically, if you create a second node that has the same
+[37:04] name as a node that already exists, it will kill the like older one. Yeah. Cool. Okay.
+[37:10] If you have any questions also about the syntax, we should definitely like answer some of these
+[37:15] questions. But also, like, don't, don't like panic. Like all of this is super well documented.
+[37:21] I just want to give you like an overview and everything. But I promise you this, you know,
+[37:25] this piece of code is probably like the first thing that pops up on Google. So it's very
+[37:29] easy to find. And that's why we have ROS in this class is because all of this syntax is
+[37:34] like really easy to find online. Cool. Okay. Receiving message. We're just going to go
+[37:41] through this real quick. But basically, it's pretty similar, except we're going to use
+[37:44] something called a callback for this. So when you're going to create a subscriber, you're
+[37:48] going to say, you're going to give it, you're going to give it a topic name that it's subscribing
+[37:54] to. So in that case, chatter, right? If you remember, there was like the first argument
+[37:57] of that, that other function before where we were saying, we're going to talk on the
+[38:00] chatter topic. Now, this is the one that we're going to subscribe to. We're going to see
+[38:05] that we're expecting string type messages. And we're going to tell it, okay, once your
+[38:12] subscriber, once you get a message of this type on this topic, this is the function that
+[38:16] you should call with that message. So that's the callback here. And then what you have
+[38:20] to do as like the implementer of this is to implement the callback. So in a more like
+[38:26] concrete way, what this looks like, a little smaller, but actually kind of more subtle.
+[38:31] Like I think the subscriber is actually a little more complicated to understand. So
+[38:37] we'll go through this as well. So again, so all this is doing basically is it's starting
+[38:41] this listener topic, which is essentially, for this case, you're not going to have to
+[38:48] have a for loop. This is what kind of this raw spin is going to do for you. Essentially,
+[38:52] it's going to implement this like continuous for loop at like that fixed rate that you
+[38:58] had. You don't have to do that to your point earlier. You always have to have a rate. If
+[39:02] you're writing a subscriber, maybe not. Maybe all you want to do is do something every time
+[39:05] you get a message. So this is what this would do. So you'd initialize a node, right? That's
+[39:10] no different than our publisher because nodes are all the same and they all live in an equal
+[39:15] world where they just have a name and they're anonymous or not. They're going to, you're
+[39:19] going to define our subscriber. You're going to say, okay, this node is going to subscribe
+[39:23] to the topic. In this case, chatter, again, like we said, the message type and what it's
+[39:29] going to do once it gets one. And this is just like a print line. And now rawspy.spin
+[39:34] is basically going to say, okay, now just stand still. And then if you ever get any
+[39:40] messages on any of your subscriber that you've created, call the associate callback. So the
+[39:45] callback here, which is I guess called callback. It's a callback. That's called callback, which
+[39:49] is probably a little annoying. Don't do that. That's going to be confusing for you. But
+[39:55] all it's doing is like this message, this callback just has to take a message and when
+[39:58] it gets it, it prints it. That's it. No message contains like message to data that will just
+[40:03] recover like the string that you had. Yeah.
+[40:06] Yes. On the queue of the publisher, you can also write queues for the subscriber, which
+[40:18] I think is just like a, like a not mandatory argument or yeah, optional argument. Yeah.
+[40:28] So yeah, there's a bunch of queuing you can do between everything. But that's all like,
+[40:32] it's not like usually needed, but it's probably not going to be needed for you guys unless
+[40:36] you're doing like super high rate things.
+[40:39] messages if you're not explicitly defining a rate in which the listener kind of listens
+[40:46] to the two reasons.
+[40:49] Why would there be a queue?
+[40:50] Yes.
+[40:51] Yeah. So if your callback is taking more, a lot of time so, you know, in this case it's
+[40:57] just like printing a message every time. Right. But the message you might get might be like,
+[41:00] okay, solve this optimization problem. And maybe this optimization problem takes like
+[41:03] 10 minutes. And then maybe like the, whoever's sending you these problems is like sending
+[41:08] them to you at like every five minutes. So you're kind of stuck right now. You're solving
+[41:12] these problems and you're just like kind of piling them up and like not solving them in
+[41:15] time. And yeah, these problems come up all the time. That's like definitely something
+[41:19] that you have to watch out for. If like, who's keeping up with what is the thing to monitor.
+[41:24] But yeah, good question. Yeah.
+[41:26] Do you need to register with the master? Because I don't see it showing up anywhere else.
+[41:31] Correct. Yeah. You basically just have to do that once. It registers it as like, I am
+[41:36] a node in the system. Listen to me if I'm trying to subscribe to things or publish things.
+[41:41] But yeah, that's what, that's like really what's differentiating this from like a regular
+[41:44] Python script is really just making sure that like you're calling this like library thing,
+[41:48] this library function that subscribes you, that tells master that you exist as a node.
+[41:54] Cool. Yep.
+[41:55] So if you have a publisher that's publishing way faster than your subscriber, and you're
+[42:00] publishing like sensor days or something, you set it so that you can look at just the
+[42:04] most recent thing.
+[42:05] Yeah, absolutely. You can have like, you know, you can make a drop a bunch of like the latest
+[42:09] messages or drop like the oldest ones or all this queuing stuff. I'm going to give a quick
+[42:14] note on like Ross too at the end. But like people are getting pretty fancy about the
+[42:18] way that they are handling this because it matters. Yeah. But hopefully you design fast
+[42:22] algorithms, the way Professor Papone is going to teach you to and that never happens.
+[42:27] Okay, we're just going to run this to make this like very concrete. So you guys see all
+[42:34] of this? Yeah. Okay. So the first thing we're going to do is we're just going to run Ross
+[42:45] core. Is that big enough for people to see? I'll think that says yes. Okay. Yeah, so this
+[43:00] is it. Like this just run like Ross core is master or like Ross master. They're like the
+[43:07] same thing essentially. So Ross core is just like the one command you launch this. This
+[43:12] usually lives somewhere on your system. Here it's telling you, for example, the parameters
+[43:17] that it has. So as you can see, we haven't defined a rate parameter. So if I were to
+[43:22] initialize this, this note that we went through earlier, it would fall back on the default
+[43:28] that we define like that second argument. Because the only parameters that it has is
+[43:32] telling you which Ross distribution you have. So that's like its version essentially. It's
+[43:36] using kinetic, which the TA confirmed me that this is still what you guys are using.
+[43:41] And yeah, it's giving you a bunch of other information, which is going to make more sense
+[43:44] once you actually start using it. But essentially most of the time you're just going to be running
+[43:49] this and you're going to make sure that, you know, some of these parameters kind of make
+[43:51] sense to you. And then the second thing we're going to do, now we're going to go in. Okay,
+[44:05] so we have our listener and our talker, which are literally like the code that, you know,
+[44:11] we just went through. Because it's like word for word. So we're going to start our talker.
+[44:21] And so remember we had this little like print statement that was just logging information.
+[44:26] And now it's just talking, it's just sending these messages at this one Hertz rate. Before
+[44:32] starting the subscriber, we're actually just going to use a tool that comes with Ross.
+[44:35] So we're going to run this thing called Ross topic list, which is going to give us the
+[44:42] list of things that are being talked about, the risk of topics that exist right now. So
+[44:46] chatter, right, is the one we created earlier. There's also always Ross out and Ross out
+[44:51] ag, which just ignore for now. But chatter is like the one that we care about. We can
+[44:57] even say, okay, what rate is this thing publishing at? And it will tell us that, okay, it has
+[45:06] rate one Hertz. It even gives you a nice little statistics, standard deviation and everything.
+[45:11] So that's cool. So this seems to be working. And now we can run, we'll run our listener,
+[45:18] our listener node. So as you can see, we're getting the message that our other node was
+[45:29] sending and it would write message content at about like one Hertz as we wanted. Yep.
+[45:36] Yeah. Good question. For Python, you can do either. Yeah. It's a little like more complicated
+[45:50] depending on which language you're using. I yeah, I didn't talk about Ross run too much
+[45:57] details and yeah, but in case of Python script, you can do it that way. One thing you will
+[46:01] notice that's like, you will probably, I don't know if you'll remember this, but this
+[46:06] is like an important little detail. If you do Ross run like this, your output isn't necessarily
+[46:12] being captured. So if you're doing like a print statement in your script, like this
+[46:17] is probably, it's probably going to show up. It should show up. If you're doing it through
+[46:20] Ross run, it won't. Like all the output gets captured by Ross essentially. So you have
+[46:27] them to use like the actual logging method, but this is probably way more in the ways
+[46:32] that you need to like think about right now. Yep. Yeah. This is like CPU time, which is,
+[46:43] they just have like this notation that, you know, it's like epoch, which I think is started
+[46:47] eight block or something. I'm not a good speaker, but it starts with like some date in 1970
+[46:53] and it's counting like seconds since then or something like that. It probably is the
+[46:58] same. I don't know what GPS time is, but it probably is similar. Yeah. But on CPU, usually
+[47:03] if you ask like a time, there's a, there's a number that, you know, everyone just agreed
+[47:07] that like time for computers start like January 1st, 1970. And that's like what this corresponds
+[47:12] to, but it doesn't really matter. Like you never really care whether your robot is, knows
+[47:17] that it's like Tuesday morning. What you care about is that it knows that it's five seconds
+[47:21] after the last LIDAR measurement. So most of the time, you know, when you're looking
+[47:25] at these time step, you're looking at like relative time. Cool. So does this demo kind
+[47:30] of make sense? This sounds like so simple and silly, but like this is it. Like this
+[47:36] is how you build really, really complicated things. It's just like having these two nodes
+[47:41] and now, you know, P set one is like one node and then like P set two is like the other
+[47:45] node and they can talk to each other and do really incredible things that make robotics
+[47:48] very magical. But yeah, under the hood, like this is it. It's just like passing messages
+[47:53] back and forth and doing it in a very efficient way and in a way that like makes it understandable
+[47:58] for like you, the human who's actually building this. Cool. Okay. We're going to move on a
+[48:04] little bit. Cool. Okay. To your question at the back about whether you can use Rust run
+[48:14] or just run the script, there's even another way that you can run this stuff. So yeah,
+[48:19] you'll get lost in all the ways that you can start your system. That's fun. But in some
+[48:23] ways at some point, you know, you get so many nodes in your system that you need to start.
+[48:27] You know, you have this talker here and this listener and then you have maybe like 12 other
+[48:31] listeners that you need to start every time. So it's kind of annoying if you have everyone
+[48:34] that has to start, you know, their own little, their own little node. So Rust, the Rust community
+[48:39] developed a lot of tools to help you deal with that complexity. And one of them is these
+[48:43] launch files. So that's also something you'll deal a lot with in this class is basically
+[48:46] this XML file, basically like text, you know, just like very structured text that tells
+[48:52] you, that will say, that will basically tell you how to like boot up your entire robotic
+[48:57] stack. So we'll, you know, have a list of nodes that you want to start. You can set
+[49:01] some parameters in there. You can set some, a whole bunch of, you know, configuration
+[49:06] things and rates of things. And it all now comes on in one big XML file. And that's super
+[49:12] useful because then you can, you know, once you're going to build your final project and
+[49:16] have all this, all these different things that you've implemented, ideally at the end
+[49:21] of the day, you would just be doing, you know, Rust launch on the robot. And then you'd say,
+[49:25] look at this file. It tells you every node that you have to start and it starts them
+[49:28] for you. So useful things. And I'll show you a little bit, kind of the syntax of what it
+[49:35] looks like. So this is like the simplest, you know, launch file that you could think
+[49:38] of. It's literally just like an XML file. It tells you the name of the node that you're
+[49:43] going to start. You're telling it which package to find it. We're going to talk about package
+[49:47] a little bit later. The type of node. So that's where you would define like the actual script
+[49:53] that starts. The output. So just saying like that's where, you know, I was saying like
+[49:58] the output gets captured or not. You can tell it, you know, print on the screen or you could
+[50:02] tell it like print somewhere else. And then you can set some parameters, right? So here
+[50:06] we're actually setting our raid parameter to a value of five. So if we were to run our
+[50:11] talker through this launch file and not through just running Python like we did before, the
+[50:18] parameter would get set through the launch file to be five. And now our talker would
+[50:22] run at five hertz instead of the one hertz default that it would have. Cool? Okay. Yeah.
+[50:29] We'll do a little like more fun example. I think the talker listener is like awesome,
+[50:35] but I can appreciate that maybe it's not as awesome for everyone. But let's look at
+[50:40] like a slightly more complicated system. So in this case, we're going to look at like
+[50:45] a case where you're trying to do edge detection for camera. So that's actually an algorithm
+[50:49] that you'll learn in this class. You'll figure out how to do some edge detections in maps
+[50:56] I think for LIDAR if that's still happening. There's a lot of things happening. But yeah.
+[51:01] So we're going to look at like what that would look like, you know, if you were to use instead
+[51:04] of your own algorithm, you want to build this with, you know, tools that already exist.
+[51:07] Like I said, a lot of this have already been implemented. A lot of really good implementation
+[51:11] exists for the ROS environment. And so it makes sense to try to reuse them. So in our
+[51:16] case, we're going to find four nodes. One of them is going to be a camera driver, right?
+[51:20] So remember that like picture of Atlas with all the sensors and I was like some of these
+[51:23] sensors can just be nodes. We're going to do this here where our camera, so my webcam
+[51:28] on this laptop is going to be a node. And then we're also going to do, we're going to
+[51:34] have an edge detection node. So that's more like the second graph, right? With the green
+[51:37] boxes and the like blue arrows where, you know, we're saying that like a piece of software
+[51:43] can also be a node. So that's what this edge detection is. It's literally just like some
+[51:46] computer vision software algorithm that like you've probably learned in computer vision
+[51:51] class or you're going to learn here. And we're going to have two other nodes, which those
+[51:55] are actually going to be GUIs. So one of them is going to show us what's the camera
+[52:00] seeing. So it's going to, and then the other one is going to show us what is the edge detection
+[52:05] produce algorithm producing. So there's a bunch of topics, right, that connects those.
+[52:11] And that's actually, so if we launch all of them and kind of build this in your head and
+[52:16] then you call this, this utility little piece of code that's called RQT graph. ROS can actually
+[52:23] generate this graph of what your nodes look like and what your topics look like. So in
+[52:27] this case, this is the camera driver node, right? And what this is actually doing is
+[52:34] it's publishing over this, this is publishing over different, over this topic image raw,
+[52:40] so USB cam image raw that is being subscribed to an image view. You can kind of ignore this
+[52:46] part. It's like internally converting something, but essentially this node is, is subscribing
+[52:52] to, you know, image raw that's coming from this node and just showing it to us. And then
+[52:57] this other one, the edge detection is subscribing to the exact same topic, right? They're both
+[53:02] listening to the same topic. But in this case, it's actually running an algorithm and then
+[53:06] which is detecting edges and the image and then publishing on another topic called edge
+[53:11] detection image to another node, our fourth node that is just like showing that image
+[53:17] with edge detected. Does that architecture kind of make sense? Cool. Yeah. So like this
+[53:24] is, you're going to do a ton of those. Like that's going to be like your sensors, your
+[53:27] IMU data, and then there's going to be like maybe a little visualizer you're going to
+[53:30] build and this is going to be like your state estimator and then that's going to go to like
+[53:34] your path planner. So yeah, this is very much like a condensed version of, of what a lot
+[53:42] of what you guys are going to do. I'm actually going to run it here. So we still have our
+[53:48] Ross core running, right? I'm going to like mix it up a little bit. What I'm going to
+[53:54] do is I'm going to run this node, which comes from, I should also do this in full screen.
+[54:01] Okay. Can you guys still see at the bottom? I will read it out loud. So Ross run USB cam,
+[54:08] which is basically saying this package that, you know, you can just find online, you know,
+[54:13] that downloaded yesterday and it, you know, just gives you like a driver for your camera
+[54:17] and then which node it has. So USB cam node. So all this is going to do is run like what
+[54:23] that first node, right? The driver node. And so we're using, okay. We have a bit of an
+[54:41] issue. This is interesting. Okay. I will, we'll move on and try to get back to it. It
+[54:54] looks like I've had a little issue in my driver node. It looks like it crashed last time we
+[55:01] ran it. Yeah. Don't do live demos. They never work. Cool. We'll move on and we'll get back
+[55:07] to it if we have time. But I don't want to waste our time debugging stuff. But essentially,
+[55:13] yeah, so this is the launch file that we could run for this demo. So it would look something
+[55:25] like this, right? So this is the four nodes that you're going to run. One of them is actually
+[55:29] using like another launch file in another package. And this is like the three other
+[55:32] nodes. So it's like just, you know, the more complicated version of what you've seen before.
+[55:40] Yeah. Sure. Okay. So there's two ways, right, of writing these launch files. So you can
+[55:51] either include every node that you have. But then you can think of like there's sometimes
+[55:55] where someone has actually already like written a launch file for a subsystem of your robotic
+[56:03] stack. So that subsystem can be launched with itself a launch file. And so you can now have
+[56:09] like you can build a hierarchy of launch files at each call each other. It's unlikely that
+[56:13] you're going to do well. Maybe you will. You can. So I wasn't in this specific like what
+[56:23] I was trying to run. But you certainly can. But it's kind of up to you. Like the launch
+[56:30] file, their launch file might define some parameters, right? And we're actually overriding
+[56:34] some of the parameters of their launch files. So we're seeing video devices, whatever argument
+[56:39] we have defined at the top. So it depends what you want to do. And then yeah, sometimes
+[56:43] it's just easier. Some of these launch files are huge. Like some of them define like, you
+[56:47] know, like the image width of every single like 16 cameras that you have. So it's kind
+[56:51] of nice to just be able to run someone else's launch file who went through like the pain
+[56:56] sticky like the really painful work of like writing it. And then but sometimes it just
+[57:02] makes sense to write everything from scratch from like the node architecture.
+[57:05] Yeah, it is a good question. Yeah, it depends how you define them. They can be I mean, like
+[57:34] there, if you define any parameters here, some of them are, yeah, it's a little subtle,
+[57:40] but like the some of the parameters to define inside like nodes, for example, will get like
+[57:47] a prefix to them. They will still be accessible to everyone, but they're just kind of like
+[57:52] an indicator that like this is for this node. So you might end up with a parameter that
+[57:56] looks something like image view 2 slash slash like auto size or something. So it's a little
+[58:04] there. Yes, all the parameters like live at the same place in in the master. But there's
+[58:10] like a soft enforcement of some parameters living in one node or another. Cool. Okay,
+[58:18] this launch file. Okay, developing with Ross. So Ross has a lot of development tools. One
+[58:24] thing that you will deal with is the catkin workspace. What the catkin workspace means
+[58:29] is so this seems more complicated than it feels like you need like it feels like you
+[58:34] should be able to write your Python scripts and they should just be able to run them.
+[58:38] It's kind of true. But keep in mind that Ross is also built to support all these different
+[58:43] languages, including C++ and C++ needs to be compiled. And so they had to kind of build
+[58:48] this well didn't have to but they decided to build this awesome tool which is called
+[58:53] your catkin workspace. The catkin which is basically a wrapper for compiler and then
+[58:58] make sure and it just like organizes all your packages for you. But you can think of like
+[59:02] catkin workspace as just a nice way to organize your project so that compilers can find the
+[59:06] different parts that you need. Yeah, I mean, those are like the commands is gonna look
+[59:10] like basically like you'll create a directory, your workspace is just a directory in your
+[59:14] on your laptop or whatever. And then you'll go in your workspace and you can compile it
+[59:20] and compile like any of the programs that are there. Cool. Okay, the problems that are
+[59:28] there are going to be in your workspace are going to be organized in packages. So if you
+[59:33] remember like this rust run command, we had like rust run package name and a node. So
+[59:39] you might have like rust run like a 274 is maybe your package name and then you'll have
+[59:43] like talker as like your node. And so like the package are going to be structured a specific
+[59:50] way, which again feels overkill. But it's, you know, blame C++ for that. But it's gonna
+[59:58] look something like this. So you're gonna have a big folder where you'll have these
+[60:02] files that you don't have to care about. There are like CMake files, you're gonna have usually
+[60:05] a configuration folder that has a bunch of configs, include files, your header files
+[60:09] in C++, your scripts, that's probably not one you care about. This will have like your
+[60:13] Python scripts that are your nodes, essentially. So you'll have your catkin workspace inside
+[60:19] your catkin workspace, you'll have a source folder, it says the source folder, you'll
+[60:22] have your packages. And like in one of your package, you'll have a scripts folder. And
+[60:29] then in that folder, you'll have finally your little Python script that is doing something.
+[60:34] And that's true. Now if you have like C++ source code is gonna be like in a source folder,
+[60:38] you'll have your launch file, they can be in your own launch folder, you'll have messages.
+[60:43] So if you're defining new types of messages, then you can do that. And then the other one
+[60:49] we're not gonna talk about because it complicates a little bit. And yeah, you can, you know,
+[60:54] ROS comes with a bunch of stuff. And for example, it comes with a nice little utility to create
+[60:58] packages and tell you. So what this does, for example, it tells you like, this is the
+[61:02] name of what I'm trying to the package I want to create. And these are the dependencies
+[61:06] that it has. Yeah.
+[61:07] So if you were to code in C++, you would put all your source in like the source folder.
+[61:20] And then cat can make it you'd have to like go out of that directory. And then you run
+[61:26] like cat can make and it'll find the project you'd have and it'll compile it.
+[61:29] Right. Yeah, there's no like conversion.
+[61:35] Right. Yeah. And something that will happen to you, I promise, we've taught this for a
+[61:43] couple of years now. You will run like roswun package name, and then you will try to run
+[61:51] your script name, which is just like you'll just add a file there, and it won't run. And
+[61:56] you won't know why. It won't find it. It'll be like, hey, this doesn't exist. You have
+[61:59] to go in there and make it executable, which, you know, all the homework is gonna walk you
+[62:04] through how to do that. But just keep that in mind. When it doesn't find it, make sure
+[62:08] that your script is executable. It's just like one command that you'll run with like
+[62:12] that that file. But remember, this is gonna come up. Yeah.
+[62:15] Yeah, good question. Yeah, no, that's a great question. Like, I mean, so I think that's
+[62:27] kind of like just a software engineering kind of decision on your end. You know, the packages
+[62:33] usually are at kind of the capability level. People use capability in robotics a lot. I
+[62:39] don't think I've ever heard it defined, but I feel like we kind of all know what it means.
+[62:43] So like you might have like an estimation package, and that estimation package is, you
+[62:47] know, an abstraction of all your estimation capability. And inside of that, you're gonna
+[62:52] have different nodes. But it's kind of up to you as to like what you think is a package.
+[62:57] Usually it should just be like a pretty reusable, you know, set of tools that like address like
+[63:01] a specific need for your robot. But yeah, that's a little bit like project dependent. Hopefully
+[63:08] that answers your question a little bit. Yep. Yeah, no, this would be a package. Yeah,
+[63:17] the blue thing would be your package. Yes, so you'll have your workspace that usually has a
+[63:25] source folder, and inside that you'll have multiple blue things like this. You don't
+[63:34] necessarily need them, right? Like you could have a bunch of launch files. Yeah, you could
+[63:41] have also in each packet, so the launch files are in packages. But something that's cool is
+[63:46] that the launch file also knows how to find things in other packages. So you could think
+[63:51] of having, you could think of having like a package that is just like this is like sensor
+[63:56] driver package, and it just has a bunch of nodes that are just like sensor drivers. And then you
+[64:00] have another package that's like your estimation package. You have a launch file inside your
+[64:04] estimation package that knows that like, oh, if I want to run an EKF that is based off my lidar,
+[64:09] like when I write this, right, it'll say fine A274. It could be like fine sensor driver package
+[64:17] instead of A274. And then say like in that package there's a launch file that launches the
+[64:23] lidar. So I want you to go launch that and then launch the rest of the stuff. Yeah, okay. Yeah,
+[64:32] we're just going to go through a couple of like tools I guess with the couple minutes we have
+[64:36] left that you might come up mostly as a reference. This is like a lot of information. I don't think
+[64:43] anyone expects you to retain all of this, but it's just like hopefully this will be at the back
+[64:49] of your mind when it comes up. Yeah, so debugging, there's a lot of things that Rust does. It's hard.
+[64:54] It's harder than debugging your, you know, self-contained Python script, but there's a lot
+[65:01] of tools to help you do that. One of them is this console. So when we were doing the logging command,
+[65:06] right, as I was saying, it's kind of like a print statement, but it's a little more sophisticated
+[65:11] than that. You can log it. You can also then look at them on this nice little GUI that's telling you
+[65:16] whether something is very important or not important. And, you know, that's like the type
+[65:21] of stuff that, you know, these like 12 people are in the room with the 12 screens that we had
+[65:25] earlier. They are probably looking at some of these tools to like make sure that like, oh, my
+[65:30] lidar or my USB camera is not working now anymore for some reason. So that's like all the type of
+[65:35] stuff that you'll have. You also want to learn to use the debugger a lot. That might be something
+[65:40] you've used before. So that just gives you a way of like stepping through your code line by line
+[65:44] in the code. PDB is awesome. Definitely learn to use it. The other thing, right, so messages.
+[65:52] There's a lot of basic messages already exist in ROS. I don't think that I remember the class
+[65:58] requiring you to write any custom one, but I might. So like I said, these, so ROS can support
+[66:06] all these different languages, right? C++, Python, Java, like Julia. And so, but you need like,
+[66:12] all of them need to be able to send these messages, right? So you have to have a way of now
+[66:17] defining what a message is that is language agnostic. Especially that doesn't depend on
+[66:21] which language you're defining it in. So it cannot be just like a message, cannot just be a Python
+[66:26] class. So you have this other syntax that allows you to define objects, and then ROS comes with
+[66:30] tools that, you know, if you define a message, let's say, let's say we have a student message,
+[66:35] then we'll have like a first name, a last name, age, grade, and then you'll have this tool that
+[66:40] will allow you to take this syntax and then automatically generate the Python class that
+[66:44] you need to send messages with it, automatically generate the C++ class that you need to send
+[66:48] messages or the Java class or the Julia, everything. So that's like one of the strengths of using this
+[66:56] PubSub thing too, is that like it becomes like very language agnostic as long as you have these
+[67:00] tools that come with ROS value to create user syntax, create messages, and then just send them
+[67:05] over any language. Yeah, okay, this is gonna like muddy things a little bit. I said ROS is like just
+[67:13] PubSub. Some people like to use different things in PubSub for specific application. ROS can also
+[67:19] support that. I would argue that like 95% of ROS usage is through PubSub, so I think it's still
+[67:25] fair to say that ROS is basically PubSub, and that's what it was originally, but just keep in
+[67:29] mind that like if you're thinking of a different design pattern than PubSub, like ROS might support
+[67:34] it. Just look into it, and that might be something you want to use. Parameter server, I think we talked
+[67:40] about it already. Okay, this is something you'll see also. I think probably underappreciated,
+[67:49] you know, feat of, I don't know, like tools or modeling, whatever you want to call it.
+[67:55] So one way to describe your robot that is super powerful is as, as these, using these XML
+[68:02] file that are called URDF files. So it turns out it's actually, if you like think hard,
+[68:07] hard enough about it, it's actually possible for almost all robots, with some exception obviously,
+[68:13] to write like all your robots as something called like a kinematic chain. So maybe some of you took
+[68:18] Professor Khatib's class, which I think talks about this, but like you'll basically think of like,
+[68:22] you know, you have a bunch of links that have joints in between them. So basically you just
+[68:27] think of like a joint is like, you know, your elbow, and then the links is like your forearm
+[68:32] and your upper arm. And so like you can think of how, and it becomes kind of this tree structure,
+[68:38] right? So a robot like Atlas can actually be like described in just this pretty abstract way. And
+[68:43] turns out if you take this description and you put that in an XML file, then it becomes like a super
+[68:48] reusable way of modeling your robot. And that's super cool because now if someone is working on
+[68:55] a different robot, so someone is like, you know, they have like a jack rat robot, jack rabbit,
+[69:01] or whatever the Stanford robot is called, maybe you have a software for it, and you're running it
+[69:05] in simulation and you have this description of the file. And then someone else comes around,
+[69:09] it's just like, I wonder how my robot, you know, I have Atlas, it's like way bigger, maybe cooler.
+[69:16] And then you kind of want to know, you know, does your algorithm work well on their robot?
+[69:21] There's a lot of things obviously that can go into it, but basically to get like their robot
+[69:24] in simulation or even to get another thing of their robot could literally just be to get their
+[69:29] URDF. So to get their URDF is this XML file, that's how we call them, Universal Robot Description
+[69:35] Format. So this XML file describes their robot, and then you can like put that in your stack,
+[69:39] and then you have simulation, you know, description of kinematics, dynamics, all this stuff
+[69:45] can come out of just this file. So look for cool URDF online, there's plenty of them,
+[69:49] people come up with weird ones all the time, and that gives you like a way of modeling robots.
+[69:55] You will interact with Gazebo. So those URDF file, right, like describe robots, like for example,
+[70:02] this little, I forgot how this guy is called, but you know, this little robot here,
+[70:06] this is a PR2 actually that I was talking about earlier from a little garage. So all these URDF
+[70:10] describe robots, and you can build them in a simulator that's called Gazebo. Gazebo is
+[70:14] well integrated with ROS. It's not ROS, they're kind of annoying about this, but they're like
+[70:21] very well integrated, and basically everyone like puts them together. So regardless of them
+[70:25] liking it or not, they're kind of part of their ROS ecosystem, and you will use it, and it's very
+[70:32] a very powerful way of modeling your system. The interesting thing, the thing that is,
+[70:37] there's two things I think that make matters a lot. So one is that yes, you will get something
+[70:43] that, you know, you will simulate the physics of your system. That's important. You're going to
+[70:46] make sure that like your controller is working with your path finding, your path following
+[70:50] controller is working. The other thing that's important of a simulator, like Gazebo have a
+[70:55] good simulator, is not just that it simulates physics properly, but it's also that it's
+[70:59] representative of the software environment that you will run your code in. So, and the reason
+[71:05] why that matters is that because if you, you'll spend a bunch of time writing your code so that
+[71:11] it works in simulation, and then if basically it works in simulation, but now to make it work on
+[71:16] the real robot, you have to rewrite everything from scratch. You know, the simulation really
+[71:21] gave you very little, but if the simulation is structured like Gazebo is, so that you can run
+[71:28] your ROS stack against the simulation, and then literally take the same code that's publishing
+[71:34] the same message as the same node, and then just put that on the real robot, and the real robot
+[71:38] knows how to, you know, communicate with the same stack without changing anything, then you just
+[71:42] save yourself like weeks of development, right? So that's super cool, and you'll see that it's true
+[71:47] for the robot. Basically, you'll have to do a lot of hardware, you know, development at the end of
+[71:54] a quarter in the project, but use Gazebo a lot. Like, you can work from home, basically. I mean,
+[72:00] you should come in the lab. I'm not going to say too much, but like, you can save so much time by
+[72:05] just making sure it works in simulation first. If it doesn't work in simulation, it's probably not
+[72:10] going to work on the real robot, and then if it works in simulation, it might work on the real
+[72:14] robot. So yeah, keep that in mind. Use simulation. It's super powerful. It'll save you a bunch of
+[72:19] time. There's other stuff you'll hear about, the transform library and stuff. All these things go
+[72:27] find information online. Just, Ross has a wiki. GitHub is great. There are readme pages of all
+[72:33] these packages. StackOverflow. Just Google things. Talk to TAs. They all know Ross very well. Yeah,
+[72:40] tons of resources. Quick note on Ross too. So Ross has been around since 2007. That's more than a
+[72:47] decade. That's like so much time in software land. So Ross has actually done a overhaul,
+[72:53] like an overhaul of everything recently in something called Ross 2. It doesn't support
+[72:59] everything yet. So the class is, you know, so everyone is very careful at using cutting edge
+[73:03] things, but he also doesn't want to, you know, make you guys use something that isn't super mature.
+[73:08] So we're going to stay away from Ross 2 for now, but, you know, keep an eye out for it. It has a
+[73:16] lot of cool things that are coming up. Yeah, so just wrapping up real quick. P set 1,
+[73:21] released Friday. Yeah, you'll have through next week, you're going to work through basic
+[73:27] simulation and the setup of all of this. And yeah, sign up for the seminar class as well,
+[73:32] which is also Friday. This class is going to teach you how to build robots. Now, if you want
+[73:36] to get ideas on what research to do with all these skills, the Stanford Robotics Seminar
+[73:43] runs every Friday at 11 a.m. And it's super casual. You get food. You get one credit to
+[73:51] attend and you get really good talks and research ideas and potential, you know,
+[73:56] future advisors who know. So yeah, that's it.

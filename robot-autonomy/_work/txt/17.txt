@@ -1,0 +1,673 @@
+[00:00] Good morning, everybody. So actually, it's a pleasure to be here. And we will have, let's
+[00:11] say, the opportunity to have today's lecture on Thursday and Friday. On Friday, we do more
+[00:16] of a hands-on session when it comes to AutoWare, which is, meanwhile, one of the most important
+[00:22] software stacks around to get the code to your learning in that lecture in Principles
+[00:27] of Robot Autonomy 1 actually in the car. But today, we actually do a bit of, let's
+[00:33] say, preparation in terms of when it comes to data fusion, multi-sensor perception, which
+[00:39] is actually quite important. You've got all the ingredients over the last couple of weeks.
+[00:45] Marco did a great job so far. So you are aware of a lot of filters and algorithms. Before
+[00:50] we start, Sabor has already mentioned where I'm from. So I'm actually from Europe, from
+[00:54] Austria. Austria is a pretty small country. I think, let's say, the most well-known person
+[01:05] still alive, I think, has a good link to California or so Arnold Schwarzenegger. He was two times
+[01:11] governor or two periods governor here in California. He's coming from Graz, so not far away where
+[01:17] the university is, where I'm currently working, and where I'm teaching. So Arnold is, of course,
+[01:27] he's a different accent because I'm from a different part of Austria. So you will not
+[01:32] hear the accent Arnold is usually having, so it will be a bit different. But now back
+[01:38] to work. Today, multi-sensor perception and data fusion. We actually will go through how
+[01:47] sensor fusion works, what are the different taxonomies in sensor fusion, how can we use
+[01:52] the Kalman filter and its variants to do data fusion, to fuse data from different sources.
+[02:00] We actually will go through a simple example and a bit more advanced example so that you
+[02:04] get a feeling and you get to know how you can use Kalman filtering for pose estimation
+[02:10] and what are the pitfalls there. Just two books which I personally think they are pretty
+[02:18] good. The one is of Fredrik Gustafsson, a Swedish professor. He has a quite nice book
+[02:23] on statistical sensor fusion. It's a bit more advanced book, but basically it's giving you
+[02:28] a broad overview how to deal with, let's say, data fusion, how to deal with all the issues
+[02:34] of temporal synchronization, spatial localization, which also is quite important when it comes
+[02:42] to real data from a car. The second one is from Dan Simon, which is basically an optimal
+[02:48] state estimation. It starts from the basic basis theory, goes over to Kalman filtering,
+[02:56] extended Kalman filtering, unscented Kalman filtering, particle filtering, and H infinity
+[03:00] filtering, which is also quite a nice algorithm. So those two ones are pretty good. Let's start
+[03:08] with, let's say, a nice video. First we see just the camera. That's actually real data
+[03:15] from our car in Austria using a mobile eye camera. Now we see, in addition, the radar
+[03:22] sensor, long range radar sensor of a commercial one from Continental. And in a few seconds
+[03:27] we will also see the LIDAR data of one of our, just a standard Miladyne LIDAR sensor.
+[03:34] Here we go. With up to 16 layers. So that's actually the data which we can use for fusion
+[03:42] when it comes to the perception. As you know, fusion, it's not only a thing of fusing LIDAR
+[03:49] with radar and camera. We also can think about additional sensors or additional sources like
+[03:55] GPS or IMU, the Universal Measurement Unit, which also are important for fusion. And in
+[04:03] the end, we have two kinds of data fusion in a car. The one thing is when it comes to
+[04:07] the perception. Then we use those data we just have seen. And that's the one thing.
+[04:12] And the other thing, of course, is pose estimation or estimating the position. Because you're
+[04:16] all aware, we need to exactly know where we are before we are allowed to drive. And that's
+[04:23] why we can also think about using GPS, IMU, and LIDAR for pose estimation. We will come
+[04:28] to that a bit later on. Yes, fusion does make sense. Because in the end, our idea is to
+[04:36] get every single sensor come so every measurement in general has certain uncertainties. And
+[04:44] our goal is, of course, to decrease the uncertainty. And if you look to the, let's say, the red
+[04:49] one and the blue one, we'll see that there is a different behavior. That actually means
+[04:55] for a radar sensor, we have, let's say, this kind of, let's say, field of view. That means
+[05:02] just using the radar would actually give us a very good resolution or accuracy in the
+[05:08] set direction, so in the direction of the distance, while the camera is a bit different.
+[05:14] And our idea is when we can bring together those red behavior and the blue behavior,
+[05:20] we hopefully end up in this, let's say, in this cross-section. And that actually means
+[05:26] those shapes are reflecting uncertainty that we can actually decrease the uncertainty.
+[05:34] And let's say one of the, let's say, very intuitive examples is that one where long-range
+[05:39] radar and camera is fused. We actually see here the estimate of the Kalman filter with
+[05:44] the huge variance. And once you're entering, let's say, the field where both sensors are
+[05:51] active and we do a proper fusion, we see that the covariance is just shrinking and we have
+[05:56] a better estimate. Because we are always interested in getting a very small variance. And if you
+[06:03] are just to the left or to the right of the car, the variance increases because only one
+[06:07] sensor is taking care of that object. And one additional motivation is, we just talked
+[06:20] about the car itself, the ego vehicle, but actually a lot of people are meanwhile working
+[06:27] to extend the field of view. That means how to use stationary sensors which are mounted
+[06:33] actually in the infrastructure to extend the field of view.
+[06:37] In here at the Highway 101, BMW is currently doing that. So there is a camera and a radar
+[06:43] installed. You might figure out where it is when you next time drive around the 101. But
+[06:49] you will see that currently BMW is doing, let's say, collecting measurement and doing
+[06:54] some industrial research to figure out how a cut-in or a merge scenario can be optimized
+[07:01] or improved when using stationary sensors. And the idea is, because usually we have these,
+[07:06] let's say, behavior up to 250 meters, 300 meters, where long-range radar and LIDAR are
+[07:13] operating. But using, let's say, infrastructure-based sensors, cameras, radar sensors, we might
+[07:20] end up almost with this kind of 7, 800 meters. So up to, let's say, almost one mile, which
+[07:27] is pretty good.
+[07:30] Just figuring out what drawbacks do we have if you just use one sensor. Just keep in mind
+[07:38] the video we just have seen. We have a limited range. We have a limited field of view. Performance
+[07:44] has some issues. We could actually have some issues in the accuracy in estimating the distance.
+[07:51] Distance is pretty important. If you would like to figure out dynamic objects and to
+[07:55] do the right decisions in terms of evading or breaking. And we also have these so-called
+[08:02] false positives or false negatives. Those are very welcome because you would like to
+[08:09] get rid of sensor false positives and false negatives that actually mean false positive.
+[08:14] Your system is breaking, although there is nothing. That means just your sensor perceives
+[08:20] or perceived some sort of an artifact and the system just made the wrong decision.
+[08:26] So that's why we have to think beyond that, to think about multi-sensor perception and
+[08:33] how to compensate those issues. And basically, what we expect when using a couple of sensors
+[08:39] is that we get a lot of plus points in terms of better classification, better accuracy
+[08:47] in terms of detecting objects, improved state estimation. We will talk about that during
+[08:52] our today's lecture. Better robustness, increased availability. That means if one sensor breaks
+[08:59] down, if you have issues with one sensor, there is still a plan B or even a plan C.
+[09:05] And hopefully, like the example with the infrastructure that we think about, let's say, up to one
+[09:10] mile of seeing, let's say, sometimes people say something like looking around the corner
+[09:17] or looking through the next object. And that's why it makes sense to include infrastructure
+[09:25] data. When it comes to fusion, we actually can distinguish between four different classes
+[09:33] or four different taxonomies. The first one is the data-related one. The second one is
+[09:38] the diffusion level taxonomy, diffusion classes, and more on the hardware point of view, the
+[09:45] architectural taxonomy. I will briefly give you an idea what those four taxonomies are.
+[09:53] First one, data-related. That's the original idea of doing fusion. That actually means
+[10:01] we have, when we get measurements, when we have to work with real data, we have a lot
+[10:05] of data-related issues. And that actually is we have imperfect data. There might be
+[10:11] some correlations between the data, different sensors, inconsistency, disparities. Those
+[10:17] kind of issues are in the data. And we have to figure out how can we get rid of those.
+[10:22] It's for sure that data is always uncertain, and we have to do the best out of it. That
+[10:27] means we have to actually think about how to deal just looking at the next layer when
+[10:33] it comes to inconsistency, what are conflicting data, outliers in data, so thinking about
+[10:40] robust estimation, disordered data. So all of those kind of things could happen. Think
+[10:46] about you have the different sensors in your car. The sensors are acquiring data, but you
+[10:52] have to figure out what are the timestamps of the data in order to avoid that the wrong
+[10:56] data is used. So we have to take care of those kind of issues, and that's actually the idea
+[11:03] of data-related fusion taxonomy, because you have to just think about if we talk about
+[11:11] estimating the distance or measuring the distance, then, of course, the distance to the nearest
+[11:16] car is some 35 meters in the metric system. But actually, that's not where we in measurement
+[11:25] usually do a full stop. We have to think about how good is the data, what's the degree of
+[11:30] belief in the data, talking about the uncertainty of data, vagraness, ambiguity, incompleteness.
+[11:36] So a lot of things which could happen, just ambiguity, but because of deal with all four
+[11:41] issues or even more issues. So that's the data-related one.
+[11:46] The next one, which might be basically one which you already heard about, is you have
+[11:51] different sensors, and people are usually talking about fusion raw data, fusing object
+[11:57] data or object lists, and that's what is here about. We could actually fuse data on
+[12:02] signal level, digital signal level. We could already do some pre-processing and work out
+[12:09] features and characteristics into the fusion on that level, or we already have basic decisions
+[12:15] made. That means we already decided this is a car, this is a truck, this is a bicyclist,
+[12:20] and we can do the fusion on object level data.
+[12:25] What is the best one? Of course, from the information theoretical point of view, we
+[12:30] always should fuse data on the lowest level and the raw data on the signal, because there
+[12:34] is all the information in. And from, let's say, from the practical point of view, just
+[12:40] think about how cars are manufactured. There is an OEM, and there are tiers, tier one,
+[12:46] and actually it's always good to have an interface, so an OEM would like to exchange
+[12:51] the sensor fusion block, go for, I don't know, for Magner, then for Denser, then for Continental
+[12:57] or Bosch. That means having it on a higher level is easier in terms of exchangeability.
+[13:03] Next one is actually talking about, let's say, classes, and here we have three classes.
+[13:09] The first one is competitive fusion, second one complementary fusion, and last one is
+[13:14] the cooperative fusion, just shown in this picture. If you talk about, let's say, the
+[13:19] green part, the competitive fusion, we're just having two sensors measuring the same
+[13:27] thing, redundant sensors, and the idea is to be fail-operational. That means if one
+[13:31] sensor breaks down, then we actually can, the second sensor takes over. We can do some
+[13:36] majority voting at the outside, something like that. That's competitive fusion.
+[13:42] Second one is complementary fusion. We use LIDAR, for instance, and radar for distance
+[13:48] estimation. And the third one is usually called emerging fuse, is when we go, let's say, when
+[13:55] one single sensor is not able to do that, we need a second source. For instance, if
+[14:00] you have to do triangulation combining with stereo vision. So those kind of classes are
+[14:05] existing, competitive fusion, complementary fusion, and cooperative fusion.
+[14:11] And the last part, as I mentioned right before, is a bit more related to the hardware, to
+[14:15] the implementation later on. We typically talk about the centralized version, the decentralized
+[14:20] version, and the distributed version, which means, if you just think about, it could be
+[14:26] that you just look for the decentralized architecture, that we have different control units or at
+[14:30] least different cores behind. That means we have a kind of, let's say, fail-silent behavior
+[14:37] and, in fact, there are, of course, pros and cons for all solutions. But, of course, the,
+[14:45] let's say, the decentralized or distributed architectures, they are just looking in terms
+[14:50] of fail operation behavior, just being, or let's say, compliant to the ISO 26262, the
+[14:58] functional safety norm. It makes sense to have something like the distributed architecture
+[15:02] in place. Right. So that's more or less the overview of fusion and the different taxonomies.
+[15:12] And one of the important things which you already heard throughout the course, Marco,
+[15:19] I think gave you a lot of motivation why actually using Bayesian law in order to solve those
+[15:27] kind of issues. You may well know that using Bayes' law is a great thing because it gives
+[15:33] you the opportunity to intuitively bring together prior information, prior densities, and actually
+[15:41] measurements in terms of dealing with probability density functions. That means, within the
+[15:47] Bayesian framework, everything is treated as a random variable. And as soon as you're,
+[15:53] let's say, leaving that concept of random variables, you're leaving the concept of the,
+[15:59] let's say, the Bayesian formulation that whenever you're calculating a maximum a posteriori
+[16:04] estimate or a maximum likelihood estimate, that's actually a optimization problem, maximum
+[16:10] something. That means then you're already out of the Bayesian formulation because then
+[16:15] you are actually looking for an optimized solution. That means complying to the optimality
+[16:23] conditions. First derivative has to vanish. Second one should be greater or less than
+[16:30] zero for a maximum or minimum. That's an optimization problem. Then we're already, let's say, out
+[16:35] of the Bayesian race. As long as we are dealing or treating everything as random variables,
+[16:41] then we are in this, let's say, framework. And the good thing is it allows us to calculate
+[16:49] any statistics. So if you really get the posterior distribution out of, let's say,
+[16:54] the combination of the prior distribution and the likelihood, the measurement likelihood,
+[16:59] we get posterior distribution. And as you know, dealing with distributions, we can work
+[17:05] out, as I said, any mode, like the maximum likelihood or the conditional mean. We could
+[17:11] work out marginal densities. So we can get a lot of more in terms of confidence's degree
+[17:17] of belief than when just running in classical, let's say, Gauss-Newton type optimization
+[17:22] straightforward.
+[17:25] Right. So that's basically the motivation that the Kalman filter and its variants are
+[17:35] belonging, let's say, to the Bayesian framework. And in order to continue with, let's say,
+[17:43] the sensor data fusion, let's think about the very simple example. This very simple
+[17:49] example is basically like this. Let us consider two sensors. And we have, let's say, n objects
+[17:59] around us and would like to work out the distance to those objects. And we have two sensors.
+[18:08] First let us assume that those sensors have the same field of view. We secondly assume
+[18:15] that the first sensor is just better than the second one. So we have to spend a bit
+[18:19] of more money for the first sensor. There's a higher precision. And the second sensor
+[18:24] is just a cheap one or an older version that is in place. So that's it.
+[18:32] And finally, for this very simple example, to show you how fusion works, let's consider
+[18:39] that we have n equals one. That means just one object around us. And now the question
+[18:45] is how to fuse these measurements in a proper sense.
+[18:52] If we just think about, so in the end, we are talking about Gaussian distributed measurements.
+[19:00] So d1 of x and d2 of x are assumed to be Gaussian. That's the classical formulation
+[19:07] of a Gaussian distribution, as you know it. We have in the exponent our x minus the mean.
+[19:14] The first measurement scaled by the variance. And for the second measurement, we have mu
+[19:18] two. So the mean of the second measurement are scaled by the variance of the second sensor.
+[19:25] And we are normally distributed. That means we have mu one, sigma one squared. So the
+[19:32] variance one and the variance two for the second measurement. And we assume we have
+[19:38] univariate Gaussian distributions normally distributed. So that's our basic assumption.
+[19:45] And if we now just recall that we more or less decided that our sensor one is better
+[19:57] than sensor two. So we have this assumption. So we have to keep that one in mind. And actually
+[20:01] would like to see if we fuse that data. What is actually the outcome? Is the variance then
+[20:07] close to sigma one? Or is it better than sigma one? Or what's going on?
+[20:14] And our problem formulation is now figure out the distance dx, given that we have two
+[20:19] measurements from two different sensors with the same field of view. But with a different
+[20:27] uncertainties connected or attached to those sensors. And if you just put its first basic
+[20:35] formulation, we actually see we have to deal with how to combine Gaussian distributions.
+[20:42] So we have to deal with Gaussian distributions, just the product of d1x and d2x. What we're
+[20:48] doing is just combining those two ones as a product. And we end up, of course, the scaling
+[20:55] factor, which is independent of x. But the variances are going in there. And we have
+[21:00] in the exponent first tensor and second tensor. So that's, let's say, not very, very difficult
+[21:06] so far. That's, let's say, our first approach, pretty straightforward. So let's think about
+[21:18] the exponent. Just, let's say, looking a bit deeper in that one. And it's a bit of mass.
+[21:28] I first thought we could do that on the whiteboard. But I think it's just basic mass. That's why
+[21:34] I'm just giving you a few hints. But it's not very complex. So that's our exponent.
+[21:42] And what we're actually doing is just multiplying that exponent out. So we have the, let's say,
+[21:48] x minus mu1 in brackets squared. And the same thing here. And if you just multiply everything
+[21:53] out, we actually get this expression. And we introduce a bit of a trick. So we just
+[22:02] divide nominator and denominator by the sum of the variances of the two sensors. That's
+[22:10] why we have a variance sensor one and variance sensor two right in here and right in here.
+[22:17] So that's the division. So we are not adding new information. It's just a mathematical
+[22:21] trick. And we end up in that formulation. And in the end, we would like to find something
+[22:30] in our final expression, which reminds us in, just going back, which reminds us in that
+[22:36] formulation. That's why we have to find, let's say, a way to express our fused data in terms
+[22:42] of this expression. And that's actually what we are doing right here is let's find the
+[22:47] way to get this, let's say, final fused information. And in that way, that we have x minus mu squared.
+[22:57] And it's, again, pretty standard mathematical trick. We just do the following. Just looking
+[23:05] at this expression, we have this x squared here. There is already an x here. So that
+[23:09] looks like the mixed term in between. So actually, that one. So right here. And what's missing
+[23:17] is that term. And what they're usually doing in maths is just add something and also subtract
+[23:24] something so that we are not adding additional information. And more or less to work out
+[23:28] that we get something which is then in the form of x minus mu squared. So that's what
+[23:33] we are going to do here. And basically, that's exactly that step. We are just adding a term.
+[23:41] And we are subtracting the same term again. So no new information added. And we are now
+[23:46] in this, let's say, in this form we had before right here that we can actually just look
+[23:53] at this first part, the first three terms, and bring them together in x minus mu squared.
+[24:00] So that's the first step. Of course, we have this minus mu squared right here. That's over
+[24:04] there. And the last part, let's just substitute it by s. Because just looking here, there
+[24:10] is no x in there. So it's independent of x. So we just can substitute it by whatever variable.
+[24:19] Just decided to go for s. And let's find an expression for this term and just call
+[24:26] it sigma squared. Because then you can already see we have something which looks like what
+[24:31] we usually would expect for the exponent of the Gaussian distribution.
+[24:36] Next step is just to rearrange a bit. We have exactly that term right here and plus the
+[24:41] mu squared plus s. One and a half over there goes in there. And it's plus term. So we get
+[24:48] this information right here. Looks good. Final step basically is bringing everything
+[24:55] together, putting everything together. And what we actually see here is just going back
+[25:01] to this first expression. So right here, we're just coming back to exactly that expression.
+[25:10] And we're right here, bringing everything together. Here is the, let's see, our expression
+[25:17] we just worked out. We could actually split that because the first part is again independent
+[25:26] of x. So we can move it out. And we end up with this very well-known formulation over
+[25:31] there.
+[25:32] And the final step is just to say this is a constant part with respect to x. That one
+[25:40] as well. So we just put capital C in there and we finally end up with that expression.
+[25:46] Right. Nice thing. But what should we do with it? We actually just summarize it. First thing
+[26:02] is in the end, we have now some sort of a data fusion done. And let's have a closer
+[26:07] look to mu, to the mean, and to the variance sigma of our final result.
+[26:15] And what you see here is basically the conclusion of doing data fusion when combining. So for
+[26:24] the special examples Gaussian distributions that we actually can see the following result.
+[26:33] Look here or watch that. D1 was our first sensor. D2, the red curve, our second sensor.
+[26:41] We assumed that D1 is more precise, so it's better than D2. You could easily see that
+[26:46] the D variant. So the width of the peak is much smaller than the red one. So that the
+[26:52] sensor is more accurate than the red one. That was our basic assumption.
+[26:57] And after doing the fusion, so D1x combining with D2x, so doing the fusion, you actually
+[27:04] end up with the yellow curve, which is basically even better than the blue one. So actually
+[27:11] we end up in a better result, in a more accurate result than by just using the first sensor
+[27:18] with the high precision. So even for that case, we can actually show that data fusion
+[27:24] is of great value because in the end the overall uncertainty decreases. That actually
+[27:30] means we do a different weighting. So the weighting by variances because you could actually
+[27:37] figure out the simplest way of doing data fusion. It's just working on the arithmetic
+[27:49] mean. That actually means if you have something like, let's say, a result with our two measurements
+[27:56] D1 plus. So for a scalar case, we just assume you're just measuring the distance from right
+[28:06] from my position to the wall. And we get two measurements, D1 and D2. And usually in measurement
+[28:13] techniques what you're doing, you're just building the mean actually. You're just going
+[28:17] for the mean operation. And you're just doing D1 plus D2. And hopefully we get, and even
+[28:26] if you go for, of course there are just two samples, usually you should sample it 10 times
+[28:31] or 20 times. Or the same thing if you work out the temperature of the room here. We just
+[28:36] measure 10 times and then do the mean over those n equals 10 samples. And you can actually
+[28:43] see that's the easiest way of doing fusion because what we're doing here is we fuse actually
+[28:53] D1 and D2. It's pretty much the same what we did over there. The only difference is
+[28:58] there is, let's say, a very, not very smart fusion because we're just doing the same weighting.
+[29:03] There is no variance in there. It's just the, let's say, doing the fusion of the means.
+[29:09] That actually is a nice thing. But we have, if D1 has some issues or D2 has some issues,
+[29:15] it goes in the same way. And so we are very, in that case, very non-robust because that's
+[29:21] the thing when you're working with means, even data outliers. So poor data is weighted
+[29:28] the same way than the good data. And that's why the mean doesn't make sense that much
+[29:34] if you're just working out measurements. And usually, but I think you're aware of that,
+[29:41] makes sense instead of using the mean to go for the median. It's the first and easiest
+[29:46] way of doing robust estimation because the median is able to treat outliers. And that's
+[29:52] pretty good because if you just work out, let's say, an outlier, the mean is just not
+[30:01] penalizing outliers while the median is doing that. So that's basically the simplest way
+[30:06] of doing data fusion. And if you now look back to our result, we see that the variances
+[30:12] are going in there. And the weighting of the different sensor or different data is done
+[30:18] in a way how the variances are. And that's the most important conclusion of that, that
+[30:24] the variances are quite important to treat.
+[30:27] And if you look at the final result of our, let's say, of our worked out variance and
+[30:44] standard deviation, it's actually comparable to, I think you have, let's say, a lot of
+[30:48] basic education in electrical engineering. It's pretty much the same if you're going
+[30:55] for a parallel circuit, which is something like, so we just assume that we have resistance
+[31:04] one and resistance two. So we have some sort of a parallel circuit, some driving voltage,
+[31:13] and some electric current. And if you now would like to work out, just looking from
+[31:22] that the nodes inside the sum, or let's say the overall resistance, it's a parallel version.
+[31:28] That means we have R1 parallel R2. That actually is one over R1 plus one over, so let's just
+[31:39] do it in the American way, one over R2 in order to avoid conflicts with them. And we
+[31:48] actually end up exactly that way to look like the variance over there, that we end
+[31:55] up in R2, R1 plus R2. And the same thing happened. And we all know that the overall resistance
+[32:10] in a parallel circuit is smaller than the smallest resistance in the network. That means
+[32:16] if R1 is 1k, R1 is 1k, and R2 is 2ks, then we actually would expect that the overall
+[32:31] resistance R is smaller than 1k. And that happens to the variance expression pretty
+[32:36] much the same, that if you have the best tensor has variance sigma one, then the overall variance
+[32:42] of diffusion is smaller than that one, which is a pretty cool result. Right. So that's
+[32:52] basically our intro example. Now let's go for a bit more advanced one. Let's go back
+[33:00] to what you already heard over the last weeks, the Kalman filter. Kalman filter actually
+[33:07] is just a second. Here we go. The Kalman filter is perfectly suited for doing fusion.
+[33:22] Before running the Kalman filter, let's do a bit of a recall what you've already heard.
+[33:27] First thing is running the Kalman filter implies a couple of assumptions. The first one is
+[33:35] we have to deal with linear dynamics. And we would like, so just looking at our dynamic
+[33:42] system xt, which let's say is driven by the dynamics of the system at, we have, let's
+[33:51] see a control input ut scaled by some capital bt, and we have some noise attached to it.
+[33:58] We assume that this noise is independent and identically distributed around let's say
+[34:05] zero mean and with a certain covariance rt, which might also depend over t and might not
+[34:13] be constant over the different time steps. And it actually implies that we deal with
+[34:22] Gaussian distributions, because for linear systems, if you have linear systems, you know
+[34:27] Gaussian distributed signals running through a linear system are still Gaussian distributed.
+[34:34] It only gets critical if you have non-linear systems. And we actually just look at this.
+[34:40] The probability of our state xt conditioned on the control input and our previous state
+[34:47] is actually the Gaussian distribution, again with our scaling factor where, let's say,
+[34:52] our process noise goes in and we have in the exponent what we actually see right here.
+[34:59] So we just have to rearrange it and we get the quadratic expression. So in terms of matrix
+[35:04] expression, we are still quadratic here, right in there. That's assumption number one.
+[35:14] For assumption number two, let's have a look at the measurement equation or the measurement
+[35:19] model, which is actually the sensor model. So when we talk about the measurement equation,
+[35:24] that's actually where we have to model the sensor, where we have to find the lighter model,
+[35:28] where we have to find the radar model or a camera model. So that's going in there.
+[35:32] And we again assume a linear behavior. We also are aware that we have some measurement noise,
+[35:41] some uncertainties attached to the measurements, which are expressed by delta. Again,
+[35:47] we assume zero mean Gaussian distribution, identically distributed and independent with
+[35:52] a certain measurement covariance qt. And our measurements sat t conditioned on our state
+[36:03] xt are exactly that expression, which directly comes out from, let's say, our measurements.
+[36:09] And here is the sensor model or measurement model. And that's actually one of the things,
+[36:13] as you already know, which are quite important. And that's the original idea of Kalman,
+[36:17] that Kalman more or less had the idea, let's think about this so-called innovation sequence,
+[36:25] which means the difference between my measurements and my model and how to make sure,
+[36:33] do I believe more in my measurements in that time instant or do I believe more the model?
+[36:40] And that's one of the basic assumptions that we have a model in there. And that's also a bit of,
+[36:48] let's say, the usual brain work we have to spend to find a proper C, a proper model for our sensor.
+[36:56] Because if the sensor model is poor, then, of course, Kalman filter doesn't make sense that
+[37:02] much. The same thing for the measurements are poor, because then you always believe
+[37:07] either the measurements or the model. And let's say, the work we have to spend here
+[37:14] is very important to find a proper model in there. But that's basically assumption number two.
+[37:19] Our, let's say, assumption that our sensor model, our measurement equation is linear.
+[37:27] Assumption number three is basically, what about the starting, the initial state x0,
+[37:35] and the belief of x0, which basically can be described by the probability of the initial state.
+[37:43] And we also assume that this initial belief is also Gaussian distributed with zero mean.
+[37:54] And all of the first three, let's say, or those three assumptions, they basically ensure that
+[38:04] the posterior distribution, so the a posteriori distribution, so the belief in our state estimate xt,
+[38:11] is actually Gaussian and normally distributed around a mean mu t and with a variance sigma t.
+[38:22] So that's the basic thing. And of course, there exist a lot of variants of the Kalman filter,
+[38:28] because not always those assumptions are valid. Linear systems are usually not happening in reality.
+[38:36] First thing is always to start with some kind of linearization. You could actually work out
+[38:41] that linearization has a huge impact in data fusion. So if the linearization is done,
+[38:46] if you have a very, let's say, non-linear system, linearization could also end up in a mess.
+[38:52] That's why the unscented Kalman filter exists or the particle filter, or you just sample from
+[39:01] the posterior using Markov chain Monte Carlo, whatever. Right. And one of the important things
+[39:09] to mention once again, I think Marko has definitely said it, the Kalman filter is able to deal with,
+[39:16] let's say, single hypothesis. That means if you have one object, we are fine. If you have two
+[39:22] objects, we actually need two Kalman filters. For n objects, we need n Kalman filters because
+[39:28] the Kalman filter is only able to deal with unimodal densities. That means like Gaussian
+[39:35] distribution, once you have two peaks in your distribution or even more peaks, you need for
+[39:41] every single peak, you need, let's say, a mode tracking. That means for n peaks, you need n
+[39:46] Kalman filters. And there you have to find different ways. For instance, as mentioned
+[39:52] before, part of the filtering could help here or Markov chain Monte Carlo. But that's an important
+[39:59] thing to consider. Single hypothesis filtering, that's the Kalman filter. That's it. And we all
+[40:07] know that for a real car, we have to deal with a lot of dynamic objects and that makes things a
+[40:13] bit more difficult. And you could also imagine that if there are two pedestrians, one car, so
+[40:21] three objects in front of us, how to work out which measurement is associated, which object.
+[40:29] So the data association problem gets critical then. That means before just showing the second
+[40:35] example, using the Kalman filter for pose estimation, you just have to be aware that it's
+[40:42] not that simple in reality because just having the sensor data and running the Kalman filter is
+[40:47] a straightforward approach. But actually we are not done because before running the Kalman filter,
+[40:53] we should think about a few things like, for instance, the registration problem. That means we
+[40:59] are the coordinate frames of our different sensors. So the spatial orientation of our sensors
+[41:05] because the lighter is mounted on a different place than the radar sensor or the camera. Other
+[41:11] issue, of course, is the temporal alignment. Sensors are different. So the signal processing
+[41:18] chain is different. That means it could easily happen that you fuse data from different time
+[41:24] instants. That means you have to think about something like triggering unit just having,
+[41:31] because every single sensor has its own clock, how to synchronize those clocks. Talking about
+[41:37] hardware, do we find global time in our car? What happens if we have external data, data from
+[41:44] infrastructure? How to make sure that this actually runs on the same time instant? So there are a lot
+[41:50] of few things to consider, which you actually could summarize and let's say the temporal
+[41:59] alignment, the spatial alignment, the registration issue, and also things like bias have to be
+[42:07] treated, but I'll come to the bias issue a bit later on. And once you have everything in the same
+[42:12] orientation, in the same frame, you have the temporal synchronization, then actually you could
+[42:20] start to implement the Kalman filter. Of course, this issue is not that critical if you just run
+[42:26] the filter in Python or whatever language you're preferring, but actually if you're doing real
+[42:35] stuffs on the real hardware where we have to think about the requirements in terms of hard
+[42:43] real time, then you quickly end up in those kind of issues. But actually this kind of, let's say,
+[42:51] temporal and spatial alignment, the data association issue, how to work out, that actually is a lecture
+[42:59] itself or even half of a course to get everything up and running before you can do or run the
+[43:05] filters afterwards. Right, so our three assumptions. Just briefly revisit our Kalman filter.
+[43:18] We actually have basically in our recursive estimation scheme always the prediction
+[43:27] at the correction step. You might recall that we usually think about the belief in our
+[43:34] state to be estimated xt at time instant t. We actually get the data, which is the belief
+[43:41] from our previous time step can be or is comprised of the mean and the variance, so that actually is
+[43:48] describing my state of the system. And of course the belief is also influenced by our control
+[43:55] variable, so the control input, and of course the measurements. And we are actually interested in
+[44:02] working out for time step t our belief in our state. And in the first step, the prediction step
+[44:10] that's more or less all about propagating densities, we have our linear model described
+[44:19] by the system dynamics at. We have our control input ut scaled by bt, and we could actually work
+[44:26] out our covariance sigma p matrix formulation. And that's basically the step for the prediction.
+[44:35] So no measurements are used. No measurements are there. So it's just the model that influences our
+[44:41] next step, our prediction. And once we have, let's say, the next state predicted, we hopefully get
+[44:49] new measurements in. And now we can actually work on that to correct our prediction and to work out
+[44:56] if the prediction was good, equal to the measurements, or bad. And that's the, let's say,
+[45:01] the famous idea of Kalman to come up basically with a correction formulation that includes the
+[45:09] Kalman Gain, calculating Kalman Gain, which actually scales measurements and the model.
+[45:16] And in the end, we have just mentioned it before, this innovation sequence there, measurement and
+[45:23] model. And the Kalman Gain is actually scaling that. So if the Kalman Gain is close to one,
+[45:28] we are believing in the measurements. And close to zero, we are just believing in our model.
+[45:33] And in every single time step t, this Kalman Gain is calculated. It's newly calculated. And
+[45:43] we assess the innovation sequence again and work out if the measurements are poor, if the
+[45:49] measurements are good, or if we treat them in, let's say, equally the distribution between the
+[45:55] measurements and the Kalman Gain. And in the end, we hopefully expect that we work out, let's say,
+[46:00] the belief in our state x t, compromised of our mu t and the covariance that hopefully gives us
+[46:11] a good estimate of our current state of our system. And that's basically the great idea
+[46:20] of Kalman and which we actually use for our position estimation right away.
+[46:31] Right, so far so good. Everyone already implemented the Kalman filter?
+[46:35] Perfect. Then let's have a look how to fuse or how to use the Kalman filter for data fusion,
+[46:43] because that's one of the things you will also do on Friday using the AutoWare stack,
+[46:47] that you use different sources to work out the data fusion. Let's go for the following situation.
+[46:56] We assume a single track model for the vehicle standard. We define that we have measurements
+[47:04] from a LiDAR, from a GPS and IMU. So we get LiDAR data and we just assume that those LiDAR data,
+[47:12] they are not that good. So we have a low precision on those data. We get our GPS and we have our IMU
+[47:20] that is able to measure the acceleration. And that's also one of the critical things.
+[47:26] Why sensor fusion? Just talking about availability. If we, in the best case,
+[47:30] have LiDAR GPS and IMU, like shown here in parallel, then we are on the safe side,
+[47:36] because GPS could actually fall. Let's say GPS could be very poor in certain instances.
+[47:44] And if we just look at the IMU at the automated train in our car, we measure the acceleration
+[47:50] and then we are integrating twice. It means first integration is the velocity, then we get out the
+[47:56] position. And if you just use the IMU, because the question could be why to use the GPS or
+[48:03] the LiDAR sensor, basically the IMU due to the fact that we integrate twice, actually,
+[48:10] and you can prove that in real and we did it, you can make it maybe 10 to 20 seconds, then you are
+[48:17] somewhere. So you are far away because you just get the bias over time due to double integration
+[48:22] and just relying on the IMU on the inertial measurement unit is just forget it, because
+[48:29] you can't get the proper pose estimation just using the IMU. That's why it makes sense to go
+[48:36] for a redundant system with GPS and LiDAR, because the pose estimation is safety critical, because
+[48:42] without knowing the pose on this with a certain accuracy, you shouldn't drive autonomously.
+[48:48] Right. So just look at our state vector. We have our position, velocity and acceleration.
+[49:01] That's our MUT. And we assume our standard single track model, which is quite known,
+[49:10] which is used in many, many publications, which works quite good for, let's say, for certain
+[49:18] circumstances. If you think about lateral control, then you better should find a better way of
+[49:24] describing that, because then you have to think about the tire model or tire models and about the
+[49:29] dynamics. But for longitudinal dynamics, that one is pretty fine. TS, as you know, is the sampling
+[49:35] time. And we actually have already written in the matrix version position, velocity, acceleration.
+[49:44] And each line, of course, is subject to noise. Right. So just put that one in our matrix
+[49:54] formulation. Pretty easy. We get our state vector and we could actually bring it together in this
+[50:01] red line. Our MUT is our linear model. And we have our noise, which also comprises different,
+[50:13] so let's say, three entries attached to there. And we, as I said before,
+[50:19] we go for IID independent and identically distributed with a certain RT.
+[50:30] Then let's assume two cases. First one is we just have LIDAR and IMU. Let's work out how that works.
+[50:37] Of course, you will see. Otherwise, we wouldn't have a second case, but that one is not that good.
+[50:45] So we also go for a fusion of three sensors, LIDAR, GPS, and IMU in our second scenario.
+[50:53] So as I said before, we assume that LIDAR is of low precision. And we have the, let's say,
+[50:59] the IMU. Those sensors are there in our car. And we would like to fuse the data
+[51:04] in this first attempt. So we actually could think about exactly the measurement equation
+[51:13] or sensor model. CT, again, is our sensor model. We have our state vector, position,
+[51:18] velocity, acceleration. We have our measurement noise of the LIDAR sensor and the IMU. We just
+[51:23] have two sensors. And hopefully, our result is the estimated position and the estimated
+[51:32] acceleration. So that's what we are aiming for. Again, we have zero mean and the certain
+[51:38] covariance for our measurements. A few words to, let's say, the initial state vector,
+[51:45] how to choose it, how to deal with it. It's a bit of a tricky thing because there is no
+[51:50] classical rule. Of course, if you have the chance to have an estimate from the history,
+[51:56] from the previous state, then go for that. If your algorithm is pretty good and, let's say,
+[52:03] the Kalman filter converges pretty quickly, then just setting it to zero usually works.
+[52:10] But it's a bit of, let's say, a tuning thing. That's not, let's say, the rule for every single
+[52:16] application. That's just setting it to zero works. Sometimes it could actually happen that
+[52:22] you're not converging. Then you have to think about the initial start point. And of course,
+[52:26] the closer you are to the final estimate, the better is it. But we know sometimes we do not
+[52:32] know the ground truth, of course. Sometimes it helps to have the GPS signal and just trigger
+[52:38] our initial state just using the GPS data. Right. And the same thing for our initial
+[52:45] covariance matrix. It's, again, let's say, a tuning thing. And you already implemented Kalman
+[52:55] filters. And you know that tuning the initial value, tuning R and Q are the usual ways to get
+[53:00] things done. But be aware because in many applications, the uncertainty measurement
+[53:09] covariance is just very high while the process covariance is set to small numbers.
+[53:17] That actually favors the model. And you're actually relying on a single track model,
+[53:23] not only measurements. That's why usually you should go away from those kinds of thinking
+[53:30] about tuning, thinking in tuning parameters. Because especially when it comes to the
+[53:35] measurement noise to that one, there is a way to work it out. So you actually could,
+[53:43] if you have the chance, if you have a real hardware, real system, you could actually
+[53:46] work that out by sampling from your system. You could actually work out the measurement,
+[53:54] let's say, the uncertainty and QT by real measurements. And then you could actually go
+[53:59] with the real distribution in your estimation procedure.
+[54:06] Right. So that's what we have, more or less, for our initial covariance. It's where we start off,
+[54:21] so sigma 0. The other thing is, just a few additional words what I just said before,
+[54:30] that by tuning Q and R, you actually can find or can improve the convergence of the Kalman filter.
+[54:38] But be aware that especially when it comes to that one, you should better measure it if you have real
+[54:46] access to a system. Because otherwise, what you're doing is, what I just wrote here is that
+[54:52] the same for the measurement. Small values indicate higher confidence. So the predicted
+[54:56] values are more weighted, while large values of the process noise indicate the lower confidence
+[55:02] in the model, in your system model AT. And the same holds here for CT, for our sensor model.
+[55:10] So you might lose the physics if you just tune too much in Q and R. It's just the point I would
+[55:18] like to mention. For our example, what you will see in a second is just synthetic data,
+[55:25] data that is simulated. Some noise is added to it. Just decided to go for some zero mean,
+[55:31] causing this to be the noise, let's say, to get noisy measurement data. And those data is
+[55:37] used then for the estimation. And that's the starting way for, let's say, for RT,
+[55:45] where we have for each sensor different end, let's say, for the process version and for the
+[55:51] measurements. So here we go for LIDAR and IMU, the different variances in there. And what we
+[55:57] are actually doing, of course, is first propagating densities, the prediction step. And then we get
+[56:05] new data, new LIDAR data and new acceleration data from our IMU. And we actually end up in,
+[56:14] let's say, in this two-stage recursive procedure between prediction and correction. And hopefully,
+[56:23] we get a proper result. And actually, you will also get, let's say, the basic code,
+[56:30] which is implemented in MATLAB and Python, which will be shared by Boris,
+[56:37] so that they can easily work out how this example is implemented.
+[56:42] What you see here is basically our position. So position in, let's say, the metric system in
+[56:50] meters over time. We are starting at zero. And that's where we have our ground truth,
+[56:57] our ground truth data for the position. And in our first example, we have our LIDAR sensor.
+[57:03] And we assumed the LIDAR data is very corrupted by noise and very bad, let's say, poor measurement
+[57:08] data from our LIDAR sensor. So we get a lot of noise there. And if we then do, let's say,
+[57:15] our estimate running our Kalman filter, our standard Kalman filter, the linear Kalman filter,
+[57:21] we see first thing is, but that's why we did the first simple example, that the variance
+[57:28] now is smaller. That's good. But we see the estimate is still
+[57:34] pretty bad. Of course, we could actually do some filtering afterwards, some
+[57:40] low-pass filtering afterwards. But in fact, it's not that good using, let's say,
+[57:48] LIDAR data for position estimating alone. Let's have a look at the velocity that fits together.
+[57:58] Just look here. Yeah, right. So it's just times, I can, six to eight. So we are flat right here.
+[58:05] So we should end up at zero about here. So that's our velocity in meters per second.
+[58:14] So actually not miles in there, meters per second. That's it. So that's our ground truth data.
+[58:22] And if we just look at the estimate coming out of our Kalman filter as implemented right before,
+[58:30] we get a pretty good result. When we have, let's say, stationary data, usually it's
+[58:35] not very good. Kalman filter is much better when it comes to dynamics. And we also see here some
+[58:42] offset in the result there, which is actually not that good. Offset is another issue where we have
+[58:49] a few words in a couple of minutes. Kalman filter and its kryptonite. Velocity and finally acceleration,
+[59:00] our third entry in our state vector in meter per second squared. Again, the ground truth data. So
+[59:08] that's what we actually, in that case, we have the ground truth. We would like to see an estimate
+[59:12] that perfectly fits to that one. And what we actually get from our IMU is the green plot.
+[59:19] A lot of noise is in there. That's what we get from our inversion measurement unit by measuring
+[59:24] the acceleration. And doing the estimation like we had before with the Kalman filter, we get
+[59:31] more or less the red curves for estimate, which are, again, a bit noisy. And that's basically it.
+[59:40] It's there. So we got some results. But actually there, to be honest, we are not satisfied with
+[59:46] those kind of results. And that's why, let's have a look. What can we do if we just now use GPS data
+[59:55] in addition to our two other sensors, LiDAR and IMU, and have a look what's changed.
+[60:02] Yeah, we don't see noise here in the estimate. Right. So we are not measuring velocity directly.
+[60:14] So that's just the estimate while LiDAR. So we have a LiDAR sensor and we have the IMU.
+[60:20] So we have real measurements from two sensors. So the one measures the position based on the LiDAR,
+[60:27] based on the point cloud. The other one measures acceleration using the IMU as meters. But we don't
+[60:34] have any velocity sensors in there. So it's just a pure estimate out of our, let's say, using the
+[60:39] single track model. And that's why we don't see that noise in there. Because there is, let's say,
+[60:45] assume not a big noise for the velocity. That's the reason for it. Right. So back to our
+[60:57] fusion example using now our search sensor. So we put it right in here. So that line goes along
+[61:06] with the GPS. We also assume some measurement noise for our GPS sensor, which is actually
+[61:13] as defined or as assumed in the beginning, for example, that one is still the worst sensor,
+[61:19] while GPS is the best sensor in terms of uncertainty. And we got this new situation.
+[61:27] And we actually could run the Kalman filter just with one new variable. So very easy for a Kalman
+[61:34] filter to, let's say, to augment your system from before with an additional measurement input.
+[61:43] So actually only our measurement equation changes while our state equation is pretty much the same
+[61:48] because we are still estimating position, velocity, and acceleration. So the state equation,
+[61:55] so the process equation is pretty much the same. The measurement equation changes because now we
+[62:00] also need a sensor model. So one row in C that reflects the sensor model of GPS.
+[62:07] Right. And for our example, we just used for, let's say, QT or a measurement covariance,
+[62:22] those kind of parameters. But you could easily play around in the Python code to see what happens
+[62:28] if that changes for the different sensors. It's just an assumption just in there.
+[62:35] Right. And looking at our result, what we get here, so the same scenario, same way of position
+[62:43] over time. The ground cruise data, what you see here is lighter. Again, the bad signal
+[62:50] or the bad measurements, while GPS is even better. So the yellow curve shows the measurement data
+[62:56] of GPS. So pretty good. Pretty good measurement data. Usually in practice,
+[63:04] you're going for D-GPS, differential GPS, which allows you basically to get out,
+[63:13] sometimes just a few inches. So in the metric systems, five centimeters. So pretty good
+[63:19] accuracy. If you go for the set of classical GPS, which is now in every single car that you buy,
+[63:25] you go for the differential GPS, D-GPS, we will spend a few words on Thursday and Friday on that.
+[63:33] That really gives you a very good estimate or let's say measurement data, which is actually
+[63:38] very good for pose estimation. Of course, if GPS fails, you have to deal with exactly that one
+[63:45] that you have to use LIDAR or IMU on top of it or in addition to diffuse diffusion.
+[63:51] Right. So that's our measurement for position. Let's go for our Kalman filter. What we see
+[64:00] here right now is that our estimate, the red curve shows us a very, let's say,
+[64:07] compared to the LIDAR sensor, a perfect distance or let's say a great difference between the green
+[64:15] curve. Of course, from that kind of scaling, it looks like that the estimate is pretty much
+[64:22] the same that a GPS data would actually would say, but brings us to the question why to go for
+[64:28] the Kalman filter when the GPS data is pretty good. One thing, which we already touched this,
+[64:35] of course, what happens if GPS fails, then we are hopefully have, let's say, a better solution. And
+[64:41] the other thing is, if we have a closer look in this, let's say, in this behavior of the red and
+[64:48] the yellow plots, we actually see that, and that's, of course, that's the theory, what we have proved
+[64:54] in our first example that the overall variance of the Kalman filter of the estimate is smaller
+[65:01] than the variance of the smallest variance of the best sensor, in our case, the GPS. That means the
+[65:08] overall variance of the estimated result has to be smaller per definition than the GPS variance.
+[65:16] That's the point. Even in that example, but it's subject to, let's say, to the choice of the
+[65:24] variances of the measurement data, we actually can show that even for, you see here, that's the
+[65:30] lighter, it's the green one, yellow is the GPS, and the estrogen one is the red one. We are in for,
+[65:38] so green is, of course, far away. Looking at this point, just having the detailed plot here,
+[65:44] you see the red one is below the yellow one, which is basically that what we expected,
+[65:50] because in the theory behind, that actually should be the case. Right.
+[66:00] So far, questions to the procedure of combining data in the Kalman filter. I think it's
+[66:13] pretty straightforward approach. One of the things which I mentioned is, of course,
+[66:18] before doing the Kalman filter, applying the Kalman filter, there are a few steps to
+[66:22] keep in mind, like the temporal synchronization and the, let's say, registration problems,
+[66:30] means the spatial calibration, let's put it in that way. And one other issue,
+[66:41] and that might be the last part for today, is Kalman filter, of course, is perfect to decrease
+[66:48] variances. That's really intuitively there. But what about bias? And it happens quite often
+[66:55] that sensors feature a bias. What do you think? Is the Kalman filter able to treat bias? So,
+[67:01] if you have a bias on your IMU, can the Kalman filter work that out? What do you think?
+[67:10] Is it a... Right. It's a bit of an issue. The Kalman filter is not able to deal with
+[67:17] bias signals. And do you have an idea how to deal? Because in measurements, that's quite often the
+[67:24] case. You have, let's say, different kinds of uncertainties and different kinds of errors,
+[67:30] usually systematic errors, random errors. Random errors always somehow are related to variances.
+[67:38] Kalman filter can work with those. Systematic errors are usually reproducible. And they have
+[67:44] the same sign in every single... So, they reproduce also in terms of signs. And usually,
+[67:50] you do some sort of correction. And the bias, if it's constant over time, then it's easier to
+[67:56] correct. If it changes over time or even every single time step, then it's a bit more trickier
+[68:02] to get that done. But basically, what do you think? How can we deal with the bias? And
+[68:08] because the IMU is one of those kind of sensors where bias could easily happen.
+[68:14] Do you have an idea how to work it out?
+[68:22] I think it's not that complicated. And I'll just show you without, let's say,
+[68:27] a theory behind. There are a few things. The one thing is the bias. Other things are colored
+[68:32] noise. So, we assumed quite often Gaussian, zero mean, normally distributed noise. We also know
+[68:39] that's actually not the case. It's always the case in, let's see, in the classroom that we have
+[68:46] linear systems and white noise, Gaussian white noise. But in practical examples, we often have
+[68:54] longer tails, fat tails in our distribution, which are then actually somehow different
+[69:00] distributions. And we might work that out by sampling many, many times, doing some sort of a
+[69:07] histogram fit and hopefully figure out it's close to a Gaussian distribution or a G-square
+[69:13] distribution or student T, whatever. But in fact, we have to also deal with bias and with some kind
+[69:20] of colored noise. And what actually is the great, let's say, a great trick is just the Kalman filter
+[69:29] in the state estimation world. If you cannot treat the problem, then just estimate it along
+[69:37] with the other parameters. That means you just augment your state vector. Instead of just
+[69:43] estimating position, velocity, and acceleration, you actually add another row, the bias of the IMU,
+[69:52] for instance, and you just estimate the bias. That's one of the, let's say, well-known tricks,
+[69:58] pretty useful just to estimate the bias. And that actually could help you. The one thing is if the
+[70:05] bias changes over time, to work it out, because it also could be, let's say, giving you a feedback
+[70:13] that the sensor degrades over time in terms of condition monitoring, state monitoring.
+[70:19] And other things like the colored state noise, colored measurement noise, can be also handled
+[70:26] by, let's say, by estimating the noise parameters. So augment the state vector and estimate the noise
+[70:32] parameters, mean and variance, or whatever distribution you have to manage. Another
+[70:40] quite helpful approach actually is to do some sort of pre-widening, which is a nice approach,
+[70:47] also called shaping filter. So you put colored noise in, matching box, and you get white noise
+[70:53] out of it. I think one of the things that Marco will definitely give you a few ideas on that,
+[70:59] but that's a pretty helpful approach to do this shaping of the noise distribution.
+[71:04] And I also put, so we talked about the offset, and offset over time, so drifts, and finally we have
+[71:11] two other issues, sensor faults. And that's one of the things which is quite important for
+[71:17] autonomous cars. The one thing is to have the proper estimation of position of all the dynamic
+[71:22] objects around me, do a proper path planning, path matching. That's the one thing where we still have
+[71:29] a lot of work to do. But the other thing is what happens, or how to detect errors in my system,
+[71:36] because that's how to monitor the overall performance of the system. And that actually is
+[71:40] one of the things we have to deal with. And the Kalman filter is pretty cool in that,
+[71:44] because just checking the innovation sequence, that means the difference between measurements
+[71:51] and the sensor model helps you quite a lot. Just defining a threshold and watching that one,
+[71:57] monitoring that one, can give you actually an idea if sensors are, let's say you have a
+[72:03] breakdown, or are completely unusable anymore. And the same happens for the actuators.
+[72:11] So you can use the Kalman filter for monitoring, system monitoring, or condition monitoring of your
+[72:16] entire system, which is pretty nice. And it turns out that a lot of work meanwhile is
+[72:23] moving to that part, because what happens actually if an autonomous car
+[72:27] has some issues from every point. If you are not talking about just the sensor is not working,
+[72:32] it could be more in your system. Great. So, but the message basically is if you have a problem
+[72:42] with certain parameters, just include it in the problem, augment the state vector, and just go
+[72:47] for estimating that one with the other parameters. Right. And that brings me to, let's say the final
+[72:55] slide for today, the conclusion. We actually started this morning by thinking about what
+[73:05] are the benefits of multi-sensor perception, multi-sensor data fusion. We talked about the
+[73:12] different taxonomies of fusion. We have these four different taxonomies where we talked about,
+[73:18] so you can find different ways of talking about sensor fusion. More on the data part,
+[73:26] more on the architecture part, talking about raw data or object lists, complementary, cooperative,
+[73:33] competitive fusion. So we had those four kinds. Then we actually worked out how fusion works. How
+[73:40] can you fuse two different PDFs? So we just did this with two Gaussian distributions to work out
+[73:47] and to show that the overall variance is smaller than the variance of the best sensor in your
+[73:54] fusion system, which can be proven. We also had, let's say a bit more improved example,
+[74:04] or let's say more advanced one, where we talked about how to fuse data from different sources.
+[74:11] And we also spent a few, let's say a few comments on our covariances, which are in many, many cases
+[74:18] seen just as tuning parameters. But be careful there. They are not only tuning parameters. Of
+[74:25] course, the process noise, we can't measure it. It's hidden in our system dynamics. But for the
+[74:33] measurement, we actually, if we have a real system, real sensors in our lab or right out
+[74:39] on the road, we could actually work out the measurement uncertainties and the measurement
+[74:45] covariance of our system. And then we actually can deal with the right parameters in our estimation
+[74:51] procedure. And I think the takeaway definitely is that doing fusion has many, many advantages.
+[75:00] It's not only about the accuracy, getting the variance down. That's, of course, one of the
+[75:06] great advantages. But we also have to think when we talk about autonomous cars, that sensors might
+[75:12] fail, that sensors might deliver wrong data. And we would always have all the sensors available,
+[75:19] just thinking about driving through tunnels or bad weather conditions. Of course, you are on
+[75:26] the sunny side here in California. It's not that bad. But there are a lot of countries around the
+[75:31] world where you have a lot of tunnels. I know what I'm speaking about, because in Austria,
+[75:37] we have a lot of the Alps there, a lot of tunnels. Weather is changing over the year.
+[75:43] And that happens to many places around the world. So we have definitely, as engineers,
+[75:48] think about those kind of things that you're not only running here in the Silicon Valley,
+[75:53] that they can be distributed all around the world. Right. Are there any questions?
+[76:02] Otherwise, I would like to close. Thanks for your attention. And we will have our next lecture on
+[76:09] Thursday, when we talk about, let's see, AutoWare, about the software stack,
+[76:14] and then the hands-on session on Friday. Thank you very much.
+[76:22] Thank you.

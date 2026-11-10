@@ -1,0 +1,1286 @@
+[00:00] Cool, all right.
+[00:06] So today we're going to continue our discussion about localization.
+[00:12] And then we will move to the topic of simultaneous localization and mapping.
+[00:16] In particular, if you remember, a key assumption we made last time in order to solve the localization
+[00:21] problem was to assume that we know the correspondence variables, which means that an oracle tells
+[00:29] us every time we have a measurement to which landmark that measurement corresponds to.
+[00:37] And this was captured, if you remember, through the notion of a correspondence variable.
+[00:42] In particular, we say that CTi is equal to j if measurement i taken at time t corresponds
+[00:51] to landmark j, say to the point j in a map that for now we assume is given to us.
+[00:59] The natural question, though, is who gives us these correspondence variables?
+[01:06] In general, indeed, they're not known and need to be estimated as we estimate our pose
+[01:13] or we need a given map.
+[01:16] The way to do it is to determine the identity of a landmark during localization via maximum
+[01:24] likelihood estimation, whereby one first determines the most likely value of the correspondence
+[01:30] variable CT, and then it takes it for granted.
+[01:33] Now, these are some ramifications.
+[01:36] First of all, the idea is to estimate, so to take the value for the correspondence variable
+[01:43] that best explain the data that we have observed.
+[01:46] That's reasonable.
+[01:47] But then we take this value for granted, which means that if we make a mistake in the correspondence,
+[01:54] we're fully committed to that choice.
+[01:57] And so we carry this mistake over and over in subsequent time steps.
+[02:03] So using maximum likelihood is generally a good idea because it leads, as we will see,
+[02:10] to a fairly tractable algorithm to estimate the correspondence variables, but introduces
+[02:15] some brittleness in the localization algorithm due to the fact that we might commit ourselves
+[02:21] to correspondences that are erroneous, which means that you need to add, in general, some
+[02:28] additional levels of robustness, for example, in terms of outlier rejection schemes.
+[02:33] Or simply, you track many different landmarks so that even if you have a few mistakes here
+[02:39] and there, it's not catastrophic during your localization process.
+[02:43] Having said that, the idea, as I said, to estimate the correspondence variables is to
+[02:56] pick the assignments from measurements to landmarks that makes the measurements as likely
+[03:08] as possible.
+[03:10] M is the map that we assume is given.
+[03:13] UT is the history of controls.
+[03:15] Z1 to T minus 1 is the history of measurements.
+[03:20] And C1 to T is the history of assignments for the correspondence variable.
+[03:27] The correspondence variable from time step 1 to time step T minus 1 have been determined
+[03:36] in the previous iteration of the estimation procedure.
+[03:40] What we are trying to understand is how to select the assignment at time step T.
+[03:45] Is there a different algorithm that uses the popular distribution for C1 to T?
+[03:52] Yeah, so this is the most basic one.
+[03:55] For example, a more advanced version is a multi-apothesis algorithm whereby you keep
+[04:02] multiple hypotheses about your localization, each one corresponding to a given history
+[04:10] of the correspondence variables.
+[04:11] And then they are mixed probabilistically.
+[04:13] With this one, if you mess up one of the Cs, you might be pretty bad off going forward.
+[04:19] Well, you keep this error as time moves forward.
+[04:23] That's exactly what I was saying before.
+[04:26] Now, having said that, in general you have many landmarks.
+[04:31] So even if you screw up with a landmark, since you are also observing many other landmarks,
+[04:37] the localization process still can be reasonable.
+[04:40] But second of all, you can add additional layers of robustness to this basic scheme
+[04:45] by either reason about multiple hypotheses for this correspondence variable, so have
+[04:51] basically a mixture localization algorithm or some other rejection and so on.
+[04:57] I'm just going to provide references for those methodologies, but your point is very valid.
+[05:02] Anyway, so the point here is that we say, OK, if Ct is equal to some assignment, what
+[05:10] is the probability of the measurement that I just observed?
+[05:13] I do that for all possible assignments of measurement i to lemma j, and I pick the assignment
+[05:19] that maximizes the likelihood of the measurement that I have observed.
+[05:23] So it's fairly reasonable.
+[05:25] I consider all possible assignments, I pick the one that best explains my current measurement
+[05:31] as captured by the condition distribution of the measurement with respect to previous
+[05:35] assignment, previous measurement, and previous controls.
+[05:38] So the intuition should be fairly straightforward.
+[05:43] Now, the challenge is that there are exponentially many assignments.
+[05:52] So Ct, so remember that the Ct, the measurement, indeed entails many possible measurements
+[06:00] at time t.
+[06:01] For example, if you have a lighter sensors, you have a point cloud.
+[06:05] So Zt is indeed a vector with many components, including Zti.
+[06:14] And we want to find an assignment for each one of these components to a landmark.
+[06:17] And the number of possibilities is exponential in the number of measurements, which in general
+[06:23] makes the direct computation of the maximum likelihood extremely computationally intense.
+[06:31] So a typical approach is to use an approximation and indeed perform maximum likelihood estimation
+[06:42] separately per each measurement.
+[06:48] So instead of processing all measurements Zt in batch, I process each assignment one
+[06:57] by one.
+[06:59] So we look at actually maximum likelihood with respect to the specific measurement I
+[07:03] as opposed to the entire vector measurements.
+[07:07] Any questions about this?
+[07:12] And now the optimization is no longer in terms of Ct, but becomes an optimization in terms
+[07:19] of a Cti.
+[07:22] So for each measurement, Cti, I try to find the correspondence from measurement at Zti
+[07:28] to landmark j through the correspondence variable Cti, such that the likelihood of that measurement
+[07:36] conditional on the histogram of measurement controls and conditional on a specific value
+[07:41] of the assignment for Cti is maximized.
+[07:45] Is this measurement related to landmark 1?
+[07:48] If that is the case, what would be the probability of observing a measurement that I've just
+[07:51] observed?
+[07:52] 0.3.
+[07:53] Is this measurement related to landmark 2?
+[07:57] If that is the case, what is the probability of observing a measurement that I've just
+[08:01] observed?
+[08:02] 0.5.
+[08:03] OK, so it's better to associate this measurement with landmark 2.
+[08:07] That's what we're saying.
+[08:08] So the only additional challenge is to represent this probability distribution in an analytical
+[08:17] form so that actually we can solve this optimization problem.
+[08:21] To do so in the EKF spirit, what we do is to use linearizations.
+[08:26] The mathematics as usual tend to be tedious, not complicated, but tedious.
+[08:33] So we just give you the high level idea, and as keep the mathematical derivation is
+[08:37] not particularly insightful.
+[08:39] In particular, the idea in order to compute this probability in an effective way is to
+[08:50] use the theorem of total probability.
+[08:52] So this probability can be written as the sum, or actually the integral of the conditional
+[08:59] probabilities with respect to xt times the probability of xt given all the other conditioning
+[09:04] variables.
+[09:05] So basically, I'm applying the total probability law with respect to the state variable xt.
+[09:10] So this is just a total probability theorem.
+[09:14] And then the derivation will be very similar to the derivation of the Kalman filter and
+[09:19] the EKF filter.
+[09:22] This probability is what?
+[09:26] The probability of distribution over the Kalman state conditional on measurement up to time
+[09:33] t minus one and controls up to time t.
+[09:36] This is the definition of a prediction belief.
+[09:40] This is the measurement model, which we assume is the measurement process, we assume is affected
+[09:51] by Gaussian noise.
+[09:55] So this probability distribution is indeed a Gaussian distribution with the variance
+[10:01] given by qt, the noise variance, and mean given by the measurement model equation.
+[10:12] The belief is also Gaussian.
+[10:14] In the EKF algorithm, the belief is always treated as Gaussian.
+[10:20] We saw last time that when we multiply two Gaussians and integrate, we still get a Gaussian.
+[10:28] The trick is, OK, so we get the Gaussian.
+[10:31] What is the mean and what is the variance with respect to the means and violences of
+[10:37] the two Gaussians that we multiply?
+[10:40] These are the steps that I'm skipping.
+[10:43] You do a couple of pages, well, maybe one page of quite tedious algebraic derivation.
+[10:49] So what you get is that the probability of ZTI with respect to all the assignments,
+[10:59] correspondence variables from time one to t can be written as a Gaussian random variable
+[11:06] with variance given by the sum of the noise variance and the sum of the variance due to
+[11:15] the uncertainty about what the robot thinks it is.
+[11:17] This is the usual measurement variance that we use in a Kalman filter.
+[11:25] The variance regarding a measurement is due to two factors.
+[11:30] We're uncertain where we are.
+[11:33] And that is reflected in our uncertainty with respect to where a landmark would be.
+[11:39] And on top of that, we have measurement noise.
+[11:42] The overall variance is the sum of the two.
+[11:45] The mean is the measurement that we will get if the value of the state will be equal to
+[11:56] the most likely value given by the mean mu bar t.
+[12:02] So for intuition, this should be quite intuitive.
+[12:05] The full derivation is a bit tedious.
+[12:07] But anyway, so the point is that then what you do is to plug this Gaussian, you replace
+[12:12] this probability distribution, it is difficult to work with this Gaussian.
+[12:18] And in order to solve for the assignments, then what do you do?
+[12:22] So for each possible value of a CTI, say CTI equal 1, you have this Gaussian.
+[12:39] The horizontal axis represents the measurement.
+[12:53] I have observed this measurement.
+[12:58] So should we assign, so this is the measurement CTI.
+[13:07] Should we assign this measurement to landmark two or to landmark one according to this procedure?
+[13:14] We pick the assignment that maximizes the data likelihood.
+[13:20] So which one should we pick?
+[13:22] I mean, intuitively?
+[13:24] Two, because assuming that the correspondence variable evaluates to two, then the distribution
+[13:32] for the measurement will be this Gaussian.
+[13:35] And so the probability of observing the measurement that I've just observed will be this one here.
+[13:42] Here will be this value here.
+[13:45] This is higher, so I consider two.
+[13:51] So what you do practically, you compute these quantities that you compute anyway when you
+[13:56] do EKF localization with the non-correspondences.
+[14:00] And now to estimate the correspondences, you plot all these Gaussians, one for each
+[14:05] possible assignment of the correspondence variable.
+[14:10] And then you pick for the correspondence value the value that maximizes the probability.
+[14:17] Because we're saying significantly is there a possibility that our correspondence function
+[14:23] would be a divisor bijection, would that be like double-mount something?
+[14:26] Yeah, but that actually could be correct, right?
+[14:29] It's very possible that, oh, you're saying that the same measurement corresponds to two
+[14:35] landmarks?
+[14:36] Or that two landmarks correspond to the same measurement?
+[14:40] Actually both.
+[14:41] Yeah, but sometimes that is possible is not incorrect.
+[14:46] That you have a measurement that corresponds to two measurements that correspond to the
+[14:51] same landmark.
+[14:52] Think about like a wide obstacle, and then you have a ladder sensor, and then you have
+[14:56] a return.
+[14:57] It's very possible that two returns are actually reflections from the same obstacle, well point
+[15:03] landmark.
+[15:04] All right, so having said that, then the EKF localization algorithm with non-correspondences
+[15:12] is identical to the EKF localization algorithms with non-correspondences.
+[15:17] The only difference is that we have to do this additional maximum likelihood estimation
+[15:22] for the correspondence variable.
+[15:24] How that works?
+[15:26] So the first part, the part whereby we compute the prediction belief, is exactly the same.
+[15:33] The prediction belief does not depend on the measurement.
+[15:36] So it makes sense that the correspondence variable doesn't play any role there.
+[15:39] In particular, as usual, the prediction belief is computed by applying the state transition
+[15:45] model to the most likely state as captured by the mean of the belief at time t minus
+[15:52] one.
+[15:53] The uncertainty about the prediction belief, as usual, is due to two components, uncertainty
+[15:58] about where we are at time t minus one as captured by the belief at time t minus one
+[16:03] plus motion uncertainty as captured by the covariance metric Rt.
+[16:10] So this is as before.
+[16:13] The difference is that now we do process each measurement sequentially, as in the EKF localization
+[16:21] algorithm, but we don't know anymore how to associate a measurement into a landmark.
+[16:26] So what we do is to first consider all possibilities.
+[16:33] So the possibility that measurement i corresponds to any possible landmarks.
+[16:41] And for each one of those possibilities, I compute the related quantities in terms of
+[16:46] if that will be the case, what will be the expected measurement and what will be the
+[16:49] expected uncertainty.
+[16:51] Again, I don't know to which landmark measurement i corresponds to.
+[16:59] So what to do in the first step is to say, OK, so let's associate the measurement Zti
+[17:09] to landmark one.
+[17:13] And if this is the case, what will be the Zti, I say, what will be the measurement that
+[17:28] I would expect, and what will be the associated uncertainty?
+[17:34] If instead we associated Zti to landmark two, what will be the expected measurement
+[17:49] and the associated uncertainty, and so on and so forth?
+[17:53] Each one corresponds to a Gaussian.
+[17:58] Once I do the computation for each landmark, then I assign measurement i to the landmark
+[18:05] j that makes my data most likely.
+[18:10] So whereby I closer to the mean of the corresponding Gaussian in a way.
+[18:16] This is exactly the correspondence problem that was described in the previous two slides.
+[18:25] Once we make the correspondence assignment, then everything else is the same.
+[18:32] We commit to that correspondence assignment, and then I, as usual, compute the Kalman gain.
+[18:38] I update the belief about the expected pose by blending the expectation of the prediction
+[18:48] belief and a linear combination of what I expect I should have seen and what I've seen,
+[18:57] and then update the equivalence accordingly.
+[18:59] So the only difference is here.
+[19:03] Does this step make sense?
+[19:06] I don't know priori which landmark I should associate the measurement to, so I consider
+[19:10] all possible possibilities.
+[19:12] For each one, I ask myself, well, if measurement i corresponds to landmark k, how likely the
+[19:20] measurement that I have observed would be?
+[19:26] That's what is done here.
+[19:27] I do it for all the possible associations for landmark and a peak then association that
+[19:32] makes the data the most likely possible.
+[19:41] So this part tends to be a little bit confusing because now the algorithm has a lot of moving
+[19:46] parts, but just trying to stress that in terms of changes with respect to the previous EKF
+[19:53] localization algorithm, there is very little.
+[19:56] The only change is really here.
+[19:59] And now I have to consider all possible possibilities, and then I pick the one that best explains
+[20:05] the data.
+[20:08] So practically, if I see a door, there is also a door over there.
+[20:20] I see a table, so I get a measurement about the return.
+[20:25] The question is, did I see a table or not?
+[20:30] So do I associate this measurement to that table or to that podium?
+[20:35] Basically this procedure says that, well, if I associate this measurement to that podium
+[20:41] to the table, I will have a certain probability.
+[20:43] If associated with that with respect to the podium, I will have a lower probability than
+[20:46] associating the measurement to that landmark.
+[20:52] Any questions?
+[20:57] Let's pause because if this is not clear, then the EKF SLAM becomes even less clear.
+[21:07] So now we have basically three building blocks.
+[21:10] First we propagate forward our estimate about the pause by using the prediction step.
+[21:17] The second module is to correct our prediction by using measurement.
+[21:22] The third module is in order to correct our prediction by using a measurement, I need
+[21:30] to associate a measurement to a landmark, and this is what is done here.
+[21:34] So a lot of lines, but in reality, we're doing three main operations.
+[21:40] Cool.
+[21:42] As I said last time, so in the description of the algorithm, I consider point landmarks,
+[21:47] but one can use any other geometric primitives as a landmark.
+[21:51] In particular, a common geometric primitive that is used for localization, and actually
+[21:56] the one that you will be using your homework, is a line.
+[22:02] Or more specifically, as discussed last time with one of the students, will be a line segment.
+[22:07] A line is then parameterized by two parameters, r and alpha, this will be your measurement.
+[22:19] Another comment is that sometimes in order to associate a measurement with a landmark,
+[22:27] we associate the measurement with the landmark that minimizes Mahalanobis distance.
+[22:37] So what is Mahalanobis distance?
+[22:40] Mahalanobis distance is an interesting concept.
+[22:49] So assume that you have a random variable with the mean mu, so this is not a dot, this
+[23:03] is just a point.
+[23:05] So it's mu, and this is an uncertainty ellipse.
+[23:11] And I want to understand how close a given realization of that random variable is, meaning
+[23:20] in terms of how many sigmas is a realization from the expectation.
+[23:31] So in general, when you try to, so the expectation is a point.
+[23:35] If you want to measure the distance between these two points, in general you will be using
+[23:39] Euclidean distance.
+[23:41] But now we are reasoning in terms of the distance with respect to a random variable, which means
+[23:45] that we don't want to use the notion of Euclidean distance, we want to use a more statistical
+[23:52] notion of distance.
+[23:54] And in particular, a very sensible one, is the notion of how many sigmas you are away
+[23:58] from the expectation.
+[24:01] It might be that you are very uncertain in one direction and much less uncertain in the
+[24:05] other direction, like here.
+[24:09] So from a statistical standpoint, this point and this point are at the same distance from
+[24:16] the mean.
+[24:19] Because loosely speaking, they are one sigma away from the mean.
+[24:25] This is a notion of a melanobis distance, basically it measures how many sigmas you
+[24:29] are away from the expectation.
+[24:33] Which makes sense, because if you know that you are highly uncertain along some axis,
+[24:40] and then you get an observation here, it makes sense to say that actually this observation
+[24:45] is indeed quite likely.
+[24:48] While if you get an observation that in terms of Euclidean distance is the same, but is
+[24:54] this in this direction, since you are more sigmas away from the mean, then you should
+[25:00] say that this observation is less likely.
+[25:03] So in a statistical sense, this observation is more distant from the expectation than
+[25:07] this observation.
+[25:08] Yeah?
+[25:09] Just to be clear, so the state that's within the enclosed space has equal certainty of
+[25:18] where you're going to be as long as you're away from the expectation?
+[25:19] Yeah, one sigma away.
+[25:20] Okay.
+[25:21] So say it's a 63% probability that you are in there.
+[25:25] Yeah.
+[25:30] Does it make sense?
+[25:32] So this is referred to as melanobis distance.
+[25:35] Practically, how do you compute the melanobis distance?
+[25:38] You compute the usual Euclidean distance, and then you scale it by the inverse of the
+[25:46] covariance matrix.
+[25:50] Which means that, loosely speaking, if on some axis you are very uncertain, then the
+[25:56] sigma is very large, and then when you divide the Euclidean distance by the large sigma,
+[26:00] you get a small number, which means that statistically you're indeed quite close.
+[26:04] This is an explanation that from a mathematical standpoint is extremely brutal and inanimate,
+[26:11] but I think is very practical.
+[26:12] Do you agree?
+[26:13] Brutal, but effective.
+[26:18] Okay, so the idea then of using melanobis distance to do that association is, again,
+[26:26] you get a measurement, you consider all possible associations for the correspondence variable.
+[26:35] For each one of them, you compute an expected measurement that you should get if measurement
+[26:42] i corresponds to landmark k with associated uncertainty, and so on.
+[26:55] Then you compute the melanobis distance of the measurement that you have observed from
+[27:02] each one of the expected measurements that you should have gotten with respect to a given
+[27:10] correspondence variable association, and you pick the one that minimizes the melanobis
+[27:15] distance.
+[27:16] This is yet another way of basically picking a value for the correspondence variable that
+[27:21] best explains the data.
+[27:30] We'll see this better later on when we talk about EK epsilon.
+[27:38] Does this make sense?
+[27:39] Again, the idea is to get a correspondence variable that best explains the data.
+[27:43] You can do it either through maximum likelihood estimation or by minimizing the notion of
+[27:48] melanobis distance.
+[27:58] So usually, it can be a sign of one or two things.
+[28:01] Everybody understands or everybody doesn't understand.
+[28:07] Should I keep going?
+[28:09] Yeah.
+[28:11] Is this notion of melanobis distance kind of also like maximum likelihood estimation
+[28:17] because you're taking the point?
+[28:18] Yes.
+[28:19] That makes sense.
+[28:20] In a way, it's very much related.
+[28:22] The philosophy is the same.
+[28:24] We want to consider the association that best explains what we have observed.
+[28:32] But what does it mean best explains what we have observed?
+[28:36] In this case, best explained means that the distance between what we have observed and
+[28:41] what we think we should have observed if measurement i corresponding to ln j, this distance is
+[28:50] as small as possible.
+[28:51] But small as through the lens of melanobis distance, not Euclidean distance, such that
+[28:57] we have a probabilistic interpretation of the distance in terms of sigmas away from
+[29:01] the mean as opposed to just a geometric interpretation of the distance.
+[29:06] Cool.
+[29:07] So as mentioned before, this approach is powerful, but it's quite brittle.
+[29:13] Because if you make erroneous associations, then you keep those through time.
+[29:18] So there are different ways to deal with it.
+[29:20] And this is a little bit beyond the scope of the class.
+[29:24] But one way that actually was suggested by one of your colleagues is to consider a multi-apothesis
+[29:29] stacking filter where there is a belief that is represented as a mixture of Gaussians.
+[29:34] And each Gaussian tracks a different sequence of association decisions.
+[29:41] And of course, you don't have to use necessarily EKF.
+[29:44] You can also use other parametric features for localizations such as EKF.
+[29:49] That is another popular choice.
+[29:50] But again, this is beyond what we do in this class.
+[29:54] OK, one more item for localization.
+[29:59] Here, those of you that are undergrads or taking 174 should take a break.
+[30:04] Well, a break.
+[30:05] Don't step out, because it's going to be just five minutes.
+[30:08] But you're not responsible for this material.
+[30:11] Those of you that are actually in the 200th version of this class should listen to what I'm saying.
+[30:16] So far, we have talked about parametric approaches to localization, whereby in particular,
+[30:24] we consider a Gaussian as a functional representation of the belief, as an approximation.
+[30:32] But as we saw during the discussion about filtering,
+[30:36] another possible approach is to consider non-parametric approximation.
+[30:42] Whereby, in a way or another, we approximate the belief through a set of particles.
+[30:49] Particles, again, are concrete instantiation of the value of the state.
+[30:55] So we saw last time how this approach led to a fairly powerful filtering algorithm
+[31:04] referred to as a particle filter.
+[31:07] The idea, as it was the case for EKF, is to take that algorithm from filtering theory,
+[31:16] cast it in a framework of robotic localization,
+[31:19] essentially understanding what the state transition model in this case is,
+[31:23] what the measurement model in this case is, and so on and so forth,
+[31:26] and then obtain the resulting localization algorithm.
+[31:29] This is exactly what we're going to do for the particle filter.
+[31:32] In particular, the application of the particle filter to the problem of localization
+[31:36] is referred to as Monte Carlo localization.
+[31:40] The good news is that the application of the filter to the localization problem
+[31:46] in the case of the particle filter is really straightforward.
+[31:50] The EKF was more complicated, but the particle filter approach is extremely simple.
+[31:55] What you do is literally you take the particle filter that we explained last Friday,
+[32:00] you just substitute the state transition model and the measurement model
+[32:04] with the appropriate instantiations of the state transition model
+[32:08] and the measurement models for robotics, and that's it.
+[32:13] In particular, if you remember, the idea of the particle filter
+[32:17] is to represent a belief through a set of particles, capital M,
+[32:21] usually about a thousand.
+[32:23] And then the filter has the same structure of a bias filter,
+[32:28] so we have as an input the belief at time t minus one,
+[32:31] current measurement, current control, and for now assume that we have a map,
+[32:35] we produce the belief at time t, again, representing the set of M particles.
+[32:40] What we do, as usual, is a prediction step
+[32:43] where we propagate forward the particles by using the state transition model
+[32:48] and then we correct the prediction by using information from the measurement.
+[32:52] The way the particle filter does it is to propagate the particle forward
+[32:57] by using the state transition model.
+[33:01] Compute an important weight that measures how likely the measurement
+[33:08] that I have observed is assuming that the state has a value
+[33:15] equal to the value of that particle, again, in the map.
+[33:21] I do this for all particles.
+[33:23] In the second step, what I do is to resample the set of particles
+[33:29] with a placement with the probability that it is proportional with importance weight,
+[33:34] whose notion, as usual, is to capture how compatible the measurement
+[33:38] that I have observed is with the hypothesis that the state
+[33:43] is equal to the value captured by the particle M.
+[33:46] Note that it is sampling with a placement,
+[33:48] so it's possible that as a resample, I always resample the same particle.
+[33:52] In the case where, and this happens when, for whatever reason,
+[33:57] given a given particle, the measurement that I've observed
+[34:02] has probability equal to one, and given all the other particles
+[34:06] the measurements I have observed has probability equal to zero.
+[34:09] So that I have one particle that corresponds to me to look in that direction,
+[34:13] one particle that corresponds to me to look into that direction,
+[34:16] and one particle that corresponds to me to look in that direction.
+[34:19] And what I observe is a table.
+[34:22] So clearly, when I resample, the probability of sampling this particle
+[34:26] particle is 1, the probability of sampling those two particles
+[34:29] is equal to 0, because those two particles are
+[34:31] incompatible with a measurement that we just observed.
+[34:35] And so I will have, in the case where we only
+[34:38] have three particles, the new set will be still
+[34:41] set with three particles, but will
+[34:43] be the same particle repeated.
+[34:47] And that's it.
+[34:48] So in hindsight, this filter is much easier to explain,
+[34:54] much easier to code.
+[34:55] Actually, the third problem in homework four
+[34:58] will ask you to code Monte Carlo localization with a tweak.
+[35:06] I would say I want to introduce a tweak.
+[35:08] The tweak is that here, the particles
+[35:11] are sampled in a way that is completely
+[35:13] independent from each other.
+[35:15] And so sometimes, if you're unlucky,
+[35:18] you might have the issue that you get the same particle over
+[35:20] and over, and that may lead to the filter to diverge.
+[35:24] So there are better ways to resampling
+[35:26] by using a stochastic process.
+[35:28] And that's what you will do for problem three, courtesy of.
+[35:33] But it's actually interesting.
+[35:35] It's fairly simple.
+[35:36] It's an interesting addition to the Monte Carlo localization
+[35:40] algorithm to make it remarkably more robust.
+[35:43] Yeah?
+[35:43] How do we incorporate the map into the measurement
+[35:46] model and the state transition model?
+[35:48] How does that affect our distribution?
+[35:50] So this is something that we discussed last time.
+[35:57] So the way that we incorporate the map in the measurement
+[36:00] model and the state transition model
+[36:02] is exactly the same, regardless of whether we
+[36:05] use the EKF algorithm and the particle filter algorithm.
+[36:08] So for example, for the state transition model,
+[36:10] if you remember from last time, we
+[36:12] had a little bit of discussion about what happened.
+[36:16] So when you forward propagate the dynamics, so you're here.
+[36:22] And this could be the possible realization of your state,
+[36:27] maybe with more mass here, at the next time.
+[36:30] But now with the map, we have the additional knowledge
+[36:32] that we might have obstacles.
+[36:34] So that should reshape this distribution.
+[36:37] And so we said that the way to do so
+[36:40] is to multiply the state transition model in the case
+[36:44] that we have no knowledge of the map per times a term that
+[36:52] checks how compatible a state is with respect to a map.
+[36:55] It's the same business here.
+[36:57] So the discussion we had last time
+[36:58] ports directly to here.
+[37:00] So this is an algorithm that is relatively simple to implement
+[37:05] conceptually.
+[37:07] Quite robust, it addresses global localization,
+[37:09] position tracking, kidnapping of other problems,
+[37:11] so very general.
+[37:12] It can also handle dynamic environments
+[37:14] by doing a trial rejection and so on.
+[37:16] But there are some caveats.
+[37:17] So as you'll see in your Pset, here we're doing a for loop.
+[37:25] So if you're not careful, if you have
+[37:26] a large number of particles, this algorithm
+[37:28] becomes very slow.
+[37:30] So implementation here is very important in order
+[37:33] to have a real-time particle filter.
+[37:37] And that's something that you'll see in the Pset.
+[37:39] Second of all, you might have more advanced versions
+[37:41] of assembling the particles.
+[37:43] In order to add robustness.
+[37:47] Third of all, and this is the example here.
+[37:50] So this is an application of a particle filter.
+[37:52] So we have the robot that is moving
+[37:54] and is getting line of sight measurements.
+[37:58] So the cluster of particles corresponds
+[38:00] to a hypothesis about what the filter thinks the robot is.
+[38:03] In reality, the robot is here.
+[38:04] The most likely hypothesis are that the robot is here
+[38:07] and it is here.
+[38:08] Because based on previous measurements,
+[38:10] this is compatible with both poses.
+[38:12] As we get inside and we start seeing a table that is not
+[38:15] here, these particles disappear when we do the re-sampling.
+[38:21] And finally, all the particles are concentrated
+[38:24] around the right pose.
+[38:26] So this is a nominal operation of a particle filter.
+[38:29] When you start, if you know nothing about your environment,
+[38:33] you just sprinkle the particles everywhere.
+[38:35] Remember, a particle is an hypothesis
+[38:37] about the concrete instantiation for your state value.
+[38:40] You might get unlucky.
+[38:41] And for whatever reason, in a bad round,
+[38:44] you eliminate all particles but one.
+[38:47] So there is one particle that is repeated 1,000 times.
+[38:50] That's a problem of particle starvation.
+[38:52] You don't have enough particles to represent your belief.
+[38:55] So what people do in practice is, from time to time,
+[38:58] to sprinkle some particles here and there,
+[39:02] which corresponds to the notion that your robot might have
+[39:05] been kidnapped.
+[39:06] And so it's good to have some residual density everywhere
+[39:09] in the environment.
+[39:12] Yeah?
+[39:13] Environments that are very similar, but symmetric.
+[39:16] So you have, say, the same room above and the same room
+[39:19] below.
+[39:19] So there's no way to tell.
+[39:21] Exactly.
+[39:22] This is actually, if you have algorithm,
+[39:23] it wouldn't work well.
+[39:24] Because that's really the case where
+[39:26] you need to have two modes in your belief.
+[39:29] If the environment is symmetric and you're just
+[39:31] relying on the measurements, there
+[39:32] is for you no way to tell whether you
+[39:35] are going in that direction and that direction.
+[39:37] So it makes sense that you have a belief distribution that
+[39:40] has two peaks.
+[39:41] And you keep track of both of them simultaneously.
+[39:44] Until, hopefully, you get some measurement
+[39:46] that allows you to disambiguate where you are.
+[39:49] Now, that's exactly what is happening here.
+[39:52] The corner is actually until actually three.
+[39:55] Exactly.
+[39:55] So if you see here, this cluster,
+[39:58] it maps into this cluster here, which is getting into here.
+[40:04] That's exactly what's happening here.
+[40:05] But it's a power of the particle filter
+[40:07] that allows you to keep track of these modes.
+[40:09] With EKF, you can't.
+[40:10] You have a big Gaussian that smooths everything.
+[40:14] And then you see the issue with Gaussian EKF,
+[40:17] that one peak should be there.
+[40:19] One peak should be there.
+[40:20] With a Gaussian, the mean is here,
+[40:22] which is guaranteed that you're not there.
+[40:25] Which means that EKF should always
+[40:27] be used for localization.
+[40:30] So around the path, or if you have a fairly good
+[40:34] initialization for your filter.
+[40:36] If you have no clue, like in this case, where we put particles
+[40:38] everywhere in the environment, then EKF is not going to work.
+[40:41] You have to use something that is nonparametric.
+[40:43] Or maybe something that is parametric,
+[40:45] but uses mixtures of Gaussians and so on.
+[40:47] Is it also fair to say that EKF is better
+[40:49] in more sparse environments, where there's
+[40:51] very few obstacles that would affect your probability of where
+[40:55] you are, versus where MCL works better when you have very
+[41:00] dense environments, where you can distinguish
+[41:03] where you are based on the differentiation
+[41:05] of your measurements?
+[41:07] Well, I mean, in general, the more distinguishable landmarks
+[41:09] you have, the better the performance of all filters is.
+[41:13] So while it is true that EKF localization, for example,
+[41:19] works specifically well with future-based maps,
+[41:23] particle filters is actually more broadly applicable.
+[41:28] The fact of having distinguishing landmarks
+[41:30] is something that is advantageous for all filters.
+[41:33] So there's no particular difference among them.
+[41:37] Yeah?
+[41:37] What do the blue lines represent?
+[41:39] What's that?
+[41:40] Sorry?
+[41:40] What do the blue lines represent?
+[41:41] Oh, measurements.
+[41:43] So we're assuming that we have a line of sight measurement
+[41:47] with, I think, 10 degrees of difference between the rays.
+[41:51] So the line of the solids can stop at walls,
+[41:53] and some go through walls?
+[41:56] Oh, yeah, I noticed a clocking issue.
+[41:58] Oh, OK.
+[42:01] Cool.
+[42:02] All right.
+[42:02] So what we're going to talk about now is EKF SLAM.
+[42:13] So we solved the localization problem.
+[42:15] But in the localization problem, we
+[42:16] assume that we know the map.
+[42:18] What if we do not know the map?
+[42:20] That's the problem of simultaneous localization
+[42:22] and mapping.
+[42:23] So what we're going to do now is to learn about, in general,
+[42:26] what the SLAM problem entails and how
+[42:28] to apply everything we know about parametric filters
+[42:32] in particular EKF filters to the SLAM problem, which will
+[42:35] lead to the EKF SLAM algorithm.
+[42:38] On Friday, I was supposed to cover
+[42:40] the field of non-parametric SLAM algorithms,
+[42:42] but I'll be on travel.
+[42:44] So we'll have a make-up lecture later on.
+[42:47] Non-parametric filters are not covered by the homework.
+[42:50] So it's not a problem that this make-up lecture is held either
+[42:53] next week or in two weeks from now.
+[42:57] Readings as usual, probabilistic robotics
+[42:59] from Sebastian Stern, Barger than Dieter Fox, chapter 8
+[43:04] and 10.
+[43:06] So in a nutshell, the SLAM problem
+[43:08] entails finding the path or the pose of a robot
+[43:14] along with the map, given the history of the measurements
+[43:17] from the initial time to the current time
+[43:19] and the history of the controls from the initial time
+[43:23] to the current time.
+[43:25] So here, for example, I'm showing some results
+[43:29] from my work about doing SLAM for a hopping spacecraft that
+[43:37] is landing on an asteroid and has to map the asteroid
+[43:43] as it's estimating its pose.
+[43:48] So this asteroid usually is very small
+[43:50] with very low gravitational fields.
+[43:52] So it takes a while to get down.
+[43:54] The reds are the observations that are made.
+[43:57] So this is done on an asteroid mock-up down at JPL
+[44:01] with lighting conditions that are
+[44:03] very representative of what you have on an asteroid.
+[44:05] So here you see that the robot is jumping.
+[44:08] And in general, the SLAM algorithm
+[44:11] does a pretty good job in terms of tracing the trajectory.
+[44:19] This is not very easy for a couple of reasons.
+[44:22] First of all, you can see that the lighting conditions are
+[44:27] either very bright or very dark.
+[44:30] And two, a hopping motion is discontinuous.
+[44:34] You jump, you hit, and then you go back.
+[44:38] But you can see that this can be done actually
+[44:40] quite reliably in real time.
+[44:42] So that's basically SLAM.
+[44:44] But this is SLAM on steroids because we
+[44:46] have additional issues in terms of picking up landmarks,
+[44:49] very discontinuous motion, large-scale variations,
+[44:53] and so on.
+[44:54] But specifically, the SLAM problem
+[44:58] entails estimating, given the history of the measurements
+[45:03] and history of the controls, the current pose
+[45:06] and the current map.
+[45:07] So before the map was a conditioning variable.
+[45:10] Now it's a variable that we want to estimate.
+[45:12] So we move the map from the conditioning variable
+[45:15] to the variables that we want to estimate.
+[45:19] As it was the case for localization,
+[45:22] solving the SLAM problem requires,
+[45:25] as a primitive procedure, to be able to associate
+[45:29] a measurement with a landmark.
+[45:30] So if that correspondence is not known,
+[45:34] which is typically the case,
+[45:36] then we also have to estimate the correspondence variables.
+[45:41] And in particular, there are two versions
+[45:42] of the SLAM problem, online SLAM and full SLAM.
+[45:45] In online SLAM, we're only trying to estimate
+[45:49] the current pose and the map
+[45:52] in terms of landmarks within the map.
+[45:55] In full SLAM, we're trying to estimate
+[45:58] the entire trajectory of the robot along with the map.
+[46:04] Different algorithms address one or the other.
+[46:08] Typically, the online SLAM leads to sequential algorithms
+[46:14] like EKF SLAM, so it's computationally very tractable.
+[46:17] Of course, in theory, having an estimate
+[46:20] of the entire past trajectory is even more powerful.
+[46:25] In both cases, you have the version
+[46:28] without correspondence variable
+[46:29] and with correspondence variable.
+[46:31] Typically, you don't have the correspondence variables
+[46:33] given to you, so that's a problem that you have to solve.
+[46:36] Now, the reason why SLAM is complicated
+[46:39] is due to two main reasons.
+[46:41] One is that it merges optimization
+[46:44] over continuous variables and over combinatorial variables.
+[46:49] In particular, the positions of the landmarks,
+[46:55] the pose of your robot is a continuous quantity.
+[46:59] Your heading, it can be anything between zero and two pi.
+[47:02] Your position could be anything
+[47:03] within a given environment and so on.
+[47:06] The correspondence of measurement to landmarks
+[47:09] is actually a combinatorial problem.
+[47:12] You have basically integer variables
+[47:14] that are assigned to each measurement and landmark.
+[47:17] So it's a very hybrid problem
+[47:18] where some variables are continuous, other are integer.
+[47:23] Second of all, look at this probability distribution.
+[47:26] When we were solving the localization problem,
+[47:30] we were finding the posteriors with respect to the pose.
+[47:33] So the map was a conditioning variable
+[47:35] with respect to the pose.
+[47:36] So for example, if you have a unicycle robot
+[47:39] with three state variables, X, Y, and theta,
+[47:42] this, what we have is that the belief
+[47:44] is a probability distribution over how many variables?
+[47:51] The belief is a probability distribution over X, T
+[47:54] for localization problems.
+[47:57] So if X, T is three-dimensional,
+[47:59] the belief is a probability distribution
+[48:01] over how many variables?
+[48:04] Three, yes, yeah, that's not a trick question.
+[48:07] Now we have a map, basically a collection of landmarks.
+[48:12] And typically, in the process of SLAM,
+[48:15] you conduct many, many landmarks, even like a thousand,
+[48:19] which means that now you have a posterior
+[48:22] over how many variables?
+[48:25] Thousands, right, so you went from a problem
+[48:28] where you had a probability distribution
+[48:30] over two or three variables to a problem
+[48:33] and now you have a posterior distribution
+[48:34] over 1,000, 10,000 variables.
+[48:37] So okay, so that's not very encouraging.
+[48:44] And there is another challenge,
+[48:45] but it's actually also an opportunity
+[48:47] that I'm going to discuss in a second.
+[48:48] But before doing so, we're using our
+[48:52] beloved graphical model for the problem.
+[48:55] So now, in filtering, we had states, controls, measurements.
+[49:02] We didn't have a map.
+[49:05] In localization, we have a map and we assume we know it.
+[49:08] Now in SLAM, the map influences our localization
+[49:14] and process, but we don't have access to the map,
+[49:16] so we have to estimate the map.
+[49:19] In online SLAM, we estimate the current pose
+[49:25] and the map.
+[49:27] In full SLAM, we estimate the full thing and the map.
+[49:35] That the map influences, of course,
+[49:41] the measurements in both ways, but also their controls.
+[49:45] For example, because of the state transition model,
+[49:48] you cannot go through an obstacle.
+[49:54] This is just to distinguish the relation
+[49:55] with respect to the measurement.
+[49:59] So now the aspect of SLAM, this is a challenge,
+[50:01] but also an opportunity as follows.
+[50:03] That the error with respect to the path
+[50:05] is correlated with the error with respect to the map.
+[50:08] What does that mean?
+[50:11] Assume that at the beginning,
+[50:13] there is no uncertainty about where you are.
+[50:14] So basically, the global reference system
+[50:20] is simply coinciding with your local reference system.
+[50:24] You don't know the map, so you can put
+[50:26] your initial global reference system anywhere.
+[50:29] The challenge is that as you move,
+[50:31] you want to keep that reference system consistent.
+[50:33] So the uncertainty about the landmarks
+[50:37] is only due to measurement noise.
+[50:39] But now, as you move,
+[50:45] you have uncertainty about where the landmark is,
+[50:47] which means that we have uncertainty about where the map is.
+[50:51] But we also have uncertainty about where we are.
+[50:54] And these two uncertainties are actually related,
+[50:57] meaning that if, so the purple ellipse
+[51:01] is an uncertainty ellipse.
+[51:03] So if I know that I'm here,
+[51:06] that reduces my uncertainty about the landmark,
+[51:08] because then I know that the landmark
+[51:10] most likely is around here.
+[51:12] If I know that I'm here,
+[51:14] then that reduces my uncertainty about the landmark,
+[51:16] because I know that the landmark most likely is here.
+[51:19] Which means that by having more information about the map,
+[51:23] I can better constrain information about the pose,
+[51:25] and by having better information about the pose,
+[51:27] I can better constrain information about the map.
+[51:29] Which means that the two errors are related.
+[51:32] So it's a challenge,
+[51:33] because then to reason about the problem correctly,
+[51:35] we have to reason about this correlation.
+[51:37] It's an opportunity,
+[51:39] because it means that if at some point
+[51:42] I'm able to reduce the uncertainty about where I am,
+[51:46] I can also immediately reduce the uncertainty about the map.
+[51:51] And we will see that more clearly later on.
+[51:53] Okay, as usual, what we do for ZLAM
+[51:59] is to embed the ZLAM problem as a filtering problem.
+[52:03] And as usual, there are two ways to approach it.
+[52:06] Either through parametric approaches,
+[52:08] whereby we approximate the belief
+[52:13] according to a functional relation,
+[52:15] like for example, a Gaussian,
+[52:17] or a non-parametric approach.
+[52:18] Basically, we approximate the belief
+[52:21] through a particle filter.
+[52:25] Now, today we're going to talk about
+[52:28] the EKF approach to ZLAM.
+[52:31] And we make two assumptions.
+[52:32] So the first assumption is really the EKF assumption.
+[52:35] We assume that the motion process noise
+[52:39] and the measurement noise are Gaussians.
+[52:41] And we assume, and this is also essential,
+[52:44] that the map is future-based.
+[52:47] For example, in terms of point landmarks.
+[52:52] And we have two versions of the problem as usual.
+[52:53] Either the correspondence variables are known,
+[52:55] or the correspondence variables are not known.
+[52:59] We will first discuss the case
+[53:00] where the correspondence variables are known.
+[53:05] So again, if you understand the foundation of a filtering,
+[53:09] the EKF ZLAM algorithm is not that complicated notionally.
+[53:13] Making it work is actually quite complicated.
+[53:16] But notionally, it's not that complicated.
+[53:19] Why?
+[53:20] Because basically what we do is to,
+[53:22] as we did for the localization problem,
+[53:24] to reduce the problem to a filtering problem
+[53:27] where we apply directly the EKF result.
+[53:31] In particular, what is the trick of EKF ZLAM?
+[53:35] Is to augment.
+[53:37] So remember that in ZLAM we tend to estimate concurrently
+[53:41] both the pose, xt, and the map.
+[53:44] So the trick is to augment the state vector.
+[53:47] And now reason in terms of a state vector, yt,
+[53:52] that comprises the state of the robot.
+[53:57] So yt,
+[54:00] comprises the state of the robot, x of t.
+[54:03] But also, all possible landmarks.
+[54:08] We are in the situation where we assume
+[54:10] that we know the correspondence variables.
+[54:12] So we know how many landmarks we have.
+[54:14] We are assuming point landmarks.
+[54:16] So a point landmark is represented
+[54:18] by the x and y coordinate of that landmark.
+[54:21] So what we do is to augment the state vector
+[54:24] with the x and y coordinates of each landmark.
+[54:32] We're assuming that the correspondence variables are known,
+[54:34] which implicitly means, since we know from
+[54:38] which measurement which landmark corresponds to,
+[54:41] that means that we know how many landmarks we have.
+[54:44] We know where they are, but we know how many we have.
+[54:49] In a realistic case, you don't have that information.
+[54:53] And that's the case of EK epsilon
+[54:55] with the unknown correspondences that we will look at later.
+[54:59] So in that case, so if you don't know
+[55:01] the number of landmarks, this is an augmented state vector
+[55:05] that keeps growing through time.
+[55:07] So it's not static, but actually grows.
+[55:10] Okay, so the dimension of this augmented state vector
+[55:14] is three, so for the case of a unicycle,
+[55:16] we assume that the pose is,
+[55:18] the configuration vector is three dimensional.
+[55:20] If you have another robot, you might have more.
+[55:24] And then we assume that we have n landmarks,
+[55:26] two coordinates per landmark.
+[55:27] So the dimension of this vector is three plus one.
+[55:32] Having done that, so basically the idea of EK epsilon
+[55:35] is to run something that is very similar
+[55:38] to EKF localization with respect
+[55:40] to the augmented state vector.
+[55:45] And in particular, we want to,
+[55:50] sorry, here there's a typo.
+[55:51] There shouldn't be an M here,
+[55:52] because M is already accounted for in Y of T.
+[55:56] I will correct this.
+[55:58] So we want to compute the full line posterior,
+[56:00] so probability of YT, given the history of the measurement
+[56:03] and the history of the controls.
+[56:09] Okay, so as I said, now that we have a notion
+[56:11] of augmented vector, the idea is literally
+[56:12] to apply the EKF localization
+[56:14] with respect to this augmented vector.
+[56:16] As usual, in order to do so, we need a couple of things.
+[56:20] First, to specify the transition model.
+[56:24] We assume we know the state transition model for the robot,
+[56:27] but what about the state transition model
+[56:29] for the augmented vector?
+[56:31] The assumption that we make
+[56:33] is that the environment is static.
+[56:36] We will briefly discuss what to do in dynamic environments.
+[56:38] But we make the assumption that the environment is static.
+[56:43] So what that means is that YT plus one,
+[56:49] or actually YT, is equal to,
+[56:52] so the first three components are equal to G,
+[56:58] X T minus one, U T.
+[57:02] And the other two end components are equal to YT minus one.
+[57:08] So we assume that the environment is static.
+[57:11] So we don't know what the landmark is,
+[57:13] but we know that they don't move.
+[57:14] So the coordinates that we're trying to estimate,
+[57:19] we know that the underlying true values do not move.
+[57:22] So that's why YT is equal to YT minus one.
+[57:25] So this is a three by one vector.
+[57:32] Motion is affected by noise,
+[57:35] but we know that the landmarks do not move.
+[57:38] So the noise is only with respect
+[57:40] to the motion of the vehicle.
+[57:43] So we have noise with respect to the first three variables,
+[57:46] but we have no noise with respect to the other variables.
+[57:50] To write everything in a compact form,
+[57:52] we just write plus epsilon,
+[57:54] which is also vector with the three plus two end components.
+[57:59] But we assume that R T,
+[58:05] so the covariance, has zero entries
+[58:08] except for the top three by three blocks,
+[58:11] which means that we're adding zero noise
+[58:14] for the last two end components,
+[58:17] meaning this has no noise,
+[58:20] but we have noise for this one.
+[58:27] Any question about this?
+[58:29] So here I'm saying just something very simple.
+[58:31] We have a documented vector.
+[58:33] Two end components correspond to the static landmarks.
+[58:36] So the state transition model is trivial.
+[58:38] YT is equal to YT minus one, YT minus one, and so on.
+[58:42] The first three that correspond to the pose of the robot,
+[58:44] three dimensional because we are considering a unit cycle,
+[58:47] is affected by noise, that is zero mean and Gaussian.
+[58:54] Measurement and, as usual, this G is in general non-linear.
+[58:59] We want to use EKF.
+[59:01] So for all the reasons that we've already explained
+[59:02] multiple times, we linearize the transition model
+[59:07] with respect to the most likely state,
+[59:10] sorry, most likely pose,
+[59:12] in order to avoid any confusion with the momentum state,
+[59:14] new T minus one.
+[59:15] G, as usual, denotes the Jacobian.
+[59:18] We have to talk about the measurement model.
+[59:21] Measurement model is the same as last time.
+[59:23] So we consider line of sight range and bearing sensors.
+[59:29] So given that measurement I corresponds to landmark J,
+[59:37] then the range, we're assuming a range of bearing sensors,
+[59:41] as we did for EKF localization.
+[59:43] So the range is the Euclidean distance
+[59:47] between the current position of the robot
+[59:53] and the position of the landmark.
+[59:58] So that will be the range.
+[60:00] So this is coordinates mu J X, mu J Y,
+[60:05] and this is X Y, the position of the robot.
+[60:09] So that will be the range here.
+[60:11] And then the bearing is the,
+[60:16] so if this is the theta,
+[60:19] if this theta is the,
+[60:23] this angle here, phi,
+[60:25] which is the absolute angle minus the heading, theta,
+[60:30] plus measurement noise.
+[60:31] This is what we already saw for the case of localization.
+[60:36] As usual, we linearize the measurement model.
+[60:41] The only thing, so this is just a little bit annoyance
+[60:44] because it's a little bit of notation.
+[60:49] But, so this will be fine.
+[60:51] We could just stop it here,
+[60:52] in terms of the measurement model.
+[60:54] Computationally, when you take the,
+[60:57] when you do the linearization,
+[60:59] you have to linearize the function
+[61:02] with respect to all the variables Y T.
+[61:06] But the measurement model,
+[61:08] assuming that the correspondence variable are known,
+[61:11] depend on how many variables.
+[61:13] So Y T can be a very large vector,
+[61:16] to what, three plus one.
+[61:18] But the measurement model,
+[61:24] depends on how many variables.
+[61:31] Five, X, Y, theta, M G X, M G Y.
+[61:36] Which means that when I take derivatives,
+[61:39] out of the three plus two N components,
+[61:42] only five will be known zero.
+[61:44] So it would be silly to call MATLAB or something else
+[61:47] to take the derivative with respect to each variable.
+[61:49] We already know which ones won't be zero.
+[61:51] So the idea is to compute a sub Jacobian,
+[61:56] which is only the derivative H with respect to the variables
+[61:59] for which we know the Jacobian is not zero.
+[62:02] And then project that back in the full,
+[62:07] oh, shoot, in the full Jacobian,
+[62:09] through a projection matrix.
+[62:11] So what it is saying,
+[62:12] we're not going too much into the details,
+[62:14] because it's not that insightful.
+[62:16] So here, in order to project back in the full Jacobian,
+[62:19] so these are the derivatives
+[62:20] with respect to the pose of the robots,
+[62:24] which will correspond to the top left block in the Jacobian.
+[62:28] That's why here we have an identity.
+[62:32] These are the derivatives with respect to the jth landmark.
+[62:35] So it should only appear
+[62:40] in a very specific position of the Jacobian.
+[62:43] In particular, the position that corresponds to columns
+[62:48] two j minus one and two j.
+[62:53] So that's the identity here.
+[62:55] Anything else?
+[62:56] Is it zero?
+[62:59] So this is just a little bit of bookkeeping.
+[63:01] But the idea here, again,
+[63:02] is that when we take the Jacobian,
+[63:05] only the partial derivatives with respect to x t and j
+[63:08] are non-zero.
+[63:09] So instead of doing something silly,
+[63:11] which is try to compute derivatives
+[63:13] with respect to all components of y t,
+[63:16] we only compute derivatives with respect to x t and mu j.
+[63:19] And then, in order to make the matrices correspond
+[63:21] in terms of dimensions,
+[63:23] we use this big projection matrix.
+[63:29] But notionally, there is just a computational trick
+[63:32] to avoid some silly computations.
+[63:33] But what we do is the standard thing
+[63:35] that is to linearize our measurement model
+[63:37] around the most likely value for the state,
+[63:42] augmented state.
+[63:44] Any questions here?
+[63:47] All right.
+[63:49] So last step is how to initialize the algorithm.
+[63:54] So at the beginning, we have no clue
+[63:57] what the map is and where we are.
+[63:59] So it's natural for a SLAM algorithm
+[64:03] to take the initial pose as the origin
+[64:05] of the coordinate system.
+[64:08] So basically, this is where we are.
+[64:12] And we say that, for example,
+[64:13] this is our position is the origin
+[64:17] of the global coordinate system,
+[64:18] and just to fix a generic coordinate system there.
+[64:22] And the map that I will be constructing
+[64:24] will be with respect to that coordinate system.
+[64:27] And then what I want to do is to construct a map
+[64:29] with respect to the coordinate system.
+[64:30] And as the robot moves, keep track of the transformation
+[64:35] between the local coordinate system and the robot,
+[64:38] and the one that I fixed at the beginning
+[64:40] as my global coordinate system.
+[64:44] In particular, we assume that at the beginning,
+[64:50] the value of the state for the robot, so the pose is zero.
+[64:55] So we say that we are at the origin
+[64:56] of the coordinate system that we enforce.
+[65:01] And since we have no clue where all the other landmarks are,
+[65:05] we set an expectation by the position
+[65:08] for those landmarks to zero,
+[65:10] and the corresponding uncertainty equal to infinity.
+[65:13] Sigma is the uncertainty about the belief
+[65:17] for the augmented state, so for both the pose of the robot
+[65:20] and the positions of the landmarks.
+[65:23] So we say that uncertainty with respect to the pose is zero,
+[65:26] because we say that we're here,
+[65:28] so the uncertainty that we're here is zero.
+[65:30] And with respect to the landmarks,
+[65:31] we say that uncertainty is infinity.
+[65:38] Any questions about this?
+[65:40] Cool, very last step, as I move around, I see a landmark.
+[65:48] So the question is, how do I initialize
+[65:50] the position of that landmark?
+[65:55] Very natural thing to do is to take
+[65:59] the most likely position for your robot
+[66:02] as given by the expectation in the belief
+[66:06] of the x and y position of the robot,
+[66:08] and then initialize the landmark
+[66:11] by using the range embedding measurements that I've seen,
+[66:15] and using the measurement model, so specifically.
+[66:23] I know that in expectation, I am at mu t x, mu t y,
+[66:32] that's where I am, and I received,
+[66:36] and I know that my heading is mu t theta.
+[66:47] So I initialize the landmark by,
+[66:52] and I have as a measurement, r t i phi t i.
+[66:58] So this is my most likely expectation,
+[67:00] so the landmark will be somewhere along the circle
+[67:05] with radius r t i, where specifically
+[67:07] it's given by the bearing angle phi t i.
+[67:12] That's how I initialize the landmark.
+[67:15] It's an approximation because basically I'm assuming
+[67:17] that the right value of the state is the expected value,
+[67:20] which in general is not true.
+[67:24] Does it make sense?
+[67:28] Cool, having said that, then the algorithm
+[67:31] looks increasingly more convoluted,
+[67:34] but again, I want to stress that intuition
+[67:36] is always the same, and most of the mathematics
+[67:38] is always the same.
+[67:40] What do we do?
+[67:41] We want to estimate the map and the pose,
+[67:48] so we try to do that through the bias filtering approach.
+[67:54] So as usual, the idea is to have a belief
+[67:57] that captures probability distribution
+[67:59] over the augmented state, not the state,
+[68:01] over the augmented state.
+[68:04] We have current control, current measurement,
+[68:07] and we assume that we have the correspondence variables.
+[68:09] For now, we're assuming we have that information,
+[68:11] and we want to compute the posterior belief,
+[68:13] accounting for the control and the measurement.
+[68:15] So what we do as usual is first step, prediction.
+[68:21] We use the knowledge about our motion,
+[68:24] about our state transition equation
+[68:27] in order to predict what time step t,
+[68:31] the value of the augmented state factor will be.
+[68:35] Here, there is no difference
+[68:37] with respect to EKF localization.
+[68:40] What we do is to apply the state transition model
+[68:43] that I explained before, with the only difference
+[68:45] is that the last two end components have trivial dynamics.
+[68:51] So the value does not change.
+[68:57] The uncertainty is, as usual,
+[68:59] the sum of the uncertainty due to what I think I am,
+[69:05] plus motion uncertainty.
+[69:09] The more complicated thing happens
+[69:13] when we want to incorporate measurements.
+[69:15] So what we do is we take a measurement,
+[69:19] we assume that we know the correspondence variables,
+[69:23] so this measurement I then corresponds to landmark J.
+[69:27] If the landmark J has never been seen,
+[69:31] I initialize it according to the previous scheme.
+[69:34] And once I've done that,
+[69:37] then everything is almost identical
+[69:39] to the EKF localization algorithm.
+[69:42] I compute the measurement that I would have expected
+[69:48] given that measurement I corresponds to landmark J.
+[69:53] I compute the uncertainty in my measurement.
+[69:56] I blend my estimate about what the state is
+[70:02] with information from the measurements,
+[70:04] and then I update the uncertainty.
+[70:06] The main difference is that now this view
+[70:09] is a three plus two n vector.
+[70:13] And in particular, the Kalman filter is a full vector,
+[70:16] which means that a measurement about one landmark
+[70:19] allow us to refine the estimation
+[70:20] with respect to all landmarks, position of all landmarks.
+[70:25] We will see that more clearly in a second.
+[70:27] Is that if statement basically like if all the probabilities
+[70:31] are very low, like none of them actually match up?
+[70:34] Well, we're in the non-correspondence case,
+[70:38] so there is nothing probabilistic in say
+[70:44] that the J has been seen or hasn't been seen,
+[70:47] because it's basically this function that tells you directly.
+[70:49] It's unrealistic though.
+[70:51] Later on, we will do that probabilistically.
+[70:53] That's exactly right.
+[70:55] So exactly the same as the EKF localization.
+[70:58] The main difference is that now we have
+[71:00] an augmented state vector,
+[71:02] and the dynamics for the landmark state variables
+[71:07] is trivial.
+[71:08] Basically, we just propagate that forward.
+[71:13] Okay, so how this would look like in practice.
+[71:16] So this is a robot that is moving,
+[71:18] and these little blue dots are landmarks.
+[71:21] Initially, I'm here.
+[71:24] There is no uncertainty about where I am,
+[71:26] because basically my local coordinate system
+[71:28] by definition coincides with the global coordinate system.
+[71:33] I see this landmark, and I have some uncertainty around it
+[71:38] due to measurement noise.
+[71:40] Then I start moving.
+[71:42] The uncertainty about my pose increases
+[71:44] because of motion uncertainty.
+[71:47] I see another landmark,
+[71:49] and now the uncertainty about this landmark
+[71:51] is relatively larger because on top of measurement noise,
+[71:57] I also have uncertainty about where I am.
+[72:01] And then I keep going,
+[72:02] and as I get information about additional landmarks,
+[72:06] since I'm increasingly uncertain about where I am
+[72:10] with respect to the initial reference system,
+[72:13] also the uncertainty about where the landmark
+[72:15] that I see is is also very large.
+[72:18] But then, here, I see the first landmark
+[72:23] that I saw at the beginning.
+[72:27] What does that mean?
+[72:29] That now, since I saw the first landmark
+[72:32] that I saw at the beginning,
+[72:34] I can constrain myself to a very specific location
+[72:39] in this uncertainty ellipse,
+[72:43] which immediately reduces the uncertainty
+[72:46] about where the robot is.
+[72:48] So I think it's very intuitive.
+[72:50] So I start with seeing this chair,
+[72:55] I move around, I don't see this chair,
+[72:57] so increasingly less confident about where I am,
+[72:59] but all of a sudden, I see this chair,
+[73:01] I know that I'm one meter away from this chair,
+[73:04] and that constrains the estimate about my entire past path.
+[73:09] Since I am one meter away,
+[73:11] it's not possible that my past trajectory
+[73:14] led me to 50 meters away, just one step behind me.
+[73:20] Yep?
+[73:21] The reason that we can identify that measurement
+[73:23] as related to the same feature
+[73:25] is because we have all correspondence parameters?
+[73:27] Yes.
+[73:30] Not also how the fact that I'm certain
+[73:34] about the pose decreases,
+[73:35] immediately decreases the uncertainty
+[73:38] about the position of all landmarks.
+[73:41] Why?
+[73:42] Because if I know that I'm here,
+[73:44] it means that...
+[73:50] So this landmark had this heavy distribution here
+[73:54] because it could have been anywhere in here,
+[73:57] so the landmark correspond,
+[73:58] if I were here, then the landmark would be here.
+[74:01] But since I know that I'm around here,
+[74:04] then it's very unlikely that the landmark is here,
+[74:06] so the uncertainty is more concentrated around here,
+[74:09] specifically around here.
+[74:10] So that's really the magic of the EKD epsilon algorithm,
+[74:14] that one measurement that really gives constraints
+[74:19] well where you are,
+[74:21] propagates throughout the estimate of all the landmarks.
+[74:25] How that happens?
+[74:27] Because the Kalman filter is in general fully populated
+[74:31] and the variance, this sigma,
+[74:35] that is how many dimensions does this variance have?
+[74:39] How many variables we have?
+[74:40] Three plus two n.
+[74:42] So it's three plus two n times three plus one.
+[74:44] This variance is a full matrix,
+[74:46] so also the off-diagonal elements are non-zero,
+[74:50] which means that there is correlation among those variables.
+[74:52] And that's exactly what causes this uncertainty
+[74:55] to shrink simultaneously once one of them shrinks.
+[75:00] Again, intuition should be similar.
+[75:03] If I'm very uncertain about where I am,
+[75:06] then the landmark that I see,
+[75:09] I also have a lot of uncertainty about where it is.
+[75:12] By the moment I can constrain my position,
+[75:13] I can also immediately constrain the position of the landmark
+[75:16] that I've just seen.
+[75:21] Okay, there is one additional step
+[75:26] that is what to do in the case of unknown correspondences.
+[75:29] I will only give you a preview,
+[75:31] and then we'll go through it in more detail next time.
+[75:34] The preview is now that we have to add
+[75:41] an estimation step for the correspondence variable.
+[75:44] The way we do it is by using Malanovitz distance.
+[75:48] So what we do is very similar
+[75:50] to the EKF localization algorithm
+[75:53] with unknown correspondences.
+[75:54] Every time I see a measurement,
+[75:57] I assume that the measurement that I've seen
+[76:02] corresponds to a new landmark.
+[76:04] I don't know if that is the case,
+[76:05] but without other knowledge, I assume that that is the case.
+[76:09] Then for all possible landmarks that I've seen,
+[76:12] including the new one that I postulate that I've seen,
+[76:15] I compute the corresponding most likely measurement
+[76:19] that I should have seen if measurement i corresponds
+[76:22] to landmark j and the corresponding measurement uncertainty.
+[76:25] And then I compute this factor pi k
+[76:29] that tells me how the observed measurement
+[76:33] is close to what I think I should see
+[76:36] if measurement i corresponds to landmark j
+[76:39] in terms of Malanovitz distance.
+[76:42] Then I set the pi for the new landmark
+[76:48] that I postulate equal to alpha,
+[76:49] some number that is a design choice.
+[76:52] If the minimum of all these pis is indeed NT plus one,
+[76:58] so the new landmark,
+[77:00] it means that I've seen the new landmark.
+[77:02] So what this is doing basically
+[77:03] is to create a new landmark
+[77:06] if the Malanovitz distance to all existing landmarks
+[77:08] exceeds the value alpha,
+[77:12] which seems reasonable.
+[77:14] Once you have the assignment, everything else is the same.
+[77:21] Cool, well, that's it for EK epsilon.
+[77:24] I will just give you a couple more words
+[77:27] for EK epsilon with unknown correspondences next week
+[77:30] when I'm back.
+[77:32] But where will you take it from here?
+[77:34] We are not going to do it in this class,
+[77:36] but in a more advanced class.
+[77:38] Well, how to make it robust?
+[77:40] Of course, oftentimes you generate,
+[77:44] especially in the case of unknown correspondences,
+[77:46] spurious landmarks.
+[77:47] You see that the landmark is new,
+[77:49] but actually it's not really new.
+[77:50] So in order to robustify it,
+[77:52] in general you need to add some try rejection schemes.
+[77:56] And also, so that's for the feature itself.
+[77:58] For the computer vision part,
+[77:59] so when you pick up the landmarks,
+[78:01] you try to pick those that really are distinctive.
+[78:04] So that's really the problem on feature detection.
+[78:07] Detecting good landmarks is really important.
+[78:09] So that's why we spent also some time on that.
+[78:12] Cool, all right.
+[78:14] So next week we will be talking about sensor fusion
+[78:19] and how to use open source software for autonomy,
+[78:24] in particular in the context of auto-ware.
+[78:26] But we'll also spend 10 more minutes
+[78:28] about going again through EK epsilon
+[78:31] with unknown correspondences
+[78:32] to make sure that everyone is on the same page.
+[78:34] The last part was a bit rushed.
+[78:36] For the SLAM with particle feature approaches,
+[78:40] we have a make-up lecture sometime next week
+[78:42] or the following week.
+[78:44] But for your pset, now you have everything you need
+[78:46] in order to get started with homework four.
+[78:51] Cool, all right, see you next week.
