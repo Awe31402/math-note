@@ -378,7 +378,7 @@ $$g=\left\|x(t)-x_{\text{ref}}(t)\right\|^2,\qquad h=t_f^2$$
 【課本補充】課本式 (2.3) 寫成最佳化問題的樣子：
 $$
 \begin{aligned}
-\underset{u(t)}{\text{minimize}}\quad & J \\
+\min_{u(t)}\quad & J \\
 \text{subject to}\quad & \dot x(t)=f(x(t),u(t),t),\quad x(t_0)=x_0,\quad x(t_f)=x_f,\quad x(t)\in\mathcal{X},\quad u(t)\in\mathcal{U}
 \end{aligned}
 $$
@@ -506,7 +506,7 @@ $x=(x_1,\dots,x_n)$ 是 $n$ 個要選的數字。通常假設 $f$ 連續可微�
 
 $$
 \begin{aligned}
-\underset{u(\cdot)}{\min}\quad & J=h\left(x(t_f),t_f\right)+\int_{t_0}^{t_f}g\left(x(t),u(t),t\right)dt \\
+\min_{u(\cdot)}\quad & J=h\left(x(t_f),t_f\right)+\int_{t_0}^{t_f}g\left(x(t),u(t),t\right)dt \\
 \text{s.t.}\quad & \dot x(t)=f\left(x(t),u(t),t\right),\quad x(t_0)=x_0 \\
 & x(t)\in\mathcal{X},\quad u(t)\in\mathcal{U}\quad(\text{可容許}),\quad \text{可能還有 }x(t_f)=x_f
 \end{aligned}
