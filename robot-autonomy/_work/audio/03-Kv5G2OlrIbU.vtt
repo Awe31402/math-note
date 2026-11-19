@@ -1,0 +1,3563 @@
+WEBVTT
+
+00:00.000 --> 00:17.720
+All right? Okay. So, last week, the first lecture focused on deriving kinematic dynamic
+
+00:17.720 --> 00:24.200
+models of robot motion. Then we had a lecture on the robot operating system, an introductory
+
+00:24.200 --> 00:31.760
+lecture. In the next couple of sections, you will get to know ROS much better. And
+
+00:31.760 --> 00:37.160
+in particular, this week, you're going to set up the machinery in order to run ROS.
+
+00:37.160 --> 00:44.680
+Next week, in the sections, you get to run your first ROS nodes. And in particular, most
+
+00:44.680 --> 00:50.320
+of the software activities are going to be handled through the sections. We found this
+
+00:50.320 --> 00:54.640
+to be a particularly effective way to teach you how to do things by having you doing things
+
+00:54.640 --> 01:03.480
+while having a CA watching you. So today, we're going to leverage what we know about
+
+01:03.480 --> 01:09.080
+deriving kinematic dynamic models of robot motion in order to compute the trajectories
+
+01:09.080 --> 01:16.200
+for a robot. In particular, today, and actually this week, we are concerned with the following
+
+01:16.200 --> 01:22.680
+problem referred to as the trajectory optimization problem. Given an initial condition for your
+
+01:22.680 --> 01:29.200
+robot, so for example, initial position and initial heading, and given a desired final
+
+01:29.200 --> 01:35.920
+position for the robot and final heading, how do we find a trajectory, meaning a time
+
+01:35.920 --> 01:42.400
+history for the state's position and heading that connects the initial condition with the
+
+01:42.400 --> 01:48.840
+final condition and satisfies all system constraints? For example, in the case of a
+
+01:48.840 --> 01:55.800
+wheeled robot, the constraint that the motion has to satisfy is a kinematic constraint,
+
+01:55.800 --> 02:02.720
+meaning the no-slip condition or poor rolling condition that we saw last time. Additionally,
+
+02:02.720 --> 02:08.800
+we may also be interested in finding trajectories that are not just feasible, but they also
+
+02:08.800 --> 02:14.160
+optimize some cost criterion. For example, we want to get to the final condition in minimum
+
+02:14.160 --> 02:20.640
+time, or we want to get to the final condition with the minimum control effort or maybe a
+
+02:20.640 --> 02:25.720
+combination of minimum time and minimum control effort, and so on and so forth. So that's
+
+02:25.720 --> 02:31.700
+a trajectory optimization problem. So the goal for today, and in general, all the lectures
+
+02:31.700 --> 02:35.560
+are going to be structured in the following way. I'm going to introduce the topic, tell
+
+02:35.560 --> 02:42.840
+you what the goals and aims are for the day, and I give you some suggested readings. As
+
+02:42.840 --> 02:46.920
+mentioned in lecture one, this class does not have a required textbook, but there are
+
+02:46.920 --> 02:52.080
+several textbooks that are recommended and listed on the syllabus. For each lecture,
+
+02:52.080 --> 02:59.800
+I'm going to give you a main reading reference, in this case, this book, along with some additional
+
+02:59.800 --> 03:05.480
+readings when needed and useful. Particularly for this class, the main reference is a book
+
+03:05.480 --> 03:13.160
+from Siciliano, Cevico, Villani, and Oriolo, titled Robotics, Modeling, Planning, and Control,
+
+03:13.160 --> 03:18.040
+and in particular, the material that we're going to cover is covered in chapter 11 of
+
+03:18.040 --> 03:23.960
+this book, if you want to get deeper into this topic. But the slides, along with the
+
+03:23.960 --> 03:28.000
+lecture notes, are sufficient in order to learn the material in this class. And in particular,
+
+03:28.000 --> 03:35.200
+for your exams, you are only required to know what is going to be covered in lecture and
+
+03:35.240 --> 03:39.320
+what is covered in the lecture notes. You don't need material from these more advanced
+
+03:39.320 --> 03:47.720
+readings. Anyway, so the goal for today is twofold. First, I want to give you a general
+
+03:47.720 --> 03:52.940
+overview of the methodologies in order to tackle the trajectory optimization problem.
+
+03:52.940 --> 03:59.000
+As you can imagine, this is one of the most fundamental problems in robot autonomy. And
+
+03:59.000 --> 04:04.840
+two, of course, there are many methods. I want to focus on a specific method referred
+
+04:04.840 --> 04:11.600
+to as a differential flatness. It is a clever method. It's not applicable to any system
+
+04:11.600 --> 04:20.760
+but to a broad class of systems. And it's widely used in the field. For example, quadrotors
+
+04:20.760 --> 04:26.400
+or aerial vehicles, the trajectory optimization problem usually is tackled through the lens
+
+04:26.400 --> 04:31.640
+of differential flatness. So it's the tool that we're going to focus in this class for
+
+04:31.640 --> 04:38.000
+the purposes of trajectory optimization. I'm going to cover it in quite a bit of detail.
+
+04:38.000 --> 04:44.280
+It's going to be covered in your homework, particular problem set one, problem one, and
+
+04:44.280 --> 04:51.960
+three. And the tools that you will learn today and you will exercise in the P set will become
+
+04:51.960 --> 04:57.080
+the backbone for your trajectory optimization module for your final project. So you will
+
+04:57.080 --> 05:02.280
+get to know differential flatness pretty well by the end of this class.
+
+05:02.280 --> 05:09.160
+So before we get to the problem of trajectory optimization, I want just to go back to the
+
+05:09.160 --> 05:13.680
+notion of dynamic models and in particular to the notion of differential equations. There
+
+05:13.680 --> 05:20.280
+were a couple of questions in Piazza on to what extent you need to be proficient with
+
+05:20.280 --> 05:27.000
+differential equations. In this slide, basically, we have everything we need to know about
+
+05:27.000 --> 05:34.320
+differential equations. Specifically, as we saw last time, the equations of motion for
+
+05:34.320 --> 05:41.480
+a robot are expressed in the form of a differential equation. That is an equation that relates
+
+05:41.480 --> 05:47.160
+the derivative of an unknown function with the unknown function itself and possibly some
+
+05:47.160 --> 05:55.720
+unknown parameters, for example, time. So it's an equation. As you might have seen for
+
+05:55.720 --> 06:03.560
+the past several years, the key feature is an equation in terms of an unknown function
+
+06:03.560 --> 06:08.160
+and the derivative of that unknown function. The reason why differential equations play
+
+06:08.160 --> 06:14.080
+a pivotal role in order to understand, in order to describe the dynamics of a system
+
+06:14.080 --> 06:21.840
+is that the solution to differential equation gives you the history of motion of a robot.
+
+06:21.840 --> 06:29.560
+In this class, you won't need to know any specific technique to solve differential equations.
+
+06:29.560 --> 06:33.400
+We're not going to solve differential equations analytically, for example. What you need to
+
+06:33.400 --> 06:39.840
+know is how to solve differential equations numerically through discretization scheme.
+
+06:39.840 --> 06:44.400
+There are many discretization schemes available out there, but the most basic one, and indeed
+
+06:44.400 --> 06:53.360
+the one that we will mostly be using in this class, is the so-called Euler method of discretization,
+
+06:53.360 --> 06:58.400
+which is also a good way to understand a little bit better what differential equations really
+
+06:58.400 --> 07:05.880
+mean from an operational standpoint. The idea behind an Euler method for differential
+
+07:05.880 --> 07:13.600
+equation integration is fairly simple. So let's consider the derivative of time over
+
+07:13.600 --> 07:29.560
+a function of time. So x dot t, remember that in this class the dot means the derivative
+
+07:29.560 --> 07:39.840
+of time, can be approximated by the very definition of a derivative as x of t plus
+
+07:39.840 --> 07:58.160
+delta t minus x of t over delta t. So this doesn't work. This works better. Delta t.
+
+07:58.160 --> 08:08.040
+Where delta t is an increment of time. As delta t gets smaller and smaller, this ratio
+
+08:08.040 --> 08:18.600
+converges to x dot t. So the idea behind the Euler method is to translate a differential
+
+08:18.600 --> 08:24.360
+equation into a discretized version, where we consider the notion of a finite increment
+
+08:24.360 --> 08:37.280
+as opposed to an infinitesimal increment. In particular, by using this expression then
+
+08:37.280 --> 08:53.240
+we can say that x t plus delta t is equal to x of t plus delta t times x dot t. I've
+
+08:53.240 --> 08:58.800
+just rewritten this expression by replacing the approximation symbol with the equality
+
+08:58.800 --> 09:04.280
+symbol, with the idea that if delta t is small enough, this is almost like an equality. So
+
+09:04.280 --> 09:10.720
+this gives us a very powerful method to solve general differential equations. Because now,
+
+09:10.720 --> 09:17.760
+if I tell you what the initial condition is, so the value of the function x at the initial
+
+09:17.760 --> 09:25.280
+time t zero, say equals five for example, then you can solve the differential equation.
+
+09:25.280 --> 09:32.720
+So find the value of x at all times, more precisely at a finite set of times corresponding
+
+09:32.720 --> 09:40.360
+to the discretization points for time, by simply recursively using this expression.
+
+09:40.360 --> 09:49.920
+For example, x of t zero plus delta t, t zero plus delta t then will become t one,
+
+09:49.920 --> 10:00.520
+is equal to x of t zero, which assume we know the initial condition, plus delta t is a time
+
+10:00.520 --> 10:06.560
+increment, basically something that we choose, trading off how long it takes to solve a differential
+
+10:06.560 --> 10:12.360
+equation with the accuracy we want. Of course, if we make this discretization very fine,
+
+10:12.360 --> 10:17.160
+then I have to iterate on this equation many times before getting to the final. So it's
+
+10:17.160 --> 10:21.940
+more computationally expensive. But if I make delta t very large, yes, this is very fast,
+
+10:21.940 --> 10:30.200
+but then the solution will not be very accurate. Plus delta t times x dot t zero. So we assume
+
+10:30.200 --> 10:38.020
+that we also know x dot t zero, given.
+
+10:38.020 --> 10:44.400
+So this is interesting in two ways. One, we saw how we can devise fairly simply a method
+
+10:44.400 --> 10:51.000
+to solve a general class of differential equations. It's not the most accurate one, it's not the
+
+10:51.000 --> 10:59.960
+most efficient one, but this is a good starting point. But two, from a conceptual standpoint,
+
+10:59.960 --> 11:05.860
+it also tells you why it is so important to solve differential equations. Basically,
+
+11:05.860 --> 11:10.540
+the knowledge of how the derivative of the function depends on the function itself allows
+
+11:10.540 --> 11:16.840
+you to predict what the system will do in the future by simply applying this recursive
+
+11:16.840 --> 11:17.840
+set of equations.
+
+11:17.840 --> 11:26.680
+In particular, the derivative has the notion of what the system is going to do next, given
+
+11:26.680 --> 11:30.800
+the current state of the system. So it makes sense. I'm just trying to give you some concepts.
+
+11:30.800 --> 11:35.720
+Maybe so far, you have seen differential equations from a purely mathematical standpoint, but
+
+11:35.720 --> 11:39.960
+from a physics engineering standpoint, have a lot of meaning. Knowing how the derivative
+
+11:39.960 --> 11:45.320
+depends on the current value of the function basically encapsulates the notion of what
+
+11:45.320 --> 11:50.880
+the system is going to do next, depending on the current system state.
+
+11:50.880 --> 11:56.640
+That's pretty much everything we need to know in terms of differential equations. We will
+
+11:56.640 --> 12:02.880
+be using the Euler method over and over in this class, because obviously, in order to
+
+12:02.880 --> 12:07.600
+control a system, we have to control its motion, but this describes two differential equations
+
+12:07.600 --> 12:11.080
+that we need to discretize in order to make them computable.
+
+12:11.080 --> 12:17.280
+Is the reason we're using the Euler method your simplicity instead of...
+
+12:17.280 --> 12:23.120
+This is the simplest, in my mind, method to describe. As I said, there are many other
+
+12:23.120 --> 12:28.200
+methods that we could be using for discretization. By the way, here, I refer to the time increment
+
+12:28.200 --> 12:35.720
+as hi. Here, I refer to the time increment as delta t. So just to make sure the two are
+
+12:35.720 --> 12:38.640
+exactly the same. That's a notational thing. Yeah?
+
+12:38.640 --> 12:42.440
+That's like you have a small step size, would you be able to calculate the moment?
+
+12:42.440 --> 12:49.000
+Yes, in general, yes. But in order to get it to the final time, tf, then of course you
+
+12:49.000 --> 12:53.080
+need many more iterations of algorithms. So say that you're integrating between zero
+
+12:53.080 --> 12:59.040
+and one, and you have a step size of 0.1, you have to apply that equation 10 times to
+
+12:59.040 --> 13:05.920
+get to tf. If you have delta t equals to 0.01, now you have a more accurate solution, because
+
+13:05.920 --> 13:09.960
+that approximation is finer. I mean, it's better, because delta t is smaller, but now
+
+13:09.960 --> 13:15.920
+you have to iterate 100 times. So in general, in robotics, there's always
+
+13:15.920 --> 13:23.680
+a trade-off between accuracy and optimality versus computation time. No one and other.
+
+13:23.680 --> 13:28.240
+The art of being a roboticist is to have a good judgment call. Yeah?
+
+13:28.240 --> 13:34.360
+In this class, we're generally using this method, so instead of solving this, it's using
+
+13:34.360 --> 13:39.560
+a feature that's... Yeah, the approach of this class is really
+
+13:39.560 --> 13:44.680
+computational. So numerically, because many of the things we will be doing do not really
+
+13:44.680 --> 13:50.240
+admit an analytical solution. So we're dealing with a nonlinear system of equations, possibly
+
+13:50.240 --> 13:54.720
+relatively high-dimensional and so on, so the best we can do is to solve them automatically.
+
+13:54.720 --> 14:00.800
+All right. Let's go back to trajectory optimization. So as discussed, the equations of motions
+
+14:00.800 --> 14:08.400
+of a robot are represented through differential equations. Now, the question is, by exploiting
+
+14:08.400 --> 14:15.700
+a model, how do we find a trajectory that joins an initial condition with a final condition?
+
+14:15.700 --> 14:22.760
+But trajectory, as I said, I mean, the history of time for the state from time to zero to
+
+14:22.760 --> 14:32.040
+time t f. In a way that satisfies the system constraints, so basically the kinematics or
+
+14:32.040 --> 14:39.000
+the dynamics, some control constraints, the dynamic model depends on the control input.
+
+14:39.000 --> 14:43.140
+For example, in the case of a unit cycle, the control input are linear speed and angular
+
+14:43.140 --> 14:47.640
+speed. We might have the control constraints. For example, the case of unit cycle means
+
+14:47.640 --> 14:53.780
+that the linear speed has to be below something, below 10 meter per second. The angular speed
+
+14:53.780 --> 15:00.880
+has to be below something, say some radian per second and so on. We might have a constraint
+
+15:00.880 --> 15:08.160
+on the state. Constraints of the states usually are obstacles, meaning that your trajectory
+
+15:08.160 --> 15:16.120
+as a function of time should not intersect an obstacle. This is a state constraint. It
+
+15:16.120 --> 15:26.680
+means that the x of t should not belong to the set x for all t. As a move, I should never,
+
+15:27.200 --> 15:33.800
+the time history of my state should never intersect, say, this table. So that's the
+
+15:33.800 --> 15:40.120
+feasibility part. If I'm only concerned with finding a function x of t that satisfies the
+
+15:40.120 --> 15:45.600
+equations of motion, input constraints, state constraints, then I say that I found a feasible
+
+15:45.600 --> 15:51.480
+trajectory for my system. If on top of it, among all feasible trajectories, I try to
+
+15:51.480 --> 15:58.360
+find the one that optimizes the cost function, that I say that I'm trying to solve an optimal
+
+15:58.360 --> 16:07.360
+trajectory control problem. Now, any questions so far? Yeah.
+
+16:07.360 --> 16:12.200
+What's the mean of each function x t and t bar?
+
+16:12.200 --> 16:17.520
+I'm going to discuss that in a second. I was going to discuss right now about the, yeah.
+
+16:17.560 --> 16:25.560
+You said that x, the constraint of x represents the path that you would, that was the collision avoidance.
+
+16:25.560 --> 16:28.560
+And u is just like velocities and angular velocities?
+
+16:28.560 --> 16:34.560
+U are input bounds. Think of it as velocity bounds, acceleration bounds, and so on, in general.
+
+16:34.560 --> 16:43.560
+Yeah. All right. So let's look a little bit more closely at the cost function.
+
+16:44.560 --> 16:56.560
+So the cost function takes the form of j equal h of x t f, t f, plus integral from t 0 to t f of a function
+
+16:56.560 --> 17:09.560
+g of x t f, u t f, t f in the t. So this part is referred to as the running cost.
+
+17:09.560 --> 17:19.560
+So basically, this is the cost that you accrue as, oh no, so this is not the t f, this is just t.
+
+17:23.560 --> 17:34.560
+So this is the cost that you accrue as you move along the trajectory. For example, if g is simply equal to 1,
+
+17:34.560 --> 17:40.560
+what is the cost that we're accruing, meaning what are we trying to minimize it? Exactly.
+
+17:40.560 --> 17:47.560
+But we might, for example, have an additional term, like for example, u square.
+
+17:47.560 --> 17:51.560
+So if I add u square, what is the cost that we are accruing?
+
+17:53.560 --> 17:58.560
+Control effort, in general. Usually the square of stuff represents power.
+
+17:58.560 --> 18:03.560
+So, I mean, usually this is related to minimizing energy.
+
+18:04.560 --> 18:08.560
+And there are many different ways. This is almost up to you to decide what you want to optimize.
+
+18:08.560 --> 18:11.560
+I'm sorry, what is it saying for cost?
+
+18:11.560 --> 18:18.560
+Running. Running cost, because since there is an integral, so think of an integral as a summation.
+
+18:18.560 --> 18:24.560
+So basically, this is the cumulative cost, the cost that I accumulate through time.
+
+18:24.560 --> 18:32.560
+For example, because I'm consuming fuel, or simply because if g is equal to 1, time is elapsing.
+
+18:34.560 --> 18:40.560
+So, interesting thing here, so think about the integral as a sum. If you discretize an integral, you get a sum.
+
+18:42.560 --> 18:47.560
+This means that the running cost has an additive structure, so we express it as a sum.
+
+18:47.560 --> 18:50.560
+So you might think, well, can we do it more generally?
+
+18:50.560 --> 18:55.560
+So instead of having an integral, we have some non-linear function of an integral and sum.
+
+18:55.560 --> 19:05.560
+In some settings, that might be useful. On the other hand, most of the optimal control formulation focuses on the structure for the cost.
+
+19:05.560 --> 19:15.560
+Because it's the one for which we can solve the problem in a way that is, in general, computationally quite efficient.
+
+19:15.560 --> 19:24.560
+If you go away from the additive cost assumption, then it becomes very hard to find any computational procedure.
+
+19:24.560 --> 19:31.560
+So if some of you are familiar with reinforcement learning and dynamic programming and so on, exactly the same.
+
+19:31.560 --> 19:36.560
+So if you think about dynamic programming, you have the expectation of a sum as a cost.
+
+19:36.560 --> 19:43.560
+The reason why you have that structure is that by leveraging that structure, then you can derive the principal optimality.
+
+19:43.560 --> 19:47.560
+And from the principal optimality, you can derive the dynamic programming equations.
+
+19:47.560 --> 19:53.560
+You remove the additive structure, then you are in trouble.
+
+19:54.560 --> 19:56.560
+So this is the running cost.
+
+19:56.560 --> 20:02.560
+This term here, as you were asking before, this is referred to as the terminal cost.
+
+20:02.560 --> 20:15.560
+So this is the cost that you incur when at the end of the operation, meaning at time t f, your state is at x t f.
+
+20:15.560 --> 20:27.560
+So for example, think about a problem where we want to get to somewhere, but we don't want necessarily to get exactly at a specific point.
+
+20:27.560 --> 20:31.560
+It's fine that we get close enough to a specific point.
+
+20:31.560 --> 20:43.560
+So the terminal cost, h, could be x t f minus x t f desired, and then I take the norm and I square it.
+
+20:43.560 --> 20:52.560
+Which means that it's fine if I get close enough, but I don't want to get it too far, otherwise this terminal cost is very large.
+
+20:52.560 --> 20:57.560
+These are the typical two terms in the optimal control formulation.
+
+20:58.560 --> 20:59.560
+What's that?
+
+21:01.560 --> 21:12.560
+Yeah, the only thing that you really need here is to have this additive cost structure and some differentiability property on h and g.
+
+21:12.560 --> 21:16.560
+These are a little bit more technical things that we're not going to bother in this class.
+
+21:16.560 --> 21:24.560
+But in the spring, I teach an entire class on optimal learning-based control, where we go to in great detail on these type of questions.
+
+21:28.560 --> 21:35.560
+x d, d stands for desired.
+
+21:35.560 --> 21:39.560
+In general, in this class, a subscript of d is desired.
+
+21:39.560 --> 21:42.560
+A desired trajectory, a desired set point, and so on.
+
+21:42.560 --> 21:47.560
+Okay, so here the literature is not very consistent.
+
+21:47.560 --> 21:57.560
+But in general, if we do not have state constraints, meaning that the set x is simply the entire Euclidean space,
+
+21:57.560 --> 22:01.560
+we refer to this problem as a trajectory optimization problem.
+
+22:01.560 --> 22:08.560
+If we do have state constraints, then we refer to this problem as motion planning, or trajectory optimization with obstacles.
+
+22:08.560 --> 22:12.560
+We'll look at trajectory optimization with obstacles next week.
+
+22:12.560 --> 22:16.560
+These weeks, we're looking at a problem without obstacles, meaning without state constraints.
+
+22:16.560 --> 22:19.560
+And hence, we talk about trajectory optimization.
+
+22:19.560 --> 22:22.560
+So this week's is trajectory optimization, next week's motion planning.
+
+22:22.560 --> 22:26.560
+The main difference is that in motion planning, we deal with state constraints.
+
+22:26.560 --> 22:27.560
+For example, collision avoidance.
+
+22:27.560 --> 22:32.560
+Trajective optimization, typically, we do not deal with the state constraints.
+
+22:33.560 --> 22:35.560
+There was, yeah?
+
+22:35.560 --> 22:40.560
+Highly weight, which causes more problems?
+
+22:40.560 --> 22:47.560
+Yeah, that's why we still need humans as part of the design loop.
+
+22:47.560 --> 22:49.560
+It's up to the designer.
+
+22:49.560 --> 22:53.560
+It really depends on what type of performance you want from your vehicle.
+
+22:53.560 --> 22:57.560
+In some cases, the only thing that you care is time.
+
+22:57.560 --> 23:01.560
+And you want to get exactly to a point in minimum time.
+
+23:01.560 --> 23:06.560
+So in this case, h will be equal to zero, g will be equal to one.
+
+23:06.560 --> 23:14.560
+And then you have the terminal constraint, xdf equal x final desire.
+
+23:14.560 --> 23:20.560
+In other cases, you also care about the fuel expenditure.
+
+23:20.560 --> 23:23.560
+And how do you trade time and the fuel?
+
+23:23.560 --> 23:25.560
+That's left to the designer.
+
+23:25.560 --> 23:30.560
+So in general, in the trajectory optimization problem formulation,
+
+23:30.560 --> 23:37.560
+the inputs are the function g, the function h, the function a,
+
+23:37.560 --> 23:41.560
+so your model, your constraints x, your input bound u.
+
+23:41.560 --> 23:42.560
+That's an input.
+
+23:42.560 --> 23:48.560
+The output is the time history of the control and associated time history of the state
+
+23:48.560 --> 23:52.560
+that solves this optimization problem.
+
+23:53.560 --> 23:55.560
+So t0 and tf seem to be fixed.
+
+23:55.560 --> 23:56.560
+Ah, great question.
+
+23:56.560 --> 23:58.560
+So t0 generally, yes.
+
+23:58.560 --> 24:04.560
+tf, the final time, could be free or could be fixed.
+
+24:04.560 --> 24:06.560
+Why sometimes the final time could be free?
+
+24:06.560 --> 24:13.560
+For example, for minimum time problem, the problem is to minimize time,
+
+24:13.560 --> 24:17.560
+which means that the tf is actually part of the optimization.
+
+24:17.560 --> 24:25.560
+For example, the optimal control problem as stated here was formulated and addressed,
+
+24:25.560 --> 24:27.560
+first started during the Cold War.
+
+24:27.560 --> 24:32.560
+So the problem was to intercept ballistic missiles coming either from the Soviet Union
+
+24:32.560 --> 24:38.560
+or from the United States in minimum time by having fuel as a constraint and so on.
+
+24:40.560 --> 24:44.560
+In particular, there were two schools, the Soviet school and the United States school.
+
+24:44.560 --> 24:50.560
+The Soviet school led to the Pontryagin minimum principles as the general solution approach.
+
+24:50.560 --> 24:59.560
+The American school, led by Richard Bellman, led to dynamic programming as the main solution approach.
+
+24:59.560 --> 25:03.560
+There are connections between the two, but those are beyond the scope of this class,
+
+25:03.560 --> 25:06.560
+which will be covered in my class in the spring.
+
+25:07.560 --> 25:10.560
+Good reference for this stuff is a book from Kirk.
+
+25:11.560 --> 25:16.560
+All right, so first of all, let me give you a little bit of overview
+
+25:16.560 --> 25:20.560
+of what methodologies are out there to solve the problem.
+
+25:21.560 --> 25:24.560
+And then we'll do a deep dive into differential planets.
+
+25:25.560 --> 25:28.560
+So when we solve for the optimal control problem,
+
+25:28.560 --> 25:33.560
+we may solve for one of two possible control functions.
+
+25:33.560 --> 25:38.560
+Control functions is the history of the function u as a function of time.
+
+25:38.560 --> 25:48.560
+If we solve for a function u that is really a function of both state and time,
+
+25:48.560 --> 25:53.560
+we say that we are interested in a closed-loop projective optimization problem.
+
+25:53.560 --> 26:01.560
+So if we're trying to find a control that is really a function of x and t,
+
+26:01.560 --> 26:09.560
+we say that we are interested in a closed-loop optimal control.
+
+26:09.560 --> 26:16.560
+If instead we try to simply find a function u t
+
+26:16.560 --> 26:21.560
+that is a function only of the initial condition, so t zero,
+
+26:21.560 --> 26:24.560
+and t, so this closed-loop,
+
+26:26.560 --> 26:28.560
+this is open-loop.
+
+26:29.560 --> 26:34.560
+We say that we're interested in an open-loop trajectory optimization problem.
+
+26:34.560 --> 26:37.560
+So the difference between open-loop and closed-loop
+
+26:37.560 --> 26:40.560
+is that in a closed-loop control,
+
+26:40.560 --> 26:43.560
+we are constantly measuring the state,
+
+26:43.560 --> 26:47.560
+and our control action depends on the current value of the state.
+
+26:48.560 --> 26:52.560
+This is a bit subtle, so I want to make sure that every one of you
+
+26:52.560 --> 26:54.560
+appreciate this part.
+
+26:54.560 --> 26:58.560
+Our formulation is deterministic. There is no uncertainty.
+
+26:58.560 --> 27:01.560
+There are no random variables, nothing. Purely deterministic.
+
+27:01.560 --> 27:07.560
+So if you give me initial condition and a control function,
+
+27:07.560 --> 27:09.560
+I can tell you exactly where my system will be,
+
+27:09.560 --> 27:11.560
+say, 10 seconds from now.
+
+27:12.560 --> 27:18.560
+Which means that if I apply a function that is only a function of time
+
+27:18.560 --> 27:22.560
+and a function that is a function of time and state,
+
+27:22.560 --> 27:27.560
+since I will always be following my nominal trajectory,
+
+27:27.560 --> 27:31.560
+the two will not really give rise to any difference.
+
+27:33.560 --> 27:37.560
+So why would we might possibly be interested in closed-loop control?
+
+27:38.560 --> 27:41.560
+Again, let me be more specific here.
+
+27:45.560 --> 27:50.560
+Open-loop is only a function of time,
+
+27:50.560 --> 27:54.560
+so it tells me at each instant of time
+
+27:54.560 --> 27:56.560
+which control action I should follow.
+
+27:56.560 --> 27:59.560
+And let's say that this is the trajectory that I get,
+
+27:59.560 --> 28:01.560
+x open-loop, x off.
+
+28:03.560 --> 28:05.560
+This is an open-loop.
+
+28:05.560 --> 28:09.560
+Closed-loop is a function of both the state and time,
+
+28:09.560 --> 28:14.560
+which means that if I'm here at a given time t,
+
+28:14.560 --> 28:16.560
+I take an action,
+
+28:16.560 --> 28:18.560
+but if I'm a different state, say, here,
+
+28:18.560 --> 28:20.560
+I may take a different action.
+
+28:20.560 --> 28:24.560
+In open-loop, no matter where I am at the current time,
+
+28:24.560 --> 28:26.560
+I always take the same action.
+
+28:27.560 --> 28:31.560
+With closed-loop, at a given time, depending on where I am,
+
+28:31.560 --> 28:33.560
+I may take different actions.
+
+28:34.560 --> 28:37.560
+So why closed-loop is actually super useful?
+
+28:37.560 --> 28:41.560
+Closed-loop is useful is that all models are wrong
+
+28:41.560 --> 28:43.560
+and some are useful,
+
+28:43.560 --> 28:46.560
+which means that when we do the computation,
+
+28:46.560 --> 28:50.560
+we derive a control function for an abstraction of our system.
+
+28:50.560 --> 28:53.560
+But there is always some residual uncertainty,
+
+28:53.560 --> 28:54.560
+which means that in general,
+
+28:54.560 --> 28:58.560
+we will drift away from our nominal trajectory.
+
+28:58.560 --> 29:00.560
+If I have a closed-loop control law,
+
+29:00.560 --> 29:03.560
+I know exactly what I do if I start drifting away,
+
+29:03.560 --> 29:06.560
+which means that I can get back to the nominal trajectory.
+
+29:06.560 --> 29:10.560
+In open-loop, if I start drifting away,
+
+29:10.560 --> 29:14.560
+I don't have any mechanism to bring me back
+
+29:14.560 --> 29:16.560
+to the nominal trajectory.
+
+29:16.560 --> 29:19.560
+So very explicitly, open-loop means that, say,
+
+29:19.560 --> 29:23.560
+I want to get to Robin, and I just compute the trajectory,
+
+29:23.560 --> 29:26.560
+close my eyes, I start walking where I'm going.
+
+29:26.560 --> 29:28.560
+You see, I was going toward.
+
+29:28.560 --> 29:31.560
+I was drifting because I was only relying on dead reckoning,
+
+29:31.560 --> 29:34.560
+basically my international measurement unit.
+
+29:34.560 --> 29:38.560
+I didn't have visual feedback for state measurement.
+
+29:38.560 --> 29:41.560
+I was drifting, I had my open-loop thing,
+
+29:42.560 --> 29:45.560
+and I didn't have any way to correct where I was going.
+
+29:45.560 --> 29:46.560
+Now that I have my eyes open,
+
+29:46.560 --> 29:49.560
+I'm constantly measuring where I am with respect to the room,
+
+29:49.560 --> 29:51.560
+which means that as I start drifting,
+
+29:51.560 --> 29:53.560
+I go back to my nominal.
+
+29:53.560 --> 29:56.560
+That's closed-loop control.
+
+29:56.560 --> 29:59.560
+So now you might say, well, okay, cool.
+
+29:59.560 --> 30:02.560
+Then closed-loop control is pretty useful.
+
+30:02.560 --> 30:04.560
+Why would you ever consider solving
+
+30:04.560 --> 30:09.560
+for an open-loop control trajectory?
+
+30:09.560 --> 30:11.560
+The unfortunate thing of closed-loop control
+
+30:11.560 --> 30:14.560
+is that this object being also a function of the state
+
+30:14.560 --> 30:19.560
+is a much more difficult object to do computation over.
+
+30:19.560 --> 30:22.560
+Open-loop is just a function of time.
+
+30:22.560 --> 30:24.560
+Closed-loop is a function of time and state,
+
+30:24.560 --> 30:26.560
+so it's a much more complicated mathematical object.
+
+30:26.560 --> 30:29.560
+Computationally, much more expensive.
+
+30:29.560 --> 30:32.560
+So ideally, we would like to have an algorithm
+
+30:32.560 --> 30:35.560
+that has the same computation efficiency
+
+30:35.560 --> 30:38.560
+required to solve an open-loop control problem,
+
+30:38.560 --> 30:41.560
+but with the same robustness of properties
+
+30:41.560 --> 30:43.560
+of closed-loop control.
+
+30:43.560 --> 30:45.560
+A good trade-off is represented
+
+30:45.560 --> 30:48.560
+by two-step trajectory optimization,
+
+30:48.560 --> 30:53.560
+whereby your control is given by the superposition
+
+30:53.560 --> 30:57.560
+of a reference open-loop control signal
+
+30:57.560 --> 31:00.560
+plus a feedback tracking term.
+
+31:00.560 --> 31:03.560
+The feedback tracking term is simply control law
+
+31:03.560 --> 31:05.560
+that tries to bring your system back
+
+31:05.560 --> 31:08.560
+to the nominal trajectory that you would follow
+
+31:08.560 --> 31:13.560
+with the open-loop control if there were no disturbances
+
+31:14.560 --> 31:17.560
+by using some feedback mechanism.
+
+31:20.560 --> 31:22.560
+And this is basically the architecture
+
+31:22.560 --> 31:23.560
+that we use in practice,
+
+31:23.560 --> 31:26.560
+and that's the one that we will be using in this class.
+
+31:27.560 --> 31:32.560
+The downside you mentioned of the closed-loop
+
+31:32.560 --> 31:34.560
+is that you don't have to do all this information
+
+31:34.560 --> 31:36.560
+with the information you have,
+
+31:36.560 --> 31:39.560
+but you also have to do it to optimize.
+
+31:39.560 --> 31:41.560
+You are compromising, because basically,
+
+31:41.560 --> 31:44.560
+usually the stacking law is valid locally,
+
+31:44.560 --> 31:47.560
+so if you are close enough to your nominal trajectory,
+
+31:47.560 --> 31:48.560
+then you know what to do,
+
+31:48.560 --> 31:50.560
+but if you are far away,
+
+31:50.560 --> 31:52.560
+then you have no clue about what to do.
+
+31:52.560 --> 31:55.560
+But in general, if, again, I want to go to,
+
+31:55.560 --> 32:00.560
+it's fine to just have a tracking that tells me what to do
+
+32:00.560 --> 32:02.560
+if I'm two meters far from my nominal.
+
+32:02.560 --> 32:04.560
+I don't need the closed-loop control law
+
+32:04.560 --> 32:05.560
+that tells me what to do
+
+32:05.560 --> 32:09.560
+if all of a sudden I'm teleported back in Italy.
+
+32:09.560 --> 32:12.560
+That would be full-blown closed-loop.
+
+32:12.560 --> 32:14.560
+So the second part of the two-step design
+
+32:14.560 --> 32:15.560
+is easier propagation?
+
+32:15.560 --> 32:17.560
+Much easier than that one,
+
+32:17.560 --> 32:19.560
+because basically you're only solving
+
+32:19.560 --> 32:23.560
+for a tracking controller that tells you what to do
+
+32:23.560 --> 32:26.560
+in a tube around the nominal trajectory.
+
+32:28.560 --> 32:30.560
+Again, this is engineering,
+
+32:30.560 --> 32:33.560
+so we really had to find a balance
+
+32:33.560 --> 32:35.560
+between ideally what we would like to do
+
+32:35.560 --> 32:36.560
+and practically what works well
+
+32:36.560 --> 32:38.560
+and is computationally feasible.
+
+32:38.560 --> 32:40.560
+Two-step design, whether used,
+
+32:40.560 --> 32:44.560
+that's actually what we will be doing in this class,
+
+32:44.560 --> 32:46.560
+which basically means two things.
+
+32:46.560 --> 32:49.560
+Now I have to tell you how to compute
+
+32:49.560 --> 32:51.560
+an open-loop trajectory as a reference,
+
+32:52.560 --> 32:55.560
+well, open-loop control signal,
+
+32:55.560 --> 32:56.560
+as a reference control signal,
+
+32:56.560 --> 32:58.560
+and then I have to tell you
+
+32:58.560 --> 33:01.560
+how to design a tracking controller.
+
+33:01.560 --> 33:03.560
+So today we're going to do this.
+
+33:03.560 --> 33:05.560
+On Thursday we're going to do this.
+
+33:08.560 --> 33:09.560
+Clear?
+
+33:09.560 --> 33:10.560
+A bit of philosophy,
+
+33:10.560 --> 33:12.560
+but it's important to have the main concepts in mind.
+
+33:12.560 --> 33:13.560
+Yeah?
+
+33:14.560 --> 33:17.560
+The tracking log in the optimized form
+
+33:17.560 --> 33:19.560
+has a special case of the...
+
+33:19.560 --> 33:21.560
+Special case of this one?
+
+33:21.560 --> 33:22.560
+Yeah.
+
+33:22.560 --> 33:23.560
+Yeah.
+
+33:23.560 --> 33:25.560
+You're only chucking certain information out
+
+33:25.560 --> 33:27.560
+which makes the computation easier.
+
+33:27.560 --> 33:28.560
+Yeah.
+
+33:28.560 --> 33:29.560
+But the idea is that we would optimize
+
+33:29.560 --> 33:30.560
+directly for this one,
+
+33:30.560 --> 33:31.560
+as opposed to that.
+
+33:31.560 --> 33:32.560
+Yeah.
+
+33:33.560 --> 33:34.560
+All right.
+
+33:34.560 --> 33:40.560
+So in general, to solve the trajectory optimization problem,
+
+33:40.560 --> 33:42.560
+there are two methods.
+
+33:42.560 --> 33:44.560
+The first class is referred to as direct methods.
+
+33:44.560 --> 33:47.560
+The second class is referred to as indirect methods.
+
+33:47.560 --> 33:50.560
+The philosophies are orthogonal.
+
+33:50.560 --> 33:53.560
+In direct methods what we do is to discretize the system,
+
+33:53.560 --> 33:55.560
+so approximate integrals with sums,
+
+33:55.560 --> 33:58.560
+differential equations with a difference equation,
+
+33:58.560 --> 34:02.560
+cast the problem as a non-linear optimization problem
+
+34:02.560 --> 34:04.560
+over a finite dimensional space,
+
+34:05.560 --> 34:07.560
+and then solve it.
+
+34:07.560 --> 34:11.560
+The indirect method is orthogonal in philosophy.
+
+34:11.560 --> 34:17.560
+The idea is to first derive the necessary optimality conditions
+
+34:17.560 --> 34:20.560
+and then solve for those necessary optimality conditions.
+
+34:20.560 --> 34:23.560
+And it will be a little bit clearer later on.
+
+34:23.560 --> 34:26.560
+But the idea is that in direct methods we first discretize
+
+34:26.560 --> 34:27.560
+and then we optimize.
+
+34:27.560 --> 34:30.560
+In indirect methods we first optimize,
+
+34:30.560 --> 34:33.560
+meaning we derive the necessary optimality conditions
+
+34:33.560 --> 34:35.560
+and then we discretize.
+
+34:35.560 --> 34:39.560
+We're going to give you a little bit more insights in a second.
+
+34:39.560 --> 34:42.560
+Let's first consider direct methods.
+
+34:42.560 --> 34:45.560
+As I said, this is the optimal control problem
+
+34:45.560 --> 34:47.560
+or trajectory optimization problem.
+
+34:47.560 --> 34:50.560
+This is exactly what I stated before.
+
+34:50.560 --> 34:53.560
+What do we do in direct methods?
+
+34:53.560 --> 34:55.560
+In direct methods.
+
+34:55.560 --> 34:58.560
+So the approach, as I said, is fairly simple.
+
+34:58.560 --> 35:05.560
+And in its most basic instantiation relies on Euler integration.
+
+35:05.560 --> 35:12.560
+So what we do is we have time from t0 to tf.
+
+35:12.560 --> 35:16.560
+We discretize it into time intervals, ti.
+
+35:16.560 --> 35:20.560
+The difference here is denoted as hi.
+
+35:20.560 --> 35:25.560
+And then we approximate the cost function j
+
+35:30.560 --> 35:32.560
+as a summation,
+
+35:33.560 --> 35:35.560
+which is depicted there.
+
+35:35.560 --> 35:43.560
+So hi plus g of xi ui ti.
+
+35:46.560 --> 35:50.560
+Okay, so in this formulation I did not include the terminal cost.
+
+35:50.560 --> 35:52.560
+But the terminal cost inclusion will be straightforward,
+
+35:52.560 --> 35:54.560
+will be the same.
+
+35:54.560 --> 35:57.560
+So sum over i of j.
+
+35:57.560 --> 36:04.560
+So what I do, I just approximate an integral as a summation.
+
+36:04.560 --> 36:10.560
+The idea is that if you have the integral from t0 to tf of a function,
+
+36:13.560 --> 36:16.560
+say of g of t in the t,
+
+36:16.560 --> 36:23.560
+this is equal to the summation of the integral from ti ti plus the t
+
+36:23.560 --> 36:26.560
+or g of t the t.
+
+36:26.560 --> 36:29.560
+And we approximate each piece.
+
+36:29.560 --> 36:32.560
+So if delta t is small,
+
+36:32.560 --> 36:35.560
+the integral between ti and ti plus delta t
+
+36:35.560 --> 36:43.560
+can be approximated as g ti times ti plus delta t minus ti.
+
+36:43.560 --> 36:46.560
+Do you agree with this?
+
+36:46.560 --> 36:49.560
+It's like a calculus one.
+
+36:49.560 --> 36:55.560
+Basically you have g of t, t.
+
+36:55.560 --> 36:58.560
+This is g of t.
+
+36:58.560 --> 37:07.560
+So the integral between ti and ti plus delta t is the area here.
+
+37:07.560 --> 37:14.560
+You're just approximating this area as the base times the height.
+
+37:14.560 --> 37:18.560
+You can imagine that the height is g ti
+
+37:18.560 --> 37:22.560
+and the base length is delta t.
+
+37:22.560 --> 37:24.560
+So you can see that as delta t gets smaller,
+
+37:24.560 --> 37:27.560
+this gets increasingly more accurate.
+
+37:27.560 --> 37:30.560
+So this is a good decision for the cost function.
+
+37:30.560 --> 37:34.560
+Then we discretize the differential equation of motion
+
+37:34.560 --> 37:37.560
+by using Euler integration.
+
+37:37.560 --> 37:39.560
+That's what I did at the beginning of this lecture,
+
+37:39.560 --> 37:40.560
+so I'm not going to repeat it.
+
+37:40.560 --> 37:43.560
+So now everything is discretized.
+
+37:43.560 --> 37:48.560
+The unknowns are the controls at each time step i
+
+37:48.560 --> 37:51.560
+and the state at each time step i.
+
+37:51.560 --> 37:54.560
+What is known and given is the value of the state
+
+37:54.560 --> 37:58.560
+at the initial time step, so zero.
+
+37:58.560 --> 38:03.560
+So now this just becomes an optimization problem,
+
+38:03.560 --> 38:06.560
+non-linear, because the function g in general is non-linear,
+
+38:06.560 --> 38:11.560
+where you solve for the xi ui's that minimize this cost
+
+38:11.560 --> 38:15.560
+and satisfy this set of constraints.
+
+38:15.560 --> 38:18.560
+Assuming that you know what an optimization problem is.
+
+38:18.560 --> 38:19.560
+Is that correct?
+
+38:23.560 --> 38:26.560
+Basically, we're trying to find the set of values xi's
+
+38:26.560 --> 38:30.560
+and the ui's that satisfies that set of constraints
+
+38:30.560 --> 38:34.560
+and minimizes cost function.
+
+38:34.560 --> 38:35.560
+How you do it?
+
+38:35.560 --> 38:36.560
+Well, it's tricky.
+
+38:36.560 --> 38:40.560
+Non-linear programming is in general difficult,
+
+38:40.560 --> 38:43.560
+but there are a number of solvers out there specific
+
+38:43.560 --> 38:47.560
+to the trajectory optimization problem that can be leveraged.
+
+38:48.560 --> 38:53.560
+There's also a running cost in each.
+
+38:53.560 --> 38:54.560
+It's not a running cost.
+
+38:54.560 --> 38:55.560
+It's a terminal cost.
+
+38:55.560 --> 38:58.560
+And as I said, here, since the main step
+
+38:58.560 --> 39:01.560
+is to approximate the integral, I just
+
+39:01.560 --> 39:04.560
+consider a formulation without the terminal cost.
+
+39:04.560 --> 39:07.560
+But we can include it in a trivial way.
+
+39:07.560 --> 39:16.560
+In that case, j will simply be that plus h of kf x kf.
+
+39:16.560 --> 39:19.560
+But the terminal cost does not require any approximation.
+
+39:19.560 --> 39:23.560
+It's just an additional term that you have.
+
+39:23.560 --> 39:26.560
+I'll put it in the slides, and I'll
+
+39:26.560 --> 39:29.560
+pass the revised set of slides later on so that it's super
+
+39:29.560 --> 39:30.560
+clear.
+
+39:30.560 --> 39:32.560
+What is the f of xn equals 0?
+
+39:32.560 --> 39:33.560
+Oh, yeah.
+
+39:33.560 --> 39:37.560
+So we might have an additional set of constraints
+
+39:37.560 --> 39:39.560
+for the final state.
+
+39:39.560 --> 39:42.560
+So for example, at the end, we want
+
+39:42.560 --> 39:45.560
+to be in a certain neighborhood, also referred to as core region.
+
+39:46.560 --> 39:47.560
+And how can we enforce that?
+
+39:47.560 --> 39:48.560
+How do we bother forward?
+
+39:48.560 --> 39:51.560
+Because those bother forwards and have restrictions
+
+39:51.560 --> 39:53.560
+that you can't control.
+
+39:53.560 --> 39:56.560
+Because you just time constraint and finish condition.
+
+39:56.560 --> 39:57.560
+Yeah.
+
+39:57.560 --> 40:01.560
+So how we handle terminal constraints is not, as I said,
+
+40:01.560 --> 40:03.560
+solving this nonlinear optimization problem
+
+40:03.560 --> 40:04.560
+is not straightforward.
+
+40:04.560 --> 40:07.560
+If you're interested, you should take my class in the spring.
+
+40:07.560 --> 40:09.560
+This is not the methodology that we're
+
+40:09.560 --> 40:10.560
+going to leverage in this class.
+
+40:10.560 --> 40:12.560
+I'm just going to give a glimpse of the field,
+
+40:12.560 --> 40:15.560
+and then we laser focus on a specific technique.
+
+40:15.560 --> 40:16.560
+Yes.
+
+40:16.560 --> 40:19.560
+Dealing with free final time and more complicated
+
+40:19.560 --> 40:21.560
+terminal conditions is not straightforward.
+
+40:21.560 --> 40:23.560
+Is there any relationship between choice
+
+40:23.560 --> 40:27.560
+and gain for the terminal cost and the discretization time?
+
+40:27.560 --> 40:29.560
+No.
+
+40:29.560 --> 40:32.560
+No, there are two different functions.
+
+40:32.560 --> 40:34.560
+So you might claim it is a bit unfortunate
+
+40:34.560 --> 40:37.560
+that I refer to delta t as hi here.
+
+40:37.560 --> 40:39.560
+In retrospect, I don't know exactly why.
+
+40:39.560 --> 40:43.560
+But yeah, there are two different concepts.
+
+40:43.560 --> 40:44.560
+All right.
+
+40:44.560 --> 40:46.560
+Let's quickly look at, so there are a number of software
+
+40:46.560 --> 40:49.560
+packages that solve this problem for you.
+
+40:49.560 --> 40:53.560
+The main differentiating factor is are they open source?
+
+40:53.560 --> 40:55.560
+And two, what is the nonlinear solver
+
+40:55.560 --> 40:58.560
+that they use in order to solve that nonlinear optimization
+
+40:58.560 --> 40:59.560
+problem?
+
+40:59.560 --> 41:01.560
+Want to get deeper into this?
+
+41:01.560 --> 41:03.560
+Take my class in the spring.
+
+41:03.560 --> 41:08.560
+Indirect methods, just to give you the high level idea.
+
+41:08.560 --> 41:12.560
+So when you want to solve a nonlinear optimization problem,
+
+41:12.560 --> 41:14.560
+one of the very first techniques
+
+41:14.560 --> 41:19.560
+that you're introduced to is as follows.
+
+41:19.560 --> 41:21.560
+So let's assume that you have a nonlinear optimization
+
+41:21.560 --> 41:22.560
+problem.
+
+41:22.560 --> 41:28.560
+You want to find a variable x that minimizes
+
+41:28.560 --> 41:32.560
+some nonlinear function of x.
+
+41:32.560 --> 41:34.560
+This is unconstrained optimization,
+
+41:34.560 --> 41:38.560
+the simplest possible form of nonlinear optimization.
+
+41:38.560 --> 41:42.560
+How would you solve this problem?
+
+41:42.560 --> 41:43.560
+Right.
+
+41:43.560 --> 41:48.560
+So take the gradient of f.
+
+41:48.560 --> 41:49.560
+Set it equal to 0.
+
+41:49.560 --> 41:54.560
+Solve for those x that satisfy the gradient equal to 0
+
+41:54.560 --> 41:55.560
+condition.
+
+41:55.560 --> 41:57.560
+Those are candidates for optimality.
+
+41:57.560 --> 41:58.560
+Plug them in.
+
+41:58.560 --> 42:01.560
+See which ones take the minimum value.
+
+42:01.560 --> 42:02.560
+You're done.
+
+42:02.560 --> 42:04.560
+Assuming some smoothness.
+
+42:04.560 --> 42:06.560
+I hope that there are no mathematicians here.
+
+42:07.560 --> 42:09.560
+But I mean, we're engineers.
+
+42:09.560 --> 42:13.560
+So all this stuff is smooth as much as you want.
+
+42:13.560 --> 42:14.560
+OK?
+
+42:14.560 --> 42:16.560
+So let's approach.
+
+42:16.560 --> 42:19.560
+Indirect methods is exactly the same.
+
+42:19.560 --> 42:22.560
+So what you do is to derive a necessary condition
+
+42:22.560 --> 42:27.560
+for optimality for the control u of t.
+
+42:27.560 --> 42:30.560
+And solve for those conditions.
+
+42:30.560 --> 42:34.560
+The challenge, though, is that while in standard nonlinear
+
+42:34.560 --> 42:38.560
+programming, the necessary optimality condition reads
+
+42:38.560 --> 42:42.560
+as a nonlinear equation, which is difficult to solve,
+
+42:42.560 --> 42:44.560
+but it's just a normal equation.
+
+42:44.560 --> 42:47.560
+In optimal control, the necessary optimality condition
+
+42:47.560 --> 42:53.560
+reads as differential equations, which are harder to solve for.
+
+42:53.560 --> 42:55.560
+So the necessary optimality condition
+
+42:55.560 --> 42:57.560
+is a differential equation in itself
+
+42:57.560 --> 43:01.560
+that needs to be discretized in order to be solved.
+
+43:01.560 --> 43:04.560
+We'll go deeper into this during the Friday lecture
+
+43:04.560 --> 43:07.560
+for those of you that are in the valid level
+
+43:07.560 --> 43:10.560
+version of this class.
+
+43:10.560 --> 43:12.560
+But just to give you an idea at a high level,
+
+43:12.560 --> 43:14.560
+you first solve for the necessary optimality condition,
+
+43:14.560 --> 43:17.560
+and then you solve for your optimal control trajectory.
+
+43:19.560 --> 43:20.560
+OK.
+
+43:20.560 --> 43:22.560
+So that's how the field is partitioned.
+
+43:22.560 --> 43:27.560
+Now, I mean, I teach a class about it.
+
+43:27.560 --> 43:30.560
+But for the systems we are interested in this class,
+
+43:30.560 --> 43:34.560
+in general for wheeled system, mobile, robotics, and so on,
+
+43:34.560 --> 43:38.560
+there is an approach that in practice works extremely well.
+
+43:38.560 --> 43:40.560
+The deal of this approach is as follows,
+
+43:40.560 --> 43:46.560
+that in general you don't really care that much about optimality.
+
+43:46.560 --> 43:48.560
+I mean, you want to find a high quality trajectory,
+
+43:48.560 --> 43:51.560
+but oftentimes it's good enough to find a feasible trajectory
+
+43:51.560 --> 43:57.560
+that is not too outrageous in terms of some cost function.
+
+43:58.560 --> 44:04.560
+So instead of looking for an optimal control trajectory,
+
+44:04.560 --> 44:08.560
+let's look for a feasible control trajectory
+
+44:08.560 --> 44:13.560
+that gives you performance that is good enough.
+
+44:13.560 --> 44:17.560
+Now, the good news is that for a certain class of systems
+
+44:17.560 --> 44:20.560
+referred to as differential reflex system,
+
+44:20.560 --> 44:24.560
+the problem of computing a feasible trajectory,
+
+44:24.560 --> 44:25.560
+meaning a trajectory that satisfies
+
+44:25.560 --> 44:27.560
+the differential equation of motion
+
+44:27.560 --> 44:30.560
+on top of some input constraints,
+
+44:30.560 --> 44:32.560
+that is good enough is particularly simple.
+
+44:32.560 --> 44:36.560
+Simple means that you can compute it very fast.
+
+44:36.560 --> 44:37.560
+Well, you want to compute very fast.
+
+44:37.560 --> 44:39.560
+As an autonomous robot is moving around,
+
+44:39.560 --> 44:42.560
+the environment is changing around the robot,
+
+44:42.560 --> 44:45.560
+so often you have to recompute your trajectory.
+
+44:45.560 --> 44:47.560
+So it's imperative that you close the loop
+
+44:47.560 --> 44:52.560
+at usually at least about 1 hertz, possibly 10 hertz.
+
+44:53.560 --> 44:57.560
+So differential flatness is a very deep topic
+
+44:57.560 --> 45:00.560
+in mathematics and differential geometry.
+
+45:00.560 --> 45:02.560
+So here, I'm just going to give you
+
+45:02.560 --> 45:05.560
+the operational version of differential flatness.
+
+45:05.560 --> 45:09.560
+And to do so, let me start with a motivating example.
+
+45:09.560 --> 45:13.560
+So let's go back to the model for a simple car.
+
+45:13.560 --> 45:17.560
+Remember from lecture one that the simple car has...
+
+45:18.560 --> 45:23.560
+The simple car is a car with two rear wheels
+
+45:23.560 --> 45:27.560
+and two steerable front wheels.
+
+45:27.560 --> 45:31.560
+The state is the position of the midpoint
+
+45:31.560 --> 45:35.560
+of the rear wheel axis and the heading.
+
+45:35.560 --> 45:39.560
+The controls are the steering angle for the front wheels
+
+45:39.560 --> 45:45.560
+and the speed of the midpoint of the rear wheel axis.
+
+45:45.560 --> 45:49.560
+Some people on Piazza asked why phi cannot be equal
+
+45:49.560 --> 45:50.560
+to pi over two.
+
+45:50.560 --> 45:55.560
+If phi is equal to pi over two, the car is jammed.
+
+45:55.560 --> 45:58.560
+It can't go forward because now you have 90 degrees
+
+45:58.560 --> 46:01.560
+between the rear wheels and the front wheels.
+
+46:01.560 --> 46:02.560
+There is a vehicle, though,
+
+46:02.560 --> 46:05.560
+where you can steer the front wheels at 90 degrees.
+
+46:05.560 --> 46:07.560
+Do you know what that vehicle is?
+
+46:10.560 --> 46:11.560
+Eh, not so much.
+
+46:11.560 --> 46:15.560
+I think you're probably too old to play that vehicle
+
+46:15.560 --> 46:17.560
+and too young to have kids.
+
+46:17.560 --> 46:18.560
+That's a problem.
+
+46:18.560 --> 46:19.560
+It's a tricycle.
+
+46:19.560 --> 46:22.560
+The tricycle, you know the thing where you move the wheel
+
+46:22.560 --> 46:23.560
+from the front?
+
+46:23.560 --> 46:24.560
+Right.
+
+46:24.560 --> 46:26.560
+So that is front wheel activated.
+
+46:26.560 --> 46:30.560
+And in principle, if you're able to steer your legs,
+
+46:30.560 --> 46:32.560
+you can actually have an angle of 90 degrees
+
+46:32.560 --> 46:33.560
+with your rear wheels.
+
+46:33.560 --> 46:37.560
+But in general, for all practical vehicles,
+
+46:37.560 --> 46:40.560
+phi cannot be equal to pi over two.
+
+46:40.560 --> 46:42.560
+Actually, it should be a little bit less than pi over two.
+
+46:42.560 --> 46:45.560
+Otherwise, your vehicle is jammed.
+
+46:45.560 --> 46:49.560
+Now, the question is, I give you initial condition
+
+46:49.560 --> 46:51.560
+for x and y and theta.
+
+46:51.560 --> 46:53.560
+Final condition for x and y and theta,
+
+46:53.560 --> 46:56.560
+compute a trajectory for the simple car
+
+46:56.560 --> 46:58.560
+that obeys some input constraints.
+
+46:58.560 --> 47:06.560
+For example, linear speed should not be larger than something.
+
+47:06.560 --> 47:08.560
+What we're going to do is to use a tool referred to
+
+47:08.560 --> 47:11.560
+as differential flatness to solve this problem.
+
+47:11.560 --> 47:13.560
+And I'm going to use this example to show you
+
+47:13.560 --> 47:15.560
+how useful differential flatness is
+
+47:15.560 --> 47:19.560
+for the purposes of trajectory optimization,
+
+47:19.560 --> 47:21.560
+even though here we're talking about feasibility,
+
+47:21.560 --> 47:24.560
+not so much about optimization.
+
+47:24.560 --> 47:26.560
+In particular, the idea is as follows.
+
+47:26.560 --> 47:28.560
+And I want to use an example because at first,
+
+47:28.560 --> 47:31.560
+differential flatness is not very intuitive.
+
+47:31.560 --> 47:35.560
+But with example, I hope it becomes quite intuitive.
+
+47:35.560 --> 47:40.560
+So we have the kinematic model for the simple car.
+
+47:40.560 --> 47:47.560
+Now, let's assume that we're given the initial condition
+
+47:47.560 --> 47:53.560
+for the xy position for the midpoint of the rear wheel axis.
+
+47:53.560 --> 47:58.560
+And I give you the final condition.
+
+47:58.560 --> 48:00.560
+Okay?
+
+48:00.560 --> 48:03.560
+And then I ask one of you to come here
+
+48:03.560 --> 48:07.560
+and just draw a curve that connects these two points.
+
+48:07.560 --> 48:09.560
+Again, this curve should be smooth.
+
+48:09.560 --> 48:12.560
+Don't ask me about smoothness because I'm going to unsay.
+
+48:12.560 --> 48:15.560
+Everything in this class is smooth, almost everything.
+
+48:15.560 --> 48:19.560
+You give me a smooth curve that joins those two points.
+
+48:19.560 --> 48:21.560
+So my question is,
+
+48:21.560 --> 48:33.560
+can I find a time history of v and phi,
+
+48:33.560 --> 48:35.560
+my two control inputs,
+
+48:35.560 --> 48:39.560
+such that this trajectory gets realized?
+
+48:39.560 --> 48:41.560
+In general, for a nonlinear system,
+
+48:41.560 --> 48:43.560
+if you just draw a trajectory for a subset
+
+48:43.560 --> 48:46.560
+of the state variables, it's not true
+
+48:46.560 --> 48:48.560
+that that trajectory is indeed realizable,
+
+48:48.560 --> 48:52.560
+meaning that I can find a set of control inputs
+
+48:52.560 --> 48:55.560
+that ensure that the vehicle can follow that trajectory.
+
+48:55.560 --> 48:57.560
+That's not true in general.
+
+48:57.560 --> 48:59.560
+But there's a specific class of systems referred to
+
+48:59.560 --> 49:02.560
+as differentially flat systems for which this is true.
+
+49:02.560 --> 49:05.560
+If this is true, why this is a dramatic simplification
+
+49:05.560 --> 49:09.560
+for the purposes of trajectory control?
+
+49:09.560 --> 49:15.560
+Because it basically means that you can just compute a curve
+
+49:15.560 --> 49:19.560
+for a subset of the state variables
+
+49:19.560 --> 49:23.560
+without having to deal with any differential constraints
+
+49:23.560 --> 49:27.560
+and then apply a map that allows you to compute
+
+49:27.560 --> 49:30.560
+the control inputs that realize that curve.
+
+49:30.560 --> 49:34.560
+So if you're not too crazy in how you design this curve,
+
+49:34.560 --> 49:36.560
+then the trajectory that you eventually compute
+
+49:36.560 --> 49:40.560
+is a high-quality trajectory, and it's computed very fast
+
+49:40.560 --> 49:44.560
+because we did not account for any differential constraint
+
+49:44.560 --> 49:49.560
+in solving for this curve.
+
+49:49.560 --> 49:51.560
+So let's go to this example.
+
+49:51.560 --> 49:55.560
+Again, I've given you a trajectory in terms of x, y,
+
+49:55.560 --> 49:56.560
+not even theta.
+
+49:56.560 --> 49:59.560
+I just gave you x and y.
+
+49:59.560 --> 50:02.560
+And its derivatives, x dot, y dot, x double dot,
+
+50:02.560 --> 50:04.560
+y double dot, and so on.
+
+50:04.560 --> 50:07.560
+So the question is, how do I compute v and phi
+
+50:07.560 --> 50:09.560
+such that this trajectory is realized?
+
+50:09.560 --> 50:12.560
+Well, I go back to the equations of motion
+
+50:12.560 --> 50:15.560
+and look at the following.
+
+50:15.560 --> 50:19.560
+x dot is equal to v cosine of theta.
+
+50:19.560 --> 50:23.560
+y dot is equal to v sine of theta.
+
+50:23.560 --> 50:27.560
+So if I take the ratio between y dot and x dot,
+
+50:27.560 --> 50:33.560
+what I get is tangent of theta.
+
+50:33.560 --> 50:37.560
+So with this equation, I can already pinpoint exactly
+
+50:37.560 --> 50:40.560
+what the corresponding heading would be
+
+50:40.560 --> 50:42.560
+for such a trajectory.
+
+50:42.560 --> 50:48.560
+Actually, probably here, this would be here.
+
+50:48.560 --> 50:53.560
+Okay, so I can reconstruct the other state variables
+
+50:53.560 --> 50:58.560
+that are necessarily implied by the trajectory in terms of x, y.
+
+50:58.560 --> 51:02.560
+But most importantly, let's look at the control inputs.
+
+51:02.560 --> 51:04.560
+So again, by the equations of motion,
+
+51:04.560 --> 51:09.560
+we know that x dot is equal to v of cosine of theta.
+
+51:09.560 --> 51:12.560
+I mean, this implies that theta is equal to inverse tangent
+
+51:12.560 --> 51:17.560
+of y dot over x dot.
+
+51:17.560 --> 51:19.560
+So I already know how to express theta
+
+51:19.560 --> 51:22.560
+in terms of x, y and its derivatives.
+
+51:22.560 --> 51:26.560
+This implies, by looking again at equations of motion,
+
+51:26.560 --> 51:30.560
+that the v is going to be implied
+
+51:30.560 --> 51:37.560
+as x dot over cosine of theta.
+
+51:37.560 --> 51:40.560
+That the control would give rise to,
+
+51:40.560 --> 51:42.560
+as a function of time, to this trajectory.
+
+51:42.560 --> 51:45.560
+If cosine of theta is equal to zero,
+
+51:45.560 --> 51:48.560
+then you will simply use the other equation,
+
+51:48.560 --> 51:50.560
+y dot equals v sine of theta.
+
+51:50.560 --> 51:53.560
+Since cosine of theta and sine of theta cannot be zero
+
+51:53.560 --> 51:57.560
+at the same time, you can always find a relation between x and y,
+
+51:57.560 --> 52:00.560
+x dot and y dot, with the v that would realize
+
+52:00.560 --> 52:02.560
+that x and y and x dot and y dot.
+
+52:02.560 --> 52:06.560
+Finally, there is another input, which is phi,
+
+52:06.560 --> 52:08.560
+the steering angle for the front wheel.
+
+52:08.560 --> 52:13.560
+Again, we go back to the equations of motion.
+
+52:13.560 --> 52:24.560
+We have that theta dot is equal to v over l tangent of phi.
+
+52:24.560 --> 52:31.560
+I have already computed theta as a function of x dot, y dot and x dot.
+
+52:31.560 --> 52:33.560
+So I can also compute theta dot.
+
+52:33.560 --> 52:36.560
+I would just take the derivative of this relation.
+
+52:36.560 --> 52:40.560
+Of course, I would get a second derivative of x and y.
+
+52:40.560 --> 52:44.560
+But as I said, once you give me x and y and you tell me that it's smooth,
+
+52:44.560 --> 52:47.560
+I know it's x dot, y dot, x double dot and y double dot.
+
+52:47.560 --> 52:52.560
+So simply, then phi is equal to the inverse tangent
+
+52:52.560 --> 53:01.560
+of l over v theta dot.
+
+53:01.560 --> 53:07.560
+So you saw how we went from trajectories in x, y space,
+
+53:07.560 --> 53:10.560
+along with information about x dot, y dot and so on,
+
+53:10.560 --> 53:13.560
+to the set of remaining set variables,
+
+53:13.560 --> 53:16.560
+and most importantly, controls that will give rise to that trajectory.
+
+53:16.560 --> 53:19.560
+That is necessarily paired with that trajectory.
+
+53:20.560 --> 53:25.560
+We calculate v as the norm of x dot and y dot?
+
+53:25.560 --> 53:27.560
+v as the norm of...
+
+53:27.560 --> 53:29.560
+Because then it would be the absolute v, not...
+
+53:29.560 --> 53:30.560
+Oh, yeah.
+
+53:30.560 --> 53:34.560
+But it comes from the equation of motion as well.
+
+53:34.560 --> 53:36.560
+Of course, v squared is equal to...
+
+53:36.560 --> 53:38.560
+But v can be a, say, another sign,
+
+53:38.560 --> 53:40.560
+versus the other one that would not have a sign.
+
+53:40.560 --> 53:41.560
+Right.
+
+53:41.560 --> 53:44.560
+That's why I prefer this.
+
+53:44.560 --> 53:46.560
+You can assume sign in other ways,
+
+53:46.560 --> 53:47.560
+but this...
+
+53:47.560 --> 53:51.560
+So the mapping between the subset of variables
+
+53:51.560 --> 53:55.560
+that you use to find a curve geometrically
+
+53:55.560 --> 53:57.560
+and the set of inputs that realize that curve
+
+53:57.560 --> 54:01.560
+is not necessarily unique.
+
+54:01.560 --> 54:04.560
+So it's pretty amazing, right?
+
+54:04.560 --> 54:06.560
+Yeah, just one second.
+
+54:06.560 --> 54:08.560
+I'll get back to you in a second.
+
+54:08.560 --> 54:11.560
+So the bottom line is that all of the state variables
+
+54:11.560 --> 54:13.560
+and the inputs can be determined
+
+54:13.560 --> 54:17.560
+by the trajectory of the real wheels and its derivatives.
+
+54:17.560 --> 54:21.560
+In particular, in the jargon of differential flatness,
+
+54:21.560 --> 54:26.560
+we refer to the subset of state variables x and y
+
+54:26.560 --> 54:29.560
+as the flat output.
+
+54:29.560 --> 54:35.560
+In particular, what we just found is that
+
+54:35.560 --> 54:42.560
+considering as flat outputs x and y,
+
+54:42.560 --> 54:50.560
+we were able to recover the theta
+
+54:50.560 --> 54:56.560
+as a function of the flat outputs and its derivatives.
+
+54:56.560 --> 55:02.560
+And the controlled signals, v phi, as another...
+
+55:02.560 --> 55:04.560
+Beta is a function.
+
+55:04.560 --> 55:07.560
+And another function, gamma, of z, z dot...
+
+55:07.560 --> 55:10.560
+Actually, z double dot, because to compute the theta dot,
+
+55:10.560 --> 55:12.560
+I would need to compute the derivative of this
+
+55:12.560 --> 55:13.560
+that depends on x dot.
+
+55:13.560 --> 55:18.560
+So I would get second derivatives of x and y.
+
+55:18.560 --> 55:21.560
+So by using z as flat output,
+
+55:21.560 --> 55:25.560
+I can pinpoint the values of the other state variables
+
+55:25.560 --> 55:27.560
+and most importantly, the control inputs
+
+55:27.560 --> 55:31.560
+that give rise to this trajectory
+
+55:31.560 --> 55:36.560
+through non-linear mappings.
+
+55:36.560 --> 55:38.560
+Yep?
+
+55:39.560 --> 55:44.560
+What is the property that allows you to...
+
+55:44.560 --> 55:46.560
+To say if a system is differentially flat?
+
+55:46.560 --> 55:50.560
+Well, last slide, I will address this in the question.
+
+55:50.560 --> 55:53.560
+So you have to be patient for the next 20 minutes.
+
+55:53.560 --> 55:57.560
+So this was just an example that I used
+
+55:57.560 --> 55:59.560
+to convey the notion of differential flatness.
+
+55:59.560 --> 56:01.560
+As I said, at first it's not very intuitive,
+
+56:01.560 --> 56:05.560
+but I hope this example really clarifies the thing.
+
+56:05.560 --> 56:07.560
+The formal definition of differential flatness
+
+56:07.560 --> 56:08.560
+is as follows.
+
+56:08.560 --> 56:11.560
+We say that the system is differentially flat
+
+56:11.560 --> 56:15.560
+if there exists a mapping from the state
+
+56:15.560 --> 56:18.560
+and the input and possibly derivative of the input,
+
+56:18.560 --> 56:21.560
+but importantly, not from...
+
+56:21.560 --> 56:23.560
+Not depending on the derivative of the state.
+
+56:23.560 --> 56:27.560
+We refer to this subset of variables as z,
+
+56:27.560 --> 56:29.560
+the flat output.
+
+56:29.560 --> 56:32.560
+In our case, it will be xy.
+
+56:32.560 --> 56:34.560
+So we say the system is differentially flat
+
+56:34.560 --> 56:37.560
+if there exists such a mapping with a property
+
+56:37.560 --> 56:41.560
+that all the state variables, in our case theta,
+
+56:41.560 --> 56:45.560
+and all the control inputs, in our case v and phi,
+
+56:45.560 --> 56:49.560
+can be uniquely pinpointed as a non-linear function
+
+56:49.560 --> 56:53.560
+of the flat output and its derivatives.
+
+56:53.560 --> 56:57.560
+In our case, this is what we have.
+
+56:57.560 --> 57:00.560
+So it's exactly basically the generalization
+
+57:00.560 --> 57:02.560
+of the example that I just provided.
+
+57:02.560 --> 57:05.560
+Or in words, we say that the system is differentially flat
+
+57:05.560 --> 57:07.560
+if we can find a set of outputs
+
+57:07.560 --> 57:09.560
+that has to be equal in number to the control inputs.
+
+57:09.560 --> 57:11.560
+This is not intuitive.
+
+57:11.560 --> 57:13.560
+This is a key result that follows from
+
+57:13.560 --> 57:16.560
+from the deep theory of differential flatness.
+
+57:16.560 --> 57:18.560
+We take this fact as granted.
+
+57:18.560 --> 57:20.560
+So the number of flat outputs has to be equal
+
+57:20.560 --> 57:21.560
+to the number of inputs.
+
+57:21.560 --> 57:24.560
+In our case, we have the two inputs,
+
+57:24.560 --> 57:27.560
+speed and steering angle,
+
+57:27.560 --> 57:30.560
+and the flat output, so two-dimensional inputs,
+
+57:30.560 --> 57:33.560
+the flat output was two-dimensional as well.
+
+57:33.560 --> 57:34.560
+This is a key fact.
+
+57:34.560 --> 57:35.560
+We take it for granted.
+
+57:35.560 --> 57:36.560
+There is a reason for it.
+
+57:36.560 --> 57:38.560
+In words, the system is differentially flat
+
+57:38.560 --> 57:40.560
+if you can find a set of outputs such that
+
+57:40.560 --> 57:42.560
+all states and inputs can be determined
+
+57:42.560 --> 57:45.560
+from these outputs without integration.
+
+57:45.560 --> 57:50.560
+So basically, I don't have to solve for differential equations.
+
+57:50.560 --> 57:52.560
+The mapping here does not entail a solution
+
+57:52.560 --> 57:57.560
+to any differential equation.
+
+57:57.560 --> 57:59.560
+The reason why it's referred to as differentially flat
+
+57:59.560 --> 58:03.560
+is because since I don't have the dependencies on x dot,
+
+58:03.560 --> 58:07.560
+the flat output z are differentially independent,
+
+58:07.560 --> 58:10.560
+which means that they are not related by differential equations.
+
+58:10.560 --> 58:13.560
+For example, here, x and y,
+
+58:13.560 --> 58:18.560
+they are not related by differential equations.
+
+58:18.560 --> 58:19.560
+That doesn't make sense.
+
+58:19.560 --> 58:25.560
+The general definition is not super intuitive.
+
+58:25.560 --> 58:28.560
+So in order to appreciate it, understand it,
+
+58:28.560 --> 58:30.560
+go back to the example that I gave you,
+
+58:30.560 --> 58:32.560
+and map the concepts one to one.
+
+58:32.560 --> 58:34.560
+Once you do that, this becomes clear.
+
+58:34.560 --> 58:36.560
+Key point here is that I can find, basically,
+
+58:36.560 --> 58:42.560
+subsets of states, and then if I just compute a curve
+
+58:42.560 --> 58:44.560
+with respect to that subset of states,
+
+58:44.560 --> 58:47.560
+I can then find the inputs that realize that curve,
+
+58:47.560 --> 58:50.560
+which basically translates a complicated
+
+58:50.560 --> 58:53.560
+objective optimization problem into the problem
+
+58:53.560 --> 58:57.560
+of finding a path in a lower dimensional subset,
+
+58:57.560 --> 59:01.560
+and then using mappings in order to pinpoint the controls
+
+59:01.560 --> 59:03.560
+for the true system,
+
+59:03.560 --> 59:06.560
+allow the true system to follow that trajectory.
+
+59:06.560 --> 59:07.560
+Yeah?
+
+59:07.560 --> 59:08.560
+So as you were doing a few examples,
+
+59:08.560 --> 59:10.560
+I kind of followed step by step,
+
+59:10.560 --> 59:12.560
+kind of bringing it back from this.
+
+59:12.560 --> 59:14.560
+What was it about the simple car steering
+
+59:14.560 --> 59:16.560
+that allowed us to find that set of outputs?
+
+59:16.560 --> 59:18.560
+Right, so this is related to the other question.
+
+59:18.560 --> 59:20.560
+What are the structural properties
+
+59:20.560 --> 59:24.560
+of a linear system model that allow you
+
+59:24.560 --> 59:28.560
+to find a flat output relation?
+
+59:28.560 --> 59:31.560
+I'll get to that at the end of the lecture.
+
+59:31.560 --> 59:34.560
+But yeah, that's like the million dollar question.
+
+59:34.560 --> 59:36.560
+It looks magic, right?
+
+59:36.560 --> 59:39.560
+It looks even more magic if we talk a little bit more
+
+59:39.560 --> 59:41.560
+about the differential flatness implication.
+
+59:41.560 --> 59:45.560
+As I said, what that means is that we can,
+
+59:45.560 --> 59:49.560
+so every curve in the flat output space
+
+59:49.560 --> 59:52.560
+that is differential enough
+
+59:52.560 --> 59:57.560
+corresponds to trajectories in terms of x and u,
+
+59:57.560 --> 01:00:00.560
+given by the transformation mappings.
+
+01:00:00.560 --> 01:00:04.560
+Which practically means that I can just optimize
+
+01:00:04.560 --> 01:00:06.560
+the curve in the flat output space
+
+01:00:06.560 --> 01:00:09.560
+without reasoning about the underlying dynamics,
+
+01:00:09.560 --> 01:00:12.560
+and then apply those mappings to automatically
+
+01:00:12.560 --> 01:00:16.560
+account for the kinematic or dynamic constraints.
+
+01:00:19.560 --> 01:00:21.560
+So practically, the reason why this is very useful
+
+01:00:21.560 --> 01:00:24.560
+is that for the purposes of trajectory optimization,
+
+01:00:24.560 --> 01:00:27.560
+it leads to a very simple three-step algorithm.
+
+01:00:27.560 --> 01:00:29.560
+And this is what you would do in problem one
+
+01:00:29.560 --> 01:00:31.560
+of the first p-sets.
+
+01:00:31.560 --> 01:00:34.560
+Step number one, in general,
+
+01:00:34.560 --> 01:00:36.560
+you're given initial and final conditions
+
+01:00:36.560 --> 01:00:39.560
+for the state and the input.
+
+01:00:39.560 --> 01:00:40.560
+Remember that the underlying problem
+
+01:00:40.560 --> 01:00:42.560
+is trying to connect the initial condition
+
+01:00:42.560 --> 01:00:43.560
+with the final condition.
+
+01:00:43.560 --> 01:00:46.560
+You transform those conditions
+
+01:00:46.560 --> 01:00:49.560
+in the conditions for the flat output variables.
+
+01:00:49.560 --> 01:00:52.560
+Since the mapping beta and gamma
+
+01:00:52.560 --> 01:00:54.560
+are actually one-to-one,
+
+01:00:54.560 --> 01:00:57.560
+you can always do this transformation.
+
+01:00:57.560 --> 01:01:00.560
+So given initial conditions in terms of x and u,
+
+01:01:00.560 --> 01:01:03.560
+you transform those into initial conditions
+
+01:01:03.560 --> 01:01:06.560
+for the flat outputs and its derivatives.
+
+01:01:06.560 --> 01:01:09.560
+So usually this step is straightforward.
+
+01:01:09.560 --> 01:01:10.560
+Once you do that,
+
+01:01:10.560 --> 01:01:12.560
+so this should be z, so this is the typo,
+
+01:01:12.560 --> 01:01:14.560
+I will fix it.
+
+01:01:14.560 --> 01:01:16.560
+So once you do that,
+
+01:01:16.560 --> 01:01:20.560
+you build a smooth curve in the flat output space
+
+01:01:20.560 --> 01:01:24.560
+by using, for example, polynomial interpolation.
+
+01:01:24.560 --> 01:01:25.560
+We'll see a little bit more about
+
+01:01:25.560 --> 01:01:27.560
+polynomial interpolation in the next slide.
+
+01:01:27.560 --> 01:01:30.560
+The y, yeah.
+
+01:01:30.560 --> 01:01:35.560
+We denote the flat output as z, not y.
+
+01:01:35.560 --> 01:01:37.560
+So we build a smooth curve,
+
+01:01:37.560 --> 01:01:40.560
+and now we're just basically interpolating two points.
+
+01:01:40.560 --> 01:01:44.560
+So we can use any technique you want for interpolation.
+
+01:01:44.560 --> 01:01:47.560
+In this class, we will use polynomial interpolation.
+
+01:01:47.560 --> 01:01:48.560
+We'll see a little bit more about
+
+01:01:48.560 --> 01:01:51.560
+polynomial interpolation in the next slide
+
+01:01:51.560 --> 01:01:55.560
+and also in your p-sets.
+
+01:01:55.560 --> 01:01:57.560
+Once you have completed this trajectory,
+
+01:01:57.560 --> 01:02:00.560
+then you just apply the reverse mapping beta and gamma
+
+01:02:00.560 --> 01:02:03.560
+to obtain the values as a function of time
+
+01:02:03.560 --> 01:02:08.560
+of the remaining state variables and the control inputs.
+
+01:02:08.560 --> 01:02:09.560
+So super easy.
+
+01:02:09.560 --> 01:02:12.560
+And since you're just doing computation
+
+01:02:12.560 --> 01:02:14.560
+and what you're doing that is a bottleneck,
+
+01:02:14.560 --> 01:02:16.560
+you're just computing this curve,
+
+01:02:16.560 --> 01:02:18.560
+but it's just a polynomial interpolation,
+
+01:02:18.560 --> 01:02:19.560
+so it's super fast.
+
+01:02:19.560 --> 01:02:23.560
+I mean, you can find 100 hertz, super robust.
+
+01:02:23.560 --> 01:02:25.560
+You know, and not just being fast,
+
+01:02:25.560 --> 01:02:27.560
+but also having problems that are well-conditioned and so on.
+
+01:02:27.560 --> 01:02:29.560
+This stuff usually is well-conditioned,
+
+01:02:29.560 --> 01:02:31.560
+so super robust and reliable.
+
+01:02:31.560 --> 01:02:32.560
+You don't want, I mean, this,
+
+01:02:32.560 --> 01:02:35.560
+the lady who separated a part of your system,
+
+01:02:35.560 --> 01:02:37.560
+you don't want your trajectory optimizer to crash saying,
+
+01:02:37.560 --> 01:02:39.560
+none, fine.
+
+01:02:39.560 --> 01:02:40.560
+Yeah.
+
+01:02:40.560 --> 01:02:43.560
+Is the way the curve you create by interpolation
+
+01:02:43.560 --> 01:02:45.560
+to create that effect the trajectory?
+
+01:02:45.560 --> 01:02:46.560
+What's that?
+
+01:02:46.560 --> 01:02:47.560
+Yeah.
+
+01:02:47.560 --> 01:02:50.560
+So of course, there are many curves
+
+01:02:50.560 --> 01:02:53.560
+that you could use for interpolation.
+
+01:02:53.560 --> 01:02:57.560
+So we'll get in a couple of slides on saying,
+
+01:02:57.560 --> 01:02:59.560
+okay, so I'm solving the feasibility problem,
+
+01:02:59.560 --> 01:03:02.560
+but let's also try to inject some notion of optimality.
+
+01:03:02.560 --> 01:03:05.560
+Not pure optimality, because that in general,
+
+01:03:05.560 --> 01:03:07.560
+this framework does not allow you to do that,
+
+01:03:07.560 --> 01:03:10.560
+but having a trajectory that is usually a good compromise.
+
+01:03:10.560 --> 01:03:13.560
+But before that, let's talk even more about
+
+01:03:13.560 --> 01:03:15.560
+polynomial interpolation.
+
+01:03:15.560 --> 01:03:22.560
+The idea is that we want to join the flat output
+
+01:03:22.560 --> 01:03:24.560
+in terms of initial and final conditions.
+
+01:03:24.560 --> 01:03:30.560
+One way to do that is to represent each flat output variable
+
+01:03:30.560 --> 01:03:36.560
+as some polynomial.
+
+01:03:36.560 --> 01:03:46.560
+So d j t can be represented as the sum over i of a i j psi i t,
+
+01:03:46.560 --> 01:03:49.560
+where psi i t are basis functions.
+
+01:03:49.560 --> 01:03:54.560
+For example, we could have psi 1 t is equal to 1,
+
+01:03:54.560 --> 01:04:01.560
+psi 2 t is equal to t, psi 3 t is equal to t squared,
+
+01:04:01.560 --> 01:04:05.560
+psi 4 t is equal to t cubed.
+
+01:04:05.560 --> 01:04:10.560
+So if you do that, we said that we're doing a cubic interpolation.
+
+01:04:10.560 --> 01:04:15.560
+So what you want to solve for are the unknown coefficients.
+
+01:04:15.560 --> 01:04:20.560
+Again, this is an effort to keep computation load low.
+
+01:04:20.560 --> 01:04:23.560
+Instead of optimizing over the entire function,
+
+01:04:23.560 --> 01:04:27.560
+you just optimize over coefficients of a parameterized function.
+
+01:04:27.560 --> 01:04:30.560
+The more basis functions you use,
+
+01:04:30.560 --> 01:04:34.560
+the larger the optimization space is,
+
+01:04:34.560 --> 01:04:36.560
+the higher quality of the solution you get.
+
+01:04:36.560 --> 01:04:39.560
+But then incur more computational time trials.
+
+01:04:39.560 --> 01:04:41.560
+It seems like from what I've seen,
+
+01:04:41.560 --> 01:04:43.560
+you're kind of designed to have pretty good progress.
+
+01:04:43.560 --> 01:04:47.560
+Well, I'm not in the mind of, yeah.
+
+01:04:47.560 --> 01:04:50.560
+But yeah, you can use other ways to do interpolation.
+
+01:04:50.560 --> 01:04:52.560
+This is a very popular way in robotics
+
+01:04:52.560 --> 01:04:56.560
+because it's very reliable, quite powerful,
+
+01:04:56.560 --> 01:04:58.560
+very interpretable, simple to implement,
+
+01:04:58.560 --> 01:05:00.560
+and so on and so forth.
+
+01:05:00.560 --> 01:05:03.560
+And it does not entail complex numbers.
+
+01:05:04.560 --> 01:05:07.560
+What if your basis functions exceeds
+
+01:05:07.560 --> 01:05:10.560
+the dimensions of the problem?
+
+01:05:10.560 --> 01:05:15.560
+Then it needs to become an optimization problem.
+
+01:05:15.560 --> 01:05:16.560
+So then what do you do?
+
+01:05:16.560 --> 01:05:21.560
+As I said, you translate the initial and final constraints
+
+01:05:21.560 --> 01:05:24.560
+for the x and u into initial and final constraints
+
+01:05:24.560 --> 01:05:27.560
+for your output variables.
+
+01:05:27.560 --> 01:05:31.560
+And then you just establish a set of linear equations
+
+01:05:31.560 --> 01:05:36.560
+that constraint the value of the interpolation coefficients
+
+01:05:36.560 --> 01:05:38.560
+and you solve for them.
+
+01:05:38.560 --> 01:05:40.560
+You might solve for them uniquely
+
+01:05:40.560 --> 01:05:41.560
+or maybe there is not a unique solution
+
+01:05:41.560 --> 01:05:43.560
+and then you have a cost objective
+
+01:05:43.560 --> 01:05:45.560
+that you want to minimize for the coefficients.
+
+01:05:45.560 --> 01:05:47.560
+Does it make sense?
+
+01:05:47.560 --> 01:05:50.560
+So basically what we are saying is that
+
+01:05:50.560 --> 01:05:53.560
+we reason in terms of polynomial splines
+
+01:05:53.560 --> 01:05:55.560
+and we find the coefficients in such a way
+
+01:05:55.560 --> 01:05:58.560
+that this polynomial spline actually obeys
+
+01:05:58.560 --> 01:06:02.560
+the initial and final conditions.
+
+01:06:02.560 --> 01:06:06.560
+In your p-sets, what you will do is to do cubic interpolation
+
+01:06:06.560 --> 01:06:09.560
+in order to compute the trajectory for the model
+
+01:06:09.560 --> 01:06:11.560
+we are focusing on in this class,
+
+01:06:11.560 --> 01:06:13.560
+which is the unicycle model,
+
+01:06:13.560 --> 01:06:16.560
+a dynamically extended version of the unicycle model.
+
+01:06:16.560 --> 01:06:17.560
+You see that along the way
+
+01:06:17.560 --> 01:06:20.560
+I'm providing additional references if you're interested.
+
+01:06:20.560 --> 01:06:22.560
+Any questions here?
+
+01:06:25.560 --> 01:06:27.560
+So key points.
+
+01:06:27.560 --> 01:06:29.560
+Nominal trajectories can be computed
+
+01:06:29.560 --> 01:06:32.560
+in a very computationally efficient way.
+
+01:06:32.560 --> 01:06:37.560
+In particular, for example, through polynomial interpolation.
+
+01:06:37.560 --> 01:06:40.560
+One aspect that we have glossed over is
+
+01:06:40.560 --> 01:06:43.560
+what if, besides the differential constraints of motion,
+
+01:06:43.560 --> 01:06:45.560
+so kinematic constraints,
+
+01:06:45.560 --> 01:06:48.560
+we have additional constraints?
+
+01:06:48.560 --> 01:06:50.560
+How do we account for that?
+
+01:06:50.560 --> 01:06:53.560
+So that means that basically we need to transform
+
+01:06:53.560 --> 01:06:56.560
+those constraints in x and u
+
+01:06:56.560 --> 01:06:59.560
+into constraints for the flat outputs.
+
+01:06:59.560 --> 01:07:03.560
+And in general, this transformation may be quite challenging.
+
+01:07:03.560 --> 01:07:07.560
+In practice, what people do is to use constraints
+
+01:07:07.560 --> 01:07:10.560
+in the flat output space that are good proxy
+
+01:07:10.560 --> 01:07:13.560
+for the constraints that you have in x and u.
+
+01:07:13.560 --> 01:07:15.560
+Usually, and this is a bit more advanced version
+
+01:07:15.560 --> 01:07:17.560
+of differential flatness
+
+01:07:17.560 --> 01:07:19.560
+that we're not covering in this class,
+
+01:07:19.560 --> 01:07:21.560
+this amounts to providing constraints
+
+01:07:21.560 --> 01:07:24.560
+in terms of curvature.
+
+01:07:24.560 --> 01:07:25.560
+From an intuition standpoint,
+
+01:07:25.560 --> 01:07:29.560
+if you have a curve that does a lot of these things,
+
+01:07:29.560 --> 01:07:31.560
+it translates into a curve that requires
+
+01:07:31.560 --> 01:07:33.560
+a lot of control effort.
+
+01:07:33.560 --> 01:07:35.560
+So for example, if you want to minimize control effort,
+
+01:07:35.560 --> 01:07:43.560
+you want to avoid these extreme changes in curvature.
+
+01:07:43.560 --> 01:07:45.560
+In general, you can set up this problem
+
+01:07:45.560 --> 01:07:48.560
+as an optimization problem with flat output variables
+
+01:07:48.560 --> 01:07:50.560
+where you have additional,
+
+01:07:50.560 --> 01:07:52.560
+so when you try to find the coefficients,
+
+01:07:52.560 --> 01:07:54.560
+you try to not only solve the feasibility problem,
+
+01:07:54.560 --> 01:07:57.560
+meaning matching initial and final values, conditions,
+
+01:07:57.560 --> 01:08:00.560
+but also some objective.
+
+01:08:00.560 --> 01:08:02.560
+An objective that is usually considered
+
+01:08:02.560 --> 01:08:08.560
+is the jerk or snap of the trajectory.
+
+01:08:08.560 --> 01:08:11.560
+Do you know what a jerk is?
+
+01:08:11.560 --> 01:08:14.560
+I mean the jerk in the mathematical sense.
+
+01:08:14.560 --> 01:08:18.560
+Yes, so the first derivative is referred to as velocity,
+
+01:08:18.560 --> 01:08:20.560
+the second derivative is referred to as acceleration,
+
+01:08:20.560 --> 01:08:23.560
+the third derivative is referred to as jerk,
+
+01:08:23.560 --> 01:08:25.560
+the fourth derivative is referred to as snap,
+
+01:08:25.560 --> 01:08:29.560
+the fifth derivative is referred to as crackle.
+
+01:08:29.560 --> 01:08:32.560
+You didn't know about that one.
+
+01:08:32.560 --> 01:08:36.560
+So we have, well, you know about velocity and acceleration.
+
+01:08:36.560 --> 01:08:44.560
+Then there is a jerk, there is snap, and there is crackle.
+
+01:08:44.560 --> 01:08:46.560
+So usually in differential flatness,
+
+01:08:46.560 --> 01:08:51.560
+you try to find a trajectory that minimizes snap or jerk,
+
+01:08:51.560 --> 01:08:54.560
+which basically means that you try to find a trajectory
+
+01:08:54.560 --> 01:08:57.560
+that is nicely smooth.
+
+01:08:57.560 --> 01:08:59.560
+You don't have these extreme oscillations,
+
+01:08:59.560 --> 01:09:02.560
+because again, those correspond to trajectories
+
+01:09:02.560 --> 01:09:04.560
+with a lot of control effort.
+
+01:09:04.560 --> 01:09:07.560
+Usually optimizing for a snap
+
+01:09:07.560 --> 01:09:10.560
+gives you a feasible trajectory that is good enough.
+
+01:09:10.560 --> 01:09:13.560
+And this is, for example, a de facto standard
+
+01:09:13.560 --> 01:09:17.560
+to compute trajectories for quadrotors or other vehicles.
+
+01:09:17.560 --> 01:09:20.560
+If you see movies about autonomous quadrotors,
+
+01:09:20.560 --> 01:09:26.560
+95% they are running this algorithm with snap minimization.
+
+01:09:26.560 --> 01:09:31.560
+So super powerful, super useful.
+
+01:09:31.560 --> 01:09:34.560
+So in this class, we will consider
+
+01:09:34.560 --> 01:09:36.560
+a specific set of constraints, which is, of course,
+
+01:09:36.560 --> 01:09:38.560
+which is indeed very useful,
+
+01:09:38.560 --> 01:09:41.560
+and a specific technique to address those constraints
+
+01:09:41.560 --> 01:09:43.560
+in the context of differential flatness.
+
+01:09:43.560 --> 01:09:47.560
+In particular, we consider the case of input bounds,
+
+01:09:47.560 --> 01:09:50.560
+meaning how do we transform the constraint
+
+01:09:50.560 --> 01:09:56.560
+that your input u has to be less than an upper bound,
+
+01:09:56.560 --> 01:10:00.560
+so say velocity less than five meters per second,
+
+01:10:00.560 --> 01:10:04.560
+how do we translate that constraint
+
+01:10:04.560 --> 01:10:06.560
+into the flat output space?
+
+01:10:06.560 --> 01:10:08.560
+The technique that we will see next time
+
+01:10:08.560 --> 01:10:11.560
+is referred to as time scaling.
+
+01:10:11.560 --> 01:10:13.560
+The idea of time scaling is that
+
+01:10:13.560 --> 01:10:15.560
+in order to fulfill this constraint,
+
+01:10:15.560 --> 01:10:17.560
+we first solve the problem
+
+01:10:17.560 --> 01:10:20.560
+without accounting for that constraint,
+
+01:10:20.560 --> 01:10:23.560
+and then we time and re-parameterize the trajectory
+
+01:10:23.560 --> 01:10:25.560
+until that constraint is satisfied.
+
+01:10:25.560 --> 01:10:31.560
+So basically, we increase the pace or slow down the pace
+
+01:10:31.560 --> 01:10:34.560
+at which we move along the trajectory
+
+01:10:34.560 --> 01:10:37.560
+until we are satisfied with the control bounds.
+
+01:10:37.560 --> 01:10:38.560
+We'll see that next time.
+
+01:10:38.560 --> 01:10:42.560
+It will also be reflected in the first problems of your PCET.
+
+01:10:45.560 --> 01:10:47.560
+So I hope that now differential flatness is clear
+
+01:10:47.560 --> 01:10:49.560
+and you appreciate the power of these methodologies,
+
+01:10:49.560 --> 01:10:52.560
+but then it goes back to the equation
+
+01:10:52.560 --> 01:10:54.560
+from a couple of your colleagues.
+
+01:10:54.560 --> 01:10:56.560
+One is the system is differentially flat.
+
+01:10:56.560 --> 01:10:58.560
+Now, you really want to use it everywhere,
+
+01:10:58.560 --> 01:11:00.560
+but can you use it everywhere?
+
+01:11:00.560 --> 01:11:02.560
+Now, unfortunately,
+
+01:11:02.560 --> 01:11:05.560
+the existence of a general computable criterion
+
+01:11:05.560 --> 01:11:08.560
+to check whether a system is differentially flat
+
+01:11:08.560 --> 01:11:10.560
+does not exist.
+
+01:11:10.560 --> 01:11:12.560
+So if you're starting your PhD
+
+01:11:12.560 --> 01:11:14.560
+and you want to do a very ambitious PhD,
+
+01:11:14.560 --> 01:11:17.560
+that could be a good research project,
+
+01:11:17.560 --> 01:11:19.560
+but a very hard one.
+
+01:11:19.560 --> 01:11:21.560
+There are actually necessary sufficient conditions,
+
+01:11:21.560 --> 01:11:26.560
+but in general, they do not lead to a computable algorithm.
+
+01:11:26.560 --> 01:11:28.560
+Only for some cases you can apply it,
+
+01:11:28.560 --> 01:11:29.560
+but in general, you can't.
+
+01:11:29.560 --> 01:11:34.560
+The reality is that if you have an interesting system
+
+01:11:34.560 --> 01:11:37.560
+and you find out that that system is differentially flat,
+
+01:11:37.560 --> 01:11:39.560
+you usually write a paper about it
+
+01:11:39.560 --> 01:11:43.560
+because it's an important contribution to the literature.
+
+01:11:43.560 --> 01:11:46.560
+And there are papers out there, some of them cited here,
+
+01:11:46.560 --> 01:11:51.560
+whereby the authors provide a catalog of systems
+
+01:11:51.560 --> 01:11:53.560
+that are known to be differentially flat
+
+01:11:53.560 --> 01:11:56.560
+and for which the flatness mapping,
+
+01:11:56.560 --> 01:11:58.560
+so basically those functions beta and gamma,
+
+01:11:58.560 --> 01:12:02.560
+that relates flat outputs with x and u are provided.
+
+01:12:02.560 --> 01:12:04.560
+This is, for example, a good reference.
+
+01:12:04.560 --> 01:12:07.560
+And there are also more recent ones.
+
+01:12:07.560 --> 01:12:12.560
+So here, I give you a little more references for this topic
+
+01:12:12.560 --> 01:12:14.560
+if you want to get deeper into this topic.
+
+01:12:15.560 --> 01:12:17.560
+In terms of application, differential flatness
+
+01:12:17.560 --> 01:12:21.560
+is really an applied mathematics topic.
+
+01:12:21.560 --> 01:12:24.560
+So if you're interested in going deeper
+
+01:12:24.560 --> 01:12:27.560
+on the topic of differential flatness
+
+01:12:27.560 --> 01:12:29.560
+using projective optimization,
+
+01:12:29.560 --> 01:12:34.560
+I suggest these two papers from Richard Murray at Caltech.
+
+01:12:34.560 --> 01:12:37.560
+This deals more with the nuts and bolts
+
+01:12:37.560 --> 01:12:39.560
+of applying differential flatness
+
+01:12:39.560 --> 01:12:40.560
+to projective optimization.
+
+01:12:40.560 --> 01:12:43.560
+This is more an overview of what differential flatness is
+
+01:12:43.560 --> 01:12:45.560
+and provides a catalog of systems
+
+01:12:45.560 --> 01:12:47.560
+that are differentially flat, so very useful.
+
+01:12:49.560 --> 01:12:51.560
+The book, this is the same book
+
+01:12:51.560 --> 01:12:53.560
+that I referenced at the beginning,
+
+01:12:53.560 --> 01:12:56.560
+also provides a nice discussion about differential flatness
+
+01:12:56.560 --> 01:13:00.560
+for the specific application to wheel out the system.
+
+01:13:00.560 --> 01:13:01.560
+So very relevant to us.
+
+01:13:01.560 --> 01:13:03.560
+In particular, chapter 11, again,
+
+01:13:03.560 --> 01:13:04.560
+is the chapter you should look at.
+
+01:13:04.560 --> 01:13:06.560
+From a theoretical standpoint,
+
+01:13:06.560 --> 01:13:10.560
+excellent reference is this book from Levine,
+
+01:13:10.560 --> 01:13:12.560
+extremely mathematically dense,
+
+01:13:12.560 --> 01:13:15.560
+so read this book with caution.
+
+01:13:15.560 --> 01:13:19.560
+A slightly less mathematical version of this book
+
+01:13:19.560 --> 01:13:21.560
+is the book from Rigato.
+
+01:13:21.560 --> 01:13:23.560
+Those are really the books whereby you go
+
+01:13:23.560 --> 01:13:27.560
+into the mathematical underpinnings,
+
+01:13:27.560 --> 01:13:29.560
+like for example, necessary conditions
+
+01:13:29.560 --> 01:13:31.560
+for differential flatness, sufficient conditions.
+
+01:13:31.560 --> 01:13:34.560
+All of that for us is beyond the scope of this class.
+
+01:13:34.560 --> 01:13:37.560
+For our class, what is important to know
+
+01:13:37.560 --> 01:13:39.560
+is that the unicycle model,
+
+01:13:39.560 --> 01:13:42.560
+the unicycle model that is the one that we use
+
+01:13:42.560 --> 01:13:47.560
+for our robot, is differentially flat,
+
+01:13:48.560 --> 01:13:51.560
+and the simple car model is differentially flat.
+
+01:13:51.560 --> 01:13:55.560
+So for the sake of mobile robotics,
+
+01:13:55.560 --> 01:13:57.560
+we are fortunate.
+
+01:13:57.560 --> 01:13:59.560
+We can leverage differential flatness.
+
+01:14:01.560 --> 01:14:03.560
+All right, so what we'll do next time
+
+01:14:03.560 --> 01:14:06.560
+will be to continue the discussion
+
+01:14:06.560 --> 01:14:07.560
+about differential flatness
+
+01:14:07.560 --> 01:14:09.560
+in terms of how do we account for constraints,
+
+01:14:09.560 --> 01:14:11.560
+in particular, input constraints,
+
+01:14:11.560 --> 01:14:13.560
+through the notion of time scaling.
+
+01:14:13.560 --> 01:14:16.560
+Then we're going to talk about the second part
+
+01:14:16.560 --> 01:14:18.560
+of the two-step design.
+
+01:14:18.560 --> 01:14:23.560
+How do we design the trajectory tacking control law?
+
+01:14:24.560 --> 01:14:26.560
+So how do we do trajectory tacking,
+
+01:14:26.560 --> 01:14:28.560
+and how do we solve for the closed-loop control laws
+
+01:14:28.560 --> 01:14:31.560
+to stay close to the nominal trajectory?
+
+01:14:31.560 --> 01:14:34.560
+All right, see you on Thursday.
+
+01:14:37.560 --> 01:14:39.560
+Thank you.
+

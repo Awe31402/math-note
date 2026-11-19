@@ -1,0 +1,3341 @@
+WEBVTT
+
+00:00.000 --> 00:12.960
+Today, we're going to conclude the second module of this class about robot perception.
+
+00:12.960 --> 00:17.720
+And in particular, we're going to focus on the fourth step of the image processing pipeline.
+
+00:17.720 --> 00:25.440
+That is the step of extracting information that can be used for either say localization,
+
+00:25.440 --> 00:31.760
+as we will see next week, or for a higher level scene understanding in order to inform
+
+00:31.760 --> 00:32.760
+decision making.
+
+00:32.760 --> 00:37.400
+Is an object a human or an animal and so on and so forth.
+
+00:37.400 --> 00:42.800
+So the goal today is to learn how to extract information from sensor measurements, in particular
+
+00:42.800 --> 00:44.480
+from cameras.
+
+00:44.480 --> 00:51.240
+And the main reference for this lecture is chapter four from the book from Siguar Urbancash
+
+00:51.240 --> 00:52.240
+at Scaramuzza.
+
+00:52.240 --> 01:03.480
+So as I said, the goal is to extract information from one or more sensors in order to generate
+
+01:03.480 --> 01:09.960
+a higher level percept that can be used for localization or for decision making.
+
+01:09.960 --> 01:18.280
+Now, it's important to realize that autonomous robots do not always need to have a very good
+
+01:18.280 --> 01:21.360
+understanding of the world around them.
+
+01:21.360 --> 01:27.080
+And actually, there is a trade-off between how much understanding you want to have and
+
+01:27.080 --> 01:30.480
+the speed and agility of the robots.
+
+01:30.480 --> 01:35.240
+If you have a robot that is flying at very high speeds, maybe everything that you need
+
+01:35.240 --> 01:38.160
+is just to have a geometric understanding of the world.
+
+01:38.160 --> 01:44.320
+But you really don't need to reason about the fine details of what you have around the
+
+01:44.320 --> 01:45.320
+robots.
+
+01:45.320 --> 01:48.840
+On the other hand, if you want to manipulate the world, for example, if you want to pour
+
+01:48.840 --> 01:54.800
+water into glass and sun, then you need to have a much more advanced understanding of
+
+01:54.800 --> 01:55.800
+the world around you.
+
+01:55.800 --> 02:00.120
+You need to know what is the relation of an object with respect to another one in order
+
+02:00.120 --> 02:04.840
+to understand the sequence of tasks that are needed in order to accomplish your task.
+
+02:04.840 --> 02:13.800
+Having said that, on the topic of information extraction, we distinguish between low level
+
+02:13.800 --> 02:21.480
+features, basically, geometric features, such as lines or circles and sun, that can
+
+02:21.480 --> 02:30.240
+be used to form localization, the most basic capability for a robot in order to move around.
+
+02:30.240 --> 02:38.120
+And then we consider higher level features, such as recognizing a table or recognizing
+
+02:38.120 --> 02:43.060
+an object, which are useful for higher level understanding, which are useful for task planning.
+
+02:43.060 --> 02:46.940
+If the robot has to do something that is more advanced than just moving around.
+
+02:46.940 --> 02:56.220
+For example, accomplish complex tasks, such as prepare a dish for you or even drive around
+
+02:56.220 --> 02:58.900
+a city and so on.
+
+02:58.900 --> 03:07.340
+So today we're going to look at both topics, so how to detect geometric primitives in the
+
+03:07.340 --> 03:15.700
+environment, and also how to detect objects and hence have a more detailed understanding
+
+03:15.700 --> 03:17.660
+of a scene.
+
+03:17.660 --> 03:20.660
+Let's start with the geometric primitives.
+
+03:20.660 --> 03:27.900
+Now, the typical geometric primitives that one may want to extract, as I said before,
+
+03:27.900 --> 03:36.200
+are typically lines or circles, or in 3D, for example, walls, ceilings, and so on.
+
+03:36.200 --> 03:43.080
+The two key problems in order to extract geometric primitives are, for example, in
+
+03:43.080 --> 03:49.080
+the case of line segmentation, in the case of line extraction, which points belong to
+
+03:49.080 --> 03:50.080
+which line?
+
+03:50.080 --> 03:51.760
+That's a problem of segmentation.
+
+03:51.760 --> 03:57.040
+And given associations of points to a line, how do we estimate the parameters of the line
+
+03:57.040 --> 03:59.400
+that best fits those points?
+
+03:59.400 --> 04:05.840
+Now, in this class, we are going to focus specifically on line extraction, particularly
+
+04:05.840 --> 04:10.080
+because this is one of the most basic geometric primitives that you want to extract.
+
+04:10.080 --> 04:14.240
+And indeed, this is a geometric primitive that you will be extracting for your final
+
+04:14.240 --> 04:17.480
+project in order to achieve localization.
+
+04:17.480 --> 04:23.000
+Accordingly, problem two in your pset focuses on line extraction.
+
+04:23.000 --> 04:28.320
+As I said, this is what you'll be using for your final project.
+
+04:28.320 --> 04:32.200
+As I said, and this is true basically for all geometric primitives, there is a problem
+
+04:32.200 --> 04:36.900
+of segmentation, which points belong to a given geometric primitive, like a line.
+
+04:36.900 --> 04:42.360
+And two, once you have found that association, how you find that the geometric primitive
+
+04:42.360 --> 04:47.260
+that best explains the points that have been associated to that primitive.
+
+04:47.260 --> 04:50.000
+So we're going to look at these two steps in turn.
+
+04:50.000 --> 04:55.560
+And in particular, we're going to look at the second step first, which is easier.
+
+04:55.560 --> 04:59.800
+And then we'll look later on at the first step.
+
+04:59.800 --> 05:01.800
+So let's start with the second step.
+
+05:01.800 --> 05:06.680
+The problem of fitting, in particular in the case of a line in 2D.
+
+05:06.680 --> 05:12.200
+Similar arguments generalize to 3D, for example for planes, but just for simplicity for this
+
+05:12.200 --> 05:15.120
+class we focus on lines.
+
+05:15.120 --> 05:20.880
+Now everybody in view knows what an equation of a line is.
+
+05:20.880 --> 05:28.240
+So if you are in 2D, this is x, this is y, and you have a line, the equation of a line
+
+05:28.240 --> 05:32.040
+in general is y equals mx plus b.
+
+05:32.040 --> 05:35.040
+So that's a usual equation of a line.
+
+05:35.040 --> 05:42.360
+Typically for image processing, we use a different parametrization of a line, and in particular
+
+05:42.360 --> 05:45.480
+the parametrization of a line with respect to polar coordinates.
+
+05:45.480 --> 05:49.240
+This is something that may not be familiar with.
+
+05:49.240 --> 05:55.040
+So let's explain what a line in the polar coordinates look like.
+
+05:55.040 --> 06:00.960
+So you already know about polar coordinates, we saw them earlier in this class.
+
+06:00.960 --> 06:04.160
+Just to make sure that everyone is on the same page.
+
+06:04.160 --> 06:08.520
+So let's assume that you have a point in the Euclidean plane.
+
+06:08.520 --> 06:15.240
+The coordinates you are used to are the x and y coordinates.
+
+06:15.240 --> 06:22.960
+But a different way to pinpoint what that point is on the plane is in terms of the distance
+
+06:22.960 --> 06:42.960
+of that point from the origin, which we denote as rho, and the angle theta that the segment
+
+06:42.960 --> 06:48.240
+joining the point to the origin forms with the x-axis.
+
+06:48.240 --> 06:52.760
+If I tell you rho and if I tell you theta, you know exactly what the point is.
+
+06:52.760 --> 07:02.840
+Which means that rho and theta are valid coordinates in order to describe each point in the plane.
+
+07:02.840 --> 07:13.800
+So then the question is, we know how to describe a line in Cartesian coordinates.
+
+07:13.800 --> 07:18.280
+How do we describe a line with respect to the coordinates rho, theta?
+
+07:19.120 --> 07:29.040
+Assuming that we have a line whose points are all identified by polar coordinates rho, theta,
+
+07:29.040 --> 07:33.760
+what are the parameters that identify this line?
+
+07:33.760 --> 07:46.120
+In order to do so, let's consider the plot that we also have over there.
+
+07:46.120 --> 07:56.280
+So, we're again given the plane, then we're given a line.
+
+07:56.280 --> 08:05.040
+So let's call it B0 and alpha.
+
+08:05.040 --> 08:18.280
+So, as you can see, a line is uniquely identified by the distance between the origin and the point
+
+08:18.280 --> 08:24.680
+that the segment orthogonal to the line from the origin intersects the line,
+
+08:24.680 --> 08:26.680
+and the angle of that segment.
+
+08:26.680 --> 08:29.480
+Let's call the length of the segment r.
+
+08:29.480 --> 08:35.400
+So here the angle is 90 degrees.
+
+08:35.400 --> 08:41.400
+So if I tell you the length of the segment, again this is the segment from the origin to the line
+
+08:41.400 --> 08:46.320
+that makes an angle equal to 90 degrees with the line.
+
+08:46.320 --> 08:53.680
+If I tell you this distance and if I tell you this angle, I uniquely identify this line.
+
+08:53.680 --> 09:02.600
+Now then the question is, what is the relation between all the points on this line
+
+09:02.600 --> 09:07.120
+with these two parameters rho, sorry, r and alpha?
+
+09:07.120 --> 09:10.880
+That will give us the equation of a line in polar coordinates.
+
+09:10.880 --> 09:19.960
+In particular, let's take a general point along the line with the coordinates rho and theta.
+
+09:19.960 --> 09:23.480
+What's the relation between rho and theta and r and alpha?
+
+09:23.480 --> 09:28.400
+This is a similar equation that we will have for what's the relation between the arbitrary point x, y
+
+09:28.400 --> 09:33.400
+on the line and the parameters of the line m and b.
+
+09:33.400 --> 09:38.120
+We already know that this relation is y equal mx plus b.
+
+09:38.120 --> 09:44.800
+We want to find a similar relation between rho, theta and r and alpha.
+
+09:44.800 --> 09:49.520
+Does it make sense?
+
+09:49.560 --> 09:58.800
+This length is rho and this angle is theta, all of this.
+
+09:58.800 --> 10:06.960
+This angle, the smaller one, this is the theta minus alpha.
+
+10:06.960 --> 10:16.360
+By using trigonometry, rho times cosine of this angle is equal to r.
+
+10:16.360 --> 10:25.400
+So rho cosine of theta minus alpha is equal to r.
+
+10:25.400 --> 10:34.520
+And this is valid for every point on the line described with respect to polar coordinates.
+
+10:34.520 --> 10:44.600
+So we can then define a line with parameters r and alpha as the locus of points such that
+
+10:44.640 --> 10:49.200
+those points, when described in polar coordinates, satisfy this equation.
+
+10:49.200 --> 10:53.400
+Similar to what you would do in the standard Cartesian coordinates,
+
+10:53.400 --> 11:01.160
+a line is the locus of points such that those points described in Cartesian coordinates satisfy this equation.
+
+11:01.160 --> 11:05.680
+Does this make sense?
+
+11:05.680 --> 11:07.360
+You don't seem convinced.
+
+11:07.360 --> 11:08.880
+You are convinced.
+
+11:08.880 --> 11:10.760
+So-so.
+
+11:10.760 --> 11:12.960
+So-so or yes?
+
+11:13.000 --> 11:14.120
+OK, cool.
+
+11:14.120 --> 11:16.640
+All right.
+
+11:16.640 --> 11:33.240
+So again, view this as the polar coordinate representation of y equal mx plus v.
+
+11:33.240 --> 11:41.360
+Equivalently, by using the, and this will become useful later on,
+
+11:41.360 --> 11:51.000
+by using the fact that cosine of alpha minus beta is equal to cosine of alpha cosine of beta
+
+11:51.000 --> 11:56.480
+plus sine of alpha sine of beta.
+
+11:56.480 --> 12:05.360
+This equation can also be written as rho cosine of theta cosine of alpha
+
+12:05.400 --> 12:13.040
+plus rho sine of theta sine of alpha.
+
+12:13.040 --> 12:15.040
+So this is what?
+
+12:15.040 --> 12:18.600
+Rho cosine of theta?
+
+12:18.600 --> 12:19.840
+Yep.
+
+12:19.840 --> 12:28.520
+So it's x cosine of alpha, and this is y sine of alpha equal r.
+
+12:28.520 --> 12:33.240
+So basically, this is how we go from the equation on the line in polar coordinates
+
+12:33.240 --> 12:38.720
+to the equation on the line in xy coordinates.
+
+12:38.720 --> 12:39.600
+Cool, all right.
+
+12:39.600 --> 12:45.440
+So all this to say that in polar coordinates,
+
+12:45.440 --> 12:51.240
+a line is described in terms of the distance between the point p0, which
+
+12:51.240 --> 12:58.600
+is the intersection between the line from the origin to the line orthogonal,
+
+12:58.600 --> 13:02.600
+to our line orthogonal to that line, and the angle that that segment forms.
+
+13:06.080 --> 13:12.040
+OK, so we know we have now endpoints.
+
+13:12.040 --> 13:12.960
+Yes?
+
+13:12.960 --> 13:19.400
+How do we deal with lines that go through the origin point in this construct?
+
+13:19.400 --> 13:20.840
+You mean here?
+
+13:20.840 --> 13:27.320
+This will be done with r equal to, yeah, this will be not well-defined,
+
+13:27.320 --> 13:28.920
+because we will not have alpha.
+
+13:28.920 --> 13:36.400
+But we have that singularity also with the case of,
+
+13:36.400 --> 13:41.840
+because for example here, m could go all the way to infinity.
+
+13:41.840 --> 13:45.800
+Yeah, so it's, but as we will see later,
+
+13:45.800 --> 13:50.840
+this representation has an advantage with respect to the Cartesian advantage.
+
+13:50.880 --> 13:57.880
+In particular, m is a number that can go from 0 to potentially infinity.
+
+13:57.880 --> 14:01.280
+So when we try to estimate from data this m,
+
+14:01.280 --> 14:04.360
+we have to account for an infinite interval from the slope.
+
+14:04.360 --> 14:08.200
+Instead, in the case of the polar coordinate representation,
+
+14:08.200 --> 14:11.480
+alpha is obviously between 0 and 2 pi.
+
+14:11.480 --> 14:17.680
+And r is basically the distance of the line from the origin.
+
+14:17.680 --> 14:21.440
+But since you have a bound in terms of what the environment is,
+
+14:21.440 --> 14:24.560
+r is always a well-defined number.
+
+14:24.560 --> 14:26.960
+And this is something that we'll see later on.
+
+14:26.960 --> 14:29.520
+But that's a good point.
+
+14:29.520 --> 14:30.400
+Cool, all right.
+
+14:30.400 --> 14:33.880
+So now, assume that, yeah, here.
+
+14:33.880 --> 14:39.720
+Assume that now we have endpoints, rho i, theta i.
+
+14:48.320 --> 14:52.320
+So we have n of those points.
+
+14:52.320 --> 14:55.800
+And we know that they all belong to the same line.
+
+14:55.800 --> 15:00.960
+So there exists an r and alpha such that
+
+15:00.960 --> 15:07.600
+rho i cosine of theta i minus alpha is equal to r.
+
+15:07.600 --> 15:10.200
+So I give you these endpoints.
+
+15:10.200 --> 15:12.160
+You know that they are on the same line.
+
+15:12.160 --> 15:14.880
+We want to find r and alpha.
+
+15:14.880 --> 15:17.200
+So this will be a system of equations.
+
+15:17.200 --> 15:20.320
+Nonlinear, but this is a system of equations that you can solve for.
+
+15:20.320 --> 15:26.160
+Unfortunately, due to noise, which could be due to measurement noise,
+
+15:26.160 --> 15:32.680
+outliers, and so on, even if these points in reality belong to the same line,
+
+15:32.680 --> 15:39.320
+what we will measure is something that has some residual, some error.
+
+15:39.320 --> 15:42.640
+So the best we can do in order to estimate the line,
+
+15:42.640 --> 15:45.560
+meaning its coefficients r and alpha,
+
+15:45.600 --> 15:53.080
+is to find the coefficients r and alpha that best describe
+
+15:53.080 --> 16:01.080
+how the points will fit at that line in terms of minimizing the residual error.
+
+16:01.080 --> 16:08.480
+Specifically, what we do is to form a cost function.
+
+16:15.760 --> 16:18.240
+Which is a function of the parameters of the line.
+
+16:18.240 --> 16:20.520
+These are the two parameters we want to find,
+
+16:20.520 --> 16:23.880
+which is equal to the summation from i equal to one to n,
+
+16:23.880 --> 16:27.160
+the total number of points, over d i square.
+
+16:27.160 --> 16:37.640
+The discrepancy between the equation of the line and what we actually have.
+
+16:37.640 --> 16:46.840
+This is just the discrepancy in r and not the discrepancy in alpha.
+
+16:46.840 --> 16:57.600
+Yeah, well, this d i basically accounts for the distance of the point
+
+16:57.600 --> 16:59.360
+with respect to the desired line.
+
+16:59.360 --> 17:01.640
+That's the meaning of...
+
+17:01.640 --> 17:06.280
+So basically, we're trying to find the line that best explains the point
+
+17:06.280 --> 17:11.080
+by minimizing the orthogonal distance between that line
+
+17:11.080 --> 17:15.000
+and each one of those points, summing all those errors.
+
+17:15.000 --> 17:17.080
+This is a model, obviously.
+
+17:17.080 --> 17:22.120
+But usually, the most common model for line fitting.
+
+17:22.120 --> 17:35.000
+So then the problem is to minimize over r and alpha this cost function.
+
+17:35.000 --> 17:42.880
+Which you can see as a least squares problem without constraints.
+
+17:42.880 --> 17:48.840
+So here, we are assuming that we equally weight all the measurements.
+
+17:48.840 --> 17:55.480
+Remember that the measurements are the values rho i's,
+
+17:55.480 --> 17:59.560
+referred to as the range or the distance to each point,
+
+17:59.560 --> 18:02.200
+something that a Lidar sensor would give you.
+
+18:02.200 --> 18:07.920
+And the theta i, which is the bearing with respect to that point.
+
+18:07.920 --> 18:08.840
+This is what you measure.
+
+18:08.840 --> 18:14.200
+You want to find the parameters r and alpha that best explain
+
+18:14.200 --> 18:16.560
+those measurements in terms of belonging to a line.
+
+18:16.560 --> 18:18.040
+Yeah.
+
+18:18.040 --> 18:22.800
+You're saying that there's no noise on alpha in this model?
+
+18:22.800 --> 18:27.440
+Well, implicitly, you also can't afford noise in...
+
+18:27.440 --> 18:31.440
+So the noise is really...
+
+18:31.440 --> 18:34.800
+We assume that we have noise in both...
+
+18:34.800 --> 18:41.280
+So first of all, the noise is neither in alpha nor in r.
+
+18:41.280 --> 18:44.400
+So these are just the parameter of the underlying line.
+
+18:44.400 --> 18:49.040
+The noise is in rho and theta, which are the quantities that we are measuring.
+
+18:49.040 --> 18:53.400
+So we assume that because of the noise in rho and theta,
+
+18:53.400 --> 19:00.200
+the end result will be a point that is offset with respect to the line.
+
+19:00.200 --> 19:04.200
+And then, in order to find the line that best fits those points,
+
+19:04.200 --> 19:11.160
+we try to minimize the error in terms of the distance of each point from that line.
+
+19:11.160 --> 19:14.920
+So in a standard Cartesian measurement system,
+
+19:14.920 --> 19:19.000
+you kind of assume there's a Gaussian error about x and a Gaussian error around y.
+
+19:19.000 --> 19:23.400
+And then you do the fitting of a line with these squares,
+
+19:23.400 --> 19:26.840
+and it minimizes those errors in some good way.
+
+19:26.840 --> 19:31.160
+And here, we're working with the...
+
+19:31.160 --> 19:33.480
+We're not only measuring things using a LiDAR sensor, right?
+
+19:33.480 --> 19:35.240
+Which has error in alpha and...
+
+19:35.240 --> 19:39.560
+Yeah, typically with the LiDAR sensor, so you measure distance.
+
+19:39.560 --> 19:41.400
+Does that still get you...
+
+19:41.400 --> 19:46.920
+Do errors in alpha and distance still translate into Gaussian errors in x and y?
+
+19:46.920 --> 19:48.200
+Yeah.
+
+19:48.920 --> 19:50.360
+Yeah, that's a good point.
+
+19:50.360 --> 19:51.320
+The answer is yes.
+
+19:51.320 --> 19:55.000
+And we could actually do an error propagation analysis
+
+19:55.000 --> 20:00.600
+to see how those errors propagate into the final estimates that you compute.
+
+20:00.600 --> 20:02.520
+But we don't do it.
+
+20:02.520 --> 20:03.800
+Because the equation on the next slide...
+
+20:05.800 --> 20:09.400
+That minimization equation is minimizing for the Gaussian in xy, right?
+
+20:11.960 --> 20:13.880
+There's no real notion of xy.
+
+20:13.880 --> 20:20.680
+Here, we are really minimizing the distance between a point and the line.
+
+20:23.480 --> 20:26.920
+So the question is how the Gaussians with respect to rho and theta
+
+20:26.920 --> 20:30.120
+transform into a Gaussian for that distance.
+
+20:30.120 --> 20:31.800
+That's what we are minimizing.
+
+20:31.800 --> 20:33.000
+Which basically leads...
+
+20:33.000 --> 20:37.800
+So we could actually do a more sophisticated stochastic analysis
+
+20:37.800 --> 20:40.520
+of the foundation of what we're doing here.
+
+20:41.160 --> 20:43.160
+But we don't do it for simplicity.
+
+20:43.160 --> 20:45.000
+Also, it's not that important.
+
+20:45.000 --> 20:47.480
+But what is important to acknowledge, as you were mentioning,
+
+20:48.120 --> 20:53.400
+is that there is an underlying notion of uncertainty behind each measurement.
+
+20:53.400 --> 20:58.520
+And in particular, we know, for example, for stereo ranging,
+
+20:59.160 --> 21:04.920
+that measurements of points that are farther away have more uncertainty.
+
+21:04.920 --> 21:08.520
+In particular, the variance increases with the square of the distance.
+
+21:08.520 --> 21:16.040
+Which prompts us to actually weight the different measurements.
+
+21:16.040 --> 21:20.040
+Basically give more weight to those measurements that are more certain.
+
+21:20.600 --> 21:23.080
+So points that are closer to us,
+
+21:23.080 --> 21:25.720
+and less weight to those measurements that are farther away.
+
+21:26.360 --> 21:32.680
+Practically, what we do is to set up weights wi equal to one over sigma i square.
+
+21:32.680 --> 21:34.920
+That is exactly what you're referring to.
+
+21:34.920 --> 21:41.640
+The uncertainty in the measurement that we have for a point.
+
+21:42.920 --> 21:47.640
+And consider then the weighted cost function.
+
+21:48.280 --> 21:52.600
+Whereby, if you see, if we are highly uncertain about a measurement,
+
+21:52.600 --> 21:54.360
+meaning that sigma is high,
+
+21:54.360 --> 21:57.720
+then we give less weight for that measurement
+
+21:57.720 --> 22:00.520
+when we do the least square fitting procedure.
+
+22:00.520 --> 22:05.720
+This is still a least square problem,
+
+22:05.720 --> 22:07.880
+it's a weighted least square problem.
+
+22:08.600 --> 22:12.760
+Again, there are two things that we are omitting here.
+
+22:13.960 --> 22:20.920
+The first thing is how, given uncertainty in the rho i and the theta i,
+
+22:21.800 --> 22:25.160
+we come up with the characterization of the uncertainty in sigma i.
+
+22:26.920 --> 22:29.080
+We are not doing that.
+
+22:29.880 --> 22:32.360
+And we are not doing all the,
+
+22:32.360 --> 22:34.760
+say, stochastic interpretation of least squares.
+
+22:34.760 --> 22:39.640
+So I'm just overlooking those issues
+
+22:39.640 --> 22:42.040
+and giving you the high level intuition.
+
+22:42.040 --> 22:46.920
+But from a practical standpoint, this is what you really need to know.
+
+22:49.240 --> 22:54.280
+Now fortunately, this least square problem has a closed form solution.
+
+22:54.280 --> 22:57.960
+That looks horrendous, but the good news is that it's a closed form solution.
+
+22:58.040 --> 23:02.440
+And this is really the equation that you would use for programming two in your p-sets.
+
+23:02.440 --> 23:09.400
+In particular, the alpha that optimizes that cost function is this monster here.
+
+23:10.520 --> 23:14.840
+And the r, it is much more benign formula here.
+
+23:14.840 --> 23:20.680
+Of course, if the wi's are all the same, wi's are actually equal to one,
+
+23:20.680 --> 23:23.000
+then the summation of the wi's will be n.
+
+23:23.480 --> 23:33.320
+So this would be basically the average of rho i cos theta i over all the measurements, r.
+
+23:33.320 --> 23:37.400
+Which kind of makes sense, right?
+
+23:37.400 --> 23:42.040
+So just for intuition, rho i cos theta i minus alpha.
+
+23:47.880 --> 23:48.840
+So we had the line.
+
+23:49.800 --> 23:52.760
+We had the segment that is perpendicular to the line.
+
+23:53.160 --> 23:53.640
+This was alpha.
+
+23:54.840 --> 24:01.640
+So this is a point on the line with the coordinates rho and the theta, and it's r.
+
+24:02.520 --> 24:08.200
+So rho cos theta minus alpha is this distance.
+
+24:12.440 --> 24:14.360
+So basically, the distance with respect to the line.
+
+24:15.000 --> 24:21.560
+And so we take r as the average of those distances, which kind of makes sense.
+
+24:23.400 --> 24:24.520
+Yeah?
+
+24:24.520 --> 24:32.040
+Can we just solve this in Cartesian?
+
+24:32.040 --> 24:36.680
+Yeah, so the only thing is that in Cartesian coordinates, you could.
+
+24:37.400 --> 24:42.600
+But in Cartesian coordinates, the problem is a little bit less well-conditioned,
+
+24:43.320 --> 24:46.840
+because m, the slope, can be a number that could be very large.
+
+24:47.960 --> 24:51.320
+And two, because I would use this polar representation.
+
+24:51.320 --> 24:52.520
+So there are three reasons.
+
+24:52.520 --> 24:57.560
+That second, typically, your measurements in terms of range measurements
+
+24:57.560 --> 25:00.040
+are in the form of rho and thetas.
+
+25:00.040 --> 25:02.200
+So you don't get x and y from a ladder.
+
+25:02.200 --> 25:03.080
+You get rho and theta.
+
+25:03.080 --> 25:05.880
+So you could do the transformation, obviously.
+
+25:05.880 --> 25:10.040
+But it's better to just go straight from the measurement to the line fitting.
+
+25:10.600 --> 25:14.600
+Three, I would use the polar representation of a line
+
+25:15.720 --> 25:19.880
+in order to also solve the segmentation problem by using Q-transform,
+
+25:19.880 --> 25:22.120
+which we're going to discuss in a few slides.
+
+25:22.120 --> 25:27.800
+So just for ease of explanation, I prefer to do everything in polar coordinates.
+
+25:28.520 --> 25:31.240
+But yes, in principle, you could do it in xy as well.
+
+25:34.280 --> 25:35.640
+Does that address your question?
+
+25:35.640 --> 25:36.280
+Yeah.
+
+25:36.280 --> 25:39.320
+So it's a mixture of pedagogical reason,
+
+25:40.520 --> 25:43.000
+the type of measurements that you actually have,
+
+25:43.000 --> 25:45.960
+and the fact that this is a little bit more robust way of doing it.
+
+25:45.960 --> 25:48.680
+All right.
+
+25:48.680 --> 25:51.160
+Let's go to step number one, light segmentation.
+
+25:51.160 --> 25:53.880
+So far, we have assumed that we have a bunch of points.
+
+25:53.880 --> 25:56.120
+We know that they all belong to a line.
+
+25:56.120 --> 25:58.520
+And then we want to find the coefficients of that line.
+
+25:58.520 --> 26:01.720
+We use polar coordinates for a number of reasons that I just explained.
+
+26:01.720 --> 26:03.720
+Of course, if you're really against polar coordinates,
+
+26:03.720 --> 26:05.320
+then you can use Cartesian coordinates.
+
+26:06.920 --> 26:10.760
+The first problem is, OK, but who tells you whether
+
+26:10.760 --> 26:14.040
+a bunch of points belong to a given line?
+
+26:14.040 --> 26:20.120
+What you get from lighters are a bunch of rho i's, theta i's,
+
+26:20.120 --> 26:21.000
+which is very large.
+
+26:22.120 --> 26:24.120
+Which point belongs to which line?
+
+26:25.560 --> 26:26.520
+And that's tricky.
+
+26:26.520 --> 26:29.000
+And that's very important because, of course, for localization,
+
+26:29.000 --> 26:33.000
+you want to understand whether that wall is the same as that wall
+
+26:33.000 --> 26:36.520
+or there are two different walls with an angle between them.
+
+26:36.520 --> 26:40.840
+So we're going to look at the three main methods for line segmentation.
+
+26:41.640 --> 26:47.880
+They are relatively simple, but still require a little bit of explanation.
+
+26:48.440 --> 26:51.960
+So the first one, which is really really simple,
+
+26:51.960 --> 26:54.280
+is referred to as a split and merge.
+
+26:55.560 --> 26:58.520
+The deal of split and merge is best illustrated by,
+
+27:01.400 --> 27:06.360
+through my skillful PowerPoint drawing skills.
+
+27:07.400 --> 27:09.960
+So let's assume that we have a bunch of points.
+
+27:09.960 --> 27:11.240
+Now it's a segmentation problem.
+
+27:11.240 --> 27:13.720
+We don't know which point belongs to which line.
+
+27:13.720 --> 27:17.720
+As a human, you will say, OK, probably this is a line
+
+27:17.720 --> 27:19.000
+and that this is a line.
+
+27:19.000 --> 27:21.000
+This is what we want to do with the algorithm.
+
+27:21.000 --> 27:23.000
+All right, so we had this bunch of points.
+
+27:23.000 --> 27:27.800
+So the first thing that we do is just to fit a line
+
+27:27.800 --> 27:31.080
+through all of these points by using the same algorithm
+
+27:31.080 --> 27:32.840
+that I explained before.
+
+27:32.840 --> 27:36.600
+So we assume, OK, maybe all of them belong to the single line.
+
+27:36.600 --> 27:37.480
+And that's what we do.
+
+27:37.480 --> 27:39.640
+We fit this line.
+
+27:40.760 --> 27:49.800
+Then we look at the point that has a maximum distance from the line.
+
+27:49.800 --> 27:55.160
+In this case, this will be the probably, probably this one.
+
+27:55.160 --> 27:58.120
+This will be the point that has a maximum distance to the line.
+
+27:59.800 --> 28:05.640
+So then we say, OK, if this maximum distance is above a design threshold,
+
+28:06.360 --> 28:10.200
+say one centimeter or one millimeter, that's a threshold that you decide.
+
+28:11.080 --> 28:13.640
+If this distance is above the threshold, then we say, OK,
+
+28:13.640 --> 28:17.000
+this point cannot really belong to that line,
+
+28:17.000 --> 28:22.200
+which means that I have to split this line into two lines.
+
+28:23.080 --> 28:26.680
+So one that will go through this set of points
+
+28:26.680 --> 28:28.680
+and the other one that goes through that set of points.
+
+28:31.480 --> 28:32.520
+So that's what we do.
+
+28:32.520 --> 28:33.400
+And then we iterate.
+
+28:33.400 --> 28:34.840
+So this is an iterative algorithm.
+
+28:34.840 --> 28:36.920
+Now I have this subset of points.
+
+28:36.920 --> 28:38.760
+I redraw a line.
+
+28:38.760 --> 28:39.560
+I compute.
+
+28:40.200 --> 28:44.120
+I find the point that has maximum distance with respect to the line.
+
+28:44.120 --> 28:45.000
+In this case, this one.
+
+28:45.720 --> 28:49.480
+And I say, is this distance less than the acceptable threshold?
+
+28:49.480 --> 28:50.680
+In this case, it is.
+
+28:50.680 --> 28:53.880
+So then I freeze this set of points as belonging to the same line.
+
+28:54.440 --> 28:55.720
+I go to this other one.
+
+28:55.720 --> 28:59.080
+And again, here are all the points past the threshold test.
+
+28:59.080 --> 29:00.040
+And then I'm done.
+
+29:00.040 --> 29:00.540
+Yeah?
+
+29:00.540 --> 29:03.240
+So you identified the one that was furthest away from the first line.
+
+29:03.240 --> 29:03.740
+Yeah.
+
+29:04.060 --> 29:08.700
+But then how did you split the points into the group of three and the group of four?
+
+29:08.700 --> 29:09.200
+Yeah.
+
+29:09.200 --> 29:16.380
+So basically, I have an order list of the points that I define as, where is it?
+
+29:16.380 --> 29:16.880
+L?
+
+29:17.820 --> 29:18.780
+And then they're indexed.
+
+29:19.820 --> 29:22.300
+So I use that indexing in order to split them.
+
+29:22.300 --> 29:24.620
+So there are the indexing along the line?
+
+29:24.620 --> 29:25.120
+Yeah.
+
+29:25.120 --> 29:26.060
+Not along the line.
+
+29:26.060 --> 29:30.300
+So basically, at the beginning, I just have a bunch of points.
+
+29:30.300 --> 29:31.980
+And I just put them in an array.
+
+29:32.700 --> 29:33.200
+OK.
+
+29:33.200 --> 29:35.980
+So just hide them with this, because, OK.
+
+29:35.980 --> 29:36.480
+Oh, yeah.
+
+29:36.480 --> 29:42.140
+See, this is a very carefully constructed case, so that the iteration stops, right?
+
+29:42.140 --> 29:42.640
+No, no.
+
+29:42.640 --> 29:43.180
+You're right.
+
+29:43.180 --> 29:47.420
+In general, I don't have this very nice sequencing and this very nice pattern.
+
+29:47.420 --> 29:52.620
+Is there such a way that you have to do and split the points in the not correct way?
+
+29:53.180 --> 29:58.460
+Well, but then you will keep splitting until you don't have these weird things.
+
+29:58.460 --> 30:00.300
+There is another step.
+
+30:00.780 --> 30:02.300
+That's the bridge rule.
+
+30:02.300 --> 30:02.800
+Exactly.
+
+30:03.740 --> 30:08.540
+So I have another example that maybe addresses that a little bit better.
+
+30:08.540 --> 30:10.700
+So this is a refinement of split and merge
+
+30:10.700 --> 30:13.740
+that is referred to as an iterative endpoint fit variant.
+
+30:14.300 --> 30:21.500
+So what you do is basically a simplification of the previous algorithm,
+
+30:21.500 --> 30:26.860
+whereby instead of doing least squares in order to compute the parameters of the line,
+
+30:26.860 --> 30:27.900
+you just merge.
+
+30:27.900 --> 30:32.220
+So you just have a bunch of points that you have ordered somehow.
+
+30:33.340 --> 30:39.500
+And then you connect the first point according to your indexing to the last point.
+
+30:39.500 --> 30:40.700
+In this case, it will be these two.
+
+30:42.140 --> 30:43.420
+Same deal as before.
+
+30:43.420 --> 30:48.140
+We compute the point that has the farthest distance, and then we split.
+
+30:52.140 --> 30:52.940
+And then, oops.
+
+30:53.500 --> 30:57.900
+And now for this subset of points, we compute another line
+
+30:59.100 --> 31:03.500
+by connecting the first and the last element of that set.
+
+31:03.500 --> 31:05.500
+We compute a point that is the farthest away.
+
+31:07.180 --> 31:08.940
+And this is, again, about the threshold.
+
+31:08.940 --> 31:09.580
+So we split.
+
+31:11.260 --> 31:11.900
+I get here.
+
+31:12.540 --> 31:15.100
+So here, no more splits are possible.
+
+31:15.660 --> 31:20.060
+And then there is a final post-processing step whereby we just merge,
+
+31:20.060 --> 31:21.100
+and we have a straight line.
+
+31:23.020 --> 31:26.780
+This is exactly the case that because of the splitting procedure,
+
+31:26.780 --> 31:30.300
+we introduce two lines that were very similar with each other.
+
+31:30.300 --> 31:34.780
+So we connected that a posteriori with the merge procedure.
+
+31:35.900 --> 31:38.220
+So of course, there are a lot of moving parameters in these things.
+
+31:38.220 --> 31:40.300
+So getting it to work correctly.
+
+31:41.100 --> 31:42.780
+So the concept is fairly easy.
+
+31:43.420 --> 31:46.380
+But getting it to work correctly is a bit hairy.
+
+31:46.380 --> 31:49.100
+And you have a problem in your pset to do exactly that.
+
+31:49.100 --> 31:56.780
+Does the convergence happen based on the amount of threshold you set?
+
+31:56.780 --> 31:57.580
+Oh, yeah, of course.
+
+31:58.700 --> 31:59.980
+That's what I'm saying is a bit hairy.
+
+31:59.980 --> 32:05.020
+Because depending on the threshold, you might get results that are really awkward.
+
+32:05.660 --> 32:08.540
+And as you will see in the second problem, the pset.
+
+32:08.540 --> 32:10.940
+So yeah, that requires a little bit of experience.
+
+32:10.940 --> 32:14.620
+And the iteration of the threshold remains the same?
+
+32:15.260 --> 32:15.980
+Typically, yes.
+
+32:19.340 --> 32:22.700
+This felt like it was really dependent on the indexing.
+
+32:25.820 --> 32:30.220
+So how do you go about choosing the right index?
+
+32:30.220 --> 32:34.700
+Or how do you go about constructing that initial array?
+
+32:34.700 --> 32:36.220
+Yeah, there are a lot of moving.
+
+32:36.220 --> 32:38.620
+There are a lot of algorithm decisions.
+
+32:38.620 --> 32:44.460
+So one, for example, would be to index them in terms of their range distance.
+
+32:45.340 --> 32:49.820
+Or you just put it back in terms of where they are in the image.
+
+32:49.820 --> 32:52.940
+Basically, there are countless variations of how you can do it.
+
+32:52.940 --> 32:55.180
+We provide you with an example in the pset2.
+
+32:55.820 --> 32:56.860
+But you're right.
+
+32:56.860 --> 32:59.180
+So as I said, the idea is simple.
+
+32:59.180 --> 33:01.420
+But making it work correctly is not so simple.
+
+33:01.980 --> 33:07.420
+Which actually give rise to the second algorithm that I want to mention, RANSAC.
+
+33:07.420 --> 33:11.340
+This is really super simple to implement and super robust.
+
+33:11.420 --> 33:13.260
+And actually, it's one of my favorite algorithms.
+
+33:13.980 --> 33:16.860
+It's simple, as I said, very robust.
+
+33:17.500 --> 33:19.340
+RANSAC, indeed, is an idea.
+
+33:19.340 --> 33:23.420
+So RANSAC, first of all, stands for random sample consensus.
+
+33:24.220 --> 33:29.580
+And it's a very general algorithm that allows you to estimate
+
+33:29.580 --> 33:33.900
+in a robust way parameters of a model, even in the presence of outliers.
+
+33:33.900 --> 33:40.780
+So I'm using RANSAC for the specific purpose of segmenting points on the line.
+
+33:41.740 --> 33:44.940
+But RANSAC can be used much more generally
+
+33:44.940 --> 33:49.500
+in order to find the correspondences between points across different images,
+
+33:49.500 --> 33:53.020
+finding planes in the 3D images, and so on.
+
+33:53.020 --> 33:55.580
+So the RANSAC concept, per se, is very, very general.
+
+33:57.580 --> 34:01.660
+So for example, when you want to do stereo matching,
+
+34:01.660 --> 34:07.020
+you have to find the correspondences between two images.
+
+34:07.660 --> 34:13.260
+Then most of the image processing pipeline out there
+
+34:13.260 --> 34:15.740
+use RANSAC in order to reject outliers.
+
+34:15.740 --> 34:18.060
+And we'll see in a second how that works.
+
+34:18.860 --> 34:25.020
+But anyway, the idea of RANSAC is to use an iterative randomized method
+
+34:25.020 --> 34:27.900
+in order to estimate parameters by rejecting outliers.
+
+34:28.540 --> 34:32.780
+Let's look at how it works for the case of line segmentation.
+
+34:33.580 --> 34:35.260
+So we have a bunch of points here.
+
+34:35.820 --> 34:40.220
+As a human, you might argue that this probably corresponds to a line.
+
+34:40.780 --> 34:41.980
+This maybe is also a line.
+
+34:44.060 --> 34:47.020
+So the way that the RANSAC algorithm works is extremely simple.
+
+34:47.660 --> 34:51.660
+You take two points, and then you compute the line
+
+34:51.660 --> 34:53.180
+that goes through those two points.
+
+34:53.180 --> 34:56.380
+Of course, there is only one line that goes through those two points.
+
+34:56.940 --> 34:59.500
+And then you compute the number of outliers,
+
+34:59.500 --> 35:03.340
+meaning the numbers of a point that are within a distance,
+
+35:03.340 --> 35:05.980
+how do we call it here, gamma maybe?
+
+35:06.940 --> 35:10.780
+Number that go, yeah, that are within a distance gamma from that line.
+
+35:12.620 --> 35:14.380
+And then I select the other two points,
+
+35:14.380 --> 35:16.300
+and then I compute the number of outliers.
+
+35:16.300 --> 35:19.020
+And I do that a certain number of times.
+
+35:19.020 --> 35:22.860
+And at the end, I choose the line with the maximum number of outliers.
+
+35:23.580 --> 35:26.620
+So the way it works, as I said, you take two points,
+
+35:26.620 --> 35:29.100
+like for example, this red point here and this red point here.
+
+35:30.380 --> 35:31.900
+You compute the line that goes through them.
+
+35:32.780 --> 35:34.380
+You compute the outliers,
+
+35:36.140 --> 35:39.900
+meaning those points whose distance is below a given threshold.
+
+35:39.900 --> 35:41.500
+So here I'm computing all the distances.
+
+35:42.140 --> 35:45.900
+I only keep the points whose distance is below a given threshold.
+
+35:45.900 --> 35:47.260
+This is a set of outliers.
+
+35:47.260 --> 35:51.020
+So for example, here I have one, two, three, four, six, seven, eight, nine.
+
+35:51.660 --> 35:53.420
+So this line has nine outliers.
+
+35:55.420 --> 35:57.900
+I do it for these other two points.
+
+35:57.900 --> 36:00.780
+And here I have three, seven, outliers.
+
+36:01.500 --> 36:02.300
+Keep doing that.
+
+36:02.300 --> 36:03.180
+Keep doing that.
+
+36:03.180 --> 36:06.060
+Until I'm lucky, I pick these two points,
+
+36:06.060 --> 36:07.900
+and I get a big number of outliers.
+
+36:10.060 --> 36:14.860
+At the end, I choose the line that has the largest number of outliers.
+
+36:15.580 --> 36:19.180
+In principle, in order to be exhaustive,
+
+36:19.180 --> 36:21.580
+you should consider all possible pairs.
+
+36:22.940 --> 36:26.940
+So you have, assume that you have in total n points.
+
+36:26.940 --> 36:29.420
+So how many pairs you will need to consider in total?
+
+36:31.020 --> 36:32.060
+The answer is already there.
+
+36:32.780 --> 36:35.820
+Is n times n minus 1 over 2,
+
+36:35.820 --> 36:39.820
+because of course, the order with which you pick the first point doesn't matter.
+
+36:42.460 --> 36:44.700
+Which in general is very large.
+
+36:45.900 --> 36:49.180
+So the idea of RANSAC is that you,
+
+36:49.180 --> 36:52.460
+and again, this is a very general idea that goes beyond the line fitting.
+
+36:52.460 --> 36:56.460
+It's not that you have to select all possible combinations,
+
+36:57.020 --> 37:00.540
+but if you have a little bit of a prior information
+
+37:00.540 --> 37:06.300
+in terms of how many outliers you should expect for a given geometric primitive,
+
+37:06.300 --> 37:09.420
+you can dramatically decrease the number of points that you need to consider.
+
+37:10.220 --> 37:11.020
+How?
+
+37:11.020 --> 37:16.060
+Let's assume that we have at least a rough estimate
+
+37:17.180 --> 37:26.140
+of the percentage number of outliers that a geometric primitive will have.
+
+37:26.780 --> 37:30.620
+For example, if you look at a line that is one meter long,
+
+37:30.620 --> 37:33.740
+and you have a given resolution for your slider,
+
+37:33.740 --> 37:37.820
+you maybe have a good sense that maybe the number of outliers should be maybe 100.
+
+37:38.380 --> 37:39.980
+So 100 total outliers,
+
+37:39.980 --> 37:41.580
+if you have one million points,
+
+37:41.580 --> 37:43.660
+that gives you the fraction of a layer that you should expect.
+
+37:44.860 --> 37:47.980
+So this is something that oftentimes you have.
+
+37:47.980 --> 37:51.020
+Even if you don't have, there are more advanced versions of RANSAC
+
+37:51.020 --> 37:54.060
+that are capable of identifying w,
+
+37:54.060 --> 37:57.580
+so the percentage of outliers in an adaptive way.
+
+37:57.580 --> 38:02.060
+So basically you will learn it as you proceed with RANSAC.
+
+38:02.780 --> 38:06.060
+So in particular, let's assume that w, the fraction of outliers,
+
+38:06.060 --> 38:10.780
+is something that we either know or we have a good estimate of it.
+
+38:11.980 --> 38:14.060
+So w is a fraction of outliers.
+
+38:15.580 --> 38:18.140
+And then let's assume that, so this is a randomized algorithm,
+
+38:18.140 --> 38:21.420
+let's assume that we have a desired probability
+
+38:22.300 --> 38:26.860
+of finding a set of points that is free of outliers.
+
+38:26.860 --> 38:29.580
+And that probability p, for example, could be 99%.
+
+38:32.620 --> 38:35.980
+So we want to run RANSAC a number of times
+
+38:35.980 --> 38:38.380
+such that with probability at least 99%,
+
+38:39.260 --> 38:41.980
+I select two points that are outliers.
+
+38:44.860 --> 38:46.460
+And this is again a design parameter.
+
+38:46.460 --> 38:49.100
+You can set it at 99.9% as you want.
+
+38:49.740 --> 38:54.780
+The question is, given the knowledge of the fraction of outliers,
+
+38:55.500 --> 39:02.860
+given the desired probability of finding two points that are indeed outliers,
+
+39:03.420 --> 39:07.500
+what is the number of times that I need to run RANSAC
+
+39:07.500 --> 39:10.860
+in order to find two outliers with probability at least 99%?
+
+39:14.380 --> 39:17.740
+The reason why we're doing that is because we want to run RANSAC
+
+39:17.820 --> 39:21.660
+a number of times that is much lower than capital N square.
+
+39:23.500 --> 39:28.140
+To answer that, we just need to do a little bit of probability.
+
+39:29.020 --> 39:35.580
+So the probability of selecting two outliers,
+
+39:35.580 --> 39:37.500
+so two points that belong to that line,
+
+39:38.860 --> 39:44.140
+assuming that the way we select points is independent,
+
+39:44.140 --> 39:47.260
+is W squared.
+
+39:47.260 --> 39:50.140
+Both points in LIGR.
+
+39:53.500 --> 39:54.000
+Yep?
+
+39:59.420 --> 40:00.780
+No, no, we don't know what the line is.
+
+40:01.740 --> 40:03.180
+So we know that there is a line.
+
+40:03.180 --> 40:04.460
+I mean, we assume that there is a line.
+
+40:05.180 --> 40:08.060
+And we assume that there are some outliers along that line.
+
+40:08.060 --> 40:09.500
+But we don't know which of them...
+
+40:14.380 --> 40:16.460
+Yes, we're trying to find the line.
+
+40:17.180 --> 40:19.660
+So we assume that there is a line in the environment,
+
+40:19.660 --> 40:21.980
+and with RANSAC we're trying to find it.
+
+40:23.260 --> 40:26.700
+It might be the case that after we run RANSAC a number of times,
+
+40:26.700 --> 40:29.500
+we find a number of outliers that is very small,
+
+40:29.500 --> 40:32.860
+which means that basically there is no line in your environment that is fine too.
+
+40:33.820 --> 40:35.420
+But the question is, if there is a line,
+
+40:36.380 --> 40:40.540
+can we find it after running RANSAC a given number of times
+
+40:40.540 --> 40:41.900
+with probability at least 99%?
+
+40:41.900 --> 40:44.780
+But of course, if there is no line,
+
+40:44.780 --> 40:46.460
+then RANSAC will not find that line.
+
+40:48.380 --> 40:52.220
+So the probability that both points are in LIGR is,
+
+40:53.420 --> 40:54.460
+when you select them,
+
+40:54.460 --> 40:58.620
+the probability that both points are in LIGRs will be W squared.
+
+40:59.740 --> 41:09.660
+So the probability that at least one of them is not an inlier,
+
+41:12.460 --> 41:15.580
+is equal to 1 minus W squared.
+
+41:16.700 --> 41:20.380
+So what is the probability that after k times that you run RANSAC,
+
+41:21.020 --> 41:23.340
+you don't pick two points that are in LIGRs?
+
+41:25.180 --> 41:26.380
+So the probability...
+
+41:28.460 --> 41:29.500
+How do we call it there?
+
+41:29.500 --> 41:30.620
+RANSAC never selects...
+
+41:34.060 --> 41:35.740
+Okay, RANSAC is unlucky.
+
+41:37.900 --> 41:41.500
+Unlucky means never selects two points that are both in LIGRs.
+
+41:41.980 --> 41:46.700
+Is 1 minus W squared to the power of k.
+
+41:49.420 --> 41:51.260
+Is unlucky after k trials.
+
+41:55.580 --> 41:57.180
+1 minus W squared.
+
+41:57.180 --> 41:59.100
+The reason why I go through this derivation is that
+
+41:59.100 --> 42:00.620
+RANSAC is a very important algorithm.
+
+42:00.620 --> 42:03.740
+So besides line fitting, it's used much more broadly.
+
+42:03.740 --> 42:06.780
+So I want to make sure that at least you are familiar with the basic concepts.
+
+42:06.780 --> 42:14.540
+Yeah, absolutely.
+
+42:14.540 --> 42:17.180
+That's why W is a really rough estimate.
+
+42:17.180 --> 42:22.060
+It's like a conceptual construct that you use in order to get a sense of
+
+42:22.060 --> 42:24.460
+how many iterations you may need.
+
+42:24.460 --> 42:26.620
+But yes, you never know W exactly.
+
+42:27.180 --> 42:29.900
+You just have some estimate that you use to
+
+42:29.900 --> 42:32.220
+guide your selection number of RANSAC iterations.
+
+42:32.220 --> 42:36.540
+I know, it seems scary, right?
+
+42:36.540 --> 42:40.300
+That the life of a person on an autonomous car depends on this.
+
+42:41.740 --> 42:42.380
+But it works.
+
+42:43.580 --> 42:46.940
+So that point cloud you showed us, and all the points there is,
+
+42:46.940 --> 42:50.620
+you can see as a human that there's a line of points that was denser than the rest of them.
+
+42:50.620 --> 42:54.700
+Yes, that means there are more in LIGRs.
+
+42:54.700 --> 42:59.660
+Yeah, would it be possible to cut down over points you have to check with RANSAC
+
+42:59.660 --> 43:05.340
+by only considering points that are in a certain density threshold, so you don't?
+
+43:06.140 --> 43:06.700
+You could.
+
+43:06.700 --> 43:11.100
+I mean, you could better inform RANSAC in order to tell RANSAC to focus on some regions.
+
+43:11.740 --> 43:12.620
+Certainly true.
+
+43:12.620 --> 43:15.820
+I mean, again, RANSAC, you have zillions of variations.
+
+43:15.820 --> 43:17.820
+This is really the most basic version of it.
+
+43:18.860 --> 43:20.460
+Just based on the version you presented,
+
+43:20.460 --> 43:23.420
+won't RANSAC only ever find one line, as you have provided?
+
+43:24.060 --> 43:28.460
+Yes, because we just picked the maximum number of layers.
+
+43:28.540 --> 43:31.500
+So then what you would do would be to remove all of these,
+
+43:31.500 --> 43:33.660
+and then RANSAC again to find that line.
+
+43:33.660 --> 43:34.160
+Yeah.
+
+43:35.820 --> 43:39.740
+So coming back to the equation of, wow, is this thing works?
+
+43:39.740 --> 43:43.980
+So I remember that when I first gave a ride on the autonomous car that I was working on
+
+43:44.940 --> 43:50.860
+a few years ago, and my wife was sitting on it, she was very fine,
+
+43:50.860 --> 43:52.380
+and oh wow, this works very well.
+
+43:52.380 --> 43:56.540
+And I was scared to death because I knew that this was the thing under the hood going.
+
+43:57.260 --> 44:01.740
+So the point being that after this class, if you happen to ride on an autonomous car,
+
+44:02.300 --> 44:06.380
+you'll see that you are much less relaxed about a person that is not knowledgeable
+
+44:06.380 --> 44:08.140
+about what there is behind.
+
+44:09.100 --> 44:09.600
+Yep.
+
+44:10.620 --> 44:13.260
+Anyway, no, but actually this works pretty well in practice.
+
+44:13.260 --> 44:16.460
+So even though we make all these approximations, it's a very robust algorithm.
+
+44:16.460 --> 44:23.180
+In particular, let's assume that we are confident about the W value.
+
+44:24.140 --> 44:31.500
+So the question is how many iterations you need in order to find a couple of outliers,
+
+44:31.500 --> 44:34.140
+so a pair of outliers so that actually you have a line.
+
+44:34.140 --> 44:43.260
+Well, as k grows larger, this quantity goes monotonically and synthetically to zero,
+
+44:43.260 --> 44:46.140
+which means that as k becomes larger and larger,
+
+44:46.140 --> 44:49.100
+the probability that you don't get to two points becomes lower and lower.
+
+44:49.820 --> 44:59.740
+In particular, you want to find a pair of outliers with a probability of at least 99%, say,
+
+44:59.740 --> 45:05.180
+which means that you want the probability of not finding the entire to be less than 1%.
+
+45:06.060 --> 45:17.740
+So you run RANSAC until 1 minus p is greater than or equal to 1 minus w square to the power of k.
+
+45:18.460 --> 45:22.060
+And you know that there is a k that is large enough such that this is true,
+
+45:22.060 --> 45:25.500
+because you know that as k goes to infinity, this goes to zero.
+
+45:30.220 --> 45:35.580
+In particular, basically you choose the k such that this is an equality.
+
+45:36.380 --> 45:38.220
+It's not really an equality because, of course,
+
+45:42.060 --> 45:46.140
+you may not find a k precisely that makes this equal to 1 minus p,
+
+45:46.140 --> 45:48.380
+but just for simplicity, let's assume it is an equality.
+
+45:49.260 --> 45:55.580
+So you then consider a number of iterations that is equal to log 1 minus p over log 1 minus w
+
+45:55.580 --> 46:01.500
+square. Again, this is basically a guideline that you use in order to tune your algorithm.
+
+46:02.140 --> 46:09.420
+The important point here is that k bar depends on w but not on n, which means that in general,
+
+46:09.420 --> 46:15.100
+with RANSAC, you need a number of iterations that is much lower than the total number of points.
+
+46:15.100 --> 46:19.980
+Since with LIDARs you have millions of points, that is a very important concept.
+
+46:20.540 --> 46:26.940
+Second of all, there are more advanced versions of RANSAC that actually retune the w in an adaptive
+
+46:26.940 --> 46:37.340
+way. All right, any questions here? RANSAC is useful for light fatigue but much more useful
+
+46:37.340 --> 46:41.820
+broadly. So if you stick with the field of robot autonomy, it's very likely that you will stumble
+
+46:41.820 --> 46:50.780
+upon RANSAC in the future. Third method for segmentation, Q-transform. This is a very cute
+
+46:51.740 --> 46:58.620
+idea and also quite widely used. So again, the idea is that we have a bunch of points.
+
+46:58.620 --> 47:03.820
+So you see that we have increasingly more refined ways of doing it. Of course, the more refined your
+
+47:03.820 --> 47:09.180
+method is, the more computation you need to do. So same problem, we have a bunch of points we want
+
+47:09.180 --> 47:17.580
+to find whether there is a line that goes through those points. So the idea of the Q-transform is
+
+47:18.860 --> 47:26.220
+simple but very clever. The idea is that, as we discussed before,
+
+47:29.340 --> 47:34.140
+a line in Cartesian coordinates is described as y equals mx plus b.
+
+47:35.100 --> 47:44.060
+Which means that if I give you a point with coordinates xi and yi,
+
+47:45.740 --> 47:52.620
+what is the set of possible lines that can go through that point? It will be this line, this line,
+
+47:52.620 --> 47:59.500
+this line, this line, and so on. And in particular, the set of lines that go through that point
+
+48:00.140 --> 48:06.220
+is the set of values m and b such that the yi's equal m xi's plus b.
+
+48:09.340 --> 48:11.340
+Which basically means that
+
+48:14.380 --> 48:15.180
+every point
+
+48:18.700 --> 48:28.380
+xy induces a set of possible values for the line that goes through that
+
+48:30.300 --> 48:33.740
+point. Specifically,
+
+48:37.580 --> 48:43.740
+the parameters of the line that go through that point are related through a linear equation.
+
+48:43.740 --> 48:55.500
+And in particular, the linear equation is b equals minus m xi plus y, which will be this.
+
+48:55.500 --> 49:05.900
+So a point has an associated line of parameters that could go through that
+
+49:07.100 --> 49:10.540
+point as a line. Does it make sense?
+
+49:15.020 --> 49:18.540
+So each one of these lines corresponds to a separate value of m and b.
+
+49:19.420 --> 49:25.340
+All those m, b values can be represented as a line in the m, b space.
+
+49:27.180 --> 49:34.540
+OK, so why is this a useful insight? Well, let's assume that now we have two points.
+
+49:35.820 --> 49:40.220
+So here we have xj, yj. So same idea here.
+
+49:43.420 --> 49:46.300
+There is an infinite amount of lines that can go through that point.
+
+49:46.860 --> 49:54.540
+But let's assume, but of course, there is only one line that goes through these two points.
+
+49:56.460 --> 50:03.580
+How will we detect that line in the m, b space? Well, let's assume that this is the
+
+50:03.580 --> 50:12.700
+m, b line associated with point i. And then we have another line that is associated with point
+
+50:13.340 --> 50:18.860
+j. Since there is only one line that goes through two points,
+
+50:20.860 --> 50:26.780
+the values of m, b of the line that goes through those two points is the intersection
+
+50:27.900 --> 50:35.820
+of the two lines in the m, b space. OK, so that's also an interesting insight.
+
+50:35.900 --> 50:37.980
+So any questions about this?
+
+50:40.940 --> 50:47.260
+So let's call m star, b star, the m, b parameters for this line.
+
+50:47.820 --> 50:54.620
+That will correspond to the coordinate of this point. So this will be m star. This will be b star.
+
+50:57.100 --> 51:04.620
+So the way that you use this intuition for line segmentation is as follows. That for each point,
+
+51:06.620 --> 51:19.980
+you have an induced set of m, b values. In particular, what you do is to grid the m, b space.
+
+51:22.540 --> 51:32.220
+And we say that each point votes for those m, b values that are possible for that point. So
+
+51:32.220 --> 51:40.140
+for example, for point i in the m, b grid, we will put a 1 here, a 1 here, a 1 here, a 1 here,
+
+51:40.140 --> 51:45.340
+1 here, 1 here, and so on. Because these are plausible parameters explaining the line going
+
+51:45.340 --> 51:50.540
+through that point. For this line here, it's too bad it's almost orthogonal. But actually,
+
+51:50.540 --> 51:55.900
+you will have one point here, one point here. Now, two points here, 1 plus 1, because both
+
+51:56.700 --> 52:01.420
+explain that line, 1, 1, 1, and so on. And of course, in general, you have many.
+
+52:02.380 --> 52:09.500
+And so you have accumulators. So each cell corresponds to an m, b value that is plausible
+
+52:10.060 --> 52:16.140
+for a given point. Here, we had the six points that had that value as plausible.
+
+52:17.100 --> 52:23.260
+So a typical result will be something like this. Now, you might say, well, but if you have
+
+52:23.420 --> 52:32.300
+multiple points, and all those points lie on the line, then you should have, for one cell,
+
+52:32.300 --> 52:37.020
+a very large number, and then ones, or very small numbers, for all the other ones.
+
+52:37.020 --> 52:42.060
+So why do we have this kind of fuzziness? Well, this is due, again, to measurement error,
+
+52:42.620 --> 52:49.740
+which means that the points, even if they are on the line in the real world, they may not be
+
+52:49.740 --> 52:55.900
+on the line in your image. So that's basically how, then, the hue transform approach for
+
+52:55.900 --> 53:04.860
+line segmentation works. Pick a point, you compute the m, b plausible values, and then you add the
+
+53:04.860 --> 53:11.660
+one for each cell in a discretized fashion that are intersected by that m, b line. And then you
+
+53:11.660 --> 53:16.060
+keep doing that for each point. Yeah? Can you decide the size of the
+
+53:16.300 --> 53:25.020
+error rate? That's a great question. The m is a tricky one, because it's a slope,
+
+53:25.740 --> 53:30.300
+so it's a tangent. So it goes back to, I think, the earlier question. This can go to infinity.
+
+53:30.300 --> 53:36.060
+So where do you stop? Tricky. And we see in a second how to address that.
+
+53:36.060 --> 53:41.100
+Because it's done the last 3D well, or? Oh, you mean for planes?
+
+53:41.100 --> 53:42.700
+Yeah. A little bit less.
+
+53:43.660 --> 53:44.160
+Yes.
+
+53:46.940 --> 53:53.820
+Going back to your question, let's go back to the polar equation of a line. Equivalently,
+
+53:53.820 --> 54:04.380
+a line can be written as x sinus of alpha plus y sinus of, sorry, x sinus of alpha plus
+
+54:05.340 --> 54:16.700
+x cosinus of alpha plus y sinus of alpha equal r. So given a point xi and yi,
+
+54:18.540 --> 54:26.700
+then the possible values alpha and r that define a line are related by a sinusoidal equation.
+
+54:26.700 --> 54:35.740
+So if I plot here, as depicted there, alpha and r
+
+54:38.460 --> 54:51.020
+as a body alpha, then I have a sinusoidal equation, and so on.
+
+54:51.340 --> 54:55.740
+So it's the same concept as before, but now instead of having a,
+
+54:56.940 --> 55:04.460
+so on each of these curves, we have a pair of alpha and r that represent a line that will go
+
+55:04.460 --> 55:11.980
+through the point xi and y. So same intuition, but while in nb space that the relation is a line,
+
+55:11.980 --> 55:15.420
+in the alpha and r space, this relation is a sinusoid.
+
+55:15.420 --> 55:23.420
+So wait, this is much better. Are you assuming that there's like an equal probability of lines
+
+55:23.420 --> 55:29.660
+having an alpha between 0 and 2 pi, whereas the probability of a line having an m decreases
+
+55:29.660 --> 55:35.820
+as m increases? Well, the thing is that with the m, you might have an m with very large values.
+
+55:35.820 --> 55:39.340
+Well, this one doesn't really make a difference. Alpha can be
+
+55:40.300 --> 55:47.820
+discretized with a constant resolution, and r is, if you remember, the distance of that line
+
+55:47.820 --> 55:53.980
+from the origin, and this is something that you can upper bound because you have an upper bound
+
+55:53.980 --> 55:59.180
+of the size of your environment. So you don't have any more this issue that one of the parameters
+
+55:59.180 --> 56:07.180
+will go to infinity. So you do the same thing, but now you have a domain for your grid that is much
+
+56:08.140 --> 56:12.060
+better well-defined. This goes back to your question earlier why I was considering
+
+56:12.060 --> 56:16.300
+polar coordinates. The third reason was exactly that specifically for Q-transform,
+
+56:16.300 --> 56:19.980
+that's the way to go in order to implement it. With xy, it wouldn't really work well.
+
+56:21.260 --> 56:29.740
+So then the algorithm is simple. So for each point, we have an induced sinusoidal line.
+
+56:30.460 --> 56:36.860
+So we take a discretization for the alpha angle, we compute the corresponding r value,
+
+56:37.740 --> 56:44.780
+as induced by the point xy and yi, and then we increase the accumulator, meaning the cell
+
+56:44.780 --> 56:52.460
+of the accumulator matrix H at coordinates alpha and r plus 1. And we do that for every
+
+56:52.460 --> 56:57.340
+discretization of alpha and, of course, for every point xy and yi that we have found. And then we
+
+56:57.340 --> 57:05.500
+choose alpha and r with the highest count. Let's look at an example. So here we have two lines,
+
+57:06.380 --> 57:13.500
+no clue where, so we don't know which point belongs to which line and even if we have a line.
+
+57:13.500 --> 57:22.220
+So for each point, we build a sinusoid in alpha r space. And as you can see here, we find the two
+
+57:22.220 --> 57:29.180
+intersections. These two intersections correspond to the alpha and r of the two lines, which is
+
+57:29.180 --> 57:37.980
+exactly what we have here reconstructed. Now in reality, the situation usually is a bit less
+
+57:37.980 --> 57:44.300
+clean because, of course, we have noise. So that would be the situation in alpha and r space. So
+
+57:44.300 --> 57:48.620
+we don't really have a clean intersection, but usually it's rather easy to find a cluster that
+
+57:48.620 --> 57:53.740
+really corresponds to an intersection. So this algorithm is quite neat because, as you see,
+
+57:53.740 --> 58:02.620
+we didn't have to make any complicated indexing policy or threshold choices and so on. So that's
+
+58:02.620 --> 58:08.700
+why this algorithm is quite widely used in practice. Robust, easy to implement and so on.
+
+58:10.700 --> 58:15.020
+You had two peaks and you could see that probably it's two lines,
+
+58:15.020 --> 58:23.100
+just one side or how many peaks you're expecting. No, in principle, you don't know how many
+
+58:23.100 --> 58:27.740
+peaks to expect. In general, yes, you have an upper bound. I mean, in a reasonable
+
+58:27.740 --> 58:32.220
+structural environment, it will be difficult to have one trillion lines. But
+
+58:32.780 --> 58:37.340
+no, in principle, this algorithm finds all the lines that are out there.
+
+58:37.980 --> 58:42.220
+So you would set a threshold for the peak and then choose a peak based on that?
+
+58:42.220 --> 58:42.720
+Yes.
+
+58:44.220 --> 58:49.260
+How do these three techniques compare in terms of speed over line?
+
+58:49.820 --> 58:56.780
+I mean, if you think about the computation behind all these techniques is extremely fast.
+
+58:56.780 --> 59:02.220
+So in terms of speed, they are all, nowadays with current processors, extremely fast.
+
+59:03.500 --> 59:11.500
+RANSAC has this advantage of being capable of being robust to outliers. So when you are in
+
+59:11.500 --> 59:16.700
+situations with a lot of outliers, RANSAC tends to be more robust, so preferable to QTransform.
+
+59:17.260 --> 59:22.460
+But RANSAC has all these additional parameters to tune, like W, the threshold, and so on.
+
+59:23.340 --> 59:29.740
+While this method is a bit less robust, does not have a statistical interpretation,
+
+59:29.740 --> 59:35.980
+but is almost free of tuning parameters. So I would say that if you are in a situation
+
+59:35.980 --> 59:42.060
+with a lot of outliers due to measurement noise or the environment that produces a lot of
+
+59:42.060 --> 59:46.380
+reflections for your layers so you get a lot of garbage, then RANSAC is the way to go.
+
+59:46.380 --> 59:51.420
+If you have anything clean environment, then QTransform deserves a try.
+
+59:53.980 --> 59:58.780
+You say how you choose the set of alphas or gradients to iterate through.
+
+59:58.780 --> 59:59.580
+How you choose what?
+
+59:59.580 --> 01:00:03.340
+The set of alphas, like the discrete set of alphas to test.
+
+01:00:04.780 --> 01:00:06.780
+How you choose the discretization for alphas?
+
+01:00:06.780 --> 01:00:07.280
+Yeah.
+
+01:00:07.980 --> 01:00:14.620
+Oh, yeah. When I said it's almost free of design parameters,
+
+01:00:14.620 --> 01:00:17.420
+I meant that it's not completely free of design parameters.
+
+01:00:17.420 --> 01:00:20.060
+One, obviously, is the discretization for alpha.
+
+01:00:20.060 --> 01:00:26.460
+The second one is the threshold with which you deem that there is a line.
+
+01:00:27.100 --> 01:00:31.020
+So those, again, are tuning parameters and a really dependent application.
+
+01:00:31.020 --> 01:00:33.740
+There is no good rule there. Yeah, absolutely.
+
+01:00:33.740 --> 01:00:39.980
+But usually between 50 and 100 values for alpha is plenty.
+
+01:00:39.980 --> 01:00:42.940
+All right.
+
+01:00:43.500 --> 01:00:46.060
+So let's talk about object recognition.
+
+01:00:46.700 --> 01:00:50.140
+And I'll be a little bit quicker here because by now,
+
+01:00:50.140 --> 01:00:54.060
+the standard to do object recognition is to use neural networks.
+
+01:00:54.060 --> 01:00:57.660
+But neural networks are the topic of the advanced version of this class,
+
+01:00:57.660 --> 01:00:59.420
+the one that I will teach in the winter.
+
+01:01:00.140 --> 01:01:03.260
+So here, in the last 20 minutes of this lecture,
+
+01:01:03.260 --> 01:01:07.100
+I'll tell you how people were doing stuff until 2012.
+
+01:01:07.900 --> 01:01:10.300
+And you also have a couple of problems, your p-sets,
+
+01:01:10.300 --> 01:01:14.380
+that ask you to do this.
+
+01:01:14.380 --> 01:01:18.860
+And you will soon recognize why people really embraced neural network response.
+
+01:01:18.860 --> 01:01:23.020
+They became a reliable solution.
+
+01:01:24.460 --> 01:01:28.140
+So the problem of object recognition
+
+01:01:28.140 --> 01:01:32.700
+is the problem of basically naming discrete objects in scene.
+
+01:01:33.260 --> 01:01:37.180
+Now, object recognition encompasses a wide range of problems
+
+01:01:37.180 --> 01:01:44.060
+like object detection, classification, scene, segmentation, and so on.
+
+01:01:44.060 --> 01:01:46.620
+So in principle, there are algorithms for each one of them.
+
+01:01:47.260 --> 01:01:52.300
+But in this class, we just broadly refer to all those problems as recognition.
+
+01:01:52.300 --> 01:01:57.500
+So basically, we have a blob, it's at the table, it's a human, it's a dog, and so on.
+
+01:01:57.500 --> 01:02:01.500
+Of course, this is a more refined understanding of the world
+
+01:02:01.500 --> 01:02:03.100
+beyond the geometric primitives.
+
+01:02:03.100 --> 01:02:06.620
+Geometric primitives help with object recognition,
+
+01:02:06.620 --> 01:02:08.540
+but in general, they're not alone,
+
+01:02:08.540 --> 01:02:12.300
+allow you to categorize an object as a dog, as a human, and so on.
+
+01:02:13.420 --> 01:02:14.620
+It's a very hard problem,
+
+01:02:14.620 --> 01:02:18.300
+probably one of the most important problems in computer vision,
+
+01:02:18.300 --> 01:02:20.540
+and of course, essential for an autonomous robot.
+
+01:02:20.540 --> 01:02:22.780
+The behavior of a robot should depend on
+
+01:02:22.780 --> 01:02:25.580
+whether you have a tree or a human in front of you.
+
+01:02:26.780 --> 01:02:28.460
+It's hard for a number of reasons.
+
+01:02:28.460 --> 01:02:30.940
+First, the world is made of a jumble of objects
+
+01:02:30.940 --> 01:02:35.500
+that tend to occlude each other with different poses, different scales.
+
+01:02:35.500 --> 01:02:37.100
+So that makes it very hard.
+
+01:02:37.100 --> 01:02:40.060
+And there is a lot of variability within each class of objects
+
+01:02:40.060 --> 01:02:43.660
+that you would like to classify.
+
+01:02:43.660 --> 01:02:47.980
+Like a human is, of course, different from a monkey,
+
+01:02:47.980 --> 01:02:49.980
+but they have a lot of similarities.
+
+01:02:49.980 --> 01:02:52.780
+So actually, trying to understand those differences
+
+01:02:52.780 --> 01:02:54.460
+can be quite difficult for a machine.
+
+01:02:55.260 --> 01:02:58.540
+Then in this class, we're going to look at three methods, classical ones,
+
+01:02:58.540 --> 01:03:00.540
+template matching, and bag of visual words.
+
+01:03:01.260 --> 01:03:05.980
+In particular, for the p-set, you will use template matching
+
+01:03:05.980 --> 01:03:07.500
+to recognize objects.
+
+01:03:08.300 --> 01:03:10.700
+You realize that it's neat,
+
+01:03:10.700 --> 01:03:14.780
+but you will use it in order to recognize a stop sign.
+
+01:03:14.780 --> 01:03:17.580
+You'll see that it's neat, but it has a number of drawbacks,
+
+01:03:18.140 --> 01:03:19.740
+which will motivate neural networks,
+
+01:03:19.740 --> 01:03:21.340
+even though we don't cover them in this class,
+
+01:03:21.340 --> 01:03:23.500
+we will cover them in 274B.
+
+01:03:23.500 --> 01:03:25.500
+But for a final project, actually,
+
+01:03:25.500 --> 01:03:28.300
+we will give you neural networks for object recognition.
+
+01:03:28.300 --> 01:03:30.540
+You will treat it as a black box.
+
+01:03:31.740 --> 01:03:35.340
+You will understand what there is behind the hood in 274B.
+
+01:03:35.340 --> 01:03:37.100
+The reason why we're using a neural network
+
+01:03:37.100 --> 01:03:39.100
+is that for your final project,
+
+01:03:39.100 --> 01:03:40.940
+you will have a fairly sophisticated robot
+
+01:03:40.940 --> 01:03:43.420
+that has to maneuver in a mock urban environment,
+
+01:03:43.420 --> 01:03:47.820
+so doing quite sophisticated tasks in terms of object detection,
+
+01:03:47.820 --> 01:03:50.620
+something that is already beyond what you can reliably achieve
+
+01:03:50.620 --> 01:03:53.180
+with template matching or bag of visual words.
+
+01:03:53.180 --> 01:03:55.180
+But at least I want to give you some intuition.
+
+01:03:55.180 --> 01:03:58.060
+It's always used to, even if you use more sophisticated tools,
+
+01:03:58.460 --> 01:04:00.460
+it's useful to understand where those tools come from.
+
+01:04:02.140 --> 01:04:06.220
+So let's assume that we consider the easiest possible problem
+
+01:04:06.220 --> 01:04:08.940
+in object recognition, that is object detection.
+
+01:04:08.940 --> 01:04:10.380
+You know what you're looking for.
+
+01:04:10.380 --> 01:04:13.500
+You want to see if that thing is in the image.
+
+01:04:14.060 --> 01:04:15.580
+So let's just, I don't know if you're familiar
+
+01:04:15.580 --> 01:04:17.980
+with the stream of books, Where is Waldo?
+
+01:04:17.980 --> 01:04:22.220
+But, so there is Waldo, and here there's a bunch of people.
+
+01:04:22.940 --> 01:04:25.580
+The question is, you know that there is Waldo there,
+
+01:04:25.580 --> 01:04:26.780
+but where is Waldo exactly?
+
+01:04:29.260 --> 01:04:31.660
+This is, of course, an easy problem
+
+01:04:31.660 --> 01:04:33.180
+because you already know what you're looking for.
+
+01:04:34.220 --> 01:04:36.620
+But still it's complicated because you have a lot of people.
+
+01:04:37.340 --> 01:04:38.300
+Do you know where Waldo is?
+
+01:04:43.420 --> 01:04:44.220
+Okay, fine.
+
+01:04:44.780 --> 01:04:50.460
+All right, so the solution that I'm going to discuss
+
+01:04:50.460 --> 01:04:52.620
+is actually a straightforward application
+
+01:04:52.620 --> 01:04:56.220
+of what we discussed last time, which is linear filtering.
+
+01:04:56.780 --> 01:04:59.740
+The idea is to view the image as an image,
+
+01:04:59.740 --> 01:05:03.660
+and then the object that you are looking for
+
+01:05:03.660 --> 01:05:05.740
+as a template or a filter
+
+01:05:05.740 --> 01:05:08.300
+with respect to which you apply a correlation.
+
+01:05:08.860 --> 01:05:11.420
+So you remember that the notion of a correlation
+
+01:05:11.420 --> 01:05:15.180
+is to have a mask that you slide across the image.
+
+01:05:15.180 --> 01:05:18.460
+For each pixel, you look locally at whether,
+
+01:05:19.020 --> 01:05:22.700
+at the weighty, the combination between the filter
+
+01:05:22.700 --> 01:05:27.180
+and the neighborhood of pixels around that pixel.
+
+01:05:27.820 --> 01:05:32.060
+You can view that correlation as basically measuring a similarity.
+
+01:05:32.060 --> 01:05:35.340
+And we will see that a little bit more clearly in a second.
+
+01:05:35.340 --> 01:05:39.100
+But it is basically to reinterpret the problem of object detection
+
+01:05:39.100 --> 01:05:42.780
+as a problem of linear filtering, where we apply correlation.
+
+01:05:43.340 --> 01:05:45.820
+Remember the formula of a correlation.
+
+01:05:45.820 --> 01:05:47.100
+The idea is that we have an image,
+
+01:05:47.100 --> 01:05:49.100
+we want to produce an output image
+
+01:05:49.900 --> 01:05:53.980
+where the value of each pixel in the output image
+
+01:05:53.980 --> 01:05:57.820
+is average according to some mask f
+
+01:05:58.780 --> 01:06:01.100
+of the values of the original image
+
+01:06:01.100 --> 01:06:03.420
+in the neighborhood of each pixel i, j.
+
+01:06:05.260 --> 01:06:06.380
+Is that clear from last time?
+
+01:06:08.380 --> 01:06:10.460
+So you can rewrite,
+
+01:06:10.460 --> 01:06:12.380
+that's what also you will do in your pset,
+
+01:06:13.020 --> 01:06:16.540
+the correlation as the dot product between two vectors.
+
+01:06:16.540 --> 01:06:18.860
+And the idea is relatively simple.
+
+01:06:18.860 --> 01:06:19.980
+So what you do is...
+
+01:06:25.260 --> 01:06:30.380
+So say that you have a matrix f
+
+01:06:32.860 --> 01:06:38.700
+with rows f1, f2, fn.
+
+01:06:40.060 --> 01:06:45.660
+Then you can form a vector f equal to f1, f2,
+
+01:06:46.380 --> 01:06:49.500
+whereby essentially you concatenate the rows.
+
+01:06:54.460 --> 01:06:56.540
+For the pixel neighborhood,
+
+01:06:56.540 --> 01:07:02.460
+so the patch of the image i centered at the pixel x, y,
+
+01:07:02.460 --> 01:07:04.220
+whereas for the neighborhoods i, j,
+
+01:07:04.220 --> 01:07:08.460
+where the i, j is the neighborhood of the image,
+
+01:07:08.460 --> 01:07:09.340
+you can do the same thing.
+
+01:07:09.340 --> 01:07:12.220
+From the matrix you can put it in a vector form.
+
+01:07:12.780 --> 01:07:15.420
+Now the reason why here we have a subscript
+
+01:07:15.420 --> 01:07:25.180
+is that this vector depends on the index of the pixel clash notation.
+
+01:07:25.180 --> 01:07:27.660
+I should have put a subscript here, x and y.
+
+01:07:28.540 --> 01:07:30.620
+While in your pset you have i, j.
+
+01:07:30.620 --> 01:07:31.420
+Sorry for that.
+
+01:07:31.420 --> 01:07:35.980
+So to be consistent with this notation, t subscript x and y,
+
+01:07:35.980 --> 01:07:38.460
+because this vector depends on the pixel
+
+01:07:39.260 --> 01:07:41.100
+at which currently your mask is centered.
+
+01:07:42.940 --> 01:07:45.340
+And this vector obviously depends on that pixel.
+
+01:07:45.820 --> 01:07:51.980
+So then you can just rewrite this linear combination as a dot product.
+
+01:07:51.980 --> 01:07:55.660
+Remember that the dot product is the sum of the products
+
+01:07:55.660 --> 01:07:59.180
+of the components of these vectors.
+
+01:08:02.140 --> 01:08:03.180
+So this is a dot product.
+
+01:08:03.180 --> 01:08:05.660
+So the intuition of a dot product, if you will,
+
+01:08:05.660 --> 01:08:08.060
+is to see alignments between two vectors.
+
+01:08:09.340 --> 01:08:12.460
+So in particular, if the two vectors are normalized,
+
+01:08:12.540 --> 01:08:16.460
+the dot product is maximum when these two vectors are equal.
+
+01:08:17.900 --> 01:08:21.980
+Which basically induces us to consider the problem of object detection
+
+01:08:21.980 --> 01:08:24.540
+as a problem of normalized correlation.
+
+01:08:24.540 --> 01:08:29.180
+Whereby we do the correlation for simplicity just expressed as a dot product,
+
+01:08:29.180 --> 01:08:36.940
+but where we normalize it in order that if the neighborhood around x and y,
+
+01:08:36.940 --> 01:08:42.380
+so this y, j here, looks exactly like the mask f,
+
+01:08:43.020 --> 01:08:44.620
+then this dot product is equal to 1.
+
+01:08:46.380 --> 01:08:50.940
+Which has the intuition that the feature that has the notion of a template
+
+01:08:50.940 --> 01:08:53.500
+exactly looks like the neighborhood around x, y,
+
+01:08:53.500 --> 01:08:55.260
+which means that we have found Waldo.
+
+01:08:55.260 --> 01:08:55.980
+Does it make sense?
+
+01:09:00.140 --> 01:09:01.100
+Any questions about it?
+
+01:09:01.100 --> 01:09:04.460
+Can we compose filters of different scale and location?
+
+01:09:05.100 --> 01:09:06.140
+Yep, in a second.
+
+01:09:06.940 --> 01:09:10.380
+So that will be the result.
+
+01:09:10.380 --> 01:09:13.420
+So you do this sliding.
+
+01:09:14.380 --> 01:09:17.340
+So you slide this template across the full image,
+
+01:09:18.620 --> 01:09:21.660
+and then, ta-da, you have a peak.
+
+01:09:22.540 --> 01:09:23.980
+And that's where you put your bounding box.
+
+01:09:24.620 --> 01:09:26.940
+In fact, I mean, this is not PPT.
+
+01:09:26.940 --> 01:09:28.620
+This is done for real.
+
+01:09:29.820 --> 01:09:30.620
+This was Waldo.
+
+01:09:32.380 --> 01:09:34.380
+And that's exactly where we found the peak.
+
+01:09:35.740 --> 01:09:36.380
+Isn't that neat?
+
+01:09:37.500 --> 01:09:40.300
+Also, it's a nice application of linear filtering.
+
+01:09:40.300 --> 01:09:44.380
+So it allows you to appreciate what the linear filters are
+
+01:09:44.380 --> 01:09:47.900
+and also very clever use of linear filtering
+
+01:09:47.900 --> 01:09:49.180
+in order to do object detection.
+
+01:09:49.820 --> 01:09:55.020
+Now, the problem here is that we have basically assumed
+
+01:09:56.780 --> 01:10:01.260
+that we more or less know the scale of the object that we're looking for.
+
+01:10:03.100 --> 01:10:06.460
+But what if I get all of a sudden much closer to the image,
+
+01:10:06.460 --> 01:10:08.780
+meaning that the Waldo becomes much larger?
+
+01:10:08.780 --> 01:10:13.500
+Now I have a template that is much smaller
+
+01:10:13.500 --> 01:10:15.340
+than the object I'm trying to detect.
+
+01:10:15.980 --> 01:10:18.140
+In that case, I would not have detection.
+
+01:10:20.460 --> 01:10:21.900
+How do we address that?
+
+01:10:21.900 --> 01:10:23.500
+Well, the idea is fairly easy.
+
+01:10:24.380 --> 01:10:30.220
+The idea is, in order to address this problem of sizing,
+
+01:10:30.220 --> 01:10:33.500
+we just rescale an image up and down
+
+01:10:34.380 --> 01:10:36.060
+according to many different scales.
+
+01:10:36.540 --> 01:10:39.580
+And we do template matching with respect to each scale.
+
+01:10:40.380 --> 01:10:42.620
+And if we have a match at a given scale,
+
+01:10:42.620 --> 01:10:46.220
+then we say that we have found an object.
+
+01:10:46.780 --> 01:10:49.740
+This idea gives rise to the idea of image pyramids
+
+01:10:49.740 --> 01:10:53.580
+because we have a pyramidal structure of images,
+
+01:10:53.580 --> 01:10:55.900
+one per scale, like here.
+
+01:10:55.900 --> 01:10:56.940
+View this as a pyramid.
+
+01:10:59.340 --> 01:11:01.020
+So this means that we want to both,
+
+01:11:01.020 --> 01:11:04.060
+so we have an image, we want to downscale it
+
+01:11:04.060 --> 01:11:05.580
+and we want to upscale it.
+
+01:11:05.580 --> 01:11:09.340
+In the hope that at some scale we have the...
+
+01:11:09.980 --> 01:11:10.540
+Is it cute?
+
+01:11:10.540 --> 01:11:11.900
+Now you can see in a second why it is cute.
+
+01:11:13.020 --> 01:11:16.220
+It means that at some scale, if there is an object,
+
+01:11:16.220 --> 01:11:17.500
+you will find it with a template.
+
+01:11:18.940 --> 01:11:21.020
+How do we subsample an image?
+
+01:11:21.020 --> 01:11:25.660
+So possible way of doing it will be just to keep
+
+01:11:25.660 --> 01:11:27.820
+only some rows and some columns.
+
+01:11:27.820 --> 01:11:29.420
+Like for example, if I give you this image
+
+01:11:30.140 --> 01:11:33.340
+where there is a small chicken and this is a mouse.
+
+01:11:33.340 --> 01:11:33.980
+How do we call it?
+
+01:11:34.860 --> 01:11:37.100
+Mouse, yeah, cute mouse.
+
+01:11:39.260 --> 01:11:41.660
+Say that you want to subsample in such a way
+
+01:11:41.660 --> 01:11:43.580
+that we reduce the width by half.
+
+01:11:43.580 --> 01:11:46.140
+You might say, okay, we remove every other column.
+
+01:11:47.420 --> 01:11:50.300
+Well, if you do that, the chicken is gone.
+
+01:11:52.940 --> 01:11:54.620
+Because basically the way that it worked
+
+01:11:55.180 --> 01:11:56.940
+is that every other line,
+
+01:11:56.940 --> 01:11:58.940
+there was the overlaid image of the chicken
+
+01:11:58.940 --> 01:12:01.740
+and every other line, the image of the mouse.
+
+01:12:02.620 --> 01:12:04.780
+If I just remove every other line,
+
+01:12:04.780 --> 01:12:07.500
+the ones that were giving you the chicken,
+
+01:12:07.500 --> 01:12:08.300
+then that is gone.
+
+01:12:08.940 --> 01:12:10.060
+So we miss information.
+
+01:12:11.660 --> 01:12:12.620
+So what's happening here?
+
+01:12:13.820 --> 01:12:18.540
+That in this picture, I had very high frequency components.
+
+01:12:18.540 --> 01:12:20.540
+These are the factors that was constantly changing,
+
+01:12:21.420 --> 01:12:23.340
+interlacing the image of the chicken
+
+01:12:23.340 --> 01:12:24.940
+with the image of the mouse.
+
+01:12:24.940 --> 01:12:27.180
+So if you're familiar with signal processing,
+
+01:12:27.180 --> 01:12:28.860
+then you are familiar with the notion
+
+01:12:28.860 --> 01:12:30.860
+of a Nyquist frequency.
+
+01:12:30.860 --> 01:12:35.900
+Basically you don't want to sample at a frequency
+
+01:12:35.900 --> 01:12:37.820
+that creates the aliasing.
+
+01:12:37.820 --> 01:12:39.420
+And this is exactly what is happening here.
+
+01:12:40.540 --> 01:12:42.300
+So if you're familiar with signal processing,
+
+01:12:42.300 --> 01:12:44.780
+in order to avoid this problem, what will you do?
+
+01:12:45.740 --> 01:12:47.980
+So here the problem is that we have frequencies
+
+01:12:47.980 --> 01:12:50.300
+that were too high for this subsampling procedure.
+
+01:12:52.140 --> 01:12:57.420
+So what you do is basically to remove those high frequencies
+
+01:12:58.140 --> 01:13:00.380
+in such a way that the subsampling is more robust.
+
+01:13:01.260 --> 01:13:04.780
+How do you basically remove high frequencies?
+
+01:13:06.700 --> 01:13:09.420
+So for example, we already looked at this when we removed noise.
+
+01:13:09.420 --> 01:13:12.220
+Noise can be seen as basically high frequency content in the image.
+
+01:13:12.220 --> 01:13:14.140
+To remove it, we blurred it.
+
+01:13:14.140 --> 01:13:14.780
+Yeah?
+
+01:13:14.780 --> 01:13:18.540
+Did you put a filter that caps off at a certain frequency or something?
+
+01:13:18.540 --> 01:13:20.940
+Yeah, which is basically what Gaussian Blur does.
+
+01:13:22.140 --> 01:13:27.260
+That basically smoothing out so that the frequency content is...
+
+01:13:27.260 --> 01:13:28.940
+Again, if you are familiar with signal processing,
+
+01:13:28.940 --> 01:13:29.740
+this is fairly obvious.
+
+01:13:29.740 --> 01:13:31.340
+If you are not familiar with signal processing,
+
+01:13:31.340 --> 01:13:32.460
+this is not so obvious.
+
+01:13:33.100 --> 01:13:36.060
+But at least visually, this is what happens.
+
+01:13:36.060 --> 01:13:37.980
+We are given again the picture as before.
+
+01:13:38.860 --> 01:13:41.820
+But now we do Gaussian Blurring first,
+
+01:13:42.460 --> 01:13:46.620
+which means that it smears out the high frequency content.
+
+01:13:46.620 --> 01:13:49.420
+That's how it will look like with Gaussian Blurring.
+
+01:13:49.420 --> 01:13:52.300
+Now with subsample, and that's what we'll get.
+
+01:13:52.300 --> 01:13:52.940
+Much better.
+
+01:13:54.940 --> 01:13:58.140
+So this means that in order to subsample,
+
+01:13:58.140 --> 01:13:59.420
+what you have to do is fairly simple.
+
+01:13:59.980 --> 01:14:02.860
+You first blur your image with a Gaussian filter,
+
+01:14:02.860 --> 01:14:05.980
+and then you keep every other column or every other row.
+
+01:14:06.780 --> 01:14:09.100
+And that's something that you will do in the pset as well.
+
+01:14:09.740 --> 01:14:11.260
+So subsampling is easy.
+
+01:14:12.620 --> 01:14:14.620
+Upsampling is also relatively easy,
+
+01:14:14.620 --> 01:14:17.340
+but now what you have to do is to do interpolation.
+
+01:14:17.980 --> 01:14:20.540
+And there are a number of ways to do interpolation,
+
+01:14:20.540 --> 01:14:23.740
+like a cubic interpolation, nearest neighbor, bilinear.
+
+01:14:23.740 --> 01:14:25.180
+Bilinear is a particularly good one.
+
+01:14:26.540 --> 01:14:29.420
+We're not going to go into the details of interpolation.
+
+01:14:29.820 --> 01:14:32.620
+But the key point is that interpolation can be seen
+
+01:14:32.620 --> 01:14:34.460
+as a linear filtering procedure,
+
+01:14:34.460 --> 01:14:37.260
+and that's exactly what you will do in the pset.
+
+01:14:37.260 --> 01:14:40.460
+So in the pset, basically, you would use subsampling, upsampling.
+
+01:14:42.540 --> 01:14:44.700
+Actually, not all of you, just the graduate students.
+
+01:14:44.700 --> 01:14:45.820
+This is the extra problem.
+
+01:14:46.780 --> 01:14:49.820
+So sorry, you and I, it's not for you.
+
+01:14:49.820 --> 01:14:51.100
+But you can always do it.
+
+01:14:51.100 --> 01:14:51.820
+It's kind of fun.
+
+01:14:54.220 --> 01:14:55.420
+And now that you have pyramids,
+
+01:14:55.420 --> 01:14:57.980
+then you will do template matching with respect to each scale.
+
+01:15:00.540 --> 01:15:04.860
+Okay, this is one way of doing object detection.
+
+01:15:05.820 --> 01:15:08.300
+But this basically assumes that you know what you're looking for,
+
+01:15:08.300 --> 01:15:10.140
+and you have a template for what you're looking for.
+
+01:15:10.940 --> 01:15:15.740
+A much more powerful approach is the so-called bags of visual words.
+
+01:15:15.740 --> 01:15:18.700
+And it can be quick, quick in terms of two-minute quick.
+
+01:15:19.980 --> 01:15:28.060
+So the idea of the bag of visual words is that we interpret images
+
+01:15:28.060 --> 01:15:34.460
+as a distribution of features, also referred to as visual words.
+
+01:15:34.460 --> 01:15:36.700
+The reason why we call them visual words
+
+01:15:36.700 --> 01:15:39.580
+is because this technique is very much related to document retrieval.
+
+01:15:40.140 --> 01:15:45.980
+So in particular, the idea is that we have a dictionary of basic features
+
+01:15:45.980 --> 01:15:47.740
+that you might find in a picture.
+
+01:15:48.860 --> 01:15:52.620
+Then what we do is that once we have a picture at query time,
+
+01:15:53.500 --> 01:16:00.220
+we look at the frequency whereby each one of these possible visual words appear.
+
+01:16:00.220 --> 01:16:02.540
+So for example, this one appears a lot,
+
+01:16:02.540 --> 01:16:04.860
+this doesn't appear much, and so on.
+
+01:16:04.860 --> 01:16:07.420
+So then what we do is we take this histogram,
+
+01:16:07.420 --> 01:16:10.940
+we compare it with the histograms of images
+
+01:16:10.940 --> 01:16:14.140
+that we have in a database that we have used for training,
+
+01:16:14.140 --> 01:16:15.500
+and we find the closest match.
+
+01:16:18.860 --> 01:16:20.620
+There are a lot of things, of course,
+
+01:16:20.620 --> 01:16:23.820
+how do I come up with this dictionary,
+
+01:16:23.820 --> 01:16:27.740
+how do I do the comparison with the images in the database
+
+01:16:29.180 --> 01:16:31.660
+in a feature way, and so on and so forth.
+
+01:16:31.660 --> 01:16:33.580
+We're not going to go into the details of that.
+
+01:16:33.580 --> 01:16:34.940
+But this is just to say that,
+
+01:16:34.940 --> 01:16:39.180
+and this was one of the most popular algorithms for object recognition.
+
+01:16:39.180 --> 01:16:41.740
+Again, the idea, just a high-level idea,
+
+01:16:41.740 --> 01:16:46.220
+is to view an image as a bunch of features
+
+01:16:46.220 --> 01:16:48.060
+with both a detector and a descriptor,
+
+01:16:48.700 --> 01:16:57.420
+and then form an histogram that gives the frequencies of each feature
+
+01:16:57.420 --> 01:17:00.380
+as a store in a given dictionary.
+
+01:17:00.380 --> 01:17:02.860
+Of course, this dictionary should be large enough
+
+01:17:02.860 --> 01:17:05.500
+in order to account for all the possible things
+
+01:17:05.500 --> 01:17:07.420
+that you could see in the world, but not too large.
+
+01:17:07.420 --> 01:17:10.780
+Otherwise, it becomes very difficult to do a match.
+
+01:17:11.420 --> 01:17:14.540
+And then you do matching with a set of images
+
+01:17:14.540 --> 01:17:17.580
+that you have in a database that become your reference images
+
+01:17:17.580 --> 01:17:18.940
+in order to do classification.
+
+01:17:19.660 --> 01:17:20.860
+Does it make sense, more or less?
+
+01:17:23.420 --> 01:17:25.500
+So this was basically the de facto standard
+
+01:17:25.500 --> 01:17:29.660
+for object classification until about seven, eight years ago,
+
+01:17:29.660 --> 01:17:30.540
+which is kind of amazing.
+
+01:17:30.540 --> 01:17:33.420
+When I was doing my PhD, that was like this thing,
+
+01:17:33.980 --> 01:17:37.900
+but now everything has been overtaken by neural nets.
+
+01:17:37.900 --> 01:17:39.980
+So not just for future description,
+
+01:17:40.620 --> 01:17:44.700
+but also, and most importantly, for recognition.
+
+01:17:44.700 --> 01:17:46.780
+The interesting thing of neural nets
+
+01:17:46.780 --> 01:17:49.900
+is that many of the concepts that we talked about,
+
+01:17:49.900 --> 01:17:53.100
+like template matching, representing figures
+
+01:17:53.100 --> 01:17:59.580
+as frequency histograms of basis visual words and so on,
+
+01:17:59.580 --> 01:18:02.700
+are implicitly learned by a neural network.
+
+01:18:02.700 --> 01:18:05.900
+So it's not that a neural network does something completely different
+
+01:18:05.900 --> 01:18:07.820
+from what it was done before.
+
+01:18:07.820 --> 01:18:10.860
+It's just that what people were painfully doing
+
+01:18:10.860 --> 01:18:14.860
+in terms of coming up with all the right templates and so on
+
+01:18:14.940 --> 01:18:19.660
+is now basically implicitly encoded through learning
+
+01:18:19.660 --> 01:18:20.700
+into a neural network.
+
+01:18:22.060 --> 01:18:25.100
+To the point that now this is the most reliable thing
+
+01:18:25.100 --> 01:18:27.180
+that you can use in order for object recognition,
+
+01:18:27.180 --> 01:18:29.580
+and indeed what you will be using for your final project.
+
+01:18:29.580 --> 01:18:31.020
+As I said, as a black box.
+
+01:18:31.020 --> 01:18:33.740
+So for you, it will be just an input-output box.
+
+01:18:33.740 --> 01:18:36.300
+You put an image in, you get a category out.
+
+01:18:37.020 --> 01:18:38.620
+The details will be into 74p.
+
+01:18:39.500 --> 01:18:42.860
+All right, so this was the last lecture for robot perception.
+
+01:18:42.860 --> 01:18:45.420
+I hope that I give you a good overview
+
+01:18:45.420 --> 01:18:47.500
+of what robot perception entails
+
+01:18:47.500 --> 01:18:50.380
+in terms of 3D world reconstruction,
+
+01:18:50.380 --> 01:18:51.500
+how a camera works,
+
+01:18:51.500 --> 01:18:53.660
+how you extract information about basic ones,
+
+01:18:53.660 --> 01:18:55.580
+axiomatic primitives, and more advanced ones.
+
+01:18:56.220 --> 01:19:03.820
+On Tuesday next week, we'll talk about localization.
+
+01:19:03.820 --> 01:19:08.220
+So the first step to do so will be to give an introduction
+
+01:19:08.220 --> 01:19:10.620
+to filtering theory, and then we will use that
+
+01:19:10.620 --> 01:19:13.340
+in order to solve the problem localization and mapping.
+
+01:19:13.340 --> 01:19:14.780
+Tomorrow, for the graduate students,
+
+01:19:14.780 --> 01:19:19.020
+will be a more advanced lecture
+
+01:19:19.020 --> 01:19:21.260
+on modern computer vision techniques.
+
+01:19:22.540 --> 01:19:25.500
+All right, see you tomorrow.
+

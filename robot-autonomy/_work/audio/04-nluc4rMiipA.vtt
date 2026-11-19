@@ -1,0 +1,4430 @@
+WEBVTT
+
+00:00.000 --> 00:10.760
+All right, so today we're going to continue our discussion about trajectory planning
+
+00:10.760 --> 00:13.200
+and trajectory optimization.
+
+00:13.200 --> 00:17.940
+So last time we formulated the trajectory optimization problem.
+
+00:17.940 --> 00:23.280
+We discussed at a high level what are the possible methodologies out there to tackle
+
+00:23.280 --> 00:25.780
+the trajectory optimization problem.
+
+00:25.780 --> 00:34.620
+In particular, we discussed two main classes of approaches, direct methods and indirect
+
+00:34.620 --> 00:35.620
+methods.
+
+00:35.620 --> 00:42.300
+They try to compute a feasible trajectory that on top of that optimizes some cost function
+
+00:42.300 --> 00:45.740
+by using different philosophies.
+
+00:45.740 --> 00:52.420
+The topic of indirect methods is a bit more advanced than this class that is covered in
+
+00:52.420 --> 00:53.860
+a class that I teach in the spring.
+
+00:54.300 --> 00:56.200
+I'll just give you the high level ideas.
+
+00:56.200 --> 00:58.100
+And on Friday, meaning tomorrow,
+
+00:58.100 --> 01:00.700
+I will go a little bit deeper into this topic.
+
+01:01.960 --> 01:06.700
+But what we did was to say, well, many times
+
+01:06.700 --> 01:09.380
+we don't really want a necessary and optimal solution.
+
+01:09.380 --> 01:11.700
+A feasible solution that is good enough
+
+01:11.700 --> 01:14.220
+as long as I can compute it quickly
+
+01:14.220 --> 01:17.540
+will be sufficient for the purposes of trajectory planning.
+
+01:17.540 --> 01:19.420
+And we found out that there is a technique
+
+01:19.420 --> 01:21.260
+referred to as differential flatness
+
+01:21.260 --> 01:23.660
+that allow us to do precisely that.
+
+01:23.660 --> 01:26.060
+For a specific class of systems that have the property
+
+01:26.060 --> 01:28.820
+of differential flatness, it is possible to compute
+
+01:28.820 --> 01:30.780
+a good enough trajectory very quickly.
+
+01:30.780 --> 01:34.540
+Indeed, to turn the problem of computing
+
+01:34.540 --> 01:38.140
+a feasible trajectory into an algebraic problem
+
+01:38.140 --> 01:43.020
+to compute the same coefficients of parameterization
+
+01:43.020 --> 01:44.260
+of a feasible trajectory.
+
+01:45.420 --> 01:48.460
+So today, we are going to continue this discussion
+
+01:48.460 --> 01:50.340
+along three main lines.
+
+01:50.340 --> 01:53.460
+First of all, we're going to talk a little bit more
+
+01:54.100 --> 01:57.300
+in detail about how to account for constraints
+
+01:57.300 --> 01:59.700
+in the context of differential flatness.
+
+01:59.700 --> 02:01.380
+If you remember last time,
+
+02:01.380 --> 02:04.220
+we just computed a trajectory,
+
+02:04.220 --> 02:07.340
+but we did not explicitly enforce any constraints
+
+02:07.340 --> 02:08.700
+in the flat outer space.
+
+02:08.700 --> 02:13.020
+With a consequence that in the real state space,
+
+02:13.020 --> 02:14.780
+we might have a trajectory that violates
+
+02:14.780 --> 02:15.860
+the sum of the constraints.
+
+02:15.860 --> 02:20.020
+So the question is, how do we encode constraints,
+
+02:20.020 --> 02:22.540
+in particular input bound constraints
+
+02:22.540 --> 02:24.340
+in differential flatness context?
+
+02:25.340 --> 02:28.220
+The second topic will be, okay, now we have a way
+
+02:28.220 --> 02:30.100
+to compute an open loop trajectory.
+
+02:30.100 --> 02:33.260
+We go back to the two-step design that we discussed
+
+02:33.260 --> 02:34.180
+last time.
+
+02:34.180 --> 02:37.180
+How do we augment an open loop trajectory
+
+02:37.180 --> 02:41.380
+with a tacking controller that imbues some robustness
+
+02:41.380 --> 02:42.980
+in the overall control scheme?
+
+02:44.500 --> 02:49.500
+Finally, we're going to discuss closed loop control.
+
+02:50.500 --> 02:52.300
+And in particular, we're going to discuss
+
+02:52.300 --> 02:54.540
+a specific application of closed loop control
+
+02:54.540 --> 02:58.740
+to posture stabilization that is going to be used,
+
+02:58.740 --> 03:03.140
+as we will see, in conjunction with the two-step design
+
+03:03.140 --> 03:06.860
+in order to have an end-to-end trajectory planning module
+
+03:06.860 --> 03:08.980
+for your differential drive robots
+
+03:08.980 --> 03:11.220
+that is robust and efficient.
+
+03:11.220 --> 03:13.020
+So these are the three main topics
+
+03:13.020 --> 03:15.100
+that we're going to cover today.
+
+03:15.100 --> 03:18.780
+Before we do so, I want just to provide a summary,
+
+03:19.140 --> 03:21.500
+a more detailed summary of what we did last time.
+
+03:21.500 --> 03:24.180
+As I said, last time we focused on the concept
+
+03:24.180 --> 03:27.700
+of differential flatness to compute a feasible trajectory.
+
+03:30.420 --> 03:32.620
+In particular, the problem of differential,
+
+03:32.620 --> 03:36.860
+the property of differential flatness reads as follows.
+
+03:36.860 --> 03:41.860
+In the linear system described by ordinary differential
+
+03:42.020 --> 03:45.620
+equation, X dot equal to AXU, X is the state,
+
+03:45.660 --> 03:49.100
+U is the input, is differentially flat.
+
+03:49.100 --> 03:52.260
+If there exists a set of output C,
+
+03:52.260 --> 03:57.220
+the function of X, U, and possibly some derivatives of U,
+
+03:57.220 --> 04:01.060
+with a property that the knowledge of the flat output C
+
+04:01.060 --> 04:03.740
+and its derivative up to order Q
+
+04:03.740 --> 04:07.220
+allow us to backtrack what is the set of states,
+
+04:07.220 --> 04:11.660
+and most importantly, the set of inputs that provide
+
+04:16.220 --> 04:17.940
+the trajectory Z.
+
+04:17.940 --> 04:20.980
+Basically, this allows us to find a one-to-one mapping
+
+04:20.980 --> 04:25.500
+between trajectories, pairs of states, and controls X, U,
+
+04:25.500 --> 04:28.300
+and the flat outputs for which the dynamics
+
+04:28.300 --> 04:31.100
+have effectively been canceled.
+
+04:34.180 --> 04:35.420
+Any questions about this?
+
+04:38.740 --> 04:41.140
+So from intuition standpoint, differential flatness
+
+04:41.140 --> 04:45.380
+captures the notion of whether a curve
+
+04:45.380 --> 04:49.700
+in the flat output space can be realized
+
+04:49.700 --> 04:52.780
+in the original X space through an appropriate
+
+04:52.780 --> 04:55.780
+selection of inputs, with the key idea that
+
+04:55.780 --> 04:59.420
+if that is the case, it's much easier to compute a curve
+
+04:59.420 --> 05:01.780
+as opposed to compute the solution
+
+05:01.780 --> 05:03.140
+to a differential equation.
+
+05:06.020 --> 05:06.860
+Any questions?
+
+05:06.860 --> 05:08.300
+So this is pretty fundamental, so I want to make sure
+
+05:08.300 --> 05:10.020
+that everyone is on the same page.
+
+05:11.260 --> 05:16.260
+All right, so if the system is differentially flat,
+
+05:17.180 --> 05:22.180
+and as we said, not all systems are differentially flat,
+
+05:22.740 --> 05:25.500
+but fortunately, for the sake of robotics,
+
+05:25.500 --> 05:28.260
+a number of systems that are of interest in practice
+
+05:28.260 --> 05:29.980
+are differentially flat.
+
+05:29.980 --> 05:34.940
+If that is the case, it's possible to plan a curve
+
+05:34.940 --> 05:39.940
+in a flat output space, Z, and then through the mappings
+
+05:39.980 --> 05:42.300
+beta and gamma, and in particular gamma,
+
+05:42.300 --> 05:45.820
+to recover the inputs that allow us to realize this,
+
+05:45.820 --> 05:47.980
+to translate this trajectory into a trajectory
+
+05:47.980 --> 05:51.180
+that is dynamically feasible in the original state space X.
+
+05:52.180 --> 05:54.260
+Now in order to compute this curve,
+
+05:54.260 --> 05:58.260
+then we can use a variety of interpolation methods.
+
+05:58.260 --> 06:00.620
+So the one that we've been discussing last time,
+
+06:00.620 --> 06:02.700
+and you're going to use for the first problem
+
+06:02.700 --> 06:07.180
+in your p-set, entails polynomial interpolation.
+
+06:07.180 --> 06:12.180
+So the idea is that each variable ZJ of T,
+
+06:14.300 --> 06:18.020
+ZJ is the jth variable of the vector Z,
+
+06:18.020 --> 06:21.780
+or the flat output Z, is going to be represented
+
+06:21.780 --> 06:26.780
+as a polynomial, alpha i, j,
+
+06:26.780 --> 06:31.780
+times a polynomial basis.
+
+06:39.380 --> 06:42.700
+The psi i's provide a polynomial basis,
+
+06:42.700 --> 06:44.260
+like for example, as I said last time,
+
+06:44.260 --> 06:49.260
+psi one could be one, psi two T could be T,
+
+06:49.580 --> 06:54.580
+psi three T could be T squared, and so on.
+
+06:56.860 --> 07:00.180
+So basically we parameterize each component
+
+07:00.180 --> 07:03.420
+of the flat output as a polynomial.
+
+07:03.420 --> 07:07.180
+These coefficients are unknown.
+
+07:07.180 --> 07:11.500
+They are computed by enforcing the boundary conditions.
+
+07:11.500 --> 07:13.980
+In particular, we have boundary conditions
+
+07:13.980 --> 07:18.260
+for the state X, for example, X of T zero
+
+07:18.260 --> 07:22.660
+is equal to X zero, X to T F is equal to X F.
+
+07:23.660 --> 07:27.300
+So these boundary conditions are translated
+
+07:27.300 --> 07:30.660
+into boundary conditions for the flat outputs,
+
+07:30.660 --> 07:33.420
+and it allows you to pinpoint the exact values
+
+07:33.420 --> 07:34.340
+for the coefficients.
+
+07:34.340 --> 07:37.500
+For example, for the first problem, your p-set,
+
+07:37.500 --> 07:41.420
+I'm asking you to consider a cubic polynomial interpolation
+
+07:41.420 --> 07:43.220
+in order to compute the curve.
+
+07:44.700 --> 07:49.700
+You have two flat outputs, X and Y, right?
+
+07:50.500 --> 07:53.660
+And in order to completely reconstruct the state,
+
+07:53.660 --> 07:56.580
+you also need the derivatives, X dot and Y dot.
+
+07:59.700 --> 08:02.140
+And since you have two flat outputs,
+
+08:02.140 --> 08:04.020
+you're going to, and you have a cubic interpolation,
+
+08:04.020 --> 08:07.480
+you're going to have four coefficients per flat output,
+
+08:07.480 --> 08:10.440
+so you have to determine eight coefficients.
+
+08:11.940 --> 08:16.700
+But then you have boundary conditions at the beginning
+
+08:16.700 --> 08:20.900
+and at the end for each, for both X and Y,
+
+08:20.900 --> 08:23.260
+and for its derivative, so you have eight conditions.
+
+08:23.260 --> 08:26.020
+That allows you to set up a system of linear equations
+
+08:26.020 --> 08:28.700
+that allow you to compute the coefficients.
+
+08:28.700 --> 08:32.240
+Now, here we're only talking about feasibility.
+
+08:32.240 --> 08:34.100
+If you want to go beyond feasibility,
+
+08:34.100 --> 08:36.140
+actually you want to compute the flat output
+
+08:36.140 --> 08:38.160
+that has some desirable property,
+
+08:38.160 --> 08:42.640
+then what you do is to overparameterize your trajectory,
+
+08:42.640 --> 08:45.400
+so basically having more coefficients than constraints,
+
+08:45.400 --> 08:48.220
+and then use a cost function to compute the coefficients
+
+08:48.220 --> 08:50.200
+that on top of guaranteeing feasibility,
+
+08:50.200 --> 08:52.320
+meaning satisfying the boundary conditions,
+
+08:52.320 --> 08:54.040
+also optimizes that cost function.
+
+08:54.040 --> 08:56.520
+For example, minimization of jerk, a snap.
+
+08:58.120 --> 08:58.960
+Is this clear?
+
+09:01.120 --> 09:03.220
+So the mathematics at the end of the day
+
+09:03.220 --> 09:04.080
+are not too important.
+
+09:04.080 --> 09:05.600
+What is very important for you to know
+
+09:05.600 --> 09:07.840
+is that for a very important class of system
+
+09:07.840 --> 09:09.600
+referred to as differentially flat,
+
+09:09.600 --> 09:11.480
+the problem of computing a trajectory
+
+09:11.480 --> 09:15.080
+can be converted to the problem of computing a curve
+
+09:15.600 --> 09:17.300
+for a subset of the state variables.
+
+09:17.300 --> 09:19.200
+Computing a curve can be done very easily
+
+09:19.200 --> 09:21.120
+through polynomial interpolation.
+
+09:21.120 --> 09:22.680
+Once you have computed that curve,
+
+09:22.680 --> 09:25.940
+then by a linear mapping that someone
+
+09:25.940 --> 09:29.460
+has already done for you, you can find the inputs
+
+09:29.460 --> 09:32.920
+that gives rise to the trajectory in the original space X
+
+09:32.920 --> 09:37.220
+that is feasible, and possibly with some optimality property
+
+09:37.220 --> 09:40.120
+in terms of minimization of jerk and snap,
+
+09:40.120 --> 09:41.920
+which means that if in the future
+
+09:41.920 --> 09:45.320
+you have to control a robotic system,
+
+09:45.320 --> 09:47.180
+first thing that you should do
+
+09:47.180 --> 09:49.120
+is to see if it's differentially flat.
+
+09:49.120 --> 09:50.640
+Proving differential flatness is hard,
+
+09:50.640 --> 09:53.540
+so what you do is you go on Scholar Google,
+
+09:53.540 --> 09:55.960
+you type what your system is,
+
+09:55.960 --> 09:57.800
+and hopefully that system falls
+
+10:00.180 --> 10:02.760
+in the category of system that is differentially flat.
+
+10:02.760 --> 10:03.600
+Great.
+
+10:03.600 --> 10:06.680
+If that is the case, you look at what these mappings are,
+
+10:06.680 --> 10:08.200
+and then you apply just a procedure
+
+10:08.200 --> 10:10.120
+that you have learned in this class.
+
+10:10.160 --> 10:13.120
+If it's not differentially flat, then you call me,
+
+10:13.120 --> 10:15.560
+and then I give you the lecture slides for two or three,
+
+10:15.560 --> 10:17.400
+where I tell you how to basically
+
+10:17.400 --> 10:18.560
+do trajectory optimization
+
+10:18.560 --> 10:20.560
+if the system is not differentially flat.
+
+10:21.520 --> 10:22.360
+Yeah?
+
+10:23.240 --> 10:28.040
+The output is almost just a subset of the state variable.
+
+10:28.040 --> 10:30.720
+Well, yeah, it's more specifically
+
+10:32.520 --> 10:37.160
+a function of the state, and possibly also the input,
+
+10:37.160 --> 10:40.240
+and possibly some derivatives of the input.
+
+10:41.560 --> 10:43.080
+It's full generality.
+
+10:43.080 --> 10:48.080
+For the case of the extended unicycle model,
+
+10:48.440 --> 10:50.220
+the one that you have in the problem set,
+
+10:50.220 --> 10:53.800
+it turns out that it's just a subset of the state variables,
+
+10:53.800 --> 10:58.040
+in particular the Cartesian position of the vehicle, x, y.
+
+10:58.040 --> 11:02.000
+But that is not, it just happened to be the case
+
+11:02.000 --> 11:05.240
+in that case, but for example in the case of a quadrotor,
+
+11:05.240 --> 11:08.400
+you also have yo, apart from the Cartesian position
+
+11:08.400 --> 11:09.900
+as an additional flat output.
+
+11:13.060 --> 11:15.900
+But in general, it turns out that the flat output,
+
+11:17.980 --> 11:21.200
+and the exact reason it's not clear to date, I would argue,
+
+11:21.200 --> 11:24.000
+typically have a physical meaning.
+
+11:24.000 --> 11:26.700
+So yes, typically is some quantity
+
+11:26.700 --> 11:28.200
+that has a physical interpretation,
+
+11:28.200 --> 11:30.520
+like x, y position, or heading, and so on.
+
+11:30.520 --> 11:33.800
+It's not some weird, from this definition,
+
+11:33.800 --> 11:36.400
+the flat output could be some very weird
+
+11:36.400 --> 11:37.820
+combination of states, right?
+
+11:37.820 --> 11:39.720
+Typically that is not the case.
+
+11:39.720 --> 11:42.040
+Typically z is just a subset.
+
+11:44.360 --> 11:46.040
+All right.
+
+11:46.040 --> 11:48.440
+Now in all this procedure, as I said,
+
+11:48.440 --> 11:50.600
+what you do to pinpoint your polynomial
+
+11:50.600 --> 11:53.360
+that defines your curve in a flat output space,
+
+11:53.360 --> 11:55.460
+we consider boundary constraints.
+
+11:55.460 --> 11:58.860
+But these are the only constraints that we account for
+
+11:58.860 --> 12:01.580
+when planning a trajectory with differential flatness.
+
+12:01.580 --> 12:03.480
+What about additional constraints?
+
+12:04.000 --> 12:06.320
+Like, for example, input bound constraints.
+
+12:06.320 --> 12:08.460
+The constraint, in the case of a unicycle,
+
+12:08.460 --> 12:10.800
+that the driving speed and the angular speed
+
+12:10.800 --> 12:13.420
+have to be less than an upper bound.
+
+12:14.520 --> 12:15.880
+How do I account for those?
+
+12:16.760 --> 12:21.760
+So in general, constraints on x and u
+
+12:21.760 --> 12:24.760
+are translated into constraints on the curvature
+
+12:24.760 --> 12:28.520
+of the curve on the flat outputs,
+
+12:28.520 --> 12:30.640
+on the curve that defines the time history
+
+12:30.640 --> 12:32.080
+of the flat output.
+
+12:32.080 --> 12:37.080
+The intuition is that if you have sharp corners,
+
+12:37.080 --> 12:40.960
+this translates typically in very high control efforts.
+
+12:40.960 --> 12:41.880
+That's intuition.
+
+12:42.760 --> 12:47.320
+So the procedure to translate general constraints
+
+12:47.320 --> 12:50.880
+from the original x, u space into the flat output space
+
+12:50.880 --> 12:52.680
+is beyond the scope of this class.
+
+12:52.680 --> 12:55.000
+But what I want to do today,
+
+12:55.000 --> 12:57.200
+as is the first part of the class,
+
+12:57.200 --> 12:59.920
+is to tell you a very effective way
+
+12:59.920 --> 13:02.640
+to account, arguably, for the most important class
+
+13:02.640 --> 13:06.080
+of constraints, which are the bound constraints,
+
+13:06.080 --> 13:07.240
+the input bound constraints.
+
+13:07.240 --> 13:09.500
+Typically, for all dynamical systems,
+
+13:09.500 --> 13:12.940
+you have an upper bound on much control authority you have.
+
+13:12.940 --> 13:15.300
+So what I want to do now is to discuss how,
+
+13:15.300 --> 13:17.080
+in the context of differential flatness,
+
+13:17.080 --> 13:19.080
+we can account for input bound constraints.
+
+13:19.080 --> 13:23.200
+For example, top velocity less than v max,
+
+13:23.200 --> 13:26.900
+say, I think it's 0.5 meter per second in your P sets,
+
+13:26.900 --> 13:29.040
+omega t less than omega max.
+
+13:29.040 --> 13:29.880
+Yeah?
+
+13:31.880 --> 13:33.320
+If R is z, for example,
+
+13:33.320 --> 13:36.940
+we're trying to also minimize the jerk in the style of x,
+
+13:36.940 --> 13:37.780
+then is that-
+
+13:37.780 --> 13:40.540
+Oh, that's not, we're reminding the jerk of z.
+
+13:40.540 --> 13:44.100
+So when we do the planning problem,
+
+13:44.100 --> 13:47.760
+it's entirely in the flat output space.
+
+13:47.760 --> 13:52.760
+Turns out that if you typically get
+
+13:53.000 --> 13:55.560
+a very smooth curve in the flat output space,
+
+13:55.560 --> 14:00.200
+that corresponds to a very nice trajectory in the x space.
+
+14:00.200 --> 14:01.200
+But in terms of planning,
+
+14:01.200 --> 14:03.020
+and that's the whole point of differential flatness,
+
+14:03.020 --> 14:06.440
+you're operating in the flat output space.
+
+14:06.440 --> 14:09.320
+That's why we also want to be able to account for constraints
+
+14:09.320 --> 14:10.640
+in the flat output space.
+
+14:12.800 --> 14:16.640
+So the strategy that I'm going to discuss
+
+14:16.640 --> 14:19.160
+is referred to as time scaling.
+
+14:19.160 --> 14:21.360
+Extremely useful to account for bound constraints
+
+14:21.360 --> 14:22.320
+in the flat output space,
+
+14:22.320 --> 14:27.320
+but in general, it's a widely used strategy in robotics
+
+14:27.520 --> 14:31.080
+to optimize trajectories for manipulators, for example,
+
+14:31.080 --> 14:33.040
+beyond wheeled vehicles.
+
+14:34.040 --> 14:38.920
+So the idea of time scaling is easy,
+
+14:38.920 --> 14:43.040
+but you should take a little bit of time
+
+14:43.040 --> 14:46.480
+to really get familiar to it.
+
+14:46.480 --> 14:48.880
+You might get a little bit confusing, basically,
+
+14:48.880 --> 14:51.400
+in terms of how you set up the notation and so on.
+
+14:51.400 --> 14:55.240
+I'm trying to explain it in the simplest possible way.
+
+14:55.240 --> 14:58.880
+The idea of time scaling from an intuitive standpoint
+
+14:58.880 --> 14:59.720
+is as follows.
+
+15:07.160 --> 15:11.560
+Let's consider again the problem of finding a curve
+
+15:11.560 --> 15:13.720
+for the flat outputs, z.
+
+15:14.440 --> 15:19.440
+So the curve ZT tells you at each time T
+
+15:22.520 --> 15:24.960
+what the value of the flat output should be.
+
+15:25.960 --> 15:28.400
+As time changes, then this point changes.
+
+15:29.320 --> 15:32.960
+The idea of time scaling is to separate the notion
+
+15:32.960 --> 15:36.240
+of a path, which is a purely geometric notion,
+
+15:36.240 --> 15:38.120
+basically just this curve,
+
+15:38.120 --> 15:43.120
+from the notion of the time scale of the flat output space
+
+15:43.720 --> 15:46.640
+and sequence that you use to go along that path.
+
+15:47.920 --> 15:50.400
+So basically, the idea is to separate the computation
+
+15:50.400 --> 15:54.640
+of the dramatic path from the time schedule
+
+15:54.640 --> 15:58.120
+according to which you reach each point along this path.
+
+15:58.120 --> 16:00.000
+If you are given a path,
+
+16:00.000 --> 16:02.120
+if you are someone that runs very fast,
+
+16:02.120 --> 16:05.200
+you may reach this point, say, in one second.
+
+16:05.200 --> 16:09.240
+If you are slow, you reach this point in two seconds.
+
+16:09.240 --> 16:13.040
+Roughly speaking, if you keep this difference in speed,
+
+16:13.960 --> 16:18.840
+the first runner reaches the end condition in time T,
+
+16:19.800 --> 16:23.520
+and the second runner reaches the same point in time 2T,
+
+16:23.520 --> 16:25.160
+so it takes double the time.
+
+16:25.160 --> 16:27.360
+But they have followed exactly the same path.
+
+16:28.960 --> 16:31.080
+So the idea of time scaling is to separate
+
+16:31.080 --> 16:32.920
+the notion of a geometric path
+
+16:32.920 --> 16:36.480
+from the notion of the time schedule that is used
+
+16:36.480 --> 16:38.520
+in order to march along that path.
+
+16:40.240 --> 16:42.480
+So why is that useful?
+
+16:42.480 --> 16:45.720
+I mean, this is useful because then you can just compute
+
+16:45.720 --> 16:50.680
+a path neglecting the input bound constraints
+
+16:50.680 --> 16:53.000
+that usually relate to how quickly
+
+16:53.000 --> 16:56.760
+you want to go through that path from the time schedule
+
+16:56.760 --> 17:00.960
+that you can adjust in order to fulfill those bounds.
+
+17:03.840 --> 17:05.480
+Does it make sense?
+
+17:05.480 --> 17:08.720
+So in particular, the idea from a mathematical standpoint
+
+17:08.720 --> 17:13.360
+is to view a function of time T
+
+17:13.360 --> 17:18.360
+as a function of T through a time scaling law, S,
+
+17:20.320 --> 17:24.560
+where S is a function such that S T zero
+
+17:26.200 --> 17:31.120
+is equal to T zero, S T F is equal to T F.
+
+17:31.120 --> 17:35.480
+Most importantly, S dot T is greater than zero,
+
+17:35.480 --> 17:39.280
+which means that basically when you do the, oh, sorry.
+
+17:44.320 --> 17:46.360
+S zero, S F.
+
+17:46.360 --> 17:49.840
+Which basically means that as you rescale time,
+
+17:49.840 --> 17:52.680
+you keep the property that you cannot go backward in time.
+
+17:53.880 --> 17:56.200
+So you need to have this monotonicity property.
+
+17:57.400 --> 18:00.760
+So here you see how basically we are separating
+
+18:00.760 --> 18:02.800
+the geometric notion of a path
+
+18:02.800 --> 18:05.720
+from the time schedule of the path.
+
+18:08.200 --> 18:12.160
+So then it's very typical to optimize the geometric path
+
+18:12.160 --> 18:16.920
+with respect to arc length, S.
+
+18:16.920 --> 18:18.880
+The arc length is the distance
+
+18:18.880 --> 18:20.680
+between two points around the path.
+
+18:22.680 --> 18:27.640
+And then specify a timing law that tells you
+
+18:27.640 --> 18:29.640
+how you're marching along the curve.
+
+18:30.640 --> 18:34.320
+Very concretely consider, for example,
+
+18:34.320 --> 18:38.800
+the problem of planning the trajectory
+
+18:38.800 --> 18:40.680
+for the joint of a manipulator.
+
+18:40.680 --> 18:43.000
+Let's call this joint vector theta.
+
+18:44.200 --> 18:48.960
+So for example, a typical way of parameterizing
+
+18:48.960 --> 18:53.080
+straight line motion is to say that your joints
+
+18:53.080 --> 18:57.240
+have to go from an initial condition T start
+
+18:57.240 --> 19:00.000
+plus S, which is curve length,
+
+19:01.320 --> 19:05.440
+times T end minus theta start.
+
+19:10.480 --> 19:12.680
+This will be like a straight line trajectory,
+
+19:12.680 --> 19:15.120
+basically, erratically in a path.
+
+19:15.120 --> 19:19.360
+S is a variable that belongs to zero and one.
+
+19:19.360 --> 19:23.480
+If S is equal to zero, then you are at the start position.
+
+19:23.480 --> 19:26.680
+If S is equal to one, theta start and theta start
+
+19:26.680 --> 19:28.920
+cancel out, then you are at the end position.
+
+19:31.120 --> 19:35.120
+So in this case, there is not even computation of the path.
+
+19:35.120 --> 19:38.000
+You just say, I want to do a straight path.
+
+19:38.000 --> 19:42.440
+Then, you say, okay, so that's a path I want to follow.
+
+19:42.440 --> 19:45.120
+What is the time schedule that I use
+
+19:45.120 --> 19:50.120
+in order to march along this path?
+
+19:50.360 --> 19:53.600
+Well, one of the easiest time schedule
+
+19:53.600 --> 19:58.600
+is a linear time schedule, C T.
+
+20:01.880 --> 20:04.160
+Actually, C T over T.
+
+20:04.160 --> 20:08.160
+So that's, yeah, T over T,
+
+20:08.160 --> 20:11.880
+such that S of zero is equal to zero
+
+20:11.880 --> 20:14.000
+and S of one is equal to one.
+
+20:16.040 --> 20:18.440
+Sorry, S of T, capital T, is equal to one.
+
+20:19.440 --> 20:20.920
+So what's the idea?
+
+20:20.920 --> 20:24.800
+That now, if you take the derivative of the theta
+
+20:24.800 --> 20:28.400
+with respect to time, what is the derivative equal to?
+
+20:30.040 --> 20:34.760
+It's the derivative of theta S with respect to S
+
+20:34.760 --> 20:39.760
+times S dot, meaning derivative S with respect to T.
+
+20:39.760 --> 20:44.760
+So this is equal to one over T,
+
+20:55.200 --> 20:58.600
+which basically means that capital T is a tuning parameter.
+
+20:58.600 --> 21:02.240
+So it's how much time you allocate
+
+21:02.240 --> 21:04.440
+in order to traverse this curve.
+
+21:04.440 --> 21:07.760
+As you increase T,
+
+21:08.760 --> 21:11.240
+you decrease theta dot.
+
+21:11.240 --> 21:14.400
+And so the idea is that maybe you have upper limits
+
+21:14.400 --> 21:16.840
+on how quickly your joint can move.
+
+21:16.840 --> 21:18.200
+Usually there are acceleration limits,
+
+21:18.200 --> 21:22.120
+but anyway, upper limit on how quickly your joints can move.
+
+21:22.120 --> 21:23.560
+Then you can fulfill them
+
+21:23.560 --> 21:26.040
+by appropriately tuning capital T.
+
+21:26.040 --> 21:28.760
+You make a capital T large enough
+
+21:28.760 --> 21:31.200
+so that the maximum value of theta dot
+
+21:31.200 --> 21:34.960
+along the trajectory is below the upper bound.
+
+21:34.960 --> 21:37.400
+Say, 10 hundred per second, I don't know.
+
+21:38.760 --> 21:39.920
+Does it make sense?
+
+21:42.160 --> 21:43.880
+As I said, the idea is simple,
+
+21:43.880 --> 21:45.440
+but you want to spend a little bit of time
+
+21:45.440 --> 21:47.920
+to really get familiar to it, with it.
+
+21:49.320 --> 21:51.400
+So in full generality,
+
+21:53.000 --> 21:54.720
+the idea is
+
+21:57.360 --> 21:59.560
+that we view a trajectory
+
+22:01.200 --> 22:04.160
+where there is a X, but just to be consistent
+
+22:04.160 --> 22:05.560
+with the part that we are considering
+
+22:05.720 --> 22:08.160
+differential flatness, let's call it Z.
+
+22:08.160 --> 22:11.160
+Z of T, we view it as a function of S of T.
+
+22:12.840 --> 22:14.800
+So that the zeta dot T
+
+22:15.960 --> 22:17.640
+is equal to the derivative of X
+
+22:17.640 --> 22:19.960
+with respect to S times S dot.
+
+22:20.920 --> 22:25.280
+By appropriately choosing S of T, the time schedule,
+
+22:25.280 --> 22:29.760
+I can accordingly change the derivative of Z.
+
+22:29.760 --> 22:32.680
+And then I would choose the schedule
+
+22:32.680 --> 22:35.240
+in such a way that properties on the derivative
+
+22:35.800 --> 22:37.680
+in terms of upper bounds are satisfied.
+
+22:38.680 --> 22:41.680
+Basically, it's low the time just enough
+
+22:41.680 --> 22:44.760
+so that all the bounds are satisfied.
+
+22:44.760 --> 22:47.920
+In particular, the bounds that usually we're interested in
+
+22:47.920 --> 22:52.920
+are input bounds, so the bounds on your control inputs.
+
+22:53.400 --> 22:57.560
+For example, going back to the case of the unicycle,
+
+23:00.560 --> 23:04.040
+we said that the input bounds are that omega T
+
+23:04.040 --> 23:06.920
+has to be less than omega max,
+
+23:06.920 --> 23:11.640
+and V T has to be less than or equal to V max.
+
+23:13.360 --> 23:14.840
+Well, in magnitude.
+
+23:17.720 --> 23:22.720
+So V T is equal to the derivative
+
+23:23.800 --> 23:27.840
+of X T over D T,
+
+23:29.080 --> 23:33.880
+which is equal if we view V as a function of S of T
+
+23:34.720 --> 23:39.720
+as derivative of X of S over D S times S dot
+
+23:43.760 --> 23:47.440
+equal to V of S times S dot.
+
+23:49.240 --> 23:54.240
+So if S represents arc length,
+
+23:54.240 --> 23:59.240
+again, the arc length is at the natural parameterization
+
+24:04.560 --> 24:05.640
+for the car.
+
+24:05.640 --> 24:09.920
+It tells you for each point what is the distance
+
+24:09.920 --> 24:13.360
+of that point from the origin of the car along the path.
+
+24:14.960 --> 24:18.440
+So if that is the case, then interpretation is as follows.
+
+24:18.560 --> 24:23.560
+This is your car, X of S.
+
+24:30.000 --> 24:34.360
+V of S is the velocity that your vehicle is
+
+24:34.360 --> 24:39.360
+when it is at a distance S from the origin, S start.
+
+24:43.920 --> 24:47.760
+So you compute the path with associated V of S,
+
+24:47.760 --> 24:51.060
+and then for the true input, which is V of T,
+
+24:51.060 --> 24:55.940
+you modulate it by choosing a scaling function S.
+
+24:58.960 --> 25:02.360
+As I said, typical choices for S are a linear scaling
+
+25:02.360 --> 25:05.440
+function where the tuning is with respect to the horizon,
+
+25:05.440 --> 25:07.920
+or maybe a polynomial scaling function.
+
+25:07.920 --> 25:10.600
+For example, in the case of manipulators,
+
+25:10.600 --> 25:14.400
+oftentimes one uses cubic polynomial
+
+25:14.400 --> 25:16.120
+to represent scaling function.
+
+25:16.120 --> 25:17.560
+This is for speed.
+
+25:17.560 --> 25:20.520
+Let's look at angular speed.
+
+25:25.800 --> 25:30.800
+So omega T is equal to the derivative of theta T over T,
+
+25:39.320 --> 25:43.600
+which is equal to derivative of theta with respect to S
+
+25:43.600 --> 25:44.960
+times S dot.
+
+25:45.800 --> 25:50.360
+From here, we see that S dot is equal to,
+
+25:52.560 --> 25:53.940
+just to be consistent with notation,
+
+25:53.940 --> 25:57.760
+this is a, do I use capital B or small b?
+
+25:57.760 --> 25:58.600
+Yeah, small b.
+
+25:59.440 --> 26:03.200
+So this small b, and this small b.
+
+26:08.740 --> 26:13.220
+So S dot is equal to V T over V S.
+
+26:15.160 --> 26:20.160
+So this is equal to D T in the S times V T over V S,
+
+26:24.380 --> 26:29.380
+equal to theta of S V T over V S.
+
+26:35.400 --> 26:39.280
+So for example, so what we will do is then
+
+26:39.280 --> 26:42.160
+to choose the time schedule S in such a way
+
+26:42.160 --> 26:46.160
+that both your velocity constraint
+
+26:46.160 --> 26:48.520
+and angular constraints are satisfied.
+
+26:48.520 --> 26:51.200
+Basically, you slow down the motion
+
+26:51.200 --> 26:55.660
+until the maximum V and maximum omega along the path
+
+26:55.660 --> 26:57.400
+is below that input.
+
+26:57.400 --> 26:59.960
+In the case of the P set, you do actually
+
+27:03.020 --> 27:05.600
+something a bit different.
+
+27:05.600 --> 27:07.880
+What you do, that is like a twist that I made
+
+27:07.880 --> 27:09.760
+for the P set to make it more engaging.
+
+27:09.760 --> 27:11.040
+Both are useful.
+
+27:11.040 --> 27:14.840
+So what you do in the P set is not to set
+
+27:14.840 --> 27:18.240
+the time scaling law S of T directly.
+
+27:18.240 --> 27:23.240
+Instead, I ask you to readjust the velocity
+
+27:26.080 --> 27:28.360
+in the arc length parameterization
+
+27:29.560 --> 27:32.680
+in such a way that the input bounds are satisfied.
+
+27:32.680 --> 27:36.760
+In particular, you want to make sure that V of S
+
+27:36.800 --> 27:41.320
+is less than P max and omega S is less than omega max.
+
+27:41.320 --> 27:43.640
+Keep in mind that you have to use this formula
+
+27:43.640 --> 27:44.840
+to ensure the constraint.
+
+27:46.600 --> 27:51.600
+So once you compute a new velocity profile along the path,
+
+27:53.720 --> 27:54.840
+we're not changing the path.
+
+27:54.840 --> 27:59.840
+We're just computing a new velocity profile along the path.
+
+28:00.520 --> 28:03.700
+Implicitly, you are defining a new time schedule.
+
+28:04.660 --> 28:08.440
+When you get the time at which you get to some point
+
+28:08.440 --> 28:11.900
+along the path is, of course, a function of the speed,
+
+28:11.900 --> 28:13.700
+the speed that you're following along the path.
+
+28:13.700 --> 28:17.900
+And in particular, just related to the integral of velocity
+
+28:17.900 --> 28:19.000
+with respect to space.
+
+28:20.120 --> 28:21.120
+Does that make sense?
+
+28:23.580 --> 28:24.820
+So it's just a different twist.
+
+28:24.820 --> 28:29.820
+You can adjust your speed, your input bounds
+
+28:30.700 --> 28:34.540
+by either adjusting the schedule directly
+
+28:34.540 --> 28:39.540
+or adjusting your input directly,
+
+28:39.580 --> 28:42.500
+which implicitly define a new time schedule.
+
+28:42.500 --> 28:45.180
+And that's what you do in the first problem of PSEC-1.
+
+28:46.340 --> 28:49.260
+It seems like the second one is more natural.
+
+28:49.260 --> 28:53.540
+Is once you understand what you're doing is more natural,
+
+28:53.540 --> 28:56.020
+but in terms of first being exposed
+
+28:56.020 --> 28:57.620
+to the notion of time scaling,
+
+28:57.620 --> 28:59.020
+I will claim it is more natural.
+
+28:59.060 --> 29:01.900
+That's why I decided to explain it in this way
+
+29:01.900 --> 29:03.540
+because I think it's more pedagogical.
+
+29:03.540 --> 29:04.660
+But I agree with you.
+
+29:04.660 --> 29:07.620
+Once you get the hang of it, then it's more natural to.
+
+29:08.620 --> 29:10.580
+Do you want to understand the dynamic reduces
+
+29:10.580 --> 29:13.820
+in the real world and then reverse engineer the actual path?
+
+29:13.820 --> 29:15.580
+Yeah, it's a much more direct way.
+
+29:15.580 --> 29:17.100
+Okay, gotcha.
+
+29:17.100 --> 29:20.140
+And that's why I'm telling you to do it that way.
+
+29:20.140 --> 29:21.740
+Any questions here?
+
+29:21.740 --> 29:22.580
+Yeah.
+
+29:22.580 --> 29:24.420
+Just real quick, in the equation up there,
+
+29:24.420 --> 29:28.780
+it says, so you have M as the time derivative of our path
+
+29:29.500 --> 29:32.620
+Hold on, you have the time derivative, so here, you mean?
+
+29:32.620 --> 29:33.460
+Yes.
+
+29:33.460 --> 29:35.300
+And in the next step, we just say S of T,
+
+29:35.300 --> 29:37.380
+but should it be T of S?
+
+29:37.380 --> 29:38.220
+No.
+
+29:38.220 --> 29:41.900
+Because we're integrating over the path and then saying like.
+
+29:41.900 --> 29:45.500
+No, so here is actually different
+
+29:45.500 --> 29:47.260
+because here you are differentiating
+
+29:47.260 --> 29:49.580
+with respect to the arc length.
+
+29:49.580 --> 29:51.620
+Let's say that S is the arc length.
+
+29:51.620 --> 29:56.140
+So you want to differentiate with respect to the value of X
+
+29:57.140 --> 30:00.420
+with respect to the value of X at the position
+
+30:00.420 --> 30:03.260
+along the curve that correspond to a given time T.
+
+30:03.260 --> 30:05.660
+Okay, but then the time is not the same time
+
+30:05.660 --> 30:07.700
+that we have in the one before?
+
+30:08.740 --> 30:10.420
+No, the time T is the same.
+
+30:10.420 --> 30:11.260
+Okay.
+
+30:11.260 --> 30:12.100
+Yeah, no, of course.
+
+30:12.100 --> 30:15.300
+So basically, the idea is to view X.
+
+30:16.580 --> 30:18.420
+So basically, the question of Paul is,
+
+30:18.420 --> 30:23.420
+should we say, should we view X of T as X of S T
+
+30:26.260 --> 30:29.140
+or X of T S?
+
+30:32.780 --> 30:33.900
+That's the thing, right?
+
+30:33.900 --> 30:34.740
+Yeah.
+
+30:34.740 --> 30:37.260
+No, that's an interpretation that we give.
+
+30:37.260 --> 30:42.260
+So we view X as indirectly depending on T
+
+30:42.780 --> 30:46.580
+through the arc length transformation.
+
+30:46.580 --> 30:51.580
+So we say, given time T, where are we along the path?
+
+30:52.740 --> 30:54.460
+And based on where we're along the path,
+
+30:54.460 --> 30:56.300
+what is the corresponding value of X?
+
+30:59.340 --> 31:03.420
+So that's how I set up the time scaling transformation.
+
+31:04.300 --> 31:06.420
+If we view it this other way,
+
+31:06.420 --> 31:10.580
+then it will not make sense to compute the derivative
+
+31:10.580 --> 31:13.060
+with respect to the path S,
+
+31:13.060 --> 31:15.580
+because now this is the real independent variable,
+
+31:15.580 --> 31:17.540
+so the composition of derivatives
+
+31:17.540 --> 31:18.980
+will be the other way around.
+
+31:20.740 --> 31:21.580
+But just intuition.
+
+31:21.580 --> 31:25.100
+So the idea is, for a given time T,
+
+31:25.100 --> 31:27.980
+there is a corresponding value of S,
+
+31:27.980 --> 31:29.860
+where I am at a time T.
+
+31:31.220 --> 31:32.940
+And then, once I'm here,
+
+31:32.940 --> 31:35.100
+I have a corresponding value of X of S.
+
+31:35.100 --> 31:40.100
+So basically, I separate X of T in X of S and S of T.
+
+31:42.380 --> 31:44.140
+As I said, it's simple,
+
+31:44.140 --> 31:46.580
+but you have to spend a little bit of time on it.
+
+31:46.580 --> 31:48.580
+It's deceptively simple.
+
+31:48.660 --> 31:50.820
+What is the opposite of T?
+
+31:52.940 --> 31:54.380
+Here?
+
+31:54.380 --> 31:58.780
+Yeah, so this is a possible time in log.
+
+31:58.780 --> 32:01.620
+So T is the time, the variable.
+
+32:01.620 --> 32:04.660
+Capital T is the horizon, as I discussed it before,
+
+32:04.660 --> 32:06.700
+so how much time we allocate
+
+32:06.700 --> 32:08.580
+in order to traverse this path,
+
+32:08.580 --> 32:11.020
+which is what ultimately we're going to tune
+
+32:11.020 --> 32:13.620
+in order to satisfy the input bounds,
+
+32:13.620 --> 32:16.260
+for example, V and omega.
+
+32:16.260 --> 32:20.060
+And L is the length of the path,
+
+32:20.060 --> 32:22.340
+which means that when T is,
+
+32:22.340 --> 32:24.380
+T is not fixed, it's something that you tune.
+
+32:24.380 --> 32:27.740
+When T is equal to the time horizon, capital T,
+
+32:27.740 --> 32:30.100
+then S of capital T is equal to L,
+
+32:30.100 --> 32:32.140
+which means that you are at the end of the path.
+
+32:35.820 --> 32:37.020
+Yeah?
+
+32:37.020 --> 32:39.940
+You said earlier that a common choice for S is arc length.
+
+32:39.940 --> 32:43.420
+Are there other common ways to parametrize?
+
+32:43.420 --> 32:44.620
+Is it de facto standard?
+
+32:44.620 --> 32:46.700
+Because it's the one that really makes sense,
+
+32:46.700 --> 32:48.140
+as we were discussing before.
+
+32:49.260 --> 32:52.820
+You want to decouple the geometric description,
+
+32:52.820 --> 32:56.060
+which is really captured by the notion of arc length,
+
+32:56.060 --> 32:57.180
+from the time schedule,
+
+32:57.180 --> 33:00.020
+so that at each point of the path,
+
+33:00.020 --> 33:02.660
+you select the velocity you want to be,
+
+33:03.820 --> 33:08.820
+and then you implicitly compute a time schedule
+
+33:09.180 --> 33:10.900
+that ensures that that is the case.
+
+33:15.620 --> 33:16.460
+All right.
+
+33:18.860 --> 33:21.140
+So what have we done so far?
+
+33:21.140 --> 33:23.740
+So what we've done so far is,
+
+33:23.740 --> 33:25.420
+starting from the two-step design
+
+33:25.420 --> 33:26.740
+that we discussed last time,
+
+33:26.740 --> 33:28.700
+we said we first are going to compute
+
+33:28.700 --> 33:29.940
+an open-loop trajectory.
+
+33:29.940 --> 33:33.420
+Open-loop trajectory means open-loop sequence of controls,
+
+33:33.420 --> 33:36.180
+and corresponding state trajectory X.
+
+33:36.180 --> 33:37.780
+The correspondence is through
+
+33:37.780 --> 33:39.580
+the differential equation of motion.
+
+33:42.100 --> 33:43.840
+This is what we've done so far.
+
+33:43.880 --> 33:45.640
+But as we discussed last time,
+
+33:45.640 --> 33:48.240
+this strategy tends to be fragile,
+
+33:48.240 --> 33:52.240
+because it does not have any mechanism
+
+33:52.240 --> 33:54.760
+to constantly check how well you're doing,
+
+33:54.760 --> 33:56.920
+and correct for possible deviations
+
+33:56.920 --> 33:59.680
+due to modern mismatches, noise, and so on.
+
+33:59.680 --> 34:01.920
+So we want to augment the strategy
+
+34:01.920 --> 34:06.920
+with a tracking controller that gives us an extra level,
+
+34:07.480 --> 34:08.880
+that give us a level of robustness
+
+34:08.880 --> 34:10.560
+toward modern mismatches.
+
+34:11.480 --> 34:13.000
+Now, the tracking controller
+
+34:13.000 --> 34:14.560
+is indeed a closed-loop controller,
+
+34:14.560 --> 34:16.940
+which means that the control depends
+
+34:16.940 --> 34:18.960
+on the current value of the state.
+
+34:18.960 --> 34:22.440
+But usually, it's designed to work locally,
+
+34:22.440 --> 34:25.920
+so basically in a tube around the nominal trajectory.
+
+34:25.920 --> 34:29.060
+Here, D, the subscript of D, means desired.
+
+34:29.060 --> 34:31.660
+Basically, desired trajectory, nominal trajectory.
+
+34:31.660 --> 34:34.560
+We discussed how to compute the open-loop trajectory
+
+34:34.560 --> 34:36.660
+through differential correctness techniques.
+
+34:36.660 --> 34:40.720
+We had discussed how to account for input bound constraints
+
+34:40.720 --> 34:42.640
+by using the notion of time scaling.
+
+34:43.240 --> 34:47.380
+Now we are in a position to move to this piece over here.
+
+34:48.320 --> 34:51.440
+This piece over here is problem one in your P set.
+
+34:51.440 --> 34:54.780
+This piece over here is problem three in your P set.
+
+34:56.280 --> 34:58.720
+As I said, trajectory tracking entails computing
+
+34:58.720 --> 35:00.900
+a closed-loop controller,
+
+35:00.900 --> 35:04.080
+something that maps the current value of the state,
+
+35:04.080 --> 35:08.520
+and usually the difference between where you are
+
+35:08.520 --> 35:11.460
+and where you would like to be,
+
+35:11.460 --> 35:13.160
+into a corrective control action.
+
+35:14.280 --> 35:16.400
+Now, there are many ways of designing
+
+35:16.400 --> 35:19.860
+a trajectory tracking controller.
+
+35:19.860 --> 35:22.480
+The simplest one, that actually works pretty well,
+
+35:22.480 --> 35:23.880
+is a purely
+
+35:25.680 --> 35:26.840
+geometric approach.
+
+35:29.480 --> 35:34.040
+Whereby, if this is your desired trajectory, X of D,
+
+35:35.040 --> 35:36.440
+and you're here,
+
+35:37.400 --> 35:42.060
+you may consider the corrective action
+
+35:42.060 --> 35:46.260
+that tells you how to intercept.
+
+35:46.260 --> 35:51.080
+So, you would like to be here at time T,
+
+35:51.080 --> 35:53.160
+and you're here at time T.
+
+35:53.160 --> 35:56.720
+So simple tracking control law is the so-called
+
+35:56.720 --> 35:58.120
+pursue control law,
+
+35:58.120 --> 36:00.800
+where you have an additional control term
+
+36:00.800 --> 36:03.700
+whose goal is try to bring you back
+
+36:03.700 --> 36:06.200
+along, say, a geometric path, like a straight line.
+
+36:07.560 --> 36:12.560
+Say, T is plus delta T seconds ahead of you in time.
+
+36:16.000 --> 36:20.160
+So basically, it's like a donkey that is chasing the carrot.
+
+36:20.160 --> 36:22.640
+That is an example of, if you are tracking.
+
+36:22.640 --> 36:24.720
+So here, this is the carrot.
+
+36:27.080 --> 36:29.240
+Well, I don't know how to design a carrot.
+
+36:29.240 --> 36:30.240
+But it's a carrot.
+
+36:30.800 --> 36:34.240
+That is moving along the path,
+
+36:34.240 --> 36:37.080
+and it's always, say, two seconds away along the path.
+
+36:37.080 --> 36:39.600
+And you're always trying to aim at that point.
+
+36:39.600 --> 36:41.760
+So it's referred to as geometric pursue.
+
+36:41.760 --> 36:42.600
+Sorry, Ben.
+
+36:42.600 --> 36:45.800
+Second, the dot that you drew for the intersection
+
+36:45.800 --> 36:48.640
+is two seconds forward, and it doesn't have to do
+
+36:48.640 --> 36:50.760
+with the fact that it's tangential at that point.
+
+36:50.760 --> 36:51.600
+No, no, no.
+
+36:51.600 --> 36:53.200
+And of course, it's something that moves.
+
+36:53.200 --> 36:54.620
+As you move, it moves.
+
+36:57.360 --> 36:58.920
+Of course, there is a mathematical formulation
+
+36:58.920 --> 36:59.760
+of all of this.
+
+37:00.200 --> 37:04.120
+The key point is that it's a fairly simple idea.
+
+37:04.120 --> 37:06.800
+And as all simple ideas, they tend to work pretty well.
+
+37:07.840 --> 37:10.880
+The second approach is linearization.
+
+37:10.880 --> 37:15.440
+So the idea of linearization is that you want
+
+37:15.440 --> 37:18.480
+to turn the problem into a linear one
+
+37:18.480 --> 37:21.040
+to which you can apply linear control techniques.
+
+37:21.040 --> 37:23.400
+For those of you that are not familiar with controls,
+
+37:23.400 --> 37:26.000
+linear controls is way easier than the linear control.
+
+37:26.000 --> 37:30.000
+So that's what people want to apply techniques
+
+37:30.000 --> 37:30.840
+from linear controls.
+
+37:30.840 --> 37:34.480
+Linear controls means control theory applied to systems
+
+37:34.480 --> 37:37.360
+whose differential equation is linear.
+
+37:38.680 --> 37:41.160
+There are two ways of linearizing the system.
+
+37:41.160 --> 37:44.280
+One is exact linearization,
+
+37:44.280 --> 37:46.800
+which is very related to the notion of differential,
+
+37:46.800 --> 37:48.960
+very much related to the notion of differential flatness.
+
+37:48.960 --> 37:50.740
+We're going to discuss it in a second.
+
+37:50.740 --> 37:54.600
+The second one is inexact linearization.
+
+37:54.600 --> 37:57.880
+So the idea is that since for the purposes
+
+37:57.880 --> 38:02.880
+of trajectory tracking, if nothing terrible happens,
+
+38:03.280 --> 38:07.880
+you're typically very close to your nominal trajectory.
+
+38:07.880 --> 38:12.880
+So you may think of linearizing the equations of motion
+
+38:14.680 --> 38:17.820
+around your nominal trajectory.
+
+38:17.820 --> 38:19.700
+The linearized system is now linear,
+
+38:19.700 --> 38:21.680
+and then you can apply linear control techniques
+
+38:21.680 --> 38:24.800
+for designing your trajectory tracking controller.
+
+38:24.800 --> 38:26.760
+Linearization basically means that
+
+38:27.900 --> 38:30.040
+if you have a non-linear function,
+
+38:30.040 --> 38:31.440
+and you know that you are at some point
+
+38:31.440 --> 38:34.360
+along that linear function, if you move locally,
+
+38:34.360 --> 38:37.680
+so if you stay close to that point,
+
+38:37.680 --> 38:39.940
+you can approximate the non-linear function
+
+38:39.940 --> 38:41.600
+with just a line.
+
+38:41.600 --> 38:45.760
+And then do the control, design the control strategy
+
+38:45.760 --> 38:47.840
+with respect to the simplified model
+
+38:47.840 --> 38:49.640
+where basically everything becomes a line.
+
+38:49.640 --> 38:53.040
+Anyway, if you're familiar with controls,
+
+38:53.040 --> 38:54.040
+this is an obvious concept.
+
+38:54.040 --> 38:55.720
+If you're not, it's a bit obscure.
+
+38:55.720 --> 38:58.520
+Just to let you know that this is also a possibility.
+
+38:59.880 --> 39:02.520
+The third possibility relies
+
+39:02.520 --> 39:04.560
+on non-linear control techniques.
+
+39:04.560 --> 39:09.560
+So you tackle the problem without simplification.
+
+39:11.020 --> 39:12.940
+Usually this is very hard to do,
+
+39:12.940 --> 39:16.400
+and seldom people do it.
+
+39:16.400 --> 39:17.660
+If you can do it, it's great,
+
+39:17.660 --> 39:19.720
+because you're not doing any approximation,
+
+39:19.720 --> 39:21.460
+you're not doing any weird transformation,
+
+39:21.460 --> 39:23.740
+but most of the time you can't.
+
+39:23.740 --> 39:27.640
+The fourth one is by using optimization-based techniques.
+
+39:27.640 --> 39:31.140
+So the tracking controller becomes the solution
+
+39:31.140 --> 39:33.320
+to an optimization algorithm.
+
+39:33.320 --> 39:36.820
+This is really the realm of model predictive control.
+
+39:36.820 --> 39:37.980
+It has a number of advantages.
+
+39:37.980 --> 39:41.220
+It can handle large variety of constraints and so on.
+
+39:42.900 --> 39:44.800
+But this is beyond the scope of this class.
+
+39:44.800 --> 39:46.580
+So what we're going to discuss in this class
+
+39:46.660 --> 39:49.240
+is the idea of exact linearization
+
+39:49.240 --> 39:51.880
+that is very much related to differential flatness.
+
+39:51.880 --> 39:56.180
+We're not going to discuss the other solution strategies.
+
+39:56.180 --> 39:58.620
+Just wanted to, you know,
+
+39:58.620 --> 40:00.100
+by now you know the philosophy of this class.
+
+40:00.100 --> 40:01.660
+I want to give you the high-level overview
+
+40:01.660 --> 40:03.940
+of all the tools that are out there,
+
+40:03.940 --> 40:08.140
+and then we go deep into one tool that is pedagogical
+
+40:08.140 --> 40:10.740
+and is of interesting practice, and is widely used.
+
+40:12.060 --> 40:15.340
+So in particular, this is what we're going to discuss now.
+
+40:15.340 --> 40:18.380
+Any questions before we do our deep dive
+
+40:18.380 --> 40:19.660
+in exact linearization?
+
+40:24.140 --> 40:25.180
+All right.
+
+40:25.180 --> 40:28.860
+So the idea of exact linearization
+
+40:28.860 --> 40:31.500
+is that for some systems,
+
+40:31.500 --> 40:33.380
+and in particular the system for which this work
+
+40:33.380 --> 40:36.140
+is exactly the class of differential flat systems,
+
+40:36.140 --> 40:39.860
+it is possible through a change of coordinates
+
+40:39.860 --> 40:42.660
+and through a transformational control input
+
+40:42.660 --> 40:46.340
+to transform the system into a linear system,
+
+40:46.340 --> 40:49.060
+meaning one that looks like this
+
+40:50.660 --> 40:51.900
+in a way that is one-to-one,
+
+40:51.900 --> 40:53.580
+meaning the solution to the linear system
+
+40:53.580 --> 40:56.860
+can be mapped into the solution of the non-linear system
+
+40:56.860 --> 40:59.060
+and vice versa, which means that then you can do
+
+40:59.060 --> 41:01.300
+control design for the linear system
+
+41:01.300 --> 41:05.520
+and then map the controller that you have
+
+41:05.520 --> 41:09.060
+into the non-linear controller for the non-linear system.
+
+41:09.060 --> 41:11.240
+Very simple example.
+
+41:12.660 --> 41:17.660
+This is super simple too.
+
+41:19.300 --> 41:21.580
+So let's assume that you have a system x dot
+
+41:21.580 --> 41:24.180
+equal fx plus u.
+
+41:24.180 --> 41:27.020
+Well, I don't know why v came out, but say u.
+
+41:28.540 --> 41:30.060
+And I tell you to control the system.
+
+41:30.060 --> 41:34.100
+So find a control history u that drives the state
+
+41:34.100 --> 41:36.500
+of the system to the origin, for example.
+
+41:37.620 --> 41:40.840
+Now, f is in general a non-linear function of x.
+
+41:40.840 --> 41:43.360
+So you might start thinking, this is complicated
+
+41:43.360 --> 41:45.360
+because in general, I don't know the solution
+
+41:45.360 --> 41:47.120
+to this differential equation.
+
+41:47.120 --> 41:49.960
+How do I really compute u and so on?
+
+41:49.960 --> 41:52.720
+But then you might just say, well,
+
+41:52.720 --> 41:57.720
+let's set f of x plus u equal v, a virtual control input.
+
+42:00.860 --> 42:05.860
+Now, you design v so that x goes to zero.
+
+42:06.960 --> 42:08.740
+This is the simplest possible differential equation
+
+42:08.740 --> 42:09.680
+that you can have.
+
+42:11.680 --> 42:14.440
+And then in the real controller u,
+
+42:14.440 --> 42:17.100
+that you will need to use for the true system
+
+42:17.100 --> 42:22.100
+to go to the origin, will be v minus f of x.
+
+42:25.760 --> 42:26.960
+So what have you done here?
+
+42:26.960 --> 42:31.280
+Basically, you are computing an input u
+
+42:31.280 --> 42:33.200
+that cancels the non-linearity
+
+42:34.900 --> 42:37.220
+and replace the system with a linear structure.
+
+42:38.220 --> 42:40.500
+So that now you can just do the control
+
+42:40.500 --> 42:42.540
+for respect to v.
+
+42:42.540 --> 42:43.980
+So in particular, you can choose v
+
+42:43.980 --> 42:45.780
+that makes sure that you converge to zero
+
+42:45.780 --> 42:48.220
+with some desired convergence rate and so on.
+
+42:48.220 --> 42:50.260
+And then with just the inverse transformation,
+
+42:50.260 --> 42:53.100
+you get the input for the true system.
+
+42:53.100 --> 42:54.060
+Does it make sense?
+
+42:55.500 --> 42:57.220
+This is called exact linearization
+
+42:57.220 --> 42:59.340
+because you're not taking any approximation.
+
+42:59.340 --> 43:02.500
+You're not doing like in exact linearization,
+
+43:03.420 --> 43:06.360
+a Taylor series expansion of your differential equation
+
+43:06.360 --> 43:10.460
+and then you truncate the Taylor system up to some order.
+
+43:10.460 --> 43:11.640
+You're not doing that.
+
+43:11.640 --> 43:12.480
+This is exact.
+
+43:13.680 --> 43:16.520
+The problem is that district does not work
+
+43:16.520 --> 43:18.560
+for all possible systems.
+
+43:18.560 --> 43:22.360
+It works exactly for the differential flat systems.
+
+43:22.360 --> 43:23.980
+In particular, one can show
+
+43:23.980 --> 43:26.300
+that every differential flat systems
+
+43:26.300 --> 43:28.720
+can be equivalently transformed
+
+43:28.720 --> 43:33.720
+by a non-linear transformation into a linear system
+
+43:33.760 --> 43:36.760
+where by z is the flat output as usual
+
+43:36.760 --> 43:39.800
+and it's q plus one derivative is equal to w,
+
+43:39.800 --> 43:42.120
+which is the mutual control input.
+
+43:42.120 --> 43:44.100
+The fact that there is a tight connection
+
+43:44.100 --> 43:48.400
+between feedback linearization and differential flatness
+
+43:48.400 --> 43:50.440
+has not been proven here rigorously
+
+43:50.440 --> 43:52.560
+but shouldn't come as a total surprise.
+
+43:52.560 --> 43:54.440
+As we already discussed, differential flatness
+
+43:54.440 --> 43:57.720
+basically removes all the non-linearity from the problem.
+
+43:57.720 --> 43:59.080
+So it's not at all surprising
+
+43:59.080 --> 44:01.000
+that there is an additional theoretical result
+
+44:01.000 --> 44:03.400
+that says that actually you can also give to it
+
+44:03.960 --> 44:05.920
+a dynamic interpretation.
+
+44:05.920 --> 44:08.860
+But if you want to dig deeper,
+
+44:09.800 --> 44:12.700
+I suggest to look at this book, Levina 2009.
+
+44:15.920 --> 44:17.720
+Key point here is that the differential flat system
+
+44:17.720 --> 44:20.680
+can be translated into a linear system
+
+44:20.680 --> 44:22.120
+in an equivalent fashion.
+
+44:22.120 --> 44:23.780
+The mappings are really the
+
+44:23.780 --> 44:25.720
+differential flat output mappings.
+
+44:25.720 --> 44:27.520
+I'm going to give an example in the next slide
+
+44:27.520 --> 44:29.160
+so that this becomes much clearer.
+
+44:30.060 --> 44:30.900
+Yeah.
+
+44:31.920 --> 44:32.760
+Okay.
+
+44:33.480 --> 44:35.000
+So if that is the case,
+
+44:35.000 --> 44:38.520
+so we have been able to translate to the non-linear system
+
+44:38.520 --> 44:40.460
+in an equivalent linear system
+
+44:40.460 --> 44:42.880
+through a non-linear transformation.
+
+44:42.880 --> 44:44.880
+We'll view it as a change of coordinates,
+
+44:44.880 --> 44:47.700
+but it's non-linear in order to remove the non-linearities.
+
+44:47.700 --> 44:49.560
+Once we have the linear system,
+
+44:49.560 --> 44:51.760
+then we can apply classical linear control techniques
+
+44:51.760 --> 44:53.080
+for tracking.
+
+44:53.080 --> 44:56.400
+In particular, the simplest possible way to do it
+
+44:56.400 --> 45:00.160
+and actually the way that people do it is
+
+45:00.160 --> 45:05.160
+you have the flat output, Z,
+
+45:05.820 --> 45:09.500
+you have the desired flat output ZDT,
+
+45:09.500 --> 45:11.520
+and then you have the actual flat output,
+
+45:11.520 --> 45:13.240
+so the one that is actually realized
+
+45:13.240 --> 45:16.080
+due to disturbances, model mismatches, and so on.
+
+45:16.080 --> 45:17.220
+Z of T.
+
+45:18.880 --> 45:22.360
+Then we define an error signal, EI,
+
+45:24.960 --> 45:29.960
+as ZIT minus ZDT.
+
+45:30.560 --> 45:33.400
+ZID or IDT.
+
+45:36.440 --> 45:40.640
+I is the i-th component of the flat output, Z,
+
+45:40.640 --> 45:41.880
+which is a general vector.
+
+45:43.580 --> 45:44.420
+Okay?
+
+45:45.680 --> 45:48.360
+So when you take the derivative,
+
+45:48.360 --> 45:50.880
+actually the derivative up to q plus one,
+
+45:50.880 --> 45:54.720
+so Eq plus one,
+
+45:55.720 --> 45:58.040
+EI T,
+
+45:58.040 --> 46:03.040
+is equal to ZI q plus one T
+
+46:03.120 --> 46:07.920
+minus ZID q plus one T.
+
+46:09.840 --> 46:11.880
+So this is equal to,
+
+46:11.880 --> 46:14.720
+we just said that the dynamics
+
+46:14.720 --> 46:16.060
+in the flat output space are linear,
+
+46:16.060 --> 46:17.920
+so this is equal to the control input,
+
+46:17.920 --> 46:21.560
+the i-th component of the control input, Wi,
+
+46:21.560 --> 46:23.760
+and is equal to Wi desired.
+
+46:24.080 --> 46:29.080
+So how do you choose Wi in such a way
+
+46:29.560 --> 46:32.040
+that the error dynamics go to zero?
+
+46:32.040 --> 46:34.040
+Error dynamics goes to zero implies
+
+46:34.040 --> 46:35.840
+that the tracking error goes to zero,
+
+46:35.840 --> 46:40.680
+because it implies that ZI goes to ZID for each i.
+
+46:40.680 --> 46:43.720
+Basically implies that the actual flat output
+
+46:43.720 --> 46:46.060
+goes to the desired output asymptotically.
+
+46:47.280 --> 46:48.120
+So what do we do?
+
+46:54.400 --> 46:59.400
+You just set Vi equal to Vid so that you cancel this term,
+
+47:02.320 --> 47:05.260
+and then you add a stable dynamics
+
+47:05.260 --> 47:07.300
+for the error system to the system,
+
+47:07.300 --> 47:12.300
+meaning minus the sum from j equal zero,
+
+47:14.600 --> 47:19.600
+q, Kij Ej T.
+
+47:19.600 --> 47:24.600
+So that the resulting differential equation,
+
+47:32.560 --> 47:34.440
+so that the resulting differential equation
+
+47:34.440 --> 47:39.440
+is Ei q plus one T is equal,
+
+47:44.420 --> 47:46.760
+so the resulting equation is Ei q plus one T
+
+47:46.760 --> 47:51.760
+plus sum of j equals zero to q, Kij Ej T equals zero.
+
+47:56.920 --> 47:58.680
+So basically with this choice,
+
+47:58.680 --> 48:03.360
+you have been able to derive an equation
+
+48:03.360 --> 48:06.160
+for your error dynamics, which is linear,
+
+48:06.160 --> 48:09.520
+and what you have to determine are these gains K.
+
+48:09.520 --> 48:12.200
+How would you pick those gains K?
+
+48:12.200 --> 48:13.040
+Kij?
+
+48:16.760 --> 48:21.760
+Sorry, Ei, jth derivative, Ei, jth derivative.
+
+48:30.660 --> 48:32.160
+How do you compute those gains?
+
+48:33.640 --> 48:36.880
+Basically, how do you design the tacking control law?
+
+48:36.880 --> 48:38.400
+You want the error to go to zero.
+
+48:38.400 --> 48:40.680
+So what do you want for this differential equation?
+
+48:40.680 --> 48:42.320
+What structural property you want?
+
+48:43.520 --> 48:45.800
+So if you know about linear differential equations,
+
+48:45.800 --> 48:48.180
+or you should know about linear differential equations,
+
+48:48.180 --> 48:52.320
+you want to compute the gains K in such a way
+
+48:52.320 --> 48:54.820
+that the eigenvalues of differential equations
+
+48:54.820 --> 48:56.560
+have negative real parts,
+
+48:56.560 --> 48:58.240
+which means that the error dynamics
+
+48:58.240 --> 49:00.040
+and its derivatives converge to zero.
+
+49:01.640 --> 49:04.600
+If you're not familiar with the linear differential equation,
+
+49:04.600 --> 49:06.120
+it's fine.
+
+49:06.120 --> 49:09.240
+The key message here is that there are very well
+
+49:09.240 --> 49:12.720
+understood techniques to compute the gains K,
+
+49:12.720 --> 49:16.120
+such that this differential equation is stable,
+
+49:16.120 --> 49:18.240
+which means that E, the variable,
+
+49:18.240 --> 49:20.400
+and all its derivatives converge to zero.
+
+49:25.960 --> 49:28.680
+So what is the resulting tacking control law?
+
+49:30.920 --> 49:35.280
+Is Wi equal to Wi desired,
+
+49:35.280 --> 49:37.840
+so the desired control input, which we know,
+
+49:38.840 --> 49:42.300
+minus the superposition of E and its derivative.
+
+49:43.560 --> 49:45.740
+Which we can compute because we assume
+
+49:45.740 --> 49:48.280
+that we have access to the flat outputs
+
+49:48.280 --> 49:49.120
+and its derivatives.
+
+49:49.120 --> 49:50.640
+It's something that we can measure.
+
+49:52.400 --> 49:53.760
+I'm going to give an example in a second
+
+49:53.760 --> 49:55.320
+so that it becomes super clear.
+
+49:57.240 --> 50:01.420
+Well, yes, so Q,
+
+50:03.440 --> 50:08.440
+so if you remember from the definition of the flat outputs,
+
+50:08.440 --> 50:13.360
+the flat outputs are a transformation
+
+50:13.360 --> 50:16.360
+from the state U and its derivative up to Q.
+
+50:16.360 --> 50:17.720
+So that's the Q.
+
+50:17.720 --> 50:21.720
+Now a good question is, if you give me a linear system,
+
+50:21.720 --> 50:22.880
+is it differentially flat?
+
+50:22.880 --> 50:25.580
+As we said, this is a very difficult question to answer.
+
+50:25.580 --> 50:27.420
+The reason why it's a very difficult question to answer
+
+50:27.420 --> 50:30.840
+is that a priori, nobody tells you
+
+50:32.120 --> 50:34.360
+how many derivatives of the input you should consider
+
+50:34.360 --> 50:35.960
+in order to find this transformation.
+
+50:35.960 --> 50:37.880
+So it's a very painful process.
+
+50:38.360 --> 50:39.680
+I mean, there are some automated procedures,
+
+50:39.680 --> 50:40.920
+but they don't really scale.
+
+50:40.920 --> 50:42.580
+It's a very painful process of,
+
+50:42.580 --> 50:45.480
+let's not include U initially.
+
+50:45.480 --> 50:47.980
+Am I able to find something that has this one-to-one mapping?
+
+50:47.980 --> 50:48.900
+Yes or no?
+
+50:48.900 --> 50:51.080
+Then I use U and so on.
+
+50:51.080 --> 50:52.840
+So that's why, as I said last time,
+
+50:52.840 --> 50:55.560
+if you find that a useful system is differentially flat,
+
+50:55.560 --> 50:57.080
+you usually write a paper about it
+
+50:57.080 --> 50:59.120
+because usually it entailed a lot of work.
+
+51:00.400 --> 51:03.960
+Let me do an example so that all of these
+
+51:03.960 --> 51:05.760
+that is quite abstract becomes clear.
+
+51:06.600 --> 51:10.200
+And let's consider the extended unicycle model,
+
+51:10.200 --> 51:11.780
+which is the one, as we said,
+
+51:11.780 --> 51:13.080
+we're going to focus on this class.
+
+51:13.080 --> 51:15.280
+It's very good, pedagogical, and it's useful,
+
+51:15.280 --> 51:16.920
+and also is in your PISOT.
+
+51:18.100 --> 51:21.360
+This model is referred to as extended unicycle
+
+51:21.360 --> 51:24.440
+because the kinematics are those of unicycle
+
+51:24.440 --> 51:25.760
+that you can recognize,
+
+51:25.760 --> 51:29.920
+but now we have added an integrator with respect to speed.
+
+51:29.920 --> 51:32.620
+So we are saying that the derivative of speed
+
+51:32.620 --> 51:34.300
+is equal to acceleration.
+
+51:34.300 --> 51:37.300
+So the inputs now are acceleration and omega,
+
+51:38.500 --> 51:40.120
+which in many ways is more realistic
+
+51:40.120 --> 51:41.520
+than just a kinematic model.
+
+51:42.980 --> 51:46.060
+So what happens if you...
+
+51:47.060 --> 51:50.020
+So this system is differentially flat,
+
+51:50.020 --> 51:52.100
+with flat output x, y,
+
+51:52.100 --> 51:54.500
+and this is what is also discussed in your PISOT.
+
+51:57.380 --> 52:02.060
+Now what happens if you take the second derivative of x
+
+52:02.060 --> 52:05.100
+and the second derivative of y dot?
+
+52:05.100 --> 52:09.260
+So the second derivative of x is equal to
+
+52:09.260 --> 52:11.500
+v dot cosine of t
+
+52:12.420 --> 52:17.300
+minus v sinus of t theta dot.
+
+52:17.300 --> 52:20.520
+And y dot is equal to v dot sinus of t
+
+52:22.260 --> 52:27.260
+minus, or plus v cosine of t theta dot,
+
+52:28.040 --> 52:31.460
+which implies that x double dot and y double dot
+
+52:33.060 --> 52:37.180
+so this is the double derivative of your flat output,
+
+52:38.520 --> 52:39.860
+is equal to,
+
+52:41.340 --> 52:43.480
+so v dot is equal to a,
+
+52:43.480 --> 52:45.540
+v dot is equal to a,
+
+52:45.540 --> 52:47.540
+theta dot is equal to omega,
+
+52:47.540 --> 52:49.120
+theta dot is equal to omega.
+
+52:50.060 --> 52:54.060
+So this is equal to cosine t
+
+52:54.060 --> 52:55.940
+minus sin of t
+
+52:57.540 --> 52:58.380
+v
+
+52:59.620 --> 53:00.900
+sinus of t
+
+53:01.860 --> 53:03.220
+v cosine of t
+
+53:06.660 --> 53:07.860
+a omega.
+
+53:09.500 --> 53:10.900
+And I call this matrix J.
+
+53:12.460 --> 53:15.980
+To make any error, cosine of minus sinus t v
+
+53:15.980 --> 53:17.340
+sinus v cosine of t.
+
+53:21.900 --> 53:22.940
+So then what do I do?
+
+53:22.940 --> 53:24.820
+I just say, okay,
+
+53:24.820 --> 53:28.540
+let's define all this stuff as
+
+53:28.580 --> 53:31.000
+a virtual control input u one, u two.
+
+53:32.940 --> 53:36.180
+I do my control design with respect to the system
+
+53:40.720 --> 53:42.060
+z double dot,
+
+53:42.920 --> 53:45.860
+specifically here we have x double dot,
+
+53:45.860 --> 53:47.740
+y double dot,
+
+53:47.740 --> 53:50.860
+equal to u one, u two.
+
+53:50.860 --> 53:54.860
+And then to obtain the true input,
+
+53:54.860 --> 53:56.400
+I just invert this matrix.
+
+53:57.400 --> 54:00.000
+Now, if I take the determinant,
+
+54:00.920 --> 54:02.800
+the determinant is equal to b.
+
+54:02.800 --> 54:04.640
+So if b equal to zero, this is singular.
+
+54:04.640 --> 54:06.300
+So this transformation doesn't work,
+
+54:06.300 --> 54:08.440
+which means you have point of singularity.
+
+54:08.440 --> 54:09.720
+The differential flatness,
+
+54:09.720 --> 54:12.920
+oftentimes this happens if you have some point of singularity
+
+54:12.920 --> 54:15.360
+there are two main ways to dealing with them.
+
+54:15.360 --> 54:18.200
+One is to use slightly more sophisticated techniques
+
+54:18.200 --> 54:19.520
+that we don't cover in this class,
+
+54:19.520 --> 54:22.760
+whereby we prolong this mapping in such a way
+
+54:22.760 --> 54:25.460
+that they're well defined everywhere.
+
+54:25.500 --> 54:27.440
+In this class, we just use a more naive technique
+
+54:27.440 --> 54:28.560
+that is still useful,
+
+54:28.560 --> 54:32.580
+whereby we just reset some of the variables if,
+
+54:32.580 --> 54:35.100
+in particular b, if b is below a threshold,
+
+54:35.100 --> 54:38.840
+say one to the minus, 10 to the power of minus four,
+
+54:38.840 --> 54:39.680
+five or so on.
+
+54:42.400 --> 54:47.300
+So this is the linearized, feedback linearized dynamics
+
+54:47.300 --> 54:49.220
+that I was referring to before.
+
+54:49.220 --> 54:54.220
+So what you do for tracking is to define the error
+
+54:54.220 --> 54:56.740
+with respect to each of the flat outputs,
+
+54:56.740 --> 54:59.820
+so the x and y here,
+
+54:59.820 --> 55:02.020
+and then the superimposed linear dynamics.
+
+55:03.120 --> 55:07.380
+In particular, with this choice of u1 and u2,
+
+55:07.380 --> 55:09.840
+what are the closed loop dynamics?
+
+55:09.840 --> 55:13.380
+Closed loop dynamics mean once you have substituted
+
+55:13.380 --> 55:15.700
+for the closed loop control law.
+
+55:15.700 --> 55:19.380
+So we have x double dot, let me do it just for x.
+
+55:19.380 --> 55:23.300
+So x double dot is equal to x double dot d,
+
+55:23.420 --> 55:28.420
+the desired value of x along time,
+
+55:29.340 --> 55:34.340
+plus k p x x d minus x dot
+
+55:35.980 --> 55:40.980
+plus plus k p y, no, sorry,
+
+55:41.580 --> 55:46.420
+k d x, and this is not dot,
+
+55:46.420 --> 55:48.360
+x dot d minus x dot.
+
+55:53.300 --> 55:57.920
+So if you put everything on the other side,
+
+55:57.920 --> 56:02.920
+what you get is x dot minus x dot d
+
+56:06.300 --> 56:11.060
+plus x p x x x d x,
+
+56:13.180 --> 56:18.180
+x dot d minus x dot plus k p x x,
+
+56:24.220 --> 56:29.220
+this is d, k p x x minus x d equals zero.
+
+56:31.740 --> 56:34.500
+So this is your error,
+
+56:35.940 --> 56:38.500
+this is the derivative with respect to the error,
+
+56:38.500 --> 56:41.460
+and this is double derivative with respect to the error.
+
+56:41.460 --> 56:42.860
+This is now a differential equation
+
+56:42.860 --> 56:45.180
+only with respect to the error term.
+
+56:45.180 --> 56:48.380
+For perfect tracking, the error has to go to zero.
+
+56:48.380 --> 56:52.880
+So to ensure that I had to compute this gain and this gain
+
+56:52.880 --> 56:56.180
+in such a way that this differential equation is stable.
+
+56:56.180 --> 56:58.780
+But the discard sign of rules, if you know about it,
+
+56:59.920 --> 57:01.520
+if these two are positive,
+
+57:01.520 --> 57:04.160
+then all the roots are negative and I'm done.
+
+57:04.160 --> 57:06.720
+As I said, if you're not familiar with differential,
+
+57:06.720 --> 57:08.200
+linear differential equations, it's fine.
+
+57:08.200 --> 57:10.840
+It's suffice to say that for the second order
+
+57:10.840 --> 57:12.120
+linear differential equation,
+
+57:12.120 --> 57:15.620
+just pick the gains that are positive and you're fine.
+
+57:17.560 --> 57:21.220
+The specific values affect how quickly you go to zero.
+
+57:22.220 --> 57:24.700
+So you might think, well, why don't you pick like k
+
+57:24.700 --> 57:27.400
+in such a way that you go very quickly to zero,
+
+57:27.400 --> 57:30.100
+is because oftentimes that translates into,
+
+57:30.100 --> 57:32.820
+that violates saturation bounds for your inputs.
+
+57:32.820 --> 57:34.740
+So if you do so, then you have to do time scaling
+
+57:34.740 --> 57:36.740
+in order to scale everything back
+
+57:36.740 --> 57:38.740
+so that you fulfill the bounds.
+
+57:40.440 --> 57:41.300
+But so that's neat, right?
+
+57:41.300 --> 57:44.700
+Because in the same framework of differential flatness,
+
+57:44.700 --> 57:48.580
+we know how to do open loop trajectory planning
+
+57:48.620 --> 57:51.260
+and how to design a tracking controller
+
+57:52.140 --> 57:53.640
+in the same framework.
+
+57:53.640 --> 57:55.700
+So it's pretty remarkable.
+
+57:55.700 --> 57:56.760
+Any questions here?
+
+57:58.140 --> 58:00.220
+Again, this is not super complicated,
+
+58:00.220 --> 58:03.680
+but I encourage you to spend a little bit of time
+
+58:03.680 --> 58:05.420
+to familiarize with these concepts.
+
+58:07.220 --> 58:10.180
+Many ideas with differential flatness to translate
+
+58:10.180 --> 58:12.180
+the trajectory planning problem
+
+58:12.180 --> 58:15.060
+into planning the problem from a geometric path
+
+58:15.060 --> 58:18.820
+to which you add a notion of times
+
+58:18.820 --> 58:20.980
+through a notion of time scaling.
+
+58:20.980 --> 58:24.020
+And at the same time, you use a differential flatness tool
+
+58:24.020 --> 58:26.700
+through its feedback linearization interpretation,
+
+58:26.700 --> 58:30.940
+basically that allows you to turn an linear system
+
+58:30.940 --> 58:32.500
+into one that looks linear,
+
+58:32.500 --> 58:35.300
+to design a trajectory controller for the linear system.
+
+58:35.300 --> 58:38.100
+And then what will be the real controller here?
+
+58:40.000 --> 58:45.000
+So U is given by this linear feedback copy law.
+
+58:45.300 --> 58:50.300
+So what are the corresponding values of A and omega?
+
+58:53.140 --> 58:55.060
+I mean, your inputs are not U one and U two.
+
+58:55.060 --> 58:57.660
+Your inputs for the unicycle system are A and omega.
+
+58:58.620 --> 59:01.760
+What you do is that you compute these two terms,
+
+59:01.760 --> 59:03.540
+and then you just invert the matrix J
+
+59:03.540 --> 59:05.140
+in order to find the A and omega,
+
+59:06.060 --> 59:09.900
+that give rise to perfect tracking
+
+59:09.900 --> 59:11.860
+for the Cartesian coordinates, X and Y.
+
+59:11.860 --> 59:16.700
+Again, with a caveat that you always have to check
+
+59:16.700 --> 59:18.940
+similarity when you invert stuff,
+
+59:18.940 --> 59:20.980
+there are ways to deal with the similarity,
+
+59:20.980 --> 59:23.560
+more sophisticated ways and less sophisticated ways.
+
+59:23.560 --> 59:26.140
+In this class, we'll look at a more naive way,
+
+59:26.140 --> 59:29.580
+but still quite effective and also used in practice.
+
+59:29.580 --> 59:30.420
+Yes?
+
+59:37.420 --> 59:40.920
+Can you please explain the last of it here?
+
+59:40.920 --> 59:45.920
+I mean, the last of it here is only the full pass point.
+
+59:45.920 --> 59:47.920
+So how do you know that?
+
+59:49.920 --> 59:50.760
+I didn't get it.
+
+59:50.760 --> 59:51.600
+Could you repeat?
+
+59:52.880 --> 59:55.900
+I mean, the last of it is...
+
+59:55.900 --> 59:56.740
+This one?
+
+59:56.740 --> 59:58.240
+The last of it.
+
+59:58.240 --> 59:59.080
+This one?
+
+59:59.940 --> 01:00:00.780
+Previous one.
+
+01:00:00.780 --> 01:00:01.600
+Previous.
+
+01:00:01.600 --> 01:00:02.440
+I see.
+
+01:00:02.440 --> 01:00:03.260
+This one.
+
+01:00:03.260 --> 01:00:05.580
+There is Z, Q plus one, and the omega,
+
+01:00:05.580 --> 01:00:06.800
+there are a lot of other ones.
+
+01:00:06.800 --> 01:00:07.640
+Oh, there's W.
+
+01:00:07.640 --> 01:00:08.460
+Whatever it is.
+
+01:00:08.460 --> 01:00:10.140
+I don't know what the graph presents
+
+01:00:10.140 --> 01:00:13.500
+in the next example of those ones.
+
+01:00:13.500 --> 01:00:17.700
+So Z, Q plus one, here,
+
+01:00:22.280 --> 01:00:26.580
+would be X double dot, Y double dot.
+
+01:00:26.580 --> 01:00:28.540
+So in this case, the Q was equal to one.
+
+01:00:29.700 --> 01:00:34.700
+W will be what I call the U1 and U2,
+
+01:00:37.620 --> 01:00:39.120
+in example, the unicycle.
+
+01:00:41.400 --> 01:00:44.380
+You see, with this choice of U1 and U2,
+
+01:00:44.380 --> 01:00:45.740
+the system becomes linear.
+
+01:00:47.460 --> 01:00:50.580
+So this will be Z, Q plus one,
+
+01:00:50.580 --> 01:00:52.760
+and this will be U1 and U2 will be
+
+01:00:52.760 --> 01:00:54.700
+the first and second components of W.
+
+01:01:00.580 --> 01:01:02.420
+Make sense?
+
+01:01:02.420 --> 01:01:03.260
+100%?
+
+01:01:05.460 --> 01:01:06.300
+90%.
+
+01:01:08.300 --> 01:01:13.300
+I mean, as I said, I didn't give you
+
+01:01:14.020 --> 01:01:16.780
+the entire explanation about why
+
+01:01:16.780 --> 01:01:19.380
+the differential fact system can be put in a form.
+
+01:01:19.380 --> 01:01:22.500
+Here I'm asking you to believe me, basically.
+
+01:01:22.500 --> 01:01:24.380
+But I also gave you some justification
+
+01:01:24.380 --> 01:01:25.860
+about why that is the case.
+
+01:01:26.740 --> 01:01:28.400
+As I said, in practice,
+
+01:01:29.660 --> 01:01:31.360
+if you want to control a robotic system,
+
+01:01:31.360 --> 01:01:33.520
+you first check whether it is differentially flat.
+
+01:01:33.520 --> 01:01:35.280
+If it is differentially flat,
+
+01:01:35.280 --> 01:01:38.700
+there is a paper out there that is showing you the mappings
+
+01:01:38.700 --> 01:01:42.100
+that allow you to do the trajectory planning part,
+
+01:01:42.100 --> 01:01:46.020
+and there's also the corresponding linear formulation
+
+01:01:46.020 --> 01:01:48.200
+that allows you to do the tracking part.
+
+01:01:48.200 --> 01:01:50.500
+So from a practitioner standpoint,
+
+01:01:50.500 --> 01:01:51.580
+you don't really need to know
+
+01:01:51.580 --> 01:01:54.300
+like the more sophisticated mathematics
+
+01:01:54.300 --> 01:01:57.820
+that allow you to do this transformation.
+
+01:01:57.820 --> 01:02:01.700
+What you really need to know are the mappings.
+
+01:02:01.700 --> 01:02:03.900
+In particular, for example, this mapping here.
+
+01:02:05.180 --> 01:02:08.220
+There are chances are that have been already done for you.
+
+01:02:08.220 --> 01:02:10.380
+Maybe you're about to expect that
+
+01:02:10.380 --> 01:02:14.740
+X of dot desire, like, are we really get that problem?
+
+01:02:14.740 --> 01:02:17.100
+Oh, X of dot desire would be
+
+01:02:18.020 --> 01:02:21.340
+the state trajectory that corresponds to U desired.
+
+01:02:22.220 --> 01:02:25.460
+So that is that you have computed your open loop trajectory
+
+01:02:25.460 --> 01:02:27.100
+which corresponds to,
+
+01:02:30.900 --> 01:02:32.100
+which corresponds, sorry,
+
+01:02:32.100 --> 01:02:35.540
+I computed the open loop trajectory,
+
+01:02:35.540 --> 01:02:39.660
+which meaning the desired U,
+
+01:02:39.660 --> 01:02:43.140
+which translates into a desired X.
+
+01:02:46.780 --> 01:02:48.500
+Of course, X is related to U
+
+01:02:48.500 --> 01:02:50.740
+through the differential equation of motion.
+
+01:02:50.740 --> 01:02:52.460
+So this is the desired quantity
+
+01:02:52.460 --> 01:02:57.460
+that you would like your system to always track perfectly.
+
+01:02:59.340 --> 01:03:03.260
+In this control law, this XD will be here
+
+01:03:03.260 --> 01:03:04.620
+along with its derivatives.
+
+01:03:06.340 --> 01:03:09.500
+And the UD is the first term
+
+01:03:09.500 --> 01:03:12.140
+that you will have in the combined control law.
+
+01:03:14.140 --> 01:03:17.820
+So, and here the pi will be the non-linear transformation
+
+01:03:17.820 --> 01:03:20.220
+that allows you to go from the original system
+
+01:03:20.220 --> 01:03:22.300
+to the differential fact representation
+
+01:03:22.980 --> 01:03:24.060
+times the error terms.
+
+01:03:26.060 --> 01:03:27.020
+Does it make sense?
+
+01:03:29.340 --> 01:03:32.980
+So the procedure is very structured.
+
+01:03:32.980 --> 01:03:35.180
+You first compute the open loop trajectory.
+
+01:03:35.180 --> 01:03:36.660
+That becomes the desired one.
+
+01:03:36.660 --> 01:03:38.500
+Then you compute a tracking controller,
+
+01:03:38.500 --> 01:03:42.260
+which depends obviously on the desired trajectory,
+
+01:03:42.260 --> 01:03:43.860
+I mean, the open loop trajectory,
+
+01:03:43.860 --> 01:03:46.100
+because that's the one that you're trying to track.
+
+01:03:48.220 --> 01:03:51.660
+All right, last step, closed loop control.
+
+01:03:51.740 --> 01:03:54.420
+So this seems a bit of a touch.
+
+01:03:54.420 --> 01:03:58.940
+So as far as two-step design is concerned, we're done.
+
+01:03:58.940 --> 01:04:00.460
+But I still want to give you a little bit of intuition
+
+01:04:00.460 --> 01:04:01.500
+about closed loop control.
+
+01:04:01.500 --> 01:04:03.460
+Before doing so, there was a question.
+
+01:04:03.460 --> 01:04:04.300
+I was just wondering,
+
+01:04:04.300 --> 01:04:07.140
+I'm from the previous slide that we just saw.
+
+01:04:07.140 --> 01:04:11.620
+In our situation, isn't that pi also a function of X dot T,
+
+01:04:11.620 --> 01:04:13.380
+X, yeah, the first derivative of X of T
+
+01:04:13.380 --> 01:04:17.340
+minus the first derivative of what the control is here?
+
+01:04:17.340 --> 01:04:18.180
+Yes, that's true.
+
+01:04:18.180 --> 01:04:21.300
+But here it is, that if you have the control history of X,
+
+01:04:21.780 --> 01:04:24.100
+you can then assume X dot and X of the observation.
+
+01:04:24.100 --> 01:04:25.540
+But yes, absolutely.
+
+01:04:25.540 --> 01:04:29.820
+You need to also have other measurement of estimation
+
+01:04:29.820 --> 01:04:31.740
+of the derivative.
+
+01:04:31.740 --> 01:04:32.580
+That's all.
+
+01:04:35.580 --> 01:04:37.100
+All right, closed loop control.
+
+01:04:37.100 --> 01:04:38.420
+Yeah?
+
+01:04:38.420 --> 01:04:39.260
+On the previous slide,
+
+01:04:39.260 --> 01:04:41.180
+is it the control gain to be positive?
+
+01:04:41.180 --> 01:04:44.100
+Does that just happen to be what makes the eigenvalues?
+
+01:04:44.100 --> 01:04:45.340
+Yes, yeah.
+
+01:04:45.340 --> 01:04:47.500
+There is something called the Scarf-Sine Rule
+
+01:04:47.500 --> 01:04:50.100
+that tells you why this is the case.
+
+01:04:50.100 --> 01:04:52.900
+Wiki the Scarf-Sine Rule.
+
+01:04:54.780 --> 01:04:55.740
+But yes, now absolutely.
+
+01:04:55.740 --> 01:04:57.180
+So there's the positive thing.
+
+01:04:57.180 --> 01:04:59.980
+By the way, P here stands for proportional,
+
+01:04:59.980 --> 01:05:03.180
+and D here stands for derivative action.
+
+01:05:03.180 --> 01:05:05.300
+That's standard notation in control.
+
+01:05:05.300 --> 01:05:09.300
+Proportional means that you're multiplying by the variables,
+
+01:05:11.340 --> 01:05:14.980
+and the derivative means that you are multiplying
+
+01:05:14.980 --> 01:05:17.980
+the derivative of those variables.
+
+01:05:18.860 --> 01:05:20.340
+Sometimes there is an additional action
+
+01:05:20.340 --> 01:05:22.740
+for two integral actions as well.
+
+01:05:22.740 --> 01:05:23.580
+But yeah.
+
+01:05:24.580 --> 01:05:27.660
+So here D does not mean desired, it means derivative.
+
+01:05:31.620 --> 01:05:32.740
+All right, so closed loop control.
+
+01:05:32.740 --> 01:05:35.060
+So as far as two-step design, we're done.
+
+01:05:36.380 --> 01:05:38.620
+I just want to give you a little bit of perspective
+
+01:05:38.620 --> 01:05:39.660
+about closed loop control.
+
+01:05:39.660 --> 01:05:44.140
+So basically, finding control laws that depend on X,
+
+01:05:44.140 --> 01:05:46.420
+and they're supposed to work everywhere,
+
+01:05:46.420 --> 01:05:48.940
+not just close to your reference trajectory.
+
+01:05:50.540 --> 01:05:53.780
+Ideally, this is the holy grail of trajectory planning
+
+01:05:53.780 --> 01:05:55.220
+and control and so on.
+
+01:05:55.220 --> 01:05:58.180
+Something that tells you from everywhere in the world
+
+01:05:58.180 --> 01:06:00.620
+what to do, that's the best you can hope for,
+
+01:06:00.620 --> 01:06:02.540
+because basically it tells you that
+
+01:06:02.540 --> 01:06:04.500
+even if your model mismatches,
+
+01:06:04.500 --> 01:06:07.340
+or dramatic disturbance and so on,
+
+01:06:07.340 --> 01:06:09.940
+that brings you far away from your reference trajectory,
+
+01:06:09.940 --> 01:06:13.140
+you know exactly what to do in order to achieve your goal.
+
+01:06:13.140 --> 01:06:14.460
+Now the problem is that this computation
+
+01:06:14.500 --> 01:06:18.100
+is much more difficult to do, to compute as an object.
+
+01:06:18.100 --> 01:06:21.620
+That's why we ideally focus on the two-step design
+
+01:06:21.620 --> 01:06:23.460
+that represents a good trade-off
+
+01:06:23.460 --> 01:06:25.420
+between computation and accuracy.
+
+01:06:25.420 --> 01:06:28.980
+But still it's useful to revisit a little bit this concept.
+
+01:06:28.980 --> 01:06:31.460
+In particular, there are two main techniques
+
+01:06:31.460 --> 01:06:34.460
+to compute closed loop controls.
+
+01:06:34.460 --> 01:06:36.300
+These are more complicated techniques.
+
+01:06:36.300 --> 01:06:39.820
+Oftentimes they're not computationally scalable and so on,
+
+01:06:39.820 --> 01:06:41.420
+but they're out there.
+
+01:06:41.420 --> 01:06:42.820
+So the first one is referred to
+
+01:06:42.860 --> 01:06:44.980
+as Habito-Yakobi-Bellman equation,
+
+01:06:46.020 --> 01:06:48.860
+which basically is a tool
+
+01:06:49.980 --> 01:06:52.540
+to compute closed loop control laws
+
+01:06:52.540 --> 01:06:55.700
+for general non-linear optimal control problems.
+
+01:06:57.340 --> 01:06:59.220
+The problem is that this equation
+
+01:06:59.220 --> 01:07:00.580
+is a partial differential equation
+
+01:07:00.580 --> 01:07:03.780
+that is very difficult to solve in practice.
+
+01:07:03.780 --> 01:07:06.100
+So readily used.
+
+01:07:06.100 --> 01:07:10.220
+There is a discrete time analog,
+
+01:07:10.220 --> 01:07:11.820
+which is referred to as dynamic programming.
+
+01:07:11.820 --> 01:07:15.700
+If you are a computer science graduate student,
+
+01:07:15.700 --> 01:07:18.140
+or if you're taking classes in important learning,
+
+01:07:18.140 --> 01:07:21.140
+most likely have talked about dynamic programming.
+
+01:07:21.140 --> 01:07:24.580
+That's a tool to solve stochastic optimal control problems
+
+01:07:24.580 --> 01:07:25.740
+in the general setting.
+
+01:07:26.740 --> 01:07:28.500
+We're now going to discuss that in this class.
+
+01:07:28.500 --> 01:07:31.660
+Again, two or three in the spring if you're interested.
+
+01:07:31.660 --> 01:07:34.100
+This technique really tries to solve
+
+01:07:34.100 --> 01:07:35.220
+optimal control problems,
+
+01:07:35.220 --> 01:07:37.100
+whereby you not only try to find a trajectory
+
+01:07:37.100 --> 01:07:39.820
+that is feasible, but that also satisfies,
+
+01:07:40.140 --> 01:07:42.660
+that also optimizes some cost function.
+
+01:07:42.660 --> 01:07:46.300
+There is another technique referred to as Lyapunov analysis
+
+01:07:46.300 --> 01:07:48.860
+that tries to find a closed loop control law
+
+01:07:48.860 --> 01:07:50.780
+that allows you to fulfill a task,
+
+01:07:50.780 --> 01:07:52.660
+typically the task of stabilization.
+
+01:07:52.660 --> 01:07:54.540
+You want to make sure that your trajectory
+
+01:07:54.540 --> 01:07:56.260
+goes to some desired point,
+
+01:07:56.260 --> 01:07:58.100
+but you don't have any notion of optimality.
+
+01:07:58.100 --> 01:08:00.460
+So if you will, Lyapunov analysis
+
+01:08:00.460 --> 01:08:02.620
+addresses more the problem of feasibility.
+
+01:08:02.620 --> 01:08:06.340
+Hamilton-Yakobi-Bellman model problem of optimality.
+
+01:08:07.300 --> 01:08:12.300
+So this is taught in a nonlinear control class at Stanford.
+
+01:08:12.620 --> 01:08:16.220
+I think it's engineering 209, but not exactly sure.
+
+01:08:17.380 --> 01:08:19.140
+So what we're going to do in this class
+
+01:08:19.140 --> 01:08:20.460
+in the last 10 minutes,
+
+01:08:20.460 --> 01:08:22.940
+is just so you look at a specific example
+
+01:08:22.940 --> 01:08:26.380
+referred to as posture stabilization or regulation,
+
+01:08:26.380 --> 01:08:29.740
+where we're going to derive a closed loop control law
+
+01:08:29.740 --> 01:08:31.180
+that gives you some more intuition
+
+01:08:31.180 --> 01:08:33.380
+about closed loop control ease in general,
+
+01:08:33.380 --> 01:08:35.500
+but it's also useful for the purposes
+
+01:08:35.500 --> 01:08:37.380
+of trajectory planning.
+
+01:08:37.380 --> 01:08:39.020
+And I'm going to mention that in a second.
+
+01:08:39.020 --> 01:08:40.020
+There was a question?
+
+01:08:41.780 --> 01:08:42.940
+Yeah, all right.
+
+01:08:42.940 --> 01:08:46.940
+So as usual, our problem is a problem
+
+01:08:48.780 --> 01:08:50.940
+of controlling a unicycle.
+
+01:08:50.940 --> 01:08:52.580
+I mean, it's not that there is only the unicycle
+
+01:08:52.580 --> 01:08:54.100
+as an interesting system out there,
+
+01:08:54.100 --> 01:08:56.580
+but for this class, I wanted to have
+
+01:08:56.580 --> 01:08:58.900
+the same running examples throughout the class
+
+01:08:58.900 --> 01:09:02.220
+so that it's easy to appreciate the concepts.
+
+01:09:02.220 --> 01:09:04.420
+And also, as I said in lecture one,
+
+01:09:05.100 --> 01:09:07.260
+this is a very useful model.
+
+01:09:07.260 --> 01:09:08.900
+So the inputs, as you know,
+
+01:09:08.900 --> 01:09:12.260
+are the linear driving speed, V,
+
+01:09:12.260 --> 01:09:14.220
+and the angular speed, omega.
+
+01:09:14.220 --> 01:09:17.740
+The states are x, y, the Cartesian position,
+
+01:09:17.740 --> 01:09:19.060
+and the heading, theta.
+
+01:09:20.460 --> 01:09:25.460
+So the task is to regulate the posture of this vehicle,
+
+01:09:26.340 --> 01:09:31.340
+which basically means from any possible initial condition,
+
+01:09:31.380 --> 01:09:34.140
+so any possible x, y, z, theta,
+
+01:09:34.740 --> 01:09:38.100
+find a trajectory that brings the vehicle to rest,
+
+01:09:38.100 --> 01:09:40.500
+which means that x equals zero, y equals zero,
+
+01:09:40.500 --> 01:09:41.540
+theta equals zero.
+
+01:09:41.540 --> 01:09:44.020
+So we want to get to the origin of the state space
+
+01:09:44.020 --> 01:09:46.340
+from all possible initial conditions.
+
+01:09:48.500 --> 01:09:53.020
+So it turns out that in this case,
+
+01:09:53.020 --> 01:09:58.020
+it's easier to work with alternate representation
+
+01:09:58.540 --> 01:10:03.540
+of the state of the system that leverages polar coordinates.
+
+01:10:04.660 --> 01:10:07.260
+So if you don't know what polar coordinates are,
+
+01:10:14.020 --> 01:10:17.020
+so if you have a point in the plane, x, y,
+
+01:10:18.060 --> 01:10:20.700
+you can uniquely specify the position of this point
+
+01:10:20.700 --> 01:10:23.900
+by either specifying the x, y coordinates,
+
+01:10:23.900 --> 01:10:27.560
+or the distance of this point from the origin,
+
+01:10:27.560 --> 01:10:29.300
+referred to as rho,
+
+01:10:29.300 --> 01:10:32.140
+and the angle of the pointing vector
+
+01:10:32.140 --> 01:10:34.900
+with respect to the x axis, with respect to theta.
+
+01:10:34.900 --> 01:10:38.260
+If I tell you the distance only,
+
+01:10:38.260 --> 01:10:40.420
+then the point can be anywhere in the circle.
+
+01:10:40.420 --> 01:10:43.420
+Once I also specify the heading theta,
+
+01:10:43.420 --> 01:10:45.960
+then I'm uniquely pinpointing where the point is.
+
+01:10:45.960 --> 01:10:47.960
+This is referred to as polar coordinates.
+
+01:10:49.220 --> 01:10:51.340
+So it turns out that it's more convenient
+
+01:10:51.340 --> 01:10:53.780
+to reason about this system in polar coordinates.
+
+01:10:53.780 --> 01:10:58.180
+Rho is the distance between the reference point
+
+01:10:58.180 --> 01:11:00.380
+on the unit cycle and the origin.
+
+01:11:02.140 --> 01:11:07.060
+Delta is the angular coordinate, which I call theta there.
+
+01:11:07.060 --> 01:11:10.120
+And alpha is the relative error
+
+01:11:10.120 --> 01:11:13.100
+between the current heading and the straight line
+
+01:11:13.100 --> 01:11:15.660
+that will lead us to the origin of the coordinate system,
+
+01:11:15.660 --> 01:11:17.260
+which is where we want to go to.
+
+01:11:18.900 --> 01:11:22.980
+There is a one-to-one mapping between x, y, theta,
+
+01:11:22.980 --> 01:11:25.700
+yes, x, y, theta, and rho, alpha, delta,
+
+01:11:25.700 --> 01:11:29.900
+which is this distance and these two angles here.
+
+01:11:29.900 --> 01:11:31.740
+The specifics are not too important.
+
+01:11:33.100 --> 01:11:34.420
+It's not too difficult to derive, though.
+
+01:11:34.420 --> 01:11:37.780
+So for example, if x, y is the position,
+
+01:11:37.780 --> 01:11:39.480
+this distance is simply the square root
+
+01:11:39.480 --> 01:11:42.940
+of x squared plus r squared, y squared, and so on.
+
+01:11:44.580 --> 01:11:46.660
+Now, in this alternative representation,
+
+01:11:46.660 --> 01:11:49.140
+the dynamic represented by this set of equations,
+
+01:11:49.140 --> 01:11:52.460
+again, the specific form is not too important here,
+
+01:11:53.840 --> 01:11:56.780
+but I think it's just a little intuition.
+
+01:11:56.780 --> 01:11:59.420
+So it makes sense that the distance from the origin
+
+01:11:59.420 --> 01:12:04.420
+represented by rho is only affected by the linear speed,
+
+01:12:04.700 --> 01:12:07.960
+input, not by the angular input,
+
+01:12:07.960 --> 01:12:12.580
+meaning that if I rotate in place with v equals zero
+
+01:12:12.580 --> 01:12:15.620
+and omega equals something, I change my heading,
+
+01:12:15.620 --> 01:12:17.960
+but I don't get any closer to the point.
+
+01:12:17.960 --> 01:12:19.060
+So that makes sense.
+
+01:12:19.060 --> 01:12:22.980
+And in particular, the rate at which I get closer
+
+01:12:22.980 --> 01:12:26.440
+to the origin depends on the speed at which I'm driving
+
+01:12:26.440 --> 01:12:30.240
+and how well the heading is aligned
+
+01:12:30.240 --> 01:12:31.700
+with the pointing vector.
+
+01:12:31.700 --> 01:12:33.240
+If alpha is equal to zero,
+
+01:12:34.200 --> 01:12:35.900
+the rate at which I'm getting closer
+
+01:12:35.900 --> 01:12:37.840
+to the origin is maximized.
+
+01:12:37.840 --> 01:12:40.960
+If, of course, alpha is equal to pi over two,
+
+01:12:40.960 --> 01:12:42.880
+I'm just doing a circle,
+
+01:12:42.880 --> 01:12:47.880
+which means that rho dot should be equal to zero.
+
+01:12:49.480 --> 01:12:54.480
+Likewise, the relative error ratio to the x-axis
+
+01:12:55.120 --> 01:12:57.660
+does not depend on omega,
+
+01:12:57.660 --> 01:13:00.760
+while the heading error depends on both v and omega.
+
+01:13:00.760 --> 01:13:03.320
+This is just a little bit of intuition.
+
+01:13:03.320 --> 01:13:05.560
+Now, the key point, and that's actually
+
+01:13:05.560 --> 01:13:07.900
+what I want to communicate here,
+
+01:13:07.900 --> 01:13:12.900
+is that we can devise a control law that is closed loop,
+
+01:13:12.920 --> 01:13:15.440
+meaning it depends on the state variables,
+
+01:13:15.440 --> 01:13:18.260
+rho, alpha, and delta,
+
+01:13:18.260 --> 01:13:20.860
+for which you can prove that from every initial condition,
+
+01:13:20.860 --> 01:13:22.360
+you get to the origin.
+
+01:13:22.360 --> 01:13:23.580
+Now, this looks ugly.
+
+01:13:23.580 --> 01:13:25.980
+So you might think, how come someone...
+
+01:13:25.980 --> 01:13:28.900
+So you can prove that this is asymptotically stable.
+
+01:13:28.900 --> 01:13:32.760
+If you use v and omega chosen in this way,
+
+01:13:32.760 --> 01:13:35.620
+and that's what we will do in problem two in your p-sets,
+
+01:13:35.620 --> 01:13:37.640
+you can prove that actually your state
+
+01:13:37.640 --> 01:13:38.840
+converges to the origin.
+
+01:13:39.700 --> 01:13:41.580
+You may think, how come someone could come up
+
+01:13:41.580 --> 01:13:42.920
+with something so crazy?
+
+01:13:44.020 --> 01:13:45.980
+So usually, and again,
+
+01:13:45.980 --> 01:13:49.940
+here I'm just giving you some intuition
+
+01:13:49.940 --> 01:13:51.820
+and high-level information if you like it.
+
+01:13:51.820 --> 01:13:52.860
+If you don't, no problem.
+
+01:13:52.980 --> 01:13:54.420
+Of course, I'm not going to ask you
+
+01:13:54.420 --> 01:13:57.020
+to derive this type of control laws in your midterms.
+
+01:13:58.180 --> 01:14:01.160
+But just to make the concept consistent.
+
+01:14:01.160 --> 01:14:03.900
+So usually the way that this works
+
+01:14:03.900 --> 01:14:06.720
+is through Lyapunov analysis,
+
+01:14:06.720 --> 01:14:11.140
+whereby you set up an energy function,
+
+01:14:11.140 --> 01:14:13.960
+usually referred as v,
+
+01:14:13.960 --> 01:14:18.180
+that has the property that is zero at the desired point,
+
+01:14:18.180 --> 01:14:19.320
+so at the origin.
+
+01:14:20.320 --> 01:14:23.000
+So if you can find a control law that ensures
+
+01:14:23.000 --> 01:14:27.360
+that you move along the level set of this Lyapunov function
+
+01:14:27.360 --> 01:14:29.920
+in a way that the value function is always...
+
+01:14:29.920 --> 01:14:31.280
+So this value function is energy,
+
+01:14:31.280 --> 01:14:32.940
+so it's a form of a ball.
+
+01:14:32.940 --> 01:14:35.200
+If you can ensure this value function
+
+01:14:35.200 --> 01:14:37.120
+is always decreasing,
+
+01:14:37.120 --> 01:14:39.120
+then you're guaranteed to go to the origin.
+
+01:14:39.120 --> 01:14:41.380
+So then, how do you design a control law?
+
+01:14:41.380 --> 01:14:44.520
+You take the derivative of this postulated energy function,
+
+01:14:44.520 --> 01:14:46.000
+and then you choose the control law
+
+01:14:46.000 --> 01:14:48.280
+in such a way that the derivative is negative.
+
+01:14:48.280 --> 01:14:50.620
+And that's, in this case, what it gives you.
+
+01:14:53.040 --> 01:14:55.880
+Anyway, so here, this is the point that I want to make.
+
+01:14:56.820 --> 01:14:58.160
+This is a closed-loop control law.
+
+01:14:58.160 --> 01:15:00.040
+From any possible initial condition,
+
+01:15:00.040 --> 01:15:02.560
+it tells you how to go to the origin.
+
+01:15:03.600 --> 01:15:07.000
+With a trajectory, you may like it, you may not like it.
+
+01:15:07.000 --> 01:15:09.360
+It's feasible, sometimes it does something weird.
+
+01:15:10.880 --> 01:15:12.920
+So the reason why I wanted to give this example
+
+01:15:12.920 --> 01:15:15.960
+is first of all to showcase what the control law is.
+
+01:15:15.960 --> 01:15:18.980
+You see that here, from any initial condition,
+
+01:15:18.980 --> 01:15:20.960
+I can get to the origin, this is proven,
+
+01:15:20.960 --> 01:15:24.600
+and you will do a numerical experiment in your P-set.
+
+01:15:24.600 --> 01:15:26.840
+This is the reference, by the way.
+
+01:15:26.840 --> 01:15:29.760
+But second of all, control laws are actually useful
+
+01:15:29.760 --> 01:15:33.240
+even in the concept of a two-step design.
+
+01:15:33.240 --> 01:15:34.080
+Why so?
+
+01:15:34.080 --> 01:15:36.120
+As I said before, in two-step design,
+
+01:15:36.120 --> 01:15:38.200
+you first design the open-loop control kernel
+
+01:15:38.200 --> 01:15:40.120
+and then the tracking controller.
+
+01:15:40.120 --> 01:15:41.040
+So in principle, you're done.
+
+01:15:41.040 --> 01:15:43.600
+You don't need to compute a closed-loop control law.
+
+01:15:43.600 --> 01:15:48.380
+But oftentimes, what happens is that
+
+01:15:48.380 --> 01:15:50.740
+as you're approaching your target,
+
+01:15:51.960 --> 01:15:53.000
+so this is a target,
+
+01:15:55.840 --> 01:15:58.280
+as you're getting closer to your target,
+
+01:15:58.280 --> 01:16:02.600
+you need something that allows you to closed-loop very fast
+
+01:16:02.600 --> 01:16:03.920
+and in a very reliable way.
+
+01:16:05.120 --> 01:16:08.200
+So this is usually achieved with a closed-loop control law.
+
+01:16:08.200 --> 01:16:10.440
+The closed-loop control law, as you can see,
+
+01:16:10.440 --> 01:16:13.240
+does not rely on any optimization
+
+01:16:13.760 --> 01:16:15.680
+or any solution of algebraic equations.
+
+01:16:15.680 --> 01:16:17.460
+Basically, it just tells you that you should be able
+
+01:16:17.460 --> 01:16:22.460
+to measure alpha, delta, and rho,
+
+01:16:22.720 --> 01:16:25.160
+and then you just compute some sine and cosine,
+
+01:16:25.160 --> 01:16:26.080
+and then you have your input.
+
+01:16:26.080 --> 01:16:27.200
+So this is super fast.
+
+01:16:28.700 --> 01:16:31.040
+So the idea, for example, I have a robot
+
+01:16:31.040 --> 01:16:32.700
+that is kind of an international space station
+
+01:16:32.700 --> 01:16:34.740
+and has to grasp an object in space.
+
+01:16:34.740 --> 01:16:37.480
+So we do the two-step design to get close to the robot,
+
+01:16:37.480 --> 01:16:38.760
+but once we're very close,
+
+01:16:38.760 --> 01:16:40.280
+which means that we don't have to reason
+
+01:16:40.280 --> 01:16:42.520
+about complicated constraints and so on,
+
+01:16:42.520 --> 01:16:45.040
+we turn it into a closed-loop control law
+
+01:16:45.040 --> 01:16:47.560
+that neglects some constraints,
+
+01:16:47.560 --> 01:16:49.400
+but the point is that since you're very close,
+
+01:16:49.400 --> 01:16:51.240
+you don't need to consider constraints anyway,
+
+01:16:51.240 --> 01:16:53.760
+but allows you to close the loop much faster
+
+01:16:53.760 --> 01:16:55.840
+so that you can really do the grasping and manipulation
+
+01:16:55.840 --> 01:16:59.140
+as usually requires you to close the loop very quickly.
+
+01:17:00.240 --> 01:17:04.320
+And that's actually what you will do in problem set two
+
+01:17:04.320 --> 01:17:06.120
+that is due in a week or so.
+
+01:17:06.120 --> 01:17:08.640
+We will put all these things together.
+
+01:17:08.640 --> 01:17:11.800
+So you will start from the two-step design
+
+01:17:11.840 --> 01:17:14.920
+that you're going to develop in your first P set.
+
+01:17:14.920 --> 01:17:18.520
+You're going to augment it with a motion planning module
+
+01:17:18.520 --> 01:17:20.940
+to deal with state constraints.
+
+01:17:20.940 --> 01:17:23.700
+So far, we have not dealt with state constraints.
+
+01:17:23.700 --> 01:17:27.440
+On top of it, you will use the posture controller
+
+01:17:27.440 --> 01:17:31.560
+to have an additional level of robustness and efficiency
+
+01:17:31.560 --> 01:17:33.440
+during the last phases of motion
+
+01:17:33.440 --> 01:17:35.720
+in order to get to your desired destination.
+
+01:17:35.720 --> 01:17:37.040
+You'll put everything together,
+
+01:17:37.040 --> 01:17:39.920
+and then you have an end-to-end trajectory optimization
+
+01:17:39.920 --> 01:17:44.180
+module that you can use for your final project.
+
+01:17:45.240 --> 01:17:50.240
+Okay, this way of thinking is very much used in practice.
+
+01:17:50.560 --> 01:17:51.760
+It's very pedagogical,
+
+01:17:51.760 --> 01:17:55.080
+so make sure that you comment your ass with it.
+
+01:17:55.080 --> 01:17:58.040
+So what we're going to do on Friday,
+
+01:17:58.040 --> 01:17:59.920
+for the graduate students, you should come to the lecture
+
+01:17:59.920 --> 01:18:01.080
+or you should watch the lecture.
+
+01:18:01.080 --> 01:18:03.020
+For the undergrads, it's optional.
+
+01:18:03.020 --> 01:18:06.120
+It's to look at more advanced techniques
+
+01:18:06.120 --> 01:18:09.040
+for optimal control and trajectory optimization.
+
+01:18:09.040 --> 01:18:12.420
+Specifically, we're going to look at indirect methods.
+
+01:18:13.680 --> 01:18:16.720
+All right, see you on Friday for those of you
+
+01:18:16.720 --> 01:18:18.720
+that have to be there or are interested to be there,
+
+01:18:18.720 --> 01:18:19.920
+or otherwise on Tuesday.
+

@@ -1,0 +1,3089 @@
+WEBVTT
+
+00:00.000 --> 00:11.060
+So this week, we're going to cover two additional topics that are not really reflected in the
+
+00:11.060 --> 00:17.980
+final project, nor in the homework, nor obviously in the midterms.
+
+00:17.980 --> 00:23.340
+But just want to make sure that at least you have the high level concepts.
+
+00:23.340 --> 00:29.080
+Want to know that these concepts are there, and two, to guide you in terms of how to best
+
+00:29.080 --> 00:35.240
+choose future courses in case you're interested in getting deeper into this topic.
+
+00:35.240 --> 00:40.060
+In particular, today, we are going to talk about high level decision making.
+
+00:40.060 --> 00:47.680
+So not so much what exact path I should drive, but more like, is it a good time to cross
+
+00:47.680 --> 00:50.760
+an intersection or should I change a lane?
+
+00:50.760 --> 00:55.800
+And the problem is that when you try to reason about those high level decisions, accounting
+
+00:55.800 --> 00:59.600
+for uncertainty becomes pivotal.
+
+00:59.600 --> 01:04.200
+Because these decisions are affected by perceptual uncertainty, obviously, but also uncertainty
+
+01:04.200 --> 01:05.720
+in your environment reconstruction.
+
+01:05.720 --> 01:11.440
+For example, you have humans around you, you want to predict what they will do and take
+
+01:11.440 --> 01:14.120
+that prediction into account when you compute your actions.
+
+01:14.120 --> 01:19.240
+Of course, those predictions have a lot of uncertainty and you need to account for that
+
+01:19.240 --> 01:24.060
+in order to compute a high level action that trades safety versus efficiency.
+
+01:24.060 --> 01:30.220
+So the question is, what mathematical model we can use in order to capture decision making
+
+01:30.220 --> 01:32.300
+with uncertainty?
+
+01:32.300 --> 01:36.320
+And second of all, once we have a model, what type of algorithms are out there?
+
+01:36.320 --> 01:42.120
+So today we'll focus mostly on the mathematical model and the baseline algorithms.
+
+01:42.120 --> 01:50.460
+On Thursday, we'll focus on algorithms that are not really guaranteed to achieve optimality
+
+01:50.460 --> 01:56.520
+with respect to the model, but at least they are guaranteed to be very fast and very powerful.
+
+01:56.520 --> 02:01.140
+In other words, today we focus more on the topic of market decision processes and dynamic
+
+02:01.140 --> 02:02.140
+programming.
+
+02:02.140 --> 02:05.920
+On Thursday, we focus more on the topic of reinforcement learning, that from the perspective
+
+02:05.920 --> 02:11.500
+of this class is seen more as an approximate solution to market decision making problems
+
+02:11.500 --> 02:15.340
+than a standalone topic.
+
+02:15.340 --> 02:21.780
+So goal today is to learn the fundamental principles behind decision making and uncertainty
+
+02:21.780 --> 02:28.420
+specifically under a formulation in terms of market decision processes, and then discuss
+
+02:28.420 --> 02:34.340
+the workhorse algorithm that is used in order to tackle this problem referred to as dynamic
+
+02:34.340 --> 02:35.340
+programming.
+
+02:35.340 --> 02:44.260
+For this lecture, I'm going to reference a book from Dimitri Bertsikas, who was a professor
+
+02:44.300 --> 02:45.300
+at MIT.
+
+02:45.300 --> 02:49.940
+He wrote a book on reinforcement learning and optimal control.
+
+02:49.940 --> 02:54.100
+I think that if you want to get deeper into this material, this is an excellent book because
+
+02:54.100 --> 03:01.140
+basically it puts within the same unifying framework two fields that have been considered
+
+03:01.140 --> 03:03.020
+fairly separate.
+
+03:03.020 --> 03:08.660
+The field of optimal control, mostly in electrical engineering, aerospace engineering, and reinforcement
+
+03:08.660 --> 03:10.780
+learning, mostly in the field of computer science.
+
+03:11.300 --> 03:13.100
+Turns out that the foundations are the same.
+
+03:13.100 --> 03:19.300
+So it's very fruitful to actually reason about all these concepts together.
+
+03:19.300 --> 03:27.460
+So let's start right away with the mathematical model through which we capture a sequential
+
+03:27.460 --> 03:28.780
+decision making problem.
+
+03:28.780 --> 03:35.060
+So the idea is that over time, we want to make actions that are optimal according to
+
+03:35.060 --> 03:37.580
+some cost function.
+
+03:37.580 --> 03:43.100
+So how do we concretize this high-level description into a mathematical model?
+
+03:43.100 --> 03:48.380
+The idea is to set up a few basic ingredients.
+
+03:48.380 --> 03:51.060
+The first ingredient, we need a model.
+
+03:51.060 --> 03:55.340
+And this is very similar to our discussion in the context of Bayesian filtering.
+
+03:55.340 --> 04:00.540
+Here the main difference is that we are not just interested in estimating a process.
+
+04:00.540 --> 04:05.420
+We are interested in estimating a process and also controlling that process based on
+
+04:05.420 --> 04:06.420
+that estimate.
+
+04:06.420 --> 04:08.700
+So it's one step further, if you will.
+
+04:08.700 --> 04:12.900
+So the first ingredient, similar to what we have in the context of Bayesian filtering,
+
+04:12.900 --> 04:15.660
+we have a dynamics model.
+
+04:15.660 --> 04:18.700
+And for now, I'm considering a setting that is deterministic.
+
+04:18.700 --> 04:20.300
+So there is no uncertainty.
+
+04:20.300 --> 04:23.660
+We will consider later on the setting with stochasticity.
+
+04:23.660 --> 04:26.900
+But the main ideas actually can be understood in a deterministic setting.
+
+04:26.900 --> 04:29.520
+So I prefer to first cover the deterministic setting.
+
+04:29.520 --> 04:45.480
+So we have the dynamic system as k plus 1 equal to f of k x a u k.
+
+04:45.480 --> 04:49.000
+As usual, x is the state, u is the control.
+
+04:49.000 --> 04:54.600
+So what this is saying is that if at time k we are at state x of k and we apply control
+
+04:54.600 --> 04:59.080
+u of k, the next time step would be at state s k plus 1.
+
+04:59.080 --> 05:00.960
+So you already know this.
+
+05:00.960 --> 05:03.640
+As a second ingredient, we have control constraints.
+
+05:03.640 --> 05:08.600
+At each state, only a subset of the possible controls can be used.
+
+05:08.600 --> 05:18.720
+For example, you can know faster than a given speed because of speed rules on a rod segment.
+
+05:18.720 --> 05:20.640
+And we have a cost function.
+
+05:20.640 --> 05:24.240
+The cost function has an additive structure.
+
+05:24.240 --> 05:30.280
+And specifically, given initial condition, the cost function associated with a sequence
+
+05:30.280 --> 05:36.040
+of controls at time 0, time 1, all the way to time n minus 1 is equal to the sum of a
+
+05:36.040 --> 05:40.760
+final cost plus the summation of stage-wise costs.
+
+05:40.760 --> 05:48.160
+g k is the cost of being at state x of k and enacting control u of k at time k, a sum through
+
+05:48.160 --> 05:53.920
+all the time steps from time k equal 1 to the final time capital N minus 1.
+
+05:53.920 --> 05:57.880
+Capital N is the horizon of our optimization problem.
+
+05:57.880 --> 06:00.760
+g of n x n is a terminal cost.
+
+06:00.760 --> 06:09.200
+The problem then is to, given initial condition, to optimize the controls u k for each time
+
+06:09.200 --> 06:14.400
+step in such a way that the cost function is optimized.
+
+06:14.400 --> 06:18.140
+Now is this open loop or closed loop control?
+
+06:18.140 --> 06:32.980
+We had a discussion about open loop and closed loop in the setting of trajectory optimization.
+
+06:32.980 --> 06:37.860
+Because we are optimizing over a control sequence u 0, u 1, u n minus 1, which basically says
+
+06:37.860 --> 06:47.220
+that once you have computed your control sequence, u star k over k, so this is a set of controls,
+
+06:47.220 --> 06:50.180
+u 0, u 1, all the way to u n minus 1.
+
+06:50.180 --> 06:57.260
+Once you are at step k, whatever the state you are in, the control that you use is a
+
+06:57.260 --> 07:01.200
+u star k, no matter what the state you are in.
+
+07:01.200 --> 07:06.620
+So if the state you are in is actually the optimal state trajectory, that's good.
+
+07:06.620 --> 07:07.940
+It's nothing to do.
+
+07:07.940 --> 07:12.180
+But if for whatever reason, due, for example, to model mismatches, disturbances that are
+
+07:12.180 --> 07:18.220
+not accounted for here, we deviate from the nominal trajectory, then we apply a control
+
+07:18.220 --> 07:19.780
+that is completely nonsensical.
+
+07:19.780 --> 07:28.220
+So say that you are driving a car, and then you know that at 10 step, you have to use
+
+07:28.220 --> 07:36.200
+a speed 50 miles per hour, but for some reason, some tailwind allow you to go much faster.
+
+07:36.200 --> 07:40.940
+So actually you are much farther ahead on the road where you have a speed limit of 20
+
+07:40.940 --> 07:41.940
+miles per hour.
+
+07:41.940 --> 07:45.860
+You still apply 50 miles per hour as a control, because you don't measure your state.
+
+07:45.860 --> 07:50.500
+So that's why open loop control in general can be quite dangerous.
+
+07:50.500 --> 07:59.060
+But the point here is to set up the problem in such a simple framework, because the, oh,
+
+07:59.060 --> 08:02.140
+thank you, great.
+
+08:02.140 --> 08:06.060
+In these simple terms, because the main ideas can be understood within the simple framework,
+
+08:06.060 --> 08:10.940
+we will then make it more complicated by introducing stochasticity later on.
+
+08:10.940 --> 08:11.940
+So two key points.
+
+08:11.940 --> 08:16.400
+First of all, this is a discrete time model, which usually for high level decision making
+
+08:16.400 --> 08:23.060
+is good enough, since we have reason in terms of macro actions as opposed to a continuum
+
+08:23.060 --> 08:25.940
+of actions as it will be needed for trajectory optimization.
+
+08:25.940 --> 08:29.620
+And second of all, the cost is additive.
+
+08:29.620 --> 08:33.560
+So we have summing stage wise costs.
+
+08:33.560 --> 08:34.820
+So this is a central assumption.
+
+08:34.820 --> 08:41.980
+And we'll see why the assumption of the cost being additive is pivotal in this modeling
+
+08:41.980 --> 08:45.540
+approach from a computational standpoint in a second.
+
+08:45.540 --> 08:54.760
+In particular, the assumption of an additive cost allow us to dramatically simplify the
+
+08:54.760 --> 09:01.100
+problem of computing the optimal control sequence, which for a deterministic setup will still
+
+09:01.100 --> 09:03.100
+be possibly reasonable.
+
+09:03.100 --> 09:09.660
+But once we introduce the stochastic variation of this problem formulation, it will be impossible.
+
+09:09.660 --> 09:11.460
+Why is this problem difficult to solve?
+
+09:11.460 --> 09:15.660
+Because in general, J doesn't have any particular structure, so it's not complex.
+
+09:15.660 --> 09:17.100
+I mean, it might be.
+
+09:17.100 --> 09:23.300
+But in general, you have non-convex functions, the constraints will be highly non-linear.
+
+09:23.300 --> 09:28.740
+So solving this problem, at least in the most brutal way, would entail plugging in all possible
+
+09:28.740 --> 09:34.820
+combinations of values for u0, u1, un-1, which will correspond to a combinatorial explosion
+
+09:34.820 --> 09:37.220
+or things you have to evaluate.
+
+09:37.220 --> 09:42.060
+So the question is, can we leverage some structure in this problem formulation to make computation
+
+09:42.060 --> 09:43.400
+easier?
+
+09:43.400 --> 09:48.100
+So instead of doing like a brute force enumeration of all possible combinations controlled sequences,
+
+09:48.100 --> 09:54.420
+can we leverage some structure to actually avoid computation that for sure are not going
+
+09:54.420 --> 09:57.580
+to be fruitful, meaning leading to an optimal solution?
+
+09:57.620 --> 10:00.340
+So that's what the principal optimality does.
+
+10:00.340 --> 10:03.780
+And I'm going to introduce the principal optimality in a fairly high-level setting just to give
+
+10:03.780 --> 10:06.220
+you the main intuition.
+
+10:06.220 --> 10:15.100
+So the principal optimality is a key concept that allows us to devise the main workhorse
+
+10:15.100 --> 10:19.860
+algorithm behind the sequential decision-making, decision-making under uncertainty.
+
+10:19.860 --> 10:22.660
+Everything else falls from this.
+
+10:22.660 --> 10:26.580
+So you take like 15 classes in reinforcement learning here at Stanford, they're all rooted
+
+10:26.580 --> 10:27.580
+in this idea here.
+
+10:27.580 --> 10:32.460
+So I just want to make sure that the unifying ideas are clear to you.
+
+10:32.460 --> 10:35.160
+Now what does the principal optimality tell us?
+
+10:35.160 --> 10:39.220
+So first I'm going to introduce the notion and then we're going to discuss what is useful
+
+10:39.220 --> 10:41.360
+from a computational standpoint.
+
+10:41.360 --> 10:45.400
+So suppose that we have an optimal path.
+
+10:45.400 --> 10:46.900
+And this is just for conceptual purposes.
+
+10:46.900 --> 10:51.140
+As I said, our model is discrete, but let's assume that we reason in terms of trajectory
+
+10:51.140 --> 10:53.300
+optimization.
+
+10:53.300 --> 10:57.820
+So suppose that we have an optimal path that says that the optimal way to go from A to
+
+10:57.820 --> 11:03.420
+E is to first go from A to B and then from B to E along these paths.
+
+11:03.420 --> 11:10.180
+This is the cost to go from A to B and this is the cost to go from B to E. The cost would
+
+11:10.180 --> 11:11.660
+be some weird stuff.
+
+11:11.660 --> 11:13.520
+That's why we don't have a linear segment.
+
+11:13.520 --> 11:16.900
+We have these curved things.
+
+11:16.900 --> 11:19.860
+So this is an optimal trajectory.
+
+11:19.940 --> 11:26.820
+Now, as I said, the first decision allows you to go from A to B and incur cost JAB.
+
+11:26.820 --> 11:35.180
+And the remaining decisions allow you to go from B to E and incur cost GBE.
+
+11:35.180 --> 11:40.340
+Since the cost is additive, the optimal cost is simply the sum of this cost and the sum
+
+11:40.340 --> 11:44.460
+of the tail cost.
+
+11:44.460 --> 11:53.080
+Now, so what is the principle to mind this says?
+
+11:53.080 --> 12:09.380
+So assume that, so we have A, we have B, we have E, so we have JAB, JBB.
+
+12:09.380 --> 12:18.780
+So let's assume that the path A, B, E is optimal, OK?
+
+12:18.780 --> 12:26.500
+Now let's assume that for some reason you are parachuted at this location.
+
+12:26.500 --> 12:30.660
+So instead of starting from here, you're starting from here.
+
+12:30.660 --> 12:36.460
+The question is now you want to go from this point to this point optimally.
+
+12:36.460 --> 12:43.420
+The question is, in order to do so, can you just use the tail control sequence of the
+
+12:43.420 --> 12:46.020
+optimal control sequence from A to E?
+
+12:46.020 --> 12:53.580
+Or maybe there is some other route that is going to incur a cost that is less than the
+
+12:53.580 --> 12:56.380
+cost of JBE.
+
+12:56.380 --> 12:57.380
+It's a valid question.
+
+12:57.380 --> 13:03.540
+A priori, if I am parachuted into point B, there might be some other path that achieves
+
+13:03.540 --> 13:06.680
+lower cost.
+
+13:06.680 --> 13:13.500
+So the principle to mind this says that this is indeed not possible.
+
+13:13.500 --> 13:21.740
+So if you have an optimal trajectory, its tails are also optimal for the subcontinent.
+
+13:21.740 --> 13:28.720
+Meaning that if you are parachuted at B, it's still optimal to move along the trajectory
+
+13:28.720 --> 13:33.500
+that was the tail of the optimal sequence.
+
+13:33.500 --> 13:34.740
+Why that is the case?
+
+13:34.740 --> 13:38.820
+Well, let's prove this by contradiction.
+
+13:38.820 --> 13:47.020
+So assume that if you start at B, there is a drawing that is similar to the slide.
+
+13:47.020 --> 13:52.460
+Let's assume that if you start at B, there is another path that allows you to go to E
+
+13:52.460 --> 13:54.140
+with lower cost.
+
+13:54.140 --> 14:01.820
+For example, a path that goes to point C. By the way, oftentimes people say there is
+
+14:01.820 --> 14:03.900
+a more optimal path.
+
+14:03.900 --> 14:06.560
+More optimal is a nonsensical term.
+
+14:06.560 --> 14:08.420
+Something either is optimal or is not optimal.
+
+14:08.420 --> 14:10.620
+So you have to say lower cost.
+
+14:10.620 --> 14:17.120
+So you have a tail path that goes through C. So we are claiming by this cycle contradiction
+
+14:17.120 --> 14:25.020
+that indeed the path that goes from B to C and then to E is lower cost than the path
+
+14:25.020 --> 14:29.220
+that goes from B to E through the solid line.
+
+14:29.220 --> 14:34.060
+So this is the path, this is the solid path.
+
+14:34.060 --> 14:42.140
+Well, if this was the case, since the cost is additive, then the cost to go from A to
+
+14:42.140 --> 14:49.300
+E through C would be JAB plus JBCE.
+
+14:49.300 --> 14:55.100
+And the cost to go from A to E, and the cost of the problem to go from A to E without going
+
+14:55.100 --> 15:02.360
+through C would be JAB plus GBE.
+
+15:02.360 --> 15:10.540
+But since we are assuming by contradiction that JBCE is less than JBE, then let's call
+
+15:10.540 --> 15:18.460
+this the cost of path two, cost of path one, then the cost of path two will be less than
+
+15:18.460 --> 15:20.500
+cost of path one.
+
+15:20.500 --> 15:24.300
+Which is a contradiction because we start as an assumption that the optimal way to go
+
+15:24.300 --> 15:33.820
+from A to E is not to go through C. So the contradiction stems from the fact that we
+
+15:33.820 --> 15:43.100
+assumed that indeed the optimal sequence to go from B to E is not the tail of the optimal
+
+15:43.100 --> 15:48.740
+trajectory to go from A to E. Does that make sense?
+
+15:48.740 --> 15:52.220
+So the principle of humanity is a very straightforward concept.
+
+15:53.140 --> 15:57.340
+Sometimes it's a bit deceptively simple, so it takes a little time to be internalized,
+
+15:57.340 --> 16:00.800
+and its consequences are immense.
+
+16:00.800 --> 16:06.580
+So let's just pause for a second to make sure that everyone is on board with this idea.
+
+16:06.580 --> 16:17.620
+Again, we proved that the tail of an optimal sequence is optimal for the tail subproblem.
+
+16:17.620 --> 16:23.020
+To do that, we use a proof of contradiction where we say, well, assume by the second contradiction
+
+16:23.020 --> 16:29.420
+that the tail subproblem, meaning the problem of going optimally from B to E, is solved
+
+16:29.420 --> 16:35.180
+by another trajectory, which is different from the tail trajectory of the optimal sequence
+
+16:35.180 --> 16:40.900
+to go from A to E. Well, if that is true, what this is saying is that the cost of going
+
+16:40.900 --> 16:47.260
+through some other point C and then to E is lower than going through E without going through
+
+16:47.260 --> 16:53.220
+C. But if that is the case, then we would have found, because the cost is additive,
+
+16:53.220 --> 16:58.900
+a new trajectory from A that has a lower cost with respect to the one that we assume to
+
+16:58.900 --> 17:01.540
+be optimal, which is a contradiction.
+
+17:01.540 --> 17:05.540
+This proves that, indeed, the tail policy was optimal.
+
+17:05.540 --> 17:14.300
+So very simple proof.
+
+17:14.300 --> 17:18.860
+We can do it in a way that is more tailored to our discrete time framework, but the idea
+
+17:18.860 --> 17:22.740
+is exactly the same.
+
+17:22.740 --> 17:27.620
+So what does the principle of optimality say is more formal?
+
+17:27.620 --> 17:33.540
+Well, so let's assume that we have an optimal sequence, u0, u1, un-1.
+
+17:33.540 --> 17:38.740
+And this optimal sequence generates a state trajectory.
+
+17:38.740 --> 17:51.780
+So if you have, so you're given u0 star, u1 star, all the way to un-1 star.
+
+17:51.780 --> 17:53.960
+So x0 is known.
+
+17:53.960 --> 18:01.980
+So x1 star, so the next state around the optimal sequence is f of x0, u0 star.
+
+18:01.980 --> 18:09.460
+x2 star is equal to f of x1 star, u1 star, and so on.
+
+18:09.460 --> 18:14.380
+So basically, by plugging in the optimal sequence recursively, then you obtain the optimal state
+
+18:14.380 --> 18:15.860
+trajectory.
+
+18:15.860 --> 18:23.300
+So let's assume that we start at x star k, where x star k is computed recursively using
+
+18:23.300 --> 18:24.580
+these equations.
+
+18:24.580 --> 18:33.460
+The question is, a problem that starts as x star k, it tries to minimize the tail cost,
+
+18:33.460 --> 18:42.140
+so the cost of going from time k to time n.
+
+18:42.140 --> 18:48.780
+The solution to that sub-problem is given by the tail of the optimal control sequence,
+
+18:48.780 --> 18:57.740
+containing from uk star to un-1 onward, or some completely different control sequence.
+
+18:57.740 --> 19:01.380
+What the principle of thermodynamics is saying is that if you consider the sub-problem where
+
+19:01.380 --> 19:06.980
+we start at x star k, and we wish to minimize the cost to go, so the cost accrue from time
+
+19:06.980 --> 19:12.740
+k all the way to the end of the horizon, then the tail of the optimal sequence is optimal
+
+19:12.740 --> 19:13.740
+for the tail sub-problem.
+
+19:13.740 --> 19:23.180
+Is it just the tail, or is it not necessarily true if you wanted to solve the front sub-problem?
+
+19:23.180 --> 19:24.180
+Great question.
+
+19:24.180 --> 19:28.940
+So in the context of deterministic dynamic programming is both.
+
+19:28.940 --> 19:35.200
+When we talk about stochastic dynamic programming, isn't it the tail?
+
+19:35.200 --> 19:41.820
+So in a nutshell, tail of optimal sequences are optimal for tail sub-problems.
+
+19:41.820 --> 19:48.460
+By the way, note that the reason why we could do this contradiction proof is that we're
+
+19:48.460 --> 19:50.260
+assuming that the cost is additive.
+
+19:50.260 --> 19:56.340
+That allowed us to infer that if the tail sequence is not optimal, then we could find
+
+19:56.340 --> 20:03.580
+a sequence that has lower cost than the one we assumed to be optimal.
+
+20:03.580 --> 20:06.780
+So the structure that we really leveraged is this additive cost structure.
+
+20:06.780 --> 20:13.100
+I'm sorry, for which case is the head part of the problem not optimal?
+
+20:13.100 --> 20:16.240
+The stochastic one that I haven't introduced yet.
+
+20:16.240 --> 20:21.260
+So for the stochastic case, actually reasoning backward and forward has a difference.
+
+20:21.260 --> 20:23.180
+We can only reason backward.
+
+20:23.180 --> 20:24.180
+But we'll come back to that later.
+
+20:24.180 --> 20:25.180
+OK.
+
+20:25.180 --> 20:29.180
+And then the second thing is, this says for deterministic systems, does this change for
+
+20:29.180 --> 20:30.180
+the systems non-deterministic?
+
+20:30.580 --> 20:34.820
+The principle of optimality stays the same.
+
+20:34.820 --> 20:39.860
+But it has to be slightly changed, because we had to account with respect to stochasticity,
+
+20:39.860 --> 20:42.200
+by basically taking an expected value here.
+
+20:42.200 --> 20:45.580
+But we're going to go to that in 10 minutes.
+
+20:45.580 --> 20:50.220
+Here I'm just introducing the DS in the deterministic setting that is not useful, so much useful
+
+20:50.220 --> 20:55.580
+for decision making, but makes the DS much crisper.
+
+20:55.580 --> 20:56.760
+OK.
+
+20:56.760 --> 20:57.760
+So you might say, well, OK.
+
+20:58.340 --> 21:01.040
+So this is an interesting property, but what do we care?
+
+21:01.040 --> 21:06.300
+We care because it allows us to dramatically reduce the amount of computation that we need
+
+21:06.300 --> 21:12.080
+in order to solve an optimal control problem.
+
+21:12.080 --> 21:17.640
+In particular, it allows us to cleverly reuse the information.
+
+21:17.640 --> 21:24.720
+So specifically, let's assume that we want to solve a problem whereby we want to compute
+
+21:24.720 --> 21:30.960
+optimal control sequences to go to some final point f.
+
+21:30.960 --> 21:36.840
+And somehow, we have computed that the optimal control sequence to go from c to f, to go
+
+21:36.840 --> 21:40.360
+from d to f, and to go from e to f.
+
+21:40.360 --> 21:46.920
+And the cost for each sequence is given by just star cf, just star df, just star ef.
+
+21:46.920 --> 21:48.320
+Somehow we have computed this.
+
+21:48.320 --> 21:50.480
+Some oracle gave us the solution.
+
+21:50.480 --> 21:55.000
+So now, so you're in the midterm, and I give you this question.
+
+21:55.000 --> 22:02.940
+You start from b, and you want to compute the optimal sequence to go from b to f.
+
+22:02.940 --> 22:05.720
+And from b, you have three actions that are possible.
+
+22:05.720 --> 22:09.040
+You can go to either c, to d, and to e.
+
+22:09.040 --> 22:14.120
+And then from c to f, you have several actions to go to f.
+
+22:14.120 --> 22:16.780
+From d to f, you have several actions that you have to do.
+
+22:16.780 --> 22:19.580
+And from e to f, you have several actions that you have to do.
+
+22:19.580 --> 22:22.460
+And you have five seconds to solve this problem.
+
+22:22.460 --> 22:26.400
+So if you didn't know about the dynamic programming, well, sorry, but the principal optimality
+
+22:26.400 --> 22:31.260
+idea, what you would do would be to resolve this problem from scratch.
+
+22:31.260 --> 22:36.340
+So not only optimize with respect to the first actions, but also with respect to all detailed
+
+22:36.340 --> 22:37.940
+actions.
+
+22:37.940 --> 22:40.740
+But now that you know about the principal optimality, the only thing that you have to
+
+22:40.740 --> 22:45.200
+do is to compare three cases.
+
+22:45.200 --> 22:51.480
+How you go from b to c, and then you already know how to optimally go from c to f, going
+
+22:51.480 --> 22:55.480
+from b to d, and then going optimally from d to f, and then going from b to e, and then
+
+22:55.480 --> 22:56.880
+optimally to e to f.
+
+22:56.880 --> 23:03.200
+There is no reason to re-optimize what you do past e, or past d, or past c, because you
+
+23:03.200 --> 23:08.040
+are leveraging the principal optimizer that tells you that if, for example, this trajectory
+
+23:08.040 --> 23:12.480
+were to be optimal, its tail would be optimal.
+
+23:12.480 --> 23:17.560
+So there is no point of considering other possible tails, because for sure that will
+
+23:17.560 --> 23:20.240
+lead to a lower cost sequence.
+
+23:20.240 --> 23:28.760
+This is a little bit subtle, but just to clarify that if you know the optimal sequences for
+
+23:28.760 --> 23:34.960
+the tails, then you have a very straightforward way of computing an optimal solution for a
+
+23:34.960 --> 23:39.800
+problem that is shifted one step back in the past.
+
+23:39.800 --> 23:43.240
+For the deterministic system, you could do the same going forward, but let's avoid this
+
+23:43.240 --> 23:44.240
+technicality.
+
+23:44.240 --> 23:46.120
+Does it make sense?
+
+23:46.120 --> 23:52.760
+Make sense, make sense there?
+
+23:52.760 --> 24:02.960
+So it's critical, it really allows you to save a lot of computation.
+
+24:02.960 --> 24:10.360
+So this explanation also leads to what I refer to as the workhorse algorithm for sequential
+
+24:10.360 --> 24:15.560
+decision making, which is referred to as dynamic programming.
+
+24:15.560 --> 24:19.800
+Before stating the dynamic programming algorithm, I'm going to give you an example.
+
+24:19.800 --> 24:28.100
+So the example, which is very simple, is that you want to go from some initial state a to
+
+24:28.100 --> 24:31.800
+some final point h.
+
+24:31.800 --> 24:38.120
+I have a different road segment that you can take, and the cost of going through each road
+
+24:38.120 --> 24:39.760
+is given by a number.
+
+24:39.760 --> 24:44.440
+For example, if you go from b to c, the cost that you pay is nine.
+
+24:44.440 --> 24:49.680
+So the question is, how do we use the notion of principle optimality to streamline the
+
+24:49.680 --> 24:51.280
+computation on optimal route?
+
+24:51.280 --> 24:56.040
+If you knew nothing about the principle optimality, then what you would do would be to list all
+
+24:56.040 --> 25:00.600
+possible combinations of segments, evaluate the cost for each trajectory, and pick the
+
+25:00.600 --> 25:01.600
+best one.
+
+25:01.600 --> 25:05.400
+Dynamic programming allows us to do this in a much more streamlined way.
+
+25:05.400 --> 25:06.400
+Yeah?
+
+25:06.400 --> 25:08.200
+One way only.
+
+25:08.200 --> 25:10.200
+One way only.
+
+25:10.200 --> 25:11.200
+Yeah.
+
+25:11.200 --> 25:12.640
+But yes.
+
+25:12.640 --> 25:22.560
+So I'm going to do an example about how this idea of principle optimality helps.
+
+25:22.560 --> 25:26.680
+So the idea of the principle optimality from a computational standpoint is to recursively
+
+25:26.680 --> 25:31.600
+solve the tails of problems until you arrive to the beginning.
+
+25:31.600 --> 25:35.400
+So it's kind of awkward that you solve the problem going backward.
+
+25:35.400 --> 25:38.880
+So specifically, you start from the final point.
+
+25:38.880 --> 25:44.920
+So if you are at the final point, j of h, what is the optimal cost to go from h to h?
+
+25:44.920 --> 25:45.920
+Zero.
+
+25:45.920 --> 25:46.920
+Zero.
+
+25:46.920 --> 25:49.400
+I mean, you just stay there.
+
+25:49.400 --> 25:53.280
+So let's assume then instead we are at the g.
+
+25:53.480 --> 25:57.440
+So what is the optimal cost of going from g to h?
+
+25:57.440 --> 26:05.200
+Well, from g, you only have one action, and you incur a cost equal to two.
+
+26:05.200 --> 26:11.400
+And then from h, you can just reuse the computation that we did before.
+
+26:11.400 --> 26:16.240
+J h was zero, so the optimal cost is two.
+
+26:16.240 --> 26:22.880
+So what is the optimal cost to go from f to g?
+
+26:22.880 --> 26:30.520
+Well, from f, you only have one action, and it costs you three, and it brings you to g.
+
+26:30.520 --> 26:35.960
+And then from g to h, you don't have to recompute what is the optimal control sequence.
+
+26:35.960 --> 26:37.400
+You already have computed it.
+
+26:37.400 --> 26:42.680
+And since you know that the tail is optimal for an optimal sequence, you can just plug
+
+26:42.680 --> 26:48.440
+in j g, which was two, so this is equal to five.
+
+26:48.440 --> 26:50.440
+And then we go backward.
+
+26:50.440 --> 26:52.120
+So we have, for example, e.
+
+26:52.120 --> 26:53.120
+So j e.
+
+26:53.120 --> 26:55.600
+Now, here is interesting.
+
+26:55.600 --> 26:58.260
+We have two possible actions.
+
+26:58.260 --> 27:01.440
+We can and we take the minimum between the two.
+
+27:01.440 --> 27:10.720
+The first one, we go directly to h, and we pay eight.
+
+27:10.720 --> 27:19.600
+And the second one, we go to f, and we pay two.
+
+27:19.600 --> 27:26.360
+And then from f, we had to solve a tail problem, but we have already solved it.
+
+27:26.360 --> 27:32.960
+And we know that by the principle of optimality, we don't have to resolve the tail subproblem,
+
+27:32.960 --> 27:37.280
+because we know that if this is an optimal sequence, each subtail will be optimal.
+
+27:37.280 --> 27:44.660
+So we can just plug in the solution to the tail problem that we have already solved.
+
+27:44.660 --> 27:46.200
+So gh is two.
+
+27:46.200 --> 27:48.520
+So this class will be 10.
+
+27:48.520 --> 27:51.080
+Jf is five.
+
+27:51.080 --> 27:52.960
+So this is seven.
+
+27:52.960 --> 27:57.120
+So this is equal to seven.
+
+27:57.120 --> 28:02.120
+Let's keep going.
+
+28:02.120 --> 28:10.840
+All right.
+
+28:10.840 --> 28:13.680
+So we were at e.
+
+28:13.680 --> 28:14.680
+Let's do d.
+
+28:14.680 --> 28:18.140
+So jd, we have only one action.
+
+28:18.140 --> 28:19.140
+So it's easy.
+
+28:19.140 --> 28:24.420
+So the action is three plus je.
+
+28:24.420 --> 28:26.920
+So this is equal to 10.
+
+28:26.920 --> 28:31.920
+Then we have c, where we have two actions.
+
+28:31.920 --> 28:46.480
+So we had to take the minimum between five plus jd, and three plus jf.
+
+28:46.480 --> 28:49.800
+Did I make a mistake?
+
+28:49.800 --> 28:50.800
+Which is possible.
+
+28:50.800 --> 28:52.800
+Shouldn't jh be zero?
+
+28:52.800 --> 28:53.800
+Two?
+
+28:53.800 --> 28:54.800
+Jh is zero.
+
+28:54.800 --> 28:55.800
+Right.
+
+28:55.800 --> 29:00.800
+And you said eight plus jh is 10.
+
+29:00.800 --> 29:01.800
+Yeah.
+
+29:01.800 --> 29:05.560
+It doesn't make a difference.
+
+29:05.560 --> 29:06.560
+But yes.
+
+29:06.560 --> 29:11.320
+Yeah, so check me because it's kind of complicated to go back and forth.
+
+29:11.320 --> 29:19.640
+So it's five plus jd, and three plus jf.
+
+29:19.640 --> 29:24.000
+So jd was equal to 10.
+
+29:24.000 --> 29:25.960
+So this is 15.
+
+29:25.960 --> 29:29.760
+Jf was equal to five.
+
+29:29.760 --> 29:31.600
+So this is eight.
+
+29:31.600 --> 29:34.920
+So this is equal to eight.
+
+29:34.920 --> 29:36.340
+Then we go to b.
+
+29:36.340 --> 29:47.540
+So jb is equal to nine plus jc, which is equal to 17.
+
+29:47.540 --> 29:49.940
+And then finally, we have g of a.
+
+29:49.940 --> 29:51.640
+It is equal to eight.
+
+29:51.640 --> 29:52.640
+No.
+
+29:52.640 --> 29:54.640
+It's eight, right?
+
+29:54.640 --> 29:55.640
+Yeah.
+
+29:55.640 --> 30:10.040
+So five plus jd, and five plus jb.
+
+30:10.040 --> 30:12.040
+So jd is 10.
+
+30:12.040 --> 30:14.040
+So this is 18.
+
+30:14.040 --> 30:15.520
+Jb is 17.
+
+30:15.520 --> 30:16.520
+So this is 22.
+
+30:16.520 --> 30:22.360
+So this is equal to 18.
+
+30:22.360 --> 30:26.960
+So now, this is an example where the reduction in computation is not so dramatic.
+
+30:26.960 --> 30:33.720
+But when you have a very large scale problem, the reduction is dramatic.
+
+30:33.720 --> 30:45.720
+Of course, now that in order to compute the optimal control sequence, you will go backward.
+
+30:45.720 --> 30:56.280
+So we know that the best thing to do is from a to go to here to d.
+
+30:56.280 --> 30:59.260
+From d, we go to e.
+
+30:59.260 --> 31:01.800
+From e, we go to f.
+
+31:01.800 --> 31:08.680
+From f, we go to g, and from g, we go to h.
+
+31:08.680 --> 31:14.200
+So formally, the dynamic programming algorithm, which is an algorithm that exploits the principle
+
+31:14.200 --> 31:18.560
+of optimality to solve the sequential decision-making problem, works as follows.
+
+31:18.560 --> 31:20.120
+We start from the end.
+
+31:20.120 --> 31:23.000
+That's the weird thing about sequential optimization.
+
+31:23.000 --> 31:25.180
+We solve the problem going backward.
+
+31:25.180 --> 31:26.360
+We start from the end.
+
+31:26.360 --> 31:33.160
+We set up the optimal cost for the tail problem that starts at the end as the terminal cost
+
+31:33.160 --> 31:36.840
+in our problem formulation.
+
+31:36.840 --> 31:43.120
+The functions j that captures the cost for the sub-problems are referred to as cost to
+
+31:43.120 --> 31:45.320
+go functions.
+
+31:45.320 --> 31:52.220
+And then we recursively compute the cost to the sub-problems by going one step backward
+
+31:52.220 --> 32:03.600
+in time each time by solving an optimization problem whereby we find the optimal control
+
+32:03.600 --> 32:12.160
+action at this time that optimize the summation of the immediate cost and the corresponding
+
+32:12.160 --> 32:14.160
+optimal cost to go.
+
+32:14.160 --> 32:19.680
+We control uk, we transition in the new state as k plus one.
+
+32:19.680 --> 32:24.260
+But since we are solving this problem backward in time, we have already solved the problems
+
+32:24.260 --> 32:30.240
+for all states at time k plus one.
+
+32:30.280 --> 32:34.680
+And you can show, and this is basically directly implied by the principle of optimality, this
+
+32:34.680 --> 32:39.520
+is the algorithm that computes the optimal solution to the problem that I mentioned before.
+
+32:39.520 --> 32:41.400
+So these algorithms work backward in time.
+
+32:41.400 --> 32:47.100
+So what you have to do is for each time, for each state, solve this minimization problem
+
+32:47.100 --> 32:48.100
+and then move backward.
+
+32:48.100 --> 32:52.420
+At some point, you eat k equals zero.
+
+32:52.420 --> 32:58.220
+So you have solved the problem from the initial condition.
+
+32:58.220 --> 32:59.940
+So a couple of things.
+
+32:59.940 --> 33:01.980
+So first of all, the algorithm makes a lot of sense.
+
+33:01.980 --> 33:06.780
+So basically what it's saying is that in order to compute the optimal cost to go from the
+
+33:06.780 --> 33:13.980
+current time, you find the control that base threads of immediate gains or immediate costs,
+
+33:13.980 --> 33:20.660
+depends on how you interpret cost, with future implications of your immediate cost, of your
+
+33:20.660 --> 33:21.660
+immediate control.
+
+33:21.660 --> 33:27.300
+The reason why I say that this makes a lot of sense is that I claim that is how a human
+
+33:27.300 --> 33:32.660
+operates or should operate, meaning that every time you make an action, in your brain,
+
+33:32.660 --> 33:38.020
+you're trading your immediate gains with the future implications of what you do.
+
+33:38.020 --> 33:45.100
+So if counterargument, let's assume that it's not using this, then why don't you just get
+
+33:45.100 --> 33:49.660
+out of this room and enjoy a little bit of sunshine?
+
+33:49.660 --> 33:52.860
+That will be what really optimize your immediate cost.
+
+33:52.860 --> 33:58.300
+But you know that by taking this class, you have a humongous reward in the future.
+
+33:58.300 --> 34:00.220
+So that's why you stick here.
+
+34:00.220 --> 34:05.060
+That's to give you sense about why this equation makes a lot of sense.
+
+34:05.060 --> 34:09.820
+Second of all, it's kind of awkward that you compute backward in time.
+
+34:09.820 --> 34:14.500
+But then, of course, once you have the optimal sequence, you compute it starting from the
+
+34:14.500 --> 34:18.780
+controller time zero, time one, time two, which basically you compute backward in time,
+
+34:18.780 --> 34:22.980
+but then you execute your sequence starting from the initial time.
+
+34:22.980 --> 34:26.780
+So there was a philosopher I like to cite him usually when I mention these results called
+
+34:26.780 --> 34:30.540
+Kierkegaard about 150 years ago.
+
+34:30.540 --> 34:34.100
+He was one of the super pessimistic philosophers in the Romantic era.
+
+34:34.100 --> 34:43.540
+But anyway, so one of his quotes is that life has to be lived forward in time, obviously,
+
+34:43.540 --> 34:46.100
+but can only be understood backward in time.
+
+34:46.100 --> 34:53.100
+So sometimes you didn't understand the meaning of your life when you go back into your past
+
+34:53.100 --> 34:57.140
+and say, well, actually, that decision was useful, brought me to Stanford, while at the
+
+34:57.140 --> 35:00.100
+time it was not clear that actually would have brought you to Stanford.
+
+35:00.100 --> 35:05.460
+So basically, life has to be lived forward, but can only be understood backward in a way
+
+35:05.460 --> 35:07.460
+that's what dynamic programming is telling you.
+
+35:07.460 --> 35:12.460
+Is there any way to exploit this structure if your state is only partially given?
+
+35:12.460 --> 35:17.260
+Let's say you took the partially given state, it's like the x and the y, where you don't
+
+35:17.260 --> 35:21.260
+know your theta, like what angle your reference would be at.
+
+35:21.260 --> 35:28.660
+So there's a problem with partial observability and still can be cast, assuming that the cost
+
+35:28.660 --> 35:32.820
+is additive in a dynamic programming formulation.
+
+35:32.820 --> 35:36.340
+Much more complicated because now you don't have direct observability with respect to
+
+35:36.340 --> 35:37.340
+some state.
+
+35:37.340 --> 35:38.820
+So you have to build a belief.
+
+35:38.820 --> 35:41.600
+And then we come back to the idea of Bayesian filtering.
+
+35:41.600 --> 35:46.760
+So you need to actually execute this recursion, not with respect to state values, but with
+
+35:46.760 --> 35:50.840
+respect to probability distribution over state values.
+
+35:50.840 --> 35:53.360
+So that makes the algorithm extremely more challenging.
+
+35:53.360 --> 35:59.720
+Not that it's not observable, but it's that, like, let's say I give you a series of weight
+
+35:59.720 --> 36:03.200
+points that are like x, y coordinates, and it says this is going to be the awful path
+
+36:03.200 --> 36:08.400
+you're about to go to, but you don't have the theta to be at each point.
+
+36:08.400 --> 36:10.960
+And then you're kind of like plan trajectory, right?
+
+36:10.960 --> 36:16.120
+So if you knew what data you're supposed to be at, then you could just kill, you could
+
+36:16.120 --> 36:20.000
+use this dynamic programming to build back the path.
+
+36:20.000 --> 36:22.400
+But if you're allowed to choose the theta.
+
+36:22.400 --> 36:23.400
+Yeah.
+
+36:23.400 --> 36:28.480
+So in order to embed it in these formalisms, you need to, so theta is a latent variable.
+
+36:28.480 --> 36:32.920
+You don't have a full knowledge of it, and still you want to reason about it.
+
+36:32.920 --> 36:37.400
+So it might be the case that you have some noisy knowledge about it, like for example,
+
+36:37.400 --> 36:43.920
+you have some sensors that returns theta, the true value, plus some Gaussian distribution
+
+36:43.920 --> 36:44.920
+around it.
+
+36:44.920 --> 36:46.520
+Or maybe you have no clue whatsoever.
+
+36:46.520 --> 36:50.240
+So in order to model in this framework, you would basically assume that you have a uniform
+
+36:50.240 --> 36:54.520
+distribution of all possible values theta, which means basically you know nothing about
+
+36:54.520 --> 36:57.920
+theta, and then you're back into this formulation.
+
+36:57.920 --> 36:58.920
+So yes, you can.
+
+36:58.920 --> 37:02.040
+But it becomes more complicated.
+
+37:02.040 --> 37:03.040
+So comments.
+
+37:03.680 --> 37:08.280
+First of all, the problem as stated is in discrete time.
+
+37:08.280 --> 37:12.480
+So if you have a problem that is in continuous time, in order to plan this machinery, you
+
+37:12.480 --> 37:14.200
+will need to do time discretization.
+
+37:14.200 --> 37:19.880
+Actually, there is a formulation on the principle of dynamic programming in continuous time
+
+37:19.880 --> 37:25.320
+that goes under the name of the Hamilton-Berman equation, the Jacobi-Berman equation, but
+
+37:25.320 --> 37:28.680
+is beyond the scope of this class.
+
+37:28.680 --> 37:32.320
+Second of all, one of the known things of dynamic programming is that you have to solve
+
+37:32.320 --> 37:37.360
+this optimization problem for each possible value of x at a given time step k.
+
+37:37.360 --> 37:44.160
+Now, if x can assume many different values, or possibly even a continuum quantity, then
+
+37:44.160 --> 37:45.160
+a challenge.
+
+37:45.160 --> 37:49.040
+It's a challenge, meaning that you have to quantize the possible values of the states.
+
+37:49.040 --> 37:53.520
+And then for each representative, you run dynamic programming, which also then means
+
+37:53.520 --> 37:56.560
+that you have to do some interpolation.
+
+37:56.560 --> 38:00.160
+Fourth point is that this algorithm gives you the global minimum, not the local or the
+
+38:00.160 --> 38:04.200
+point, really the global, if you can run these algorithms to completion.
+
+38:04.200 --> 38:08.160
+And finally, the constraints in this case actually helps with optimization, because
+
+38:08.160 --> 38:14.720
+they reduce the number of possible control values that you need to evaluate in order
+
+38:14.720 --> 38:19.200
+to solve the Bellman Recursion, which is basically this problem here.
+
+38:19.200 --> 38:21.200
+Okay, so.
+
+38:21.200 --> 38:28.200
+Are there common situations where the costs are not bad?
+
+38:28.200 --> 38:31.120
+I have to say that actually the additive cost structure is one of those assumptions
+
+38:31.120 --> 38:39.760
+that is very useful, because it allows you to leverage a structure, and also very common.
+
+38:39.760 --> 38:47.860
+The situations where the cost may not be additive, even after transformation, arise, for example,
+
+38:47.860 --> 38:54.960
+when you try to include some notion of trajectory long, this is more like in the stochastic
+
+38:54.960 --> 38:59.000
+sense.
+
+38:59.000 --> 39:04.880
+Information that really needs you to reason about the full trajectory, as opposed to just
+
+39:04.880 --> 39:06.280
+some segment of the trajectory.
+
+39:06.280 --> 39:12.560
+For example, if you want to compute whether a probability of the trajectory is in collision
+
+39:12.560 --> 39:17.920
+with something, if you have some process noise, you can't simply chop the trajectory into
+
+39:17.920 --> 39:18.920
+waypoints.
+
+39:18.920 --> 39:22.120
+You have to consider the full trajectory to really compute that probability.
+
+39:22.120 --> 39:25.040
+So that leads to a non-additive formulation.
+
+39:25.040 --> 39:32.080
+Or for example, as we will see here, in a stochastic case, in order to account for stochasticity,
+
+39:32.080 --> 39:34.760
+we take an expectation with respect to disturbances.
+
+39:34.760 --> 39:42.360
+An expectation is basically a linear function.
+
+39:42.360 --> 39:54.320
+So the expectation of a random variable x is equal to the sum of pi xi, where the pi
+
+39:54.320 --> 39:58.480
+is the probability that the random variable takes on the value xi.
+
+39:58.480 --> 40:03.140
+So if you know the pi, this is just a linear function where the outcomes are weighted by
+
+40:03.140 --> 40:05.900
+these known quantities.
+
+40:05.900 --> 40:08.880
+But sometimes you don't just want to optimize the expected value.
+
+40:08.880 --> 40:14.520
+You may want to optimize, say, the variance of your cost.
+
+40:14.520 --> 40:18.760
+So you're interested in understanding not so much, you're interested in optimizing performance
+
+40:18.760 --> 40:24.400
+in the average case, but also limit the variation of your performance with respect to the average
+
+40:24.400 --> 40:29.140
+case, which means that you want to count some variance term in your cost function, or more
+
+40:29.140 --> 40:30.640
+in general, some risk metric.
+
+40:30.640 --> 40:36.280
+Well, those risk metrics actually couple the different optimization stages in a non-linear
+
+40:36.280 --> 40:37.280
+fashion.
+
+40:37.320 --> 40:39.920
+That I could apply dynamic programming.
+
+40:39.920 --> 40:46.060
+So the point is that the added assumption is fairly general, but there are some very
+
+40:46.060 --> 40:50.840
+important classes of problems that do not have that structure, which basically means
+
+40:50.840 --> 40:56.600
+that either you do some reformulation so that you have it, or you do some relaxations, or
+
+40:56.600 --> 41:01.000
+you just rely on somebody to solve the problem, but you can't use dynamic programming anymore.
+
+41:01.000 --> 41:03.880
+All right, so stochastic case.
+
+41:03.880 --> 41:06.760
+The stochastic case is relatively similar.
+
+41:06.760 --> 41:12.840
+The main difference is that now in a motion model, we include a disturbance term, wk,
+
+41:12.840 --> 41:14.560
+which is a stochastic quantity.
+
+41:14.560 --> 41:22.080
+So if you are a state x and we apply control u, the next state is equal to f of x u and
+
+41:22.080 --> 41:27.520
+some stochastic quantity w that is chosen for u by nature.
+
+41:27.520 --> 41:32.280
+We see high control constraints, but most importantly, we assume that we know the probability
+
+41:32.280 --> 41:38.840
+distribution through which nature computes the disturbance values.
+
+41:38.840 --> 41:41.480
+And in particular, this is a critical assumption.
+
+41:41.480 --> 41:46.780
+This probability distribution only depends on the current state and the current control.
+
+41:46.780 --> 41:53.040
+So wk is a random variable whose distribution is in general dependent on the current value
+
+41:53.040 --> 41:55.400
+of the state and the current value of the control.
+
+41:55.600 --> 42:01.440
+Critically, it cannot depend on values of the state prior to time k.
+
+42:01.440 --> 42:05.280
+This is referred to as a Markovian assumption.
+
+42:05.280 --> 42:10.180
+In such a stochastic setting, we are not so much interested in open loop control sequences,
+
+42:10.180 --> 42:16.000
+but indeed on control policies, meaning functions and map states into controls.
+
+42:16.000 --> 42:18.520
+So it's a much more complicated problem.
+
+42:18.520 --> 42:22.840
+We are not solving over a control sequence.
+
+42:22.840 --> 42:26.940
+We are solving the optimization problem with respect to functions, meaning functions and
+
+42:26.940 --> 42:28.140
+map states into controls.
+
+42:28.140 --> 42:30.600
+So much more complicated.
+
+42:30.600 --> 42:33.200
+But for stochastic problems, that's what you really need.
+
+42:33.200 --> 42:37.800
+Since noise brings you all the way across the state space, it's important that you know
+
+42:37.800 --> 42:44.540
+what to do from each possible realization of the state.
+
+42:44.540 --> 42:50.560
+The problem, similar as before, we have a terminal cost and we have stage-wise cost.
+
+42:50.560 --> 42:54.560
+The stage-wise cost can depend also on the noise.
+
+42:54.560 --> 42:57.680
+And this is stochastic quantity.
+
+42:57.680 --> 43:02.320
+In order to make the problem amenable to optimization, we have to translate that stochastic quantity
+
+43:02.320 --> 43:09.040
+into deterministic quantity that you can use in order to rank the policies.
+
+43:09.040 --> 43:15.080
+So in particular, the way we do it is by taking an expectation of the random variable.
+
+43:15.080 --> 43:22.600
+And the expectation here is with respect to the realization of the WK random variables.
+
+43:22.600 --> 43:31.820
+The goal is then to compute a policy sequence that optimizes such a cost.
+
+43:31.820 --> 43:35.180
+So key point, models still have discrete time.
+
+43:35.180 --> 43:39.980
+But now we have stochasticity and in particular, the model is Markovian, which means that this
+
+43:39.980 --> 43:45.980
+probability distribution only depends on the current state or the current control.
+
+43:45.980 --> 43:49.820
+Do you have an idea why we need to make this Markovian assumption?
+
+43:49.820 --> 43:53.100
+What's that?
+
+43:53.100 --> 44:02.860
+Exactly, because remember that the principle of optimality was basically telling you is
+
+44:02.860 --> 44:08.100
+that you can chop the problem into pieces and solve them independently.
+
+44:08.100 --> 44:09.660
+So the cost is still additive.
+
+44:09.660 --> 44:13.500
+So we can still chop the problem into pieces from the perspective of control.
+
+44:13.500 --> 44:16.700
+But if we don't make this assumption that the probability distribution only depends
+
+44:16.700 --> 44:21.300
+on the current state and control, we cannot really chop the problem into pieces from the
+
+44:21.300 --> 44:23.280
+perspective of the trajectory.
+
+44:23.280 --> 44:33.180
+So this actual assumption allows you to prove principle of optimality concept that is very
+
+44:33.180 --> 44:38.500
+similar to the one that we proved for the deterministic setting.
+
+44:38.500 --> 44:45.040
+The objective is to find a closed loop policy before we were concerned with open loop policies.
+
+44:45.040 --> 44:48.440
+The cost is still additive, again, central assumption.
+
+44:48.440 --> 44:50.800
+And finally, we are considering a risk-neutral combination.
+
+44:50.800 --> 44:53.820
+So we want to optimize performance on average.
+
+44:53.820 --> 44:58.900
+Sometimes, as mentioned above, you're interested in going beyond average performance.
+
+44:58.900 --> 45:04.420
+We want to also count what happens in the worst case with respect to some quantile of
+
+45:04.420 --> 45:06.420
+your distribution and so on and so forth.
+
+45:06.420 --> 45:12.420
+This would lead to a risk-sensitive or risk-aware formulation of the problem.
+
+45:12.420 --> 45:15.620
+That is actually something that we work quite a bit in my lab, but is beyond the scope of
+
+45:15.620 --> 45:16.620
+this class.
+
+45:16.620 --> 45:25.500
+All right, as a note, the way that I stated the problem is based on a formalism that I
+
+45:25.500 --> 45:28.060
+really like, and it is rooted in control theory.
+
+45:28.060 --> 45:32.860
+If you go to a class in CS, you take, say, Emma Brunski's class on enforcement learning,
+
+45:32.860 --> 45:34.500
+her formalism will be different.
+
+45:34.500 --> 45:38.260
+So instead of a state transition equation, you have a probability kernel that tells you
+
+45:38.260 --> 45:43.500
+from state S. If you play action A, what is your next state S prime?
+
+45:43.500 --> 45:44.500
+Same thing.
+
+45:44.500 --> 45:46.620
+The only thing is that, unfortunately, different notations.
+
+45:46.620 --> 45:51.620
+Somehow the AI community, operational research community, and control theory community have
+
+45:51.620 --> 45:54.320
+developed a different notation.
+
+45:54.320 --> 45:56.100
+So what do you do when you have different languages?
+
+45:56.100 --> 45:57.660
+You have Rosetta Stone.
+
+45:57.660 --> 46:01.980
+So if you're confused about a notation, go into this paper.
+
+46:01.980 --> 46:08.580
+All this paper is about is to translate notation from one community to the other one.
+
+46:08.580 --> 46:10.600
+So it's a bit boring, but useful.
+
+46:10.600 --> 46:13.380
+Here you have F of X, A, U, K. No, wait.
+
+46:13.380 --> 46:18.140
+In AI, it's P, S, A, A, S prime, and so on and so forth.
+
+46:18.140 --> 46:21.860
+Seemed tedious, but actually it's quite useful.
+
+46:21.860 --> 46:23.340
+Did you know about this paper?
+
+46:23.340 --> 46:25.340
+You did, because you took two or three.
+
+46:25.340 --> 46:26.340
+Cool.
+
+46:26.340 --> 46:27.340
+All right.
+
+46:27.900 --> 46:32.900
+You can prove that even in the stochastic setting, and the proof is very, very similar
+
+46:32.900 --> 46:38.540
+to the proof I did before, the only complication is that now we had to reason in terms of these
+
+46:38.540 --> 46:39.540
+probability distributions.
+
+46:39.540 --> 46:43.420
+But you can prove a result that is almost identical.
+
+46:43.420 --> 46:48.700
+So assume that state S, K is reachable.
+
+46:48.700 --> 46:52.620
+Then consider this a problem whereby we are at X, K at time K, and we wish to minimize
+
+46:52.620 --> 46:54.900
+the cost to go from time K to N.
+
+46:54.940 --> 47:00.180
+Then the tail policy is optimal for the tail sub-problem.
+
+47:00.180 --> 47:01.900
+The same.
+
+47:01.900 --> 47:08.260
+Main difference here is A, we're talking about the tail policies as opposed to tail sequences,
+
+47:08.260 --> 47:13.140
+and two, the proof is slightly different because we have to account for probability distributions,
+
+47:13.140 --> 47:15.140
+but intuition is the same.
+
+47:15.140 --> 47:18.420
+As I said in this class, I want to just give you intuition.
+
+47:18.420 --> 47:21.740
+That's why I did it in a deterministic sense.
+
+47:21.740 --> 47:26.260
+The TPA algorithm itself is also extremely similar.
+
+47:26.260 --> 47:27.940
+You still proceed backward.
+
+47:27.940 --> 47:34.260
+You set the terminal cost to go equal to the terminal cost of your optimal control problem,
+
+47:34.260 --> 47:38.100
+and then go backward in time, you solve the Bellman equation.
+
+47:38.100 --> 47:43.300
+The only difference is that now you had to take an expectation with respect to the disturbance
+
+47:43.300 --> 47:44.900
+at the current time K.
+
+47:44.900 --> 47:49.980
+But the idea is the same, that in order to compute the optimal cost to go from each state,
+
+47:51.780 --> 47:57.820
+you compute the action that best trade-off immediate cost with the optimal cost to go.
+
+48:03.900 --> 48:07.580
+So let's do an example to make this a bit more concrete.
+
+48:07.580 --> 48:13.780
+An example is not really in the robotics field because I just want to distill the main ideas here.
+
+48:13.780 --> 48:17.020
+This is an inventory control problem.
+
+48:17.020 --> 48:24.700
+So the idea is that we have a warehouse whereby we can keep some stock and then we deliver stock.
+
+48:24.700 --> 48:30.500
+So in particular, we denote the amount of stock, which is an integer number,
+
+48:30.500 --> 48:35.460
+we can one unit, two units and some, as SOK, that's our state.
+
+48:35.460 --> 48:44.540
+The control, the inventory UK is the amount of stock that we buy trying to predict and meet future demands.
+
+48:44.540 --> 48:47.580
+And then we have a demand WK, which is a stochastic quantity,
+
+48:47.580 --> 48:52.460
+is the demand of that stock that we have each day.
+
+48:52.460 --> 48:58.740
+The dynamics are given by the maximum between zero and XK plus UK minus WK.
+
+48:58.740 --> 49:06.460
+What that means is that if I start with an amount of stock equal to X, I buy U and I get the demand W,
+
+49:06.460 --> 49:13.140
+then the stock at the next time is the difference between X plus U minus W.
+
+49:13.140 --> 49:14.380
+So please step forward.
+
+49:14.380 --> 49:16.500
+What I have the next time is the leftover.
+
+49:16.500 --> 49:23.260
+What I have after, I have shipped the stock that is required by the demand.
+
+49:23.260 --> 49:32.700
+The constraint is that the amount of stock that we can store at every single time can only be larger than two units.
+
+49:32.700 --> 49:37.340
+So X plus U has to be less than or equal to two.
+
+49:37.340 --> 49:41.140
+Of course, this is a very toy problem, but just to illustrate the main ideas.
+
+49:41.180 --> 49:46.460
+Finally, we have to prescribe a probabilistic structure for the disturbance,
+
+49:46.460 --> 49:49.220
+which in our case is the demand for the stock.
+
+49:49.220 --> 49:52.620
+And we say that we have three possible levels of demand.
+
+49:52.620 --> 49:57.340
+With probability 0.1, 10%, we have no demand at time K.
+
+49:57.340 --> 50:00.580
+Probability 70%, we have demand of one unit.
+
+50:00.580 --> 50:04.660
+Probability of 20%, we have demand for two units.
+
+50:04.660 --> 50:08.980
+This probability distribution in this case doesn't change through time, it's always the same.
+
+50:11.500 --> 50:16.220
+The cost is somewhat made up.
+
+50:16.220 --> 50:23.020
+And basically is a combination of the cost due to the fact that we are ordering new stock,
+
+50:23.020 --> 50:26.580
+and we say that the new stock costs $1, say,
+
+50:26.580 --> 50:31.740
+plus a cost due to the fact that we have to store material.
+
+50:31.740 --> 50:34.500
+Storing material incurs a cost.
+
+50:34.500 --> 50:39.100
+Maybe we have to pay workers to take care of the stock and so on.
+
+50:39.140 --> 50:42.300
+In particular, the cost is modeled as XK plus K minus WK.
+
+50:42.300 --> 50:46.340
+So that's the leftover stock that has to stay overnight.
+
+50:46.340 --> 50:48.860
+So we take the quantity, we square it.
+
+50:48.860 --> 50:50.820
+I mean, why not two, but why not two to the power of four?
+
+50:50.820 --> 50:53.300
+I mean, these will be made up to example.
+
+50:54.660 --> 50:56.660
+Well, so how do we solve this problem?
+
+50:56.660 --> 51:02.140
+How do we find a policy that tells you from each possible state the best thing to do?
+
+51:02.140 --> 51:04.220
+So how much stock you need to order?
+
+51:04.220 --> 51:08.620
+It's not trivial to really understand what would be optimal to do
+
+51:08.620 --> 51:11.380
+in terms of a control policy in this case.
+
+51:11.380 --> 51:16.220
+So in order to do so, what we do is to apply dynamic programming.
+
+51:16.220 --> 51:23.700
+So in particular, I forgot to mention that the terminal cost is zero.
+
+51:23.700 --> 51:28.180
+So if you're left with some stock, we just discard it, that incurs no cost.
+
+51:28.180 --> 51:32.060
+And the problem is over three time steps.
+
+51:32.060 --> 51:37.420
+Of course, the problem is very small just to solve it manually.
+
+51:37.420 --> 51:39.460
+Okay, so how do we solve this problem?
+
+51:39.460 --> 51:44.660
+This problem has all the ingredients of a Markov decision process.
+
+51:44.660 --> 51:47.620
+So basically, the model that I described before.
+
+51:47.620 --> 51:49.700
+Cost is additive.
+
+51:49.700 --> 51:54.060
+Remember that additive does not mean that the immediate costs are linear function.
+
+51:54.060 --> 51:58.060
+It means that I can sum immediate costs through time.
+
+51:58.060 --> 52:00.500
+The probability distribution is Markovian.
+
+52:00.500 --> 52:04.540
+We have all the ingredients, so we can apply dynamic programming.
+
+52:04.540 --> 52:09.540
+So the first step would be to say that the terminal cost to go
+
+52:09.540 --> 52:12.340
+is equal to the terminal cost.
+
+52:12.340 --> 52:19.340
+In this case, J3 of X3 is equal to zero.
+
+52:19.340 --> 52:27.020
+Because remember that the terminal cost is by problem definition equal to zero.
+
+52:27.020 --> 52:32.940
+So now, how do we compute the optimal control policy?
+
+52:32.940 --> 52:35.420
+Well, we have to carry out the dynamic programming algorithm.
+
+52:35.420 --> 52:36.980
+So we go one step backward.
+
+52:36.980 --> 52:39.380
+So from three, we go to two.
+
+52:39.380 --> 52:42.620
+And we compute the optimal cost to go function
+
+52:42.620 --> 52:46.660
+for each possible value of the state.
+
+52:46.660 --> 52:51.980
+What are the possible values of the state?
+
+52:51.980 --> 52:53.780
+Remember that we have this constraint here,
+
+52:53.780 --> 53:00.420
+which means that X can either be equal to zero, one or two.
+
+53:00.420 --> 53:06.820
+So we have to compute J20, J21, and J22.
+
+53:06.820 --> 53:10.460
+Once I've done these three computations, then I go backward in time.
+
+53:10.460 --> 53:13.340
+I either compute J1 for all possible values of the states,
+
+53:13.340 --> 53:17.020
+and then I go back to J0, and then I've solved the problem.
+
+53:17.020 --> 53:22.740
+So let's compute J20 just to do an example.
+
+53:22.740 --> 53:26.380
+So the J20, according to the Bellman equation,
+
+53:26.380 --> 53:33.660
+is the minimum over the feasible controls.
+
+53:33.660 --> 53:35.860
+So what are the feasible controls here?
+
+53:35.860 --> 53:38.020
+We go back to the constraint.
+
+53:38.020 --> 53:42.460
+So the constraint says that X plus U has to be less than or equal to two.
+
+53:42.460 --> 53:47.060
+We are considering as an initial state for the Taylor's problem zero,
+
+53:47.060 --> 53:51.780
+which means that zero plus U has to be less than or equal to two,
+
+53:51.780 --> 53:55.860
+which means that U can be either zero, one or two.
+
+53:55.900 --> 53:57.540
+Make sense?
+
+53:57.540 --> 54:05.620
+So this is the minimum over U2 equal either zero, one or two
+
+54:05.620 --> 54:12.580
+of the expected value of the immediate cost.
+
+54:12.580 --> 54:18.660
+So U2 plus zero, which is the value of the state,
+
+54:18.660 --> 54:27.340
+plus U2 minus W2, plus the cost to go
+
+54:27.340 --> 54:30.340
+from the perspective of the following state,
+
+54:30.340 --> 54:33.980
+which we have already computed, so this is equal to zero.
+
+54:33.980 --> 54:35.980
+And here I forgot the square.
+
+54:38.580 --> 54:41.580
+All right, so let's do this computation.
+
+54:48.660 --> 55:01.140
+All right, so this is equal to...
+
+55:07.140 --> 55:11.020
+equal to, we have to compute the expectation.
+
+55:11.020 --> 55:14.940
+Expectation means that we take the outcome times the probability of that outcome.
+
+55:14.940 --> 55:16.420
+So what is the random variable?
+
+55:16.420 --> 55:18.100
+It is W2.
+
+55:18.100 --> 55:24.580
+So with probability equal to 0.1.
+
+55:28.580 --> 55:31.100
+I'm balanced by this one.
+
+55:33.780 --> 55:37.540
+So the expectation, so U2 does not depend on any stochasticity.
+
+55:37.540 --> 55:38.780
+So we can bring it out.
+
+55:38.780 --> 55:44.700
+So it is equal to U2 plus, so this is the stochastic quantity.
+
+55:44.700 --> 55:50.380
+So with probability equal to 10%, W takes on the value of zero.
+
+55:50.380 --> 55:54.620
+So we have...
+
+55:54.620 --> 55:59.820
+So minimum over U2 equals zero, one or two of U2
+
+55:59.820 --> 56:06.220
+plus U2 minus zero square, probability 10%,
+
+56:06.220 --> 56:14.660
+plus plus U2 minus one square, probability 70%.
+
+56:15.660 --> 56:22.660
+Plus U2 minus two square, probability 20%.
+
+56:29.660 --> 56:33.300
+U2 minus two, all right.
+
+56:33.300 --> 56:36.820
+So then what you do is to plug in this expression,
+
+56:36.820 --> 56:40.700
+either U2 equals zero, U2 equals one, or U2 equals two.
+
+56:40.700 --> 56:43.460
+You evaluate it, and then you take the minimum.
+
+56:43.500 --> 56:50.180
+In this case, the minimum is obtained for U2 equal one.
+
+56:50.180 --> 56:55.420
+The cost in that case, you could check.
+
+56:55.420 --> 56:58.500
+Is J2 equal 1.3?
+
+56:58.500 --> 57:04.020
+And then we set the value of the policy at time two
+
+57:04.020 --> 57:07.220
+from state zero as equal one, which
+
+57:07.220 --> 57:11.500
+means that at state zero, at time step two,
+
+57:11.500 --> 57:14.060
+we had to choose control one.
+
+57:14.060 --> 57:19.820
+Then I will solve G21, J22, same reasoning,
+
+57:19.820 --> 57:21.780
+and then we'll go one step backward.
+
+57:21.780 --> 57:24.100
+And then if you do that, you should do it as an exercise
+
+57:24.100 --> 57:27.300
+that you will get.
+
+57:27.300 --> 57:29.420
+OK, so any questions here?
+
+57:35.020 --> 57:37.500
+This is really how you solve stochastic sequential decision
+
+57:37.500 --> 57:39.140
+making problems.
+
+57:39.140 --> 57:44.260
+Everything else is basically a variation on this idea.
+
+57:44.260 --> 57:46.500
+In particular, why do we need variations?
+
+57:46.500 --> 57:48.700
+The problem is that this problem is coarse.
+
+57:48.700 --> 57:51.620
+And usually the carceral dimensionality
+
+57:51.620 --> 57:53.420
+is the only one that is mentioned,
+
+57:53.420 --> 57:56.020
+but in reality, you have many more courses.
+
+57:56.020 --> 57:58.300
+So first of all, you have the carceral dimensionality.
+
+57:58.300 --> 58:00.340
+So what is the carceral dimensionality?
+
+58:00.340 --> 58:02.340
+The problem is that even the dynamic programming
+
+58:02.340 --> 58:06.420
+allow you to do very streamlined computation,
+
+58:06.420 --> 58:08.620
+reusing all the information from the solution
+
+58:08.620 --> 58:10.020
+to the tails-up problem.
+
+58:10.020 --> 58:13.780
+Still, at each time step, you have
+
+58:13.780 --> 58:20.060
+to solve the Bellman equation, which is this thing here,
+
+58:20.060 --> 58:22.940
+for each possible value of the state.
+
+58:22.940 --> 58:26.620
+So if the state is a one-dimensional object that
+
+58:26.620 --> 58:29.460
+can take on 100 values, it's fine.
+
+58:29.460 --> 58:34.140
+But assume that the state is now a three-dimensional object,
+
+58:34.140 --> 58:36.220
+x1, x2, x3.
+
+58:36.220 --> 58:40.620
+So you have to take all the combination of x1, x2, and x3.
+
+58:40.620 --> 58:44.100
+So if you have 10 values, how many combinations you have?
+
+58:49.460 --> 58:51.540
+So basically, this grows exponentially
+
+58:51.540 --> 58:53.980
+with the dimension, which means that you go on five,
+
+58:53.980 --> 58:57.660
+six dimensions, you are hopeless.
+
+58:57.660 --> 59:00.660
+On top of it, and that's what you were asking,
+
+59:00.660 --> 59:05.940
+if a sum of the states cannot be observed directly,
+
+59:05.940 --> 59:08.420
+what you do in order to be in this formalism
+
+59:08.420 --> 59:13.140
+is to build a probability distribution around it, which
+
+59:13.140 --> 59:14.580
+means, though, that you can still
+
+59:14.580 --> 59:16.180
+use the dynamic programming principle,
+
+59:16.180 --> 59:19.060
+but now you have to reason in terms of beliefs, which
+
+59:19.060 --> 59:22.460
+means that now your optimal cost to go
+
+59:22.460 --> 59:26.540
+is not related to the state, but related to the belief
+
+59:26.540 --> 59:28.020
+of that state, which means that you
+
+59:28.020 --> 59:32.220
+have to discretize or approximate
+
+59:32.220 --> 59:34.940
+a probability distribution to run this Bellman equation.
+
+59:34.940 --> 59:37.100
+So computationally, very complicated.
+
+59:37.100 --> 59:40.620
+This will lead to the so-called POMDP problems.
+
+59:40.620 --> 59:43.500
+Similarly, curves of modeling.
+
+59:43.500 --> 59:52.460
+Oftentimes, it's very complex to get close-form expressions
+
+59:52.460 --> 59:54.980
+for these probability distributions.
+
+59:54.980 --> 59:58.500
+So sometimes, well, yeah, this one's here.
+
+59:58.500 --> 01:00:01.940
+Sometimes, it will be possible to compute them,
+
+01:00:01.940 --> 01:00:03.980
+but they're extremely complicated.
+
+01:00:04.020 --> 01:00:06.260
+Or sometimes, they're not really known.
+
+01:00:06.260 --> 01:00:08.700
+For example, if you are trying to model
+
+01:00:08.700 --> 01:00:12.780
+how a human would react to your actions, that, of course,
+
+01:00:12.780 --> 01:00:16.340
+is an influence in what the next state will be.
+
+01:00:16.340 --> 01:00:20.260
+But who is going to give you that information?
+
+01:00:20.260 --> 01:00:21.860
+So you have to learn that from data.
+
+01:00:21.860 --> 01:00:23.780
+So that's so-called curves of modeling,
+
+01:00:23.780 --> 01:00:26.260
+that some of the problem formulation
+
+01:00:26.260 --> 01:00:29.900
+may not be given to you, and yet you want to solve this problem.
+
+01:00:29.900 --> 01:00:31.700
+Finally, curves of time.
+
+01:00:31.700 --> 01:00:34.700
+Oftentimes, the data of the problem
+
+01:00:34.700 --> 01:00:37.140
+is given to you with little advanced notice.
+
+01:00:37.140 --> 01:00:40.540
+For example, in the context of inventory control
+
+01:00:40.540 --> 01:00:43.740
+or dispatching, scheduling, so not so much in robotics.
+
+01:00:43.740 --> 01:00:46.980
+In the context of robotics, the problem data
+
+01:00:46.980 --> 01:00:50.300
+may change as the system is controlled,
+
+01:00:50.300 --> 01:00:52.860
+which means that you have to recompute these policies
+
+01:00:52.860 --> 01:00:56.860
+online, possibly by recomputing some parts of the problem
+
+01:00:56.860 --> 01:00:59.740
+formulation online, by adapting, for example,
+
+01:00:59.780 --> 01:01:04.460
+the transition model to the model that reflects
+
+01:01:04.460 --> 01:01:07.500
+the current capabilities of the robot.
+
+01:01:07.500 --> 01:01:09.900
+So this has triggered a lot of interest
+
+01:01:09.900 --> 01:01:15.780
+in suboptimal dynamic programming, which you say,
+
+01:01:15.780 --> 01:01:16.540
+boring.
+
+01:01:16.540 --> 01:01:18.780
+Let's say exciting reinforcement learning.
+
+01:01:18.780 --> 01:01:21.700
+OK, so for me, it's suboptimal dynamic programming.
+
+01:01:21.700 --> 01:01:24.460
+So basically, the idea is to come up
+
+01:01:24.460 --> 01:01:28.660
+with approximations that make the dynamic programming
+
+01:01:28.700 --> 01:01:32.340
+algorithm scalable to a number of different settings.
+
+01:01:32.340 --> 01:01:34.380
+High dimensional spaces, situations
+
+01:01:34.380 --> 01:01:36.780
+whereby parts of the model are not specified,
+
+01:01:36.780 --> 01:01:38.180
+they had to be learned from data,
+
+01:01:38.180 --> 01:01:40.500
+they're offline, online, and so on.
+
+01:01:40.500 --> 01:01:43.380
+In particular, and this will be the subject of the lecture
+
+01:01:43.380 --> 01:01:46.940
+on Thursday, there are basically two main ideas
+
+01:01:46.940 --> 01:01:52.380
+behind suboptimal DP, or if you will, enforcement learning.
+
+01:01:52.380 --> 01:01:54.020
+The idea is to either approximate
+
+01:01:54.020 --> 01:01:56.620
+the problem in a value space, whereby
+
+01:01:56.620 --> 01:01:59.300
+we approximate the optimal cost-to-go function
+
+01:01:59.300 --> 01:02:03.340
+with some surrogate, or approximate the problem
+
+01:02:03.340 --> 01:02:06.580
+in policy space, whereby we select the policy
+
+01:02:06.580 --> 01:02:11.420
+from a restricted class of policies.
+
+01:02:11.420 --> 01:02:13.460
+Let me just give you, in the final 10 minutes,
+
+01:02:13.460 --> 01:02:16.180
+the intuition between these two classes, which, of course,
+
+01:02:16.180 --> 01:02:18.580
+has been moving in several different modeling
+
+01:02:18.580 --> 01:02:20.500
+approaches, algorithms, and this is
+
+01:02:20.500 --> 01:02:22.540
+a very active field of research.
+
+01:02:22.540 --> 01:02:29.860
+So the first approach is to, OK, solving this problem
+
+01:02:29.860 --> 01:02:33.860
+allows you to solve all the tail subproblems, which
+
+01:02:33.860 --> 01:02:39.860
+is very complicated, difficult, and most of the time
+
+01:02:39.860 --> 01:02:42.060
+is intractable.
+
+01:02:42.060 --> 01:02:46.740
+So the idea is that if you want to compute a policy at,
+
+01:02:46.740 --> 01:02:49.220
+actually, your action at time k, you still
+
+01:02:49.220 --> 01:02:51.020
+use the idea of a dynamic programming.
+
+01:02:51.060 --> 01:02:54.500
+So you compute a policy that best trades off
+
+01:02:54.500 --> 01:02:56.740
+immediate cost with the cost-to-go.
+
+01:02:56.740 --> 01:02:59.260
+But for the cost-to-go, you don't use the optimal one,
+
+01:02:59.260 --> 01:03:01.340
+because maybe it's too computationally intensive
+
+01:03:01.340 --> 01:03:04.380
+to compute it, or you don't have enough problem information
+
+01:03:04.380 --> 01:03:09.100
+to compute it, but you use a surrogate cost-to-go.
+
+01:03:09.100 --> 01:03:12.700
+So something that hopefully is close to the optimal cost-to-go.
+
+01:03:12.700 --> 01:03:15.700
+Well, OK, so the $100 question is,
+
+01:03:15.700 --> 01:03:17.460
+how do you compute this surrogate cost-to-go
+
+01:03:17.460 --> 01:03:19.420
+that still allows you to compute an action that
+
+01:03:20.020 --> 01:03:21.060
+good enough?
+
+01:03:21.060 --> 01:03:22.700
+Well, there are many different classes.
+
+01:03:22.700 --> 01:03:25.380
+Within each class, you have many different subclasses.
+
+01:03:25.380 --> 01:03:28.500
+But you can do, for example, problem approximation.
+
+01:03:28.500 --> 01:03:30.620
+So to compute the optimal cost-to-go,
+
+01:03:30.620 --> 01:03:32.940
+you consider a problem that is simpler
+
+01:03:32.940 --> 01:03:36.140
+but has some commonality to the problem you're trying to solve.
+
+01:03:36.140 --> 01:03:38.140
+In the case of motion planning, say
+
+01:03:38.140 --> 01:03:43.060
+that you're computing a trajectory for your robot,
+
+01:03:43.060 --> 01:03:44.780
+and the cost-to-go is the solution
+
+01:03:44.780 --> 01:03:47.660
+to the optimal trajectory from some state in the future.
+
+01:03:47.660 --> 01:03:49.420
+For that problem, instead of using
+
+01:03:49.420 --> 01:03:51.700
+the full dynamics of the robot, you
+
+01:03:51.700 --> 01:03:53.580
+consider simplified dynamics in order
+
+01:03:53.580 --> 01:03:57.900
+to compute the cost-to-go, for example.
+
+01:03:57.900 --> 01:04:02.580
+Second approach is to do approximate optimization.
+
+01:04:02.580 --> 01:04:04.780
+A third approach that is very popular
+
+01:04:04.780 --> 01:04:09.140
+is to approximate the cost-to-go with a functional approximator,
+
+01:04:09.140 --> 01:04:11.260
+such as a neural network, and then learn
+
+01:04:11.260 --> 01:04:13.940
+this approximation from data.
+
+01:04:13.940 --> 01:04:17.020
+And then, of course, there are zillions of ways of doing it.
+
+01:04:17.060 --> 01:04:18.940
+And entire classes devoted to it.
+
+01:04:18.940 --> 01:04:20.860
+And then state aggregation.
+
+01:04:20.860 --> 01:04:24.300
+This is oftentimes not mentioned in classes.
+
+01:04:24.300 --> 01:04:26.900
+But the idea is, instead of reasoning
+
+01:04:26.900 --> 01:04:29.380
+in terms of individual states, you
+
+01:04:29.380 --> 01:04:31.940
+reason in terms of macro states, so that you
+
+01:04:31.940 --> 01:04:34.340
+reduce the dimensionality of the state space.
+
+01:04:34.340 --> 01:04:38.260
+With the idea that, OK, you don't know anymore
+
+01:04:38.260 --> 01:04:41.620
+what you have to do if you are exactly at a given
+
+01:04:41.620 --> 01:04:42.660
+latitude and longitude.
+
+01:04:42.660 --> 01:04:46.220
+But if you are within a circle on a given latitude and longitude,
+
+01:04:46.220 --> 01:04:50.100
+you know more or less what to do that is good enough.
+
+01:04:50.100 --> 01:04:51.700
+So the other approach, as I mentioned,
+
+01:04:51.700 --> 01:04:53.580
+is approximation in policy space.
+
+01:04:53.580 --> 01:04:58.500
+So I suppose, when we do policy optimization,
+
+01:04:58.500 --> 01:05:00.500
+so when we tend to compute the optimum policy,
+
+01:05:00.500 --> 01:05:02.940
+we are not putting any restriction in the policies
+
+01:05:02.940 --> 01:05:06.700
+we are computing, which makes the problem very complicated.
+
+01:05:06.700 --> 01:05:09.260
+So a popular approach is basically
+
+01:05:09.260 --> 01:05:12.380
+consider a parameterized class of a policy.
+
+01:05:12.420 --> 01:05:17.540
+So basically, functions that depends on some parameter rk.
+
+01:05:17.540 --> 01:05:22.060
+And then by using, for example, data, so in a learning context
+
+01:05:22.060 --> 01:05:27.460
+or some other technique, you optimize over those parameters.
+
+01:05:27.460 --> 01:05:29.660
+So what's the main difference is that you are transforming
+
+01:05:29.660 --> 01:05:32.140
+a problem from an optimization of the space of functions
+
+01:05:32.140 --> 01:05:35.060
+over a problem in terms of optimization over parameters.
+
+01:05:35.060 --> 01:05:37.220
+So finite dimensional objects.
+
+01:05:37.220 --> 01:05:39.740
+So what we do on Thursday will be
+
+01:05:39.740 --> 01:05:42.660
+to go deeper into these two approaches
+
+01:05:42.660 --> 01:05:47.180
+to scale up stochastic optimization
+
+01:05:47.180 --> 01:05:49.020
+and dynamic programming to problems
+
+01:05:49.020 --> 01:05:52.780
+where either the state space is too large
+
+01:05:52.780 --> 01:05:56.660
+or some of the problem data is not available
+
+01:05:56.660 --> 01:05:59.980
+and have to be learned online.
+
+01:05:59.980 --> 01:06:01.540
+Which means that the topic of Thursday
+
+01:06:01.540 --> 01:06:03.860
+will be reinforcement learning.
+
+01:06:03.860 --> 01:06:07.020
+Now, so as I said, this is the final week.
+
+01:06:07.020 --> 01:06:11.020
+So Friday, we'll have the final project demo.
+
+01:06:11.020 --> 01:06:16.060
+So I hope that you're having fun with the final project.
+
+01:06:16.060 --> 01:06:20.060
+Please provide your comments and suggestions
+
+01:06:20.060 --> 01:06:22.660
+in your course evaluations.
+
+01:06:22.660 --> 01:06:26.380
+This, I think, one of the most difficult classes to teach.
+
+01:06:26.380 --> 01:06:28.740
+Definitely the most difficult class to teach,
+
+01:06:28.740 --> 01:06:30.300
+that I teach here at Stanford.
+
+01:06:30.300 --> 01:06:34.820
+Because material per se is rather sophisticated,
+
+01:06:34.820 --> 01:06:37.020
+but also has a very strong software component.
+
+01:06:37.020 --> 01:06:39.980
+So you're not just writing a script.
+
+01:06:39.980 --> 01:06:42.940
+You are interacting with a complicated software
+
+01:06:42.940 --> 01:06:45.020
+infrastructure, which I think is a very good learning
+
+01:06:45.020 --> 01:06:45.940
+opportunity.
+
+01:06:45.940 --> 01:06:47.980
+But of course, it's difficult to establish.
+
+01:06:47.980 --> 01:06:50.820
+Plus, you have also hands-on hardware.
+
+01:06:50.820 --> 01:06:53.860
+So every year, I really take into serious account
+
+01:06:53.860 --> 01:06:56.020
+the feedback that I receive from your colleagues
+
+01:06:56.020 --> 01:06:57.660
+in order to improve this course.
+
+01:06:57.660 --> 01:06:59.820
+This course basically changes every year
+
+01:06:59.820 --> 01:07:02.500
+by taking into account the feedback from the previous years.
+
+01:07:02.500 --> 01:07:04.500
+All this to say that I really value your feedback.
+
+01:07:04.500 --> 01:07:08.260
+So try to put some time in providing feedback
+
+01:07:08.260 --> 01:07:11.020
+that is really constructive.
+
+01:07:11.020 --> 01:07:14.100
+So if there are aspects that you don't like, fine.
+
+01:07:14.100 --> 01:07:16.660
+But try to be constructive.
+
+01:07:16.660 --> 01:07:19.620
+Also, there is some discussion within the School
+
+01:07:19.620 --> 01:07:21.300
+of Engineering about the best way
+
+01:07:21.300 --> 01:07:26.300
+to evaluate and provide comments for a class.
+
+01:07:26.300 --> 01:07:32.340
+So this year, I have opted in for an additional layer
+
+01:07:32.380 --> 01:07:34.700
+of evaluation that asks you questions
+
+01:07:34.700 --> 01:07:35.820
+in a slightly different way.
+
+01:07:35.820 --> 01:07:40.940
+So there was some concern that with the previous questions,
+
+01:07:40.940 --> 01:07:43.140
+people were introducing biases.
+
+01:07:43.140 --> 01:07:45.300
+Some biases were quite surprising to me.
+
+01:07:45.300 --> 01:07:49.980
+For example, on average, classes instructed by female professors
+
+01:07:49.980 --> 01:07:52.460
+had much lower ratings.
+
+01:07:52.460 --> 01:07:58.620
+And classes instructed early morning had lower ratings.
+
+01:07:58.620 --> 01:07:59.740
+A lot of weird biases.
+
+01:07:59.740 --> 01:08:01.860
+So basically, there was a task force within the School
+
+01:08:01.900 --> 01:08:04.620
+of Engineering to change a little bit how questions
+
+01:08:04.620 --> 01:08:06.500
+are asked in order to see if there is
+
+01:08:06.500 --> 01:08:09.100
+a way to eliminate these biases.
+
+01:08:09.100 --> 01:08:11.220
+So the point being is that you have
+
+01:08:11.220 --> 01:08:14.300
+to fill out not just the standard course evaluation,
+
+01:08:14.300 --> 01:08:17.140
+but also an additional experimental course evaluation
+
+01:08:17.140 --> 01:08:21.980
+that we'll make available to you this week.
+
+01:08:21.980 --> 01:08:24.180
+Third, unfortunately, on Thursday,
+
+01:08:24.180 --> 01:08:25.420
+I won't be able to be here.
+
+01:08:25.420 --> 01:08:27.820
+I had to be at a meeting at NASA.
+
+01:08:27.820 --> 01:08:30.700
+I tried to get out of it as much as I could, but I'll be
+
+01:08:30.740 --> 01:08:34.060
+kidnapped at NASA Ames from 9 to 5.
+
+01:08:34.060 --> 01:08:37.180
+So my thoughts will be with you, but the class
+
+01:08:37.180 --> 01:08:40.260
+will be given to you by one of the CAs
+
+01:08:40.260 --> 01:08:42.220
+on the unfortunate learning.
+
+01:08:42.220 --> 01:08:44.460
+And what else?
+
+01:08:44.460 --> 01:08:47.580
+So I mean, from now on, if you have
+
+01:08:47.580 --> 01:08:50.940
+any questions about robot autonomy, both the algorithms
+
+01:08:50.940 --> 01:08:54.220
+or what classes you could take or what type of experience
+
+01:08:54.220 --> 01:08:56.820
+you could have, please feel free to email me.
+
+01:08:56.820 --> 01:08:59.780
+I like to say that after you take a class with me,
+
+01:08:59.780 --> 01:09:04.420
+you are under a lifelong policy of assistance from myself
+
+01:09:04.420 --> 01:09:06.580
+as much as I can.
+
+01:09:06.580 --> 01:09:09.420
+In the winter, together with two other professors
+
+01:09:09.420 --> 01:09:12.340
+from computer science, I'm going to teach
+
+01:09:12.340 --> 01:09:14.700
+an advanced version of this class, which
+
+01:09:14.700 --> 01:09:18.620
+is going to cover techniques that are really
+
+01:09:18.620 --> 01:09:22.300
+at the forefront of the science on robot autonomy,
+
+01:09:22.300 --> 01:09:27.980
+mainly human intent inference, learning-based perception
+
+01:09:28.060 --> 01:09:30.860
+control, verification and validation,
+
+01:09:30.860 --> 01:09:32.980
+mobile manipulation, and so on.
+
+01:09:32.980 --> 01:09:34.860
+It will be an experimental class, the first time
+
+01:09:34.860 --> 01:09:35.940
+we teach it.
+
+01:09:35.940 --> 01:09:38.900
+So just a word of caution.
+
+01:09:38.900 --> 01:09:42.340
+You will be part of this experiment,
+
+01:09:42.340 --> 01:09:45.980
+and I will also be part of this experiment.
+
+01:09:45.980 --> 01:09:47.020
+It will be a fun class.
+
+01:09:47.020 --> 01:09:48.900
+Of course, it will be an experimental class,
+
+01:09:48.900 --> 01:09:54.660
+so less structured than this one, more, how can I say,
+
+01:09:54.660 --> 01:09:56.460
+laid back.
+
+01:09:56.460 --> 01:09:57.620
+But it will be a lot of fun.
+
+01:09:57.660 --> 01:10:00.260
+So you'll be helping us in building
+
+01:10:00.260 --> 01:10:03.500
+this new version, the advanced version of this class.
+
+01:10:03.500 --> 01:10:06.580
+Arguably, there is not much there
+
+01:10:06.580 --> 01:10:09.060
+in the world about the material that we're going to teach.
+
+01:10:09.060 --> 01:10:11.140
+So I think it's going to be a good opportunity
+
+01:10:11.140 --> 01:10:15.460
+if you want to get deeper into this topic.
+
+01:10:15.460 --> 01:10:15.980
+All right.
+
+01:10:15.980 --> 01:10:16.900
+So any questions?
+
+01:10:24.180 --> 01:10:25.780
+No?
+
+01:10:25.780 --> 01:10:29.060
+I think that usually people after this class for a while
+
+01:10:29.060 --> 01:10:32.780
+still have nightmares about debugging Python scripts
+
+01:10:32.780 --> 01:10:35.660
+and validation gates and so on.
+
+01:10:35.660 --> 01:10:38.700
+But as I said, later on in the future,
+
+01:10:38.700 --> 01:10:40.540
+you'll see that this has been, hopefully,
+
+01:10:40.540 --> 01:10:44.180
+a worthwhile learning opportunity.
+
+01:10:44.180 --> 01:10:50.460
+Or in other words, in the spirit of this lecture,
+
+01:10:50.460 --> 01:10:54.180
+the mere cost I acknowledge has been probably very large.
+
+01:10:54.220 --> 01:10:56.500
+But don't focus so much on the immediate cost.
+
+01:10:56.500 --> 01:11:00.820
+Think about the optimal reward to go.
+
+01:11:00.820 --> 01:11:03.100
+That's my message, my legacy.
+
+01:11:03.100 --> 01:11:03.780
+All right.
+
+01:11:03.780 --> 01:11:07.500
+So I'll see you on Friday for the final demos.
+

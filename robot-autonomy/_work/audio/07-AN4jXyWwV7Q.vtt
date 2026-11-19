@@ -1,0 +1,3962 @@
+WEBVTT
+
+00:00.000 --> 00:15.000
+All right, so today we're going to continue our discussion about motion planning by discussing
+
+00:15.000 --> 00:20.200
+another class of algorithms referred to as sampling-based algorithms, which have become
+
+00:20.200 --> 00:25.120
+quite popular in the field of robotics and robot autonomy.
+
+00:25.120 --> 00:29.800
+In particular, as you know, the problem of motion planning entails finding a sequence
+
+00:29.800 --> 00:37.360
+of actions that drive a robot from an initial position to a goal region, while avoiding
+
+00:37.360 --> 00:43.960
+obstacles, respecting the dynamics of the system, and possibly optimizing a cost function.
+
+00:43.960 --> 00:50.240
+Last time I had as an image of a motion planning problem an image of a discretized word, because
+
+00:50.240 --> 00:52.880
+we focus more on grid-based approaches.
+
+00:52.880 --> 00:57.560
+Here I have an image of motion planning where we have a continuous path, because today we're
+
+00:57.560 --> 01:04.880
+going to look at algorithms that reason about the continuous formulation of motion planning,
+
+01:04.880 --> 01:08.160
+where you're reasoning about the continuous path.
+
+01:08.160 --> 01:11.680
+In particular, the goal of today is to learn about the class of algorithms referred to
+
+01:11.680 --> 01:14.600
+as a sampling-based motion planning algorithms.
+
+01:14.600 --> 01:23.160
+A good reading for the lecture of today is chapter 5 in the book of Steve Lavallee called
+
+01:23.160 --> 01:26.920
+The Planning Algorithms.
+
+01:26.920 --> 01:31.720
+So let's start from where we ended last time.
+
+01:31.720 --> 01:36.840
+A critical point that I already made a few times, but I want to make one more time, is
+
+01:36.840 --> 01:41.920
+that while the motion planning problem is defined in the workspace, you want to find
+
+01:41.920 --> 01:45.880
+a trajectory that does not collide with obstacles.
+
+01:45.880 --> 01:51.840
+The procedure, the process of building a trajectory really happens in another space, the configuration
+
+01:51.840 --> 01:58.160
+space, the space of configurations that a robot can have.
+
+01:58.160 --> 02:04.640
+Like in the case of a unicycle, where you have as a configuration the XY position of
+
+02:04.640 --> 02:10.360
+the unicycle and the heading of the unicycle, the configuration space is three-dimensional.
+
+02:10.360 --> 02:15.920
+Now the difficulty is that translating constraints that are defined in the workspace, in the
+
+02:15.920 --> 02:22.600
+real world, into constraints in the configuration space is, in general, quite difficult.
+
+02:22.600 --> 02:28.560
+In particular, to better explain this difficulty, this is the same sequence of figures that
+
+02:28.560 --> 02:29.560
+I had last time.
+
+02:29.560 --> 02:37.040
+I'm going to show how the difficulty in making this translation possible increases as the
+
+02:37.040 --> 02:40.120
+number of dimensions of the configuration space increases.
+
+02:40.120 --> 02:44.600
+Let's consider first the case of a triangular robot that wants to maneuver from initial
+
+02:44.600 --> 02:47.120
+configuration to final configuration.
+
+02:47.120 --> 02:52.280
+Here we're allowing the robot to only move in the vertical direction and in the horizontal
+
+02:52.280 --> 02:56.080
+direction, meaning that the configuration space is two-dimensional and the workspace
+
+02:56.080 --> 02:58.920
+is two-dimensional as well.
+
+02:58.920 --> 03:04.040
+So the way that motion planning works is that we shrink the robot to point its configuration
+
+03:04.040 --> 03:07.280
+and accordingly we enlarge the obstacles.
+
+03:07.280 --> 03:11.560
+In this case it's fairly simple, so what we would do would be to slice the shape of
+
+03:11.560 --> 03:18.360
+the robot around the obstacles and then the representation of the obstacle in the configuration
+
+03:18.360 --> 03:25.360
+space of the robot would be this gray area plus the purple area, with the idea that if
+
+03:25.360 --> 03:31.320
+the configuration of the robot, in this case taken to be the XY position of this corner
+
+03:31.320 --> 03:38.200
+of the robot, is not in neither the purple area nor in the gray area, then the robot
+
+03:38.200 --> 03:42.480
+in the workspace, what we really care about, is not going to be in condition with the obstacle
+
+03:42.480 --> 03:43.480
+at all.
+
+03:43.480 --> 03:51.560
+Does it make sense?
+
+03:51.560 --> 03:55.120
+So we do the same for the other obstacle.
+
+03:55.120 --> 04:00.000
+We do the same with respect to the boundaries of the environment, so we have to crop the
+
+04:00.000 --> 04:04.560
+boundaries to make sure that our obstacle doesn't get outside of the boundaries of the
+
+04:04.560 --> 04:05.560
+environment.
+
+04:05.560 --> 04:11.160
+And now the problem has been translated into the problem of finding a path for a point
+
+04:11.160 --> 04:16.320
+which represents the configuration of the robot, which as I said, would represent the
+
+04:16.320 --> 04:25.400
+XY coordinates of this vertex of the triangular robot, then we just find the path knowing
+
+04:25.400 --> 04:33.440
+that if the XY position of this vertex is collision free in the configuration space,
+
+04:33.440 --> 04:38.080
+then the robot is going to be obstacle free in the real space, in the workspace.
+
+04:38.080 --> 04:45.880
+So these are all good and fine, but now let's assume that we start considering a more complicated
+
+04:45.880 --> 04:50.920
+model for the triangular robot, whereby apart from just translating, the robot can also
+
+04:50.920 --> 04:51.920
+rotate.
+
+04:51.920 --> 04:56.240
+So the configuration is both XY and theta, the heading angle.
+
+04:56.240 --> 05:02.160
+In this case, the workspace is still two dimensional, but now the configuration space is three dimensional,
+
+05:02.160 --> 05:08.960
+XY and theta, which means that we will need to carry out the same sliding procedure for
+
+05:08.960 --> 05:18.200
+each fixed value of theta and incrementally build a 3D representation of the obstacles
+
+05:18.200 --> 05:19.820
+in the configuration space.
+
+05:19.820 --> 05:23.740
+So even though the obstacles in the workspace are two dimensional, now in the configuration
+
+05:23.740 --> 05:29.100
+space, they will look something like this, fairly complicated three dimensional objects.
+
+05:29.100 --> 05:35.180
+You can imagine how this procedure, as the configuration vector becomes larger and larger,
+
+05:35.180 --> 05:42.320
+or if you start accounting for dynamics, becomes extremely complicated.
+
+05:42.320 --> 05:47.300
+So the key point here is that when the motion planning problem is described in the real
+
+05:47.300 --> 05:52.780
+world, also referred to as the workspace, it really lives in another space, the configuration
+
+05:52.780 --> 05:59.100
+space, whereby the robot has been shrunk to a point and the obstacles have been enlarged
+
+05:59.100 --> 06:03.500
+accordingly and represented in the configuration space.
+
+06:03.500 --> 06:07.860
+So having said that, there are two main approaches to continuous motion planning, continuous
+
+06:07.860 --> 06:11.700
+in the sense that we reason about the continuous trajectory.
+
+06:11.740 --> 06:15.900
+The first approach to continuous motion planning, which is what we saw toward the end of the
+
+06:15.900 --> 06:23.820
+lecture on Tuesday, whereby we build data structures, like for example, cell decompositions
+
+06:23.820 --> 06:30.940
+that discretely approximate the continuous formulation of the problem without neglecting
+
+06:30.940 --> 06:34.980
+any information that is necessary for the problem.
+
+06:34.980 --> 06:39.280
+This is, in principle, the ideal approach.
+
+06:39.280 --> 06:44.200
+The disadvantage of this approach is that in order to work, it requires the explicit
+
+06:44.200 --> 06:51.240
+representation of the obstacles in the configuration space, which, as I said, is extremely challenging.
+
+06:51.240 --> 06:55.280
+To build the cell decomposition, you need to have explicit representation of the obstacles
+
+06:55.280 --> 06:59.160
+in the configuration space, which is very challenging.
+
+06:59.160 --> 07:04.840
+This motivated the development of a second class of algorithms, simply based algorithms,
+
+07:04.840 --> 07:10.400
+which only implicitly represent the obstacles in the configuration space.
+
+07:10.400 --> 07:15.840
+And this is what makes them really work for complex motion planning problems.
+
+07:15.840 --> 07:21.160
+I will discuss in a second what implicit representation of an obstacle in the configuration space
+
+07:21.160 --> 07:22.120
+means.
+
+07:27.080 --> 07:30.440
+The idea is as follows.
+
+07:30.480 --> 07:36.280
+Using the obstacles from the workspace to the configuration space is hard.
+
+07:36.280 --> 07:43.680
+But what is easy is to say, if a robot is a given configuration, say x, y, theta, would
+
+07:43.680 --> 07:49.260
+the robot be in collision with an obstacle in the workspace, yes or no?
+
+07:49.260 --> 07:55.180
+Such yes or no type of question can be easily answered by using a collision checker.
+
+07:55.180 --> 08:01.100
+So the idea of a sampling-based algorithm is to avoid the explicit representation of
+
+08:01.100 --> 08:06.380
+obstacles in the configuration space, and instead, probe the configuration space with
+
+08:06.380 --> 08:10.740
+a set of samples that are drawn randomly.
+
+08:10.740 --> 08:17.700
+For each sample, which is a specific instantiation of the configuration vector, we call a collision
+
+08:17.700 --> 08:23.500
+checker asking the question, if the robot were to be at this configuration, would the
+
+08:23.500 --> 08:26.200
+robot be in a collision, yes or no?
+
+08:26.200 --> 08:31.180
+If the sample is collision-free, then we retain it.
+
+08:31.180 --> 08:34.660
+If it actually will lead to a collision, then we discard it.
+
+08:34.660 --> 08:40.060
+And then by using these samples, we build a roadmap or some variation of a roadmap that
+
+08:40.060 --> 08:42.260
+we can leverage to compute a path.
+
+08:42.260 --> 08:48.680
+I will give you explicit examples of algorithms instantiating this idea in a second.
+
+08:48.860 --> 08:54.660
+Overall, this is the key idea behind the sampling-based algorithms.
+
+08:54.660 --> 09:00.160
+As I said, to capture the structure of the configuration space by random sampling, then
+
+09:00.160 --> 09:09.480
+use a black box component, a collision checker, to check if every sample configuration will
+
+09:09.480 --> 09:11.880
+lead to a collision, yes or no?
+
+09:11.880 --> 09:16.760
+And then use such a set of samples in order to build a roadmap.
+
+09:17.240 --> 09:23.720
+A good reference for this is a paper, 2011, from Steve Laval, the same author of the book
+
+09:23.720 --> 09:27.960
+I mentioned before.
+
+09:27.960 --> 09:35.720
+Now before we go into specific instantiation of this idea by discussing some popular algorithms
+
+09:35.720 --> 09:40.520
+implemented in this idea, let me say that the main advantages of this class of algorithms,
+
+09:40.520 --> 09:46.720
+which has made them quite popular in the robotics domain, is that, as you will see, these algorithms
+
+09:46.720 --> 09:48.440
+are conceptually simple.
+
+09:48.440 --> 09:53.240
+Remember, when we were talking about combinatorial algorithms, we were talking about doing a
+
+09:53.240 --> 09:59.480
+set of decompositions that require complicated geometric structures that require quite a
+
+09:59.480 --> 10:02.040
+bit of coding and so on?
+
+10:02.040 --> 10:05.800
+These algorithms are super simple to implement, say, 50 lines of code.
+
+10:05.800 --> 10:06.800
+That's it.
+
+10:06.800 --> 10:11.680
+Very difficult to make mistakes with them, which is a big plus.
+
+10:11.680 --> 10:14.320
+Second of all, they are quite flexible.
+
+10:14.400 --> 10:22.560
+For example, with the combinatorial algorithms, the set decomposition approach is really dependent
+
+10:22.560 --> 10:26.600
+on how you represent your obstacles, like in a polygonal way.
+
+10:26.600 --> 10:32.760
+It really depends on the specifics of your robots, whether it has dynamics or not dynamics.
+
+10:32.760 --> 10:38.080
+These algorithms, as we will see, can be applied very broadly.
+
+10:38.080 --> 10:40.800
+And in particular, they can be applied beyond the geometric case.
+
+10:40.840 --> 10:45.840
+They can be applied to the case where we account for dynamics in a motion planning procedure,
+
+10:45.840 --> 10:50.040
+can be extended to the case where we also account for uncertainty in environment, even
+
+10:50.040 --> 10:52.920
+though we won't see it in this class, and so on.
+
+10:52.920 --> 10:57.120
+There are disadvantages, as for everything in engineering.
+
+10:57.120 --> 11:03.040
+First of all, as you will see, a key question is, how many samples do we need in order to
+
+11:03.040 --> 11:06.040
+accurately cover the configuration space?
+
+11:06.040 --> 11:11.320
+In general, there is no rigorous answer to this question, which means that you still
+
+11:11.320 --> 11:19.600
+need some experience in order to select a good enough number of samples that you want
+
+11:19.600 --> 11:20.600
+to use.
+
+11:20.600 --> 11:26.120
+Second of all, if there is a path, these algorithms will most likely find it.
+
+11:26.120 --> 11:30.760
+And actually, we're going to have more precise statements about this.
+
+11:30.760 --> 11:35.700
+But if a path does not exist, in general, these algorithms won't tell you that it does
+
+11:35.700 --> 11:36.700
+not exist.
+
+11:36.700 --> 11:40.900
+The algorithm will continue running, and then you will continue waiting, but it will never
+
+11:40.900 --> 11:44.280
+terminate saying, sorry, no path exists.
+
+11:44.280 --> 11:45.280
+Which is annoying, right?
+
+11:45.280 --> 11:49.940
+From an algorithm, you would like to know that if a solution exists, it finds it, and
+
+11:49.940 --> 11:52.380
+if it does not exist, it tells you that it does not exist.
+
+11:52.380 --> 11:57.000
+These algorithms, unfortunately, do not tell you that a solution does not exist.
+
+11:57.000 --> 12:03.140
+But in reality, this is a mild disadvantage, because in practice, if an algorithm runs
+
+12:03.140 --> 12:07.300
+for a long time, you know that most likely a solution does not exist, and that's what
+
+12:07.300 --> 12:09.960
+you basically claim.
+
+12:09.960 --> 12:15.780
+So today, we're going to discuss three main topics in the general umbrella of sampling-based
+
+12:15.780 --> 12:16.780
+motion planning algorithms.
+
+12:16.780 --> 12:24.020
+First, I'm going to discuss representative algorithms that are sampling-based and address
+
+12:24.020 --> 12:29.060
+the problem of geometric planning, meaning we try to find a path that avoids obstacles,
+
+12:29.060 --> 12:34.220
+but we do not account for dynamics in the motion planning procedure.
+
+12:34.220 --> 12:38.740
+Then we consider the case where we actually account for dynamics in the motion planning
+
+12:38.740 --> 12:39.740
+procedure.
+
+12:39.740 --> 12:44.620
+In this case, motion planning is referred to as a kino-dynamic planning to make it explicit
+
+12:44.620 --> 12:46.660
+that we're counting for dynamics.
+
+12:46.660 --> 12:54.780
+And finally, I will discuss a fairly natural question, which is, does the probing of the
+
+12:54.780 --> 12:59.340
+configuration space through the sampling procedure need to be random?
+
+12:59.340 --> 13:08.020
+As I said, since the first description of these algorithms used randomized sampling,
+
+13:08.020 --> 13:16.180
+but a natural question is, does the probing sampling sequence need to be random or can
+
+13:16.180 --> 13:19.940
+be done actually deterministically?
+
+13:19.940 --> 13:22.220
+Let's start with the geometric case.
+
+13:22.220 --> 13:28.900
+Any questions so far?
+
+13:28.900 --> 13:33.460
+So the key concept that is a bit subtle, and I will say that a number of roboticists out
+
+13:33.460 --> 13:38.060
+there actually confuse this concept a little bit, is the main difference between combinatorial
+
+13:38.060 --> 13:42.700
+and sampling-based is that the combinatorial algorithms explicitly represent obstacles
+
+13:42.700 --> 13:44.620
+in the configuration space.
+
+13:44.620 --> 13:50.260
+Sampling-based relies on implicit representation of obstacles in the configuration space through
+
+13:50.260 --> 13:59.220
+this notion of sampling, whereby you just throw some possible instantiation of configurations
+
+13:59.220 --> 14:06.140
+and for each one, you call a collision checker to see if those samples are in collision or
+
+14:06.140 --> 14:07.140
+not.
+
+14:07.140 --> 14:11.940
+By doing so, you only implicitly represent the obstacles because the obstacles are only
+
+14:11.940 --> 14:23.580
+represented by the samples that have been declared respectively collision-free or not.
+
+14:23.580 --> 14:28.300
+So there are two main approaches in the field of sampling-based planning.
+
+14:28.300 --> 14:33.420
+The first approach is referred to as a multi-query planning.
+
+14:33.420 --> 14:39.860
+Multi-query means that this class of algorithms give you a data structure that can be used
+
+14:39.860 --> 14:45.900
+to solve any motion planning instance that you want.
+
+14:45.900 --> 14:51.940
+Any means for any pair of origin and destination, you can use this data structure to find a
+
+14:51.940 --> 14:52.940
+path.
+
+14:52.940 --> 14:57.300
+Single-query instead of planners that allow you to solve only one instance of the motion
+
+14:57.300 --> 15:04.420
+planning problem, basically for one specific origin and goal region pair.
+
+15:04.420 --> 15:08.060
+Depending on your application, one might be preferable to the other one.
+
+15:08.060 --> 15:15.580
+So the first algorithm that was proposed in the multi-query setting was the PRM algorithm,
+
+15:15.580 --> 15:20.780
+Probabilistic Roadmap, which was devised about 20 years ago by Lydia Kavaraki and her
+
+15:20.780 --> 15:27.740
+co-authors and has seen a lot of development in the subsequent 20 years.
+
+15:27.740 --> 15:32.000
+The other approach, the single-query, is dominated by a class of algorithms referred
+
+15:32.000 --> 15:38.840
+to as RRTs, Rapidly Exploring Random Trees, which was proposed a few years later with
+
+15:38.840 --> 15:39.840
+respect to PRM.
+
+15:39.840 --> 15:45.760
+It was proposed in 2001 by Lavallee and here there is a typo, it should be Kufner.
+
+15:45.760 --> 15:50.840
+Lavallee is the same author of the book that I mentioned before.
+
+15:50.840 --> 15:56.280
+And this algorithm as well has seen a lot of development in the past 15 years or so.
+
+15:56.280 --> 16:02.340
+So what we're going to do now is to discuss in terms PRM and RRT, discuss the relative
+
+16:02.340 --> 16:08.460
+advantages and disadvantages, and then discuss also some alternatives.
+
+16:08.460 --> 16:10.820
+So let's consider PRM first.
+
+16:10.820 --> 16:14.600
+The idea of PRM is fairly simple.
+
+16:14.600 --> 16:21.500
+So let's say that this is the configuration space of our robot.
+
+16:21.500 --> 16:25.080
+White means that this region is collision free.
+
+16:25.080 --> 16:30.720
+So if the configuration of the robot is this point, remember that the configuration represents
+
+16:30.720 --> 16:40.500
+the value for a configuration of the robot, specifically in the case of a unicycle, specific
+
+16:40.500 --> 16:43.300
+values for x, y, and theta.
+
+16:43.300 --> 16:50.860
+So if this configuration, so white means free space, gray means a set of configurations
+
+16:50.860 --> 16:54.960
+that will lead to a collision for the robot in the workspace.
+
+16:54.960 --> 17:04.260
+The way that PRM, in sampling base, we assume that we do not have an explicit characterization
+
+17:04.260 --> 17:06.960
+of the free region of the configuration space.
+
+17:06.960 --> 17:13.620
+So I'm showing it here because, of course, that notion exists, but the algorithm does
+
+17:13.620 --> 17:15.320
+not have access to it.
+
+17:15.320 --> 17:21.820
+So what the algorithm does is to throw a bunch of possible configurations.
+
+17:21.820 --> 17:26.380
+Each one, again, corresponds to a given pose of the robot in the workspace.
+
+17:26.380 --> 17:29.780
+For each one, we call a collision checker.
+
+17:29.780 --> 17:35.740
+So we say, if the robot were to have this pose, would the robot be in a collision?
+
+17:35.740 --> 17:36.740
+Yes or no?
+
+17:36.740 --> 17:40.260
+In this case, the answer is yes, here you will be in a collision.
+
+17:40.260 --> 17:43.500
+No, here you would not be in a collision.
+
+17:43.500 --> 17:50.440
+So you discard all these samples that will lead to a collision, and you keep those ones
+
+17:50.440 --> 17:54.520
+that would ensure that the robot is collision free.
+
+17:54.520 --> 17:59.160
+And that's our implicit representation of the free configuration space.
+
+17:59.160 --> 18:04.480
+The robot does not have access to these boundaries, but has an implicit characterization of what
+
+18:04.480 --> 18:11.520
+is free through the samples that have been declared collision free.
+
+18:11.520 --> 18:20.720
+Then what we do is for each sample, we try to connect that sample to neighbors.
+
+18:20.720 --> 18:25.400
+Basically we try to answer the question, can I go from this sample to this sample in a
+
+18:25.400 --> 18:27.040
+way that is collision free?
+
+18:27.040 --> 18:31.720
+So in the case where we're solving a geometric problem, the best way to connect two points
+
+18:31.720 --> 18:34.640
+is through a straight line.
+
+18:34.640 --> 18:38.580
+So for each point, we look at the neighbor, for each sample, we look at the neighborhood
+
+18:38.580 --> 18:46.260
+around that sample, and we try to connect that sample to all its neighbors.
+
+18:46.260 --> 18:54.460
+In particular, we look for each sample x at all samples x prime that are within a ball
+
+18:54.460 --> 18:57.540
+of radius r.
+
+18:57.540 --> 19:03.380
+So you might say, why don't you try to connect each sample to any other sample?
+
+19:03.380 --> 19:09.620
+In principle, that will give you a very dense graph that you could use to plan high quality
+
+19:09.620 --> 19:10.880
+paths.
+
+19:10.880 --> 19:12.480
+So that seems reasonable.
+
+19:12.480 --> 19:18.000
+So why in practice people do not consider as radius in order to establish connections
+
+19:18.000 --> 19:25.900
+to neighbors the full diameter of the environment?
+
+19:25.900 --> 19:31.440
+Yeah, because that would require you to evaluate a lot of connections.
+
+19:31.440 --> 19:35.600
+For each one of these connections, you will need to call a collision checker to make
+
+19:35.600 --> 19:38.400
+sure that this connection is collision free.
+
+19:38.400 --> 19:42.640
+Remember that the robot does not have an explicit characterization of the obstacles in the configuration
+
+19:42.640 --> 19:43.640
+space.
+
+19:43.640 --> 19:47.960
+So in order to check whether this edge is collision free, what in practice you had to
+
+19:47.960 --> 19:57.000
+do is to discretize this edge in multiple configurations for each one called a collision
+
+19:57.000 --> 19:58.420
+checker.
+
+19:58.420 --> 20:04.940
+So you can see that the more connections you're trying to establish, the more computation
+
+20:04.940 --> 20:09.540
+that you have to do up to a point where this cannot be run and you have time anymore, which
+
+20:09.540 --> 20:14.220
+means that the algorithm is not useful anymore in general.
+
+20:14.220 --> 20:22.060
+So you try to limit the size of these radius in such a way that you still connect to a
+
+20:22.060 --> 20:26.600
+representative number of neighbors, but you don't do too much computation.
+
+20:26.600 --> 20:33.160
+We discuss later on how to choose that radius in a way that represents a good compromise
+
+20:33.160 --> 20:37.240
+between solution quality and computation.
+
+20:37.240 --> 20:39.780
+So you establish these connections.
+
+20:39.780 --> 20:46.520
+And once you've done that, what you have is a roadmap in your free configuration space.
+
+20:46.520 --> 20:57.040
+And for any motion planning instance, which means for each pair of goal and starting
+
+20:57.040 --> 21:02.600
+configuration and final configuration, what you do is attach your initial configuration
+
+21:02.600 --> 21:09.560
+to the closest sample in the roadmap, your goal configuration to the closest sample in
+
+21:09.560 --> 21:12.080
+the roadmap, like this.
+
+21:12.080 --> 21:16.760
+And then you plan a path by using one of the pathfinding algorithms that we discussed
+
+21:16.760 --> 21:21.400
+last time, like the Jextra or A star and so on.
+
+21:21.400 --> 21:23.220
+And that's it.
+
+21:23.220 --> 21:27.460
+As you can see, this is a very simple algorithm.
+
+21:27.460 --> 21:34.080
+So once you have a collision checking module, which oftentimes is relatively easy, the collision
+
+21:34.080 --> 21:39.000
+checking module only has to answer the question, if the robot is a dispose, is the robot going
+
+21:39.000 --> 21:40.000
+to be in collision?
+
+21:40.040 --> 21:44.440
+The robot is just evaluating the intersection in general between polygons.
+
+21:44.440 --> 21:48.560
+It's still computationally intense, but it's not the end of the world.
+
+21:48.560 --> 21:55.560
+So once you have that in place, once you have collision checking in place, then coding a
+
+21:55.560 --> 21:59.840
+PRM algorithm is really a matter of 40, 50 lines of code.
+
+21:59.840 --> 22:00.840
+Super easy.
+
+22:00.840 --> 22:01.840
+Yeah.
+
+22:01.960 --> 22:04.480
+Why do you only connect the certain end to the closest nodes?
+
+22:04.480 --> 22:09.600
+Like, what if it leads you to go backwards first, or what if the graph is disconnected
+
+22:09.600 --> 22:12.720
+and connected to one side instead of the other side?
+
+22:12.720 --> 22:13.220
+Sure.
+
+22:13.220 --> 22:13.880
+That can happen.
+
+22:13.880 --> 22:18.440
+The only problem is that you don't have any.
+
+22:18.440 --> 22:23.440
+So sometimes you have additional information that can guide you in that choice.
+
+22:23.440 --> 22:27.480
+But usually, in absence of other information, this is the best you can do.
+
+22:27.480 --> 22:36.240
+When you pick your initial and final configuration, and you go to the closest node, basically,
+
+22:36.240 --> 22:37.720
+do you need to check that streamline?
+
+22:37.720 --> 22:38.720
+Oh, yes, absolutely.
+
+22:38.720 --> 22:43.920
+So it might be very well the case that this is actually, there is an obstacle here.
+
+22:43.920 --> 22:48.240
+So there is an obstacle in the workspace that translates into the configuration space will
+
+22:48.240 --> 22:53.040
+lead you to a gray area here, which would invalidate this edge, which means that now
+
+22:53.040 --> 22:55.040
+you have to consider the second best.
+
+22:55.040 --> 22:56.040
+Yeah.
+
+22:57.040 --> 23:03.240
+Would it be more efficient to do more random samplings closer to the robot, and then less
+
+23:03.240 --> 23:05.240
+further away from the robot?
+
+23:05.240 --> 23:09.840
+Yeah, so there are a number of parameters that we haven't discussed about this algorithm.
+
+23:09.840 --> 23:17.440
+In particular, how we select the radius, how densely we sample, something that will remedy
+
+23:17.440 --> 23:21.400
+to the issue that you mentioned, and with which distribution.
+
+23:21.400 --> 23:26.200
+So here, I just show a uniform distribution.
+
+23:26.200 --> 23:32.840
+But in reality, as you said, a much better way to sample, and that's what people actually
+
+23:32.840 --> 23:39.080
+do in practice, is to do non-uniform sampling informed by some players.
+
+23:39.080 --> 23:44.160
+At the very least, you try to sample more closely toward your robot, toward your goal
+
+23:44.160 --> 23:45.160
+region.
+
+23:45.160 --> 23:51.960
+Sometimes, you have some understanding about what are the best pathways in the configuration
+
+23:51.960 --> 23:53.120
+space, and so on.
+
+23:53.120 --> 23:57.680
+A common trend, and also something that we work with a bit in the lab, is to use data-driven
+
+23:57.680 --> 24:02.240
+methods, so basically machine learning methods, to learn good sampling distribution.
+
+24:02.240 --> 24:07.480
+So basically, you solve one million motion planning problems, and then you have a neural
+
+24:07.480 --> 24:14.160
+net that learns, given as an input, the representation of the obstacles in the workspace, what is
+
+24:14.160 --> 24:17.920
+a good sampling distribution in the configuration space.
+
+24:17.920 --> 24:18.920
+So that's an excellent question.
+
+24:18.920 --> 24:23.200
+And just to make sure I understand, so we still presume that we know where all the obstacles
+
+24:23.200 --> 24:24.200
+are in the workspace?
+
+24:24.200 --> 24:25.200
+Yes.
+
+24:25.200 --> 24:26.200
+Yeah.
+
+24:26.200 --> 24:27.200
+That's the assumption of-
+
+24:27.200 --> 24:28.440
+That's the input to the algorithm.
+
+24:28.440 --> 24:34.640
+What we do not assume we know is the representation of them in the configuration space.
+
+24:34.640 --> 24:40.100
+Then the other version is, what if the obstacles are time-varying in the workspace?
+
+24:40.140 --> 24:46.180
+What if we have uncertainty about where the obstacles are in the workspace, and so on?
+
+24:46.180 --> 24:50.020
+And there are answers to all those questions, but those are beyond the scope of this class.
+
+24:50.020 --> 24:59.300
+Would it ever be worthwhile to somewhere down during the path to recalculate and resample?
+
+24:59.300 --> 25:00.300
+Yes, absolutely.
+
+25:00.300 --> 25:06.460
+So the way these algorithms are run, and that's why they need to run fast, is that you compute
+
+25:06.460 --> 25:14.100
+this path, you execute the first part of it, and then you recompute the path in a receding
+
+25:14.100 --> 25:19.380
+horizon matter, or in a repeated optimization matter.
+
+25:19.380 --> 25:26.300
+So it really depends on the tempo of your dynamics, but usually, as a rule of thumb,
+
+25:26.300 --> 25:31.780
+you want these algorithms to run between 200 milliseconds to a couple of seconds in order
+
+25:31.780 --> 25:37.060
+to re-optimize quickly enough to account for variations in your environment.
+
+25:39.620 --> 25:43.940
+How does the fluency checker actually work, because don't we still need like a full representation
+
+25:43.940 --> 25:49.140
+of our- not a full representation, but a pretty big representation of our workspace like you
+
+25:49.140 --> 25:53.540
+showed in the diagram before, because we would still need to find the intersection between-
+
+25:53.540 --> 25:55.940
+But in the workspace, not in the computation space.
+
+25:55.940 --> 25:57.060
+In the workspace, yeah.
+
+25:57.060 --> 26:02.380
+Yes, well, so the problem becomes a purely geometric problem.
+
+26:02.380 --> 26:07.500
+For example, sometimes there are some libraries to do that, or you can also use bullet and so on.
+
+26:07.500 --> 26:10.220
+But the idea is that it's a purely geometric problem in the workspace.
+
+26:10.220 --> 26:13.060
+You don't have to do any complicated transformation.
+
+26:13.060 --> 26:18.500
+What you have is that each configuration corresponds to a pose of the robot, xy position, position
+
+26:18.500 --> 26:21.260
+of the joint angles if you're a manipulator, and so on.
+
+26:21.260 --> 26:26.660
+So now you have a certain configuration of the robot in the workspace, you have an obstacle,
+
+26:26.660 --> 26:32.620
+and then you call bullet or something else to say, are these two geometric entities intersecting or not?
+
+26:32.620 --> 26:35.460
+How you do that is not entirely straightforward.
+
+26:35.460 --> 26:39.020
+But by now there are libraries that do that fairly reliably.
+
+26:39.020 --> 26:43.140
+Usually, as a roboticist, you do not implement collision checker.
+
+26:43.140 --> 26:45.660
+There are libraries out there that do a very good job.
+
+26:45.660 --> 26:49.060
+What you do is to implement these algorithms.
+
+26:49.060 --> 26:53.820
+Out of curiosity, do those algorithms convert the robot into the workspace
+
+26:53.820 --> 26:58.980
+and then check the configuration collisions in the workspace, where they translate the obstacles into the configuration?
+
+26:58.980 --> 27:00.540
+No, no, no.
+
+27:00.540 --> 27:04.340
+But that's the whole point, that you don't want to do this translation because it's in general intractable.
+
+27:04.340 --> 27:06.900
+So it's easier to translate the robot into the workspace than that.
+
+27:06.900 --> 27:13.740
+We know that you translate, because every point indeed corresponds to a pose in the configuration space.
+
+27:13.740 --> 27:17.220
+So then you just, well, yes, OK.
+
+27:17.220 --> 27:23.180
+So if you will, you translate that pose into a set of points in the workspace that are taken up by the robot.
+
+27:23.220 --> 27:24.660
+Yeah, that's how they work.
+
+27:24.660 --> 27:30.020
+So the collision checking is done in the workspace, not in the configuration space.
+
+27:30.020 --> 27:30.700
+Cool.
+
+27:30.700 --> 27:40.580
+I like these questions because it really means that you understood this business of configuration space and workspace,
+
+27:40.580 --> 27:44.460
+and also that I'm a good teacher, that I was able to communicate that to you.
+
+27:44.460 --> 27:47.660
+So this graph sits in the configuration space?
+
+27:47.660 --> 27:49.740
+Yes, absolutely.
+
+27:49.740 --> 27:54.460
+OK, that question actually makes me more worried that I'm a good teacher because, yes, absolutely.
+
+27:54.460 --> 27:57.220
+Although the point of this is that this is a configuration space.
+
+27:57.220 --> 28:06.660
+This is the free space, the free area in the configuration space that we only implicitly present through this sampling scheme.
+
+28:06.660 --> 28:16.580
+So you said that with these methods, we are, like this method runs infinitely if we can't find the path to find it?
+
+28:16.620 --> 28:21.380
+Yeah, because say that we don't find a solution.
+
+28:21.380 --> 28:29.100
+That you don't know whether you don't find a solution because you don't have a problem scheme that is fine enough,
+
+28:29.100 --> 28:31.740
+or because actually there is no feasible solution.
+
+28:31.740 --> 28:40.180
+So what you do is you redraw an additional n samples, making this quantization finer.
+
+28:40.180 --> 28:42.620
+If you don't find a solution, you keep going.
+
+28:42.620 --> 28:46.740
+But you never know whether if you don't find it is because you don't have enough samples,
+
+28:46.740 --> 28:49.980
+or because there is no solution.
+
+28:49.980 --> 28:56.900
+But if we are able to find the path to the final destination, it means we don't have a solution.
+
+28:56.900 --> 29:01.300
+No, no, it means we don't have a solution up to this discretization.
+
+29:01.300 --> 29:03.180
+Because think about this case.
+
+29:03.180 --> 29:13.220
+So I'm just representing that road map around the starting point.
+
+29:13.220 --> 29:16.740
+So you have a point here, well, more or less.
+
+29:16.740 --> 29:19.060
+So this is your start goal, right?
+
+29:19.060 --> 29:26.580
+So let's assume that now we have a situation, so that will be the start goal, the pink one over there.
+
+29:26.580 --> 29:30.780
+And this will be the five blue neighbors, not immediate neighbors.
+
+29:31.020 --> 29:37.500
+So let's assume that we have a planning problem that looks like this one.
+
+29:37.500 --> 29:41.100
+So this will be obstacles in the configuration space.
+
+29:41.100 --> 29:43.260
+So we try to establish this connection doesn't work.
+
+29:43.260 --> 29:44.980
+We try to establish this connection doesn't work.
+
+29:44.980 --> 29:48.100
+This does not work, this does not work, this does not work.
+
+29:48.100 --> 29:51.340
+The algorithm will say, I can't find a path.
+
+29:51.340 --> 30:02.700
+But if you sample more densely, then I can find a path to get out.
+
+30:02.700 --> 30:07.660
+So by the way, these situations are referred to as bug traps in the motion planning literature.
+
+30:07.660 --> 30:10.540
+Notoriously difficult to deal with.
+
+30:10.540 --> 30:18.780
+They happen sometimes with planning for robotic manipulators where you have to maneuver in very tight spaces,
+
+30:18.780 --> 30:23.820
+for example, to place a cup in the refrigerator and so on.
+
+30:23.820 --> 30:27.260
+All right, so that's PRM in a nutshell.
+
+30:27.260 --> 30:36.220
+So easy algorithm to implement, very general, tends to work pretty well, reliable, what they use.
+
+30:36.220 --> 30:43.900
+It's a multi-query algorithm because if now you give me a different initial and goal position,
+
+30:43.900 --> 30:46.900
+I would just connect them to the roadmap and I would solve the problem.
+
+30:46.900 --> 30:52.500
+So it's not really specific to the initial and goal position.
+
+30:52.500 --> 30:59.460
+The other class of, well, the other algorithm that is very popular under the umbrella of sampling-based algorithm
+
+30:59.460 --> 31:07.900
+is the so-called RRT algorithms, which is a single-query algorithm that works by growing a tree or path
+
+31:07.900 --> 31:12.740
+rooted at the starting configuration.
+
+31:12.740 --> 31:15.780
+In particular, the way it works is as follows.
+
+31:15.780 --> 31:25.300
+Let's assume that we have already grown a portfolio of a path.
+
+31:25.300 --> 31:28.780
+It's really a tree which is rooted at the initial configuration.
+
+31:28.780 --> 31:36.060
+The way it works is that we build this tree iteratively by sampling one configuration at a time.
+
+31:36.060 --> 31:41.900
+So, for example, here we sample a new configuration that had one.
+
+31:41.900 --> 31:47.180
+We collision check whether that configuration is collision-free or not.
+
+31:47.180 --> 31:50.940
+In this case, it's collision-free, so we keep it.
+
+31:50.940 --> 31:58.820
+Then we find the nearest point in the tree to that configuration.
+
+31:58.820 --> 32:08.340
+Then we try to extend the tree either all the way to the newly sampled configuration or a fraction of the way.
+
+32:08.340 --> 32:14.980
+Usually you don't want to extend it all the way because otherwise it will lead to trees with very long branches
+
+32:14.980 --> 32:18.260
+that might lead to paths that are highly non-optimal.
+
+32:18.260 --> 32:24.380
+So usually you just extend by, say, 10% of the distance or so.
+
+32:24.380 --> 32:27.380
+Then you collision check this edge.
+
+32:27.380 --> 32:30.780
+In this case, this edge is collision-free, and then you keep it.
+
+32:30.780 --> 32:36.220
+And then you have added a new tiny branch to your tree.
+
+32:36.220 --> 32:37.500
+And then you keep going.
+
+32:37.500 --> 32:44.460
+So initially you start just from the root of the tree, which is the initial configuration.
+
+32:44.460 --> 32:49.500
+And then you incrementally proceed with this process.
+
+32:49.500 --> 32:52.620
+The sample new configuration.
+
+32:52.620 --> 32:59.500
+Here, in this case, this configuration will be in collision.
+
+32:59.500 --> 33:06.580
+But you still try to extend to it, at least in a way that your edge is collision-free.
+
+33:06.580 --> 33:09.220
+And then you keep this edge, and so on.
+
+33:09.220 --> 33:16.180
+You keep doing that, and eventually you will get to the goal.
+
+33:16.180 --> 33:18.060
+Does that make sense?
+
+33:18.060 --> 33:20.820
+So this is an incremental algorithm,
+
+33:20.820 --> 33:25.340
+whereas the PRM algorithm is a batch algorithm.
+
+33:25.340 --> 33:29.540
+In the PRM, you throw n samples, and then you build a roadmap.
+
+33:29.540 --> 33:35.460
+Here you throw one sample at a time, and you incrementally build a tree.
+
+33:35.460 --> 33:41.140
+It's single query, because we had built the tree at the initial configuration.
+
+33:41.140 --> 33:44.940
+So if now you give me another initial configuration,
+
+33:44.940 --> 33:49.140
+it's unclear how I will reuse this data structure to plan a path.
+
+33:49.140 --> 33:53.500
+There are ways, actually, to make RT also multi-query.
+
+33:53.500 --> 33:56.260
+But in general, it's a single-query algorithm.
+
+33:56.260 --> 33:59.940
+So this is the procedure in more mathematical terms.
+
+33:59.940 --> 34:02.660
+We sample a new configuration, which we call xrun.
+
+34:02.660 --> 34:04.300
+Run stands for randomize.
+
+34:04.340 --> 34:07.380
+We find the nearest vertex in the tree to xrun.
+
+34:07.380 --> 34:12.980
+We extend the tree from the nearest neighbor to xrun,
+
+34:12.980 --> 34:16.940
+in such a way that the extended edge is collision-free.
+
+34:16.940 --> 34:21.300
+And then we update the tree with a new branch, and then we repeat.
+
+34:21.300 --> 34:27.060
+In general, if you do this process, it would be very unlikely,
+
+34:27.060 --> 34:30.220
+and actually it will have a probability 0,
+
+34:30.220 --> 34:32.860
+that at some point you sample the goal tree,
+
+34:32.860 --> 34:34.540
+and you get to the goal tree.
+
+34:34.540 --> 34:39.780
+So RT is usually implemented with the so-called goal-biasing strategy,
+
+34:39.780 --> 34:46.300
+whereby every few times you sample as a configuration
+
+34:46.300 --> 34:47.820
+the goal configuration.
+
+34:47.820 --> 34:50.020
+So basically, in that way, you try to see
+
+34:50.020 --> 34:52.780
+if you can make a direct connection to the goal.
+
+34:52.780 --> 35:00.180
+So say, every 20 samples, you sample non-randomly the goal configuration,
+
+35:00.180 --> 35:04.020
+and then you try to extend the tree toward that goal.
+
+35:04.020 --> 35:06.700
+It is referred to goal-biasing, because doing so,
+
+35:06.700 --> 35:09.860
+you're biasing the growth of the tree toward the goal.
+
+35:09.860 --> 35:12.220
+Practically, if you don't implement goal-biasing,
+
+35:12.220 --> 35:13.780
+this algorithm really doesn't work.
+
+35:13.780 --> 35:17.060
+If you implement goal-biasing, this algorithm works pretty well.
+
+35:17.060 --> 35:20.820
+Do you want to check the goal if you're close enough?
+
+35:20.820 --> 35:22.380
+Like, if you're really far away from the goal,
+
+35:22.380 --> 35:23.460
+would you actually want to check?
+
+35:23.460 --> 35:25.340
+Because then that edge would be really long.
+
+35:25.340 --> 35:30.140
+Yeah, so there are about 3,000 papers
+
+35:30.140 --> 35:34.660
+that are offspring of the original paper that proposed RT,
+
+35:34.660 --> 35:38.420
+with all sorts of variations on the theme.
+
+35:38.420 --> 35:41.660
+How much do we extend, when do we do it,
+
+35:41.660 --> 35:45.180
+how do we select this fraction, zillions of it.
+
+35:45.180 --> 35:47.980
+Because, again, this is an algorithm that you can implement
+
+35:47.980 --> 35:51.900
+in very few lines of code, very general, works very well in practice.
+
+35:51.900 --> 35:55.460
+Yes, absolutely, you could do that, as you could do many other things.
+
+35:55.460 --> 35:58.380
+We're going to talk about one particular variation,
+
+35:58.380 --> 36:02.100
+which is what makes this algorithm guaranteed
+
+36:02.100 --> 36:06.500
+to find an optimal solution as the number of samples goes to UKD.
+
+36:06.500 --> 36:11.060
+Knowing that there are another 2,199 variations on the theme.
+
+36:11.060 --> 36:14.940
+But Optimize, of course, is one of the most important variations.
+
+36:14.940 --> 36:16.900
+Any questions about this?
+
+36:16.900 --> 36:20.220
+Can you go back a slide?
+
+36:20.220 --> 36:22.940
+Yeah, to the point where it was all clear.
+
+36:22.940 --> 36:24.860
+I had a question about the last argument,
+
+36:24.860 --> 36:27.580
+which is why do you try to fully connect the graph
+
+36:27.580 --> 36:29.620
+to all of its neighbors beforehand?
+
+36:29.620 --> 36:31.220
+Oh, you mean for PRM?
+
+36:31.220 --> 36:38.140
+Yeah, why wouldn't you just try to use some kind of heuristic
+
+36:38.140 --> 36:40.700
+to go towards the end position and then only check
+
+36:40.700 --> 36:43.980
+if the points are connected, if you might use them.
+
+36:43.980 --> 36:45.980
+Right, there's work done in the bottom right of that graph,
+
+36:45.980 --> 36:47.740
+which is never used.
+
+36:47.740 --> 36:49.980
+And so the question is why would you do that?
+
+36:49.980 --> 36:53.100
+So one of the very first variations for PRM
+
+36:53.140 --> 37:01.500
+is to build the, so basically, sample.
+
+37:01.500 --> 37:04.820
+Then, so the variation that I'm referring to
+
+37:04.820 --> 37:06.980
+is referred to as a lazy PRM.
+
+37:06.980 --> 37:10.140
+So roughly speaking, the way that lazy PRM works
+
+37:10.140 --> 37:12.660
+is that once you have a sample, you just
+
+37:12.660 --> 37:17.900
+build the graph by using connection to your neighbors,
+
+37:17.900 --> 37:21.260
+but without collision checking those connections.
+
+37:21.260 --> 37:26.140
+Then you run A star, and you find the path assuming
+
+37:26.140 --> 37:27.660
+that there are no collisions.
+
+37:27.660 --> 37:31.500
+And then you collision check the edges along the path.
+
+37:31.500 --> 37:34.380
+If you have not found any edge in collision,
+
+37:34.380 --> 37:35.700
+that's the optimal path.
+
+37:35.700 --> 37:39.980
+If you do, you actually discard that edge,
+
+37:39.980 --> 37:42.340
+and you rerun A star.
+
+37:42.340 --> 37:43.980
+It's called lazy because in that case,
+
+37:43.980 --> 37:46.340
+you evaluate collision checking only
+
+37:46.340 --> 37:49.340
+when it is really needed to validate the terminal path.
+
+37:49.340 --> 37:51.660
+In that way, you would, as you said,
+
+37:51.660 --> 37:55.300
+avoid this wasted effort here.
+
+37:55.300 --> 37:57.940
+This effort will not be wasted if actually you
+
+37:57.940 --> 38:02.700
+plan to use the algorithm in a true multi-query setting,
+
+38:02.700 --> 38:06.220
+meaning that you want to use it for all possible source
+
+38:06.220 --> 38:07.740
+and goal destinations.
+
+38:07.740 --> 38:10.740
+But if you do not want to do it, then lazy PRM
+
+38:10.740 --> 38:11.980
+is the way to go.
+
+38:11.980 --> 38:15.940
+Indeed, lazy PRM is one of the most popular implementation
+
+38:15.940 --> 38:16.580
+of PRM.
+
+38:16.580 --> 38:19.700
+I was going to ask if that's the main driving difference
+
+38:19.700 --> 38:22.700
+you are going to use it for a multi-query or a single-query?
+
+38:22.700 --> 38:23.540
+Well, yes.
+
+38:23.540 --> 38:24.540
+OK.
+
+38:24.540 --> 38:26.020
+Gotcha.
+
+38:26.020 --> 38:28.620
+So this would be more computationally than single?
+
+38:28.620 --> 38:32.140
+Yes, PRM is more computationally than TensorRCT by far.
+
+38:32.140 --> 38:36.700
+And you can see why that is the case because in general,
+
+38:36.700 --> 38:39.380
+roughly speaking, and we'll come back to this point,
+
+38:39.380 --> 38:43.300
+here for each sample, we have to collision check
+
+38:43.300 --> 38:44.980
+at least in the basic implementation.
+
+38:44.980 --> 38:49.980
+For each sample, we have to collision check each edge
+
+38:49.980 --> 38:51.060
+to enable it.
+
+38:51.060 --> 38:57.860
+In RRT, we collision check only one edge per sample.
+
+39:00.380 --> 39:04.180
+So it's much less computationally intense.
+
+39:04.180 --> 39:06.660
+Just to share, are we taking kind of like an implicit thread
+
+39:06.660 --> 39:11.500
+first approach where we kind of add a new edge to every node
+
+39:11.500 --> 39:13.620
+and kind of go back to the beginning?
+
+39:13.620 --> 39:15.060
+No, we don't go back to the beginning.
+
+39:15.060 --> 39:17.620
+We're not to the beginning, but if we have a set of nodes,
+
+39:17.620 --> 39:20.340
+right, a set of end nodes, are we just adding
+
+39:20.340 --> 39:21.980
+one branch to each end node?
+
+39:21.980 --> 39:27.020
+No, in RRT, we sample nodes incrementally.
+
+39:27.020 --> 39:31.740
+So we don't have, like in the standard pathfinding setup,
+
+39:31.740 --> 39:34.100
+you're given end nodes, and you try to find the best
+
+39:34.100 --> 39:35.780
+way to explore all of them.
+
+39:35.780 --> 39:38.180
+Here, we actually explore them.
+
+39:38.180 --> 39:41.500
+So we build the graph incrementally.
+
+39:41.500 --> 39:42.380
+Does that make sense?
+
+39:42.380 --> 39:45.140
+So basically, we sample a node here, we extend.
+
+39:45.140 --> 39:47.900
+We sample another node here, we extend.
+
+39:47.900 --> 39:52.940
+Actually, this question brings to an interpretation of RRT
+
+39:52.940 --> 39:57.980
+that is useful to understand what works better in practice,
+
+39:57.980 --> 40:01.180
+which is the notion of Voronoi bias.
+
+40:01.180 --> 40:04.180
+So the reason why RRT works well,
+
+40:04.180 --> 40:07.820
+and it's called rapidly exploring random tree,
+
+40:07.820 --> 40:12.100
+is that consider the vertices of the tree.
+
+40:12.100 --> 40:15.260
+And consider the Voronoi diagram with respect
+
+40:15.260 --> 40:17.220
+to the vertices of the tree.
+
+40:17.220 --> 40:19.660
+A Voronoi diagram is basically a diagram
+
+40:19.660 --> 40:23.540
+whereby you have partitioned environment into cells
+
+40:23.540 --> 40:29.460
+with a property that within each cell, each point in that cell
+
+40:29.460 --> 40:32.980
+is closer to the representative node of that cell
+
+40:32.980 --> 40:34.460
+than to any other node.
+
+40:34.460 --> 40:37.740
+So for example, here, this point is closest to this point
+
+40:37.740 --> 40:40.580
+than to this point.
+
+40:40.580 --> 40:43.580
+The boundary is the set of points
+
+40:43.580 --> 40:47.300
+that is equidistant from these two nodes.
+
+40:47.300 --> 40:50.380
+The Voronoi bias tells the following,
+
+40:50.380 --> 40:55.020
+that at the frontier of the tree,
+
+40:55.020 --> 40:58.300
+the Voronoi cells tend to be larger,
+
+40:58.300 --> 41:02.020
+which means that the likelihood that you sample in this region
+
+41:02.020 --> 41:04.460
+is larger.
+
+41:04.460 --> 41:08.540
+The likelihood of sampling is proportional to the area
+
+41:08.540 --> 41:10.900
+of the corresponding cell, which
+
+41:10.900 --> 41:14.820
+means that basically there is a strong bias in the sampling
+
+41:14.820 --> 41:19.260
+procedure towards sampling in unexplored regions.
+
+41:19.260 --> 41:22.460
+So this is basically, going back to your question,
+
+41:22.460 --> 41:26.100
+is related in a way to greedy search on an implicit graph.
+
+41:26.100 --> 41:30.820
+Implicit because we still have to sample the graph.
+
+41:30.820 --> 41:32.980
+So it's just one interpretation of why RRT is called
+
+41:32.980 --> 41:34.260
+rapidly exploring random trees.
+
+41:38.540 --> 41:42.980
+In practice, for high dimensions,
+
+41:42.980 --> 41:47.580
+it's pretty tractable to compute the full Voronoi diagram.
+
+41:47.580 --> 41:50.180
+No, you don't compute a Voronoi diagram for this.
+
+41:50.180 --> 41:54.580
+The Voronoi diagram is only a conceptual structure
+
+41:54.580 --> 41:56.300
+that we use in order to understand
+
+41:56.300 --> 41:57.980
+why RRT work in practice.
+
+41:57.980 --> 42:01.220
+In the field of motion planning, usually low dimension
+
+42:01.220 --> 42:05.180
+is rule of thumb, but low dimension means 2 to 4.
+
+42:05.220 --> 42:09.300
+Reasonable dimensions means 4 to maybe 12.
+
+42:09.300 --> 42:14.380
+Beyond 12 is beyond what even these algorithms can do.
+
+42:14.380 --> 42:16.180
+And the reason is quite simple.
+
+42:16.180 --> 42:21.620
+So assume that you have a two dimensional problem.
+
+42:21.620 --> 42:26.580
+And the problem is non-trivial in any other dimensions, which
+
+42:26.580 --> 42:28.940
+means that at the very least, you
+
+42:28.940 --> 42:31.300
+may want to consider a sample in this quadrant,
+
+42:31.300 --> 42:33.420
+a sample in this quadrant, a sample in this quadrant,
+
+42:33.420 --> 42:34.780
+a sample in this quadrant.
+
+42:35.780 --> 42:38.420
+I would claim that at least you need four samples
+
+42:38.420 --> 42:43.820
+to have a remotely decent coverage of the configuration
+
+42:43.820 --> 42:44.660
+space.
+
+42:44.660 --> 42:47.900
+Now, let's assume that we go to three dimensions.
+
+42:47.900 --> 42:54.460
+So in order to put a sample in each quadrants in three
+
+42:54.460 --> 42:57.700
+dimensions.
+
+42:57.700 --> 42:58.940
+But that thing, right?
+
+42:58.940 --> 43:02.180
+So how many samples do you need?
+
+43:02.180 --> 43:03.580
+Right, so two to the three.
+
+43:03.580 --> 43:05.700
+And then you go to four dimensions.
+
+43:05.700 --> 43:08.180
+How do you call quadrant in four dimensions?
+
+43:08.180 --> 43:08.740
+I don't know.
+
+43:08.740 --> 43:10.100
+Anyway, 16.
+
+43:10.100 --> 43:13.660
+So basically, just roughly speaking,
+
+43:13.660 --> 43:15.380
+you need a number of samples that
+
+43:15.380 --> 43:17.580
+grows exponentially in the dimensions.
+
+43:17.580 --> 43:19.760
+So beyond 12, 13 does not work.
+
+43:19.760 --> 43:23.620
+So what you do in those cases is to either decompose the problem
+
+43:23.620 --> 43:26.140
+into subspaces.
+
+43:26.140 --> 43:32.620
+Or in many cases, the problem is not
+
+43:32.660 --> 43:34.100
+interesting in some of the dimensions,
+
+43:34.100 --> 43:35.220
+meaning that you don't have collisions
+
+43:35.220 --> 43:36.380
+in some of the dimensions.
+
+43:36.380 --> 43:39.260
+So you just collapse some of the dimensions.
+
+43:39.260 --> 43:41.980
+But this is beyond the scope of this class.
+
+43:41.980 --> 43:45.780
+For the system we deal with, these algorithms are fine.
+
+43:45.780 --> 43:49.220
+In particular, in this class, we deal mostly
+
+43:49.220 --> 43:51.980
+between three and eight dimensions.
+
+43:51.980 --> 43:54.980
+So we're good.
+
+43:54.980 --> 43:57.820
+So in practice, when you're finding the nearest vertex,
+
+43:57.820 --> 44:00.300
+do you use some fast running convergence?
+
+44:00.340 --> 44:02.180
+Yes, we're going to go back to what are
+
+44:02.180 --> 44:03.740
+the bottlenecks of these algorithms.
+
+44:03.740 --> 44:07.100
+Nearness enabled search is certainly one of the bottlenecks.
+
+44:07.100 --> 44:10.540
+And keep in mind that there are about,
+
+44:10.540 --> 44:14.100
+say, at ICRA, which is one of the most important robotics
+
+44:14.100 --> 44:18.380
+conferences that has about, say, 1,500 papers per year,
+
+44:18.380 --> 44:20.900
+there are about 200 papers on motion planning.
+
+44:20.900 --> 44:22.860
+So this is still a very active field.
+
+44:22.860 --> 44:25.420
+Particularly, for example, the question of scalability
+
+44:25.420 --> 44:28.140
+is still quite open.
+
+44:28.140 --> 44:30.180
+So what about theoretical guarantees?
+
+44:30.180 --> 44:34.540
+Unfortunately, in general, there are no theoretical guarantees
+
+44:34.540 --> 44:35.500
+in finite time.
+
+44:35.500 --> 44:36.980
+The only theoretical guarantees are
+
+44:36.980 --> 44:40.100
+with respect to the asymptotic behavior of these algorithms.
+
+44:40.100 --> 44:43.580
+Asymptotic means that we say something
+
+44:43.580 --> 44:48.420
+in the case where the number of samples goes to infinity.
+
+44:48.420 --> 44:50.940
+And in particular, the very first guarantees
+
+44:50.940 --> 44:57.340
+that were derived are that a PRM with a constant radius
+
+44:57.340 --> 45:00.660
+is guaranteed to find a feasible solution if one exists
+
+45:00.660 --> 45:03.140
+as the number of samples goes to infinity.
+
+45:03.140 --> 45:07.340
+So the probability that PRM does not find a solution if one
+
+45:07.340 --> 45:12.860
+exists goes to 0 as n goes to infinity.
+
+45:12.860 --> 45:17.460
+A similar theoretical guarantee exists for RRT.
+
+45:17.460 --> 45:20.500
+As the number of samples goes to infinity,
+
+45:20.500 --> 45:26.860
+then RRT is guaranteed to find a feasible trajectory, which
+
+45:26.860 --> 45:27.340
+is OK.
+
+45:27.340 --> 45:29.420
+I mean, it's not the best guarantee you can have.
+
+45:29.420 --> 45:30.580
+It's a probabilistic one.
+
+45:30.580 --> 45:31.940
+It's asymptotic.
+
+45:31.940 --> 45:34.420
+But it's better than nothing.
+
+45:34.420 --> 45:37.260
+In practice, as I said, they work pretty well.
+
+45:37.260 --> 45:39.460
+Now, all these guarantees are the guarantees
+
+45:39.460 --> 45:42.740
+that I just mentioned are with respect to feasibility.
+
+45:42.740 --> 45:46.580
+What about quality of the path?
+
+45:46.580 --> 45:50.420
+It turns out that RRT, in terms of quality,
+
+45:50.420 --> 45:53.060
+does not do a good job.
+
+45:53.060 --> 45:56.940
+In particular, oftentimes, as you will see in the P-sets,
+
+45:56.940 --> 45:59.820
+RRT produces trajectories that have
+
+45:59.820 --> 46:04.140
+a lot of zigzag, which means that the cost is large.
+
+46:04.140 --> 46:06.340
+Actually, you can prove mathematically
+
+46:06.340 --> 46:10.180
+that with non-negligible probability, in some instances,
+
+46:10.180 --> 46:15.860
+RRT provides a path whose cost is a factor away
+
+46:15.860 --> 46:17.540
+from the optimum cost.
+
+46:17.540 --> 46:19.260
+So for example, in this case, you
+
+46:19.260 --> 46:22.300
+can prove that it may happen that RRT
+
+46:22.300 --> 46:24.420
+with a non-zero probability will select
+
+46:24.420 --> 46:28.900
+as a path this very long one, as opposed to this blue one.
+
+46:28.900 --> 46:30.620
+The exact reason why that happens,
+
+46:30.620 --> 46:31.980
+we're not going to discuss it.
+
+46:31.980 --> 46:34.420
+But there are a couple of references out there
+
+46:34.420 --> 46:37.820
+that you can look at if you're interested.
+
+46:37.820 --> 46:41.140
+This has prompted, in the past 10 years or so,
+
+46:41.140 --> 46:43.860
+quite a bit of research in trying to understand
+
+46:43.860 --> 46:52.900
+what additional conditions should be done to the algorithms
+
+46:52.900 --> 46:56.180
+in order to ensure quality of the solution,
+
+46:56.180 --> 46:58.500
+meaning having a property that says
+
+46:58.500 --> 47:01.020
+that as the number of samples goes to infinity,
+
+47:01.020 --> 47:03.300
+then we recover not just a feasible solution,
+
+47:03.300 --> 47:05.700
+but actually an optimal solution.
+
+47:05.700 --> 47:12.100
+So it turns out that if you choose for PRM the radius
+
+47:12.140 --> 47:16.100
+with a scaling of log n over n to the power of 1 over d,
+
+47:16.100 --> 47:20.300
+then PRM is guaranteed to find, with probability 1,
+
+47:20.300 --> 47:23.300
+an optimal solution if 1 exists.
+
+47:23.300 --> 47:26.580
+So log n, so n here is the number of samples.
+
+47:26.580 --> 47:29.540
+D is the number of dimensions.
+
+47:32.940 --> 47:35.340
+As n goes to infinity, log n over n
+
+47:35.340 --> 47:39.300
+goes to 0, which makes sense, because basically,
+
+47:39.340 --> 47:43.460
+as n goes to infinity, so we have increasing more samples,
+
+47:43.460 --> 47:45.420
+we want to make the radius with respect
+
+47:45.420 --> 47:48.300
+to which we find neighbors smaller and smaller in order
+
+47:48.300 --> 47:53.620
+to contain the number of connections
+
+47:53.620 --> 47:57.740
+that we want to make that are computationally expensive.
+
+47:57.740 --> 48:07.060
+On the other hand, the ball has a radius in the dimension of n
+
+48:07.100 --> 48:09.900
+over d, which means that with this scaling,
+
+48:09.900 --> 48:12.980
+we are guaranteed that for all n,
+
+48:12.980 --> 48:15.780
+we have roughly log n neighbors.
+
+48:15.780 --> 48:17.700
+That's one last idea.
+
+48:17.700 --> 48:20.420
+So there's a good trade-off between computation
+
+48:20.420 --> 48:23.300
+and retaining enough connectivity of your roadmap.
+
+48:23.300 --> 48:25.420
+And in particular, it turns out that with this scaling
+
+48:25.420 --> 48:27.340
+or with the larger scaling, we are guaranteed
+
+48:27.340 --> 48:30.020
+to find an optimal solution.
+
+48:30.020 --> 48:31.740
+Now, it turns out, and this has been
+
+48:31.740 --> 48:33.900
+a very influential paper, so it turns out
+
+48:33.940 --> 48:38.660
+that it was a logical gap in the proof of this result.
+
+48:38.660 --> 48:41.340
+So this result, as stated, is not quite correct.
+
+48:41.340 --> 48:45.380
+So together with Kirill Solovey, who
+
+48:45.380 --> 48:47.820
+is a postdoc in my lab and a couple of students,
+
+48:47.820 --> 48:50.500
+I recently published a paper where we correct the proof,
+
+48:50.500 --> 48:53.420
+but that required also changing a tiny bit the results.
+
+48:53.420 --> 48:55.980
+In particular, the scaling should be respect to 1 over d
+
+48:55.980 --> 48:57.180
+plus 1.
+
+48:57.180 --> 49:01.340
+The plus 1, if you care, is due to the fact that in RT,
+
+49:01.340 --> 49:04.180
+you sample the nodes incrementally.
+
+49:04.180 --> 49:08.060
+So you also have to account for time as an additional state
+
+49:08.060 --> 49:08.980
+variable.
+
+49:08.980 --> 49:10.220
+So that's why you have plus 1.
+
+49:10.220 --> 49:12.980
+But anyway, it's just a fine detail.
+
+49:12.980 --> 49:17.900
+Similar optimality extension exists for RT.
+
+49:17.900 --> 49:22.020
+In order to make RT an optimal sampling-based planner,
+
+49:22.020 --> 49:24.740
+optimal means that as the number of samples goes to infinity,
+
+49:24.740 --> 49:26.660
+you recover an optimal solution.
+
+49:26.660 --> 49:28.940
+You have to do a couple of variations
+
+49:28.940 --> 49:30.900
+to the RT algorithm.
+
+49:30.940 --> 49:35.020
+Basically, you have to rewire some edges in such a way
+
+49:35.020 --> 49:37.660
+that you straighten up your RT.
+
+49:37.660 --> 49:39.660
+We're not going to cover the details.
+
+49:39.660 --> 49:42.660
+But here, pictorially, I show you the typical output
+
+49:42.660 --> 49:44.420
+of an RT algorithm.
+
+49:44.420 --> 49:46.180
+You see that there is a lot of zigzag.
+
+49:46.180 --> 49:48.780
+And zigzag doesn't really go away
+
+49:48.780 --> 49:50.620
+as the number of points goes to infinity.
+
+49:50.620 --> 49:53.620
+With RT star, we straighten up the path
+
+49:53.620 --> 49:56.780
+by doing some local rewiring that I'm not explaining here.
+
+49:56.820 --> 50:02.580
+So we have a much straighter path and hence optimal path.
+
+50:02.580 --> 50:08.620
+So the key point here is that optimal variants of PRM and RT
+
+50:08.620 --> 50:09.620
+exist.
+
+50:09.620 --> 50:13.220
+And they require minor variation to the PRM and the RT
+
+50:13.220 --> 50:13.780
+algorithm.
+
+50:13.780 --> 50:15.340
+So that's good news.
+
+50:15.340 --> 50:19.420
+And there are fairly rigorous mathematical statements
+
+50:19.420 --> 50:24.620
+about the optimality in terms of a synthetic convergence.
+
+50:24.620 --> 50:25.700
+So observation.
+
+50:25.700 --> 50:29.900
+PRM, in general, for given n samples,
+
+50:29.900 --> 50:33.900
+is the algorithm that gives you the highest quality solution,
+
+50:33.900 --> 50:37.020
+because it carefully connects to the computational space.
+
+50:37.020 --> 50:41.180
+RT is a much greener algorithm, going back to that question,
+
+50:41.180 --> 50:42.660
+which means that it's faster.
+
+50:42.660 --> 50:45.100
+Per sample, you only do one collision check.
+
+50:45.100 --> 50:48.180
+PRM, in general, does log n collision checks,
+
+50:48.180 --> 50:51.620
+because as we said before, the number of neighbors per sample
+
+50:51.620 --> 50:52.500
+is about log n.
+
+50:52.500 --> 50:55.820
+And then in PRM, you collision check connections
+
+50:55.820 --> 50:57.380
+to every neighbor.
+
+50:57.380 --> 50:59.540
+So much faster.
+
+50:59.540 --> 51:01.940
+But in general, the quality of the path is poor.
+
+51:01.940 --> 51:04.340
+Basically, it traps itself in the initial paths
+
+51:04.340 --> 51:05.380
+that it finds.
+
+51:05.380 --> 51:09.620
+And then it's unable to get out of those bad paths.
+
+51:09.620 --> 51:13.820
+You can offset this behavior partially with the RT star.
+
+51:13.820 --> 51:17.820
+But basically, the RT star represents an posterior fix
+
+51:17.820 --> 51:22.380
+of what is bad in RT, which prompted Marisi's group
+
+51:22.380 --> 51:26.580
+to design another algorithm referred to as FMT star.
+
+51:26.580 --> 51:29.140
+The details are in the paper here.
+
+51:29.140 --> 51:32.460
+Lucas Johnson was a former PhD student in my group.
+
+51:32.460 --> 51:33.500
+He's now at Harvard.
+
+51:33.500 --> 51:40.180
+Anyway, so the idea of FMT is to get the best of both worlds
+
+51:40.180 --> 51:41.900
+from PRM and RT.
+
+51:41.900 --> 51:44.100
+Basically, you tend to have an algorithm that gives you
+
+51:44.100 --> 51:47.100
+the solution quality of PRM, but with the same computational
+
+51:47.100 --> 51:49.020
+speed of RT.
+
+51:49.020 --> 51:51.700
+And the way it works is quite similar to, I think,
+
+51:51.700 --> 51:53.820
+what you were saying.
+
+51:53.820 --> 51:56.020
+So the way it works is that, assume
+
+51:56.020 --> 51:59.860
+that we have built a tree of a path.
+
+51:59.860 --> 52:05.620
+And u1 and u2 are two vertices.
+
+52:05.620 --> 52:07.340
+So it's a tree.
+
+52:07.340 --> 52:07.940
+So it's a tree.
+
+52:07.940 --> 52:08.780
+This is one branch.
+
+52:08.780 --> 52:09.940
+This is the other branch.
+
+52:09.940 --> 52:12.140
+u1 is terminal node for this branch.
+
+52:12.140 --> 52:14.580
+u2 terminal node for this branch.
+
+52:14.580 --> 52:20.020
+So the idea of FMT is that let's sample a new node, v.
+
+52:20.060 --> 52:25.380
+And let's try to attach v to the branch such
+
+52:25.380 --> 52:28.780
+that the cost to arrival is minimized,
+
+52:28.780 --> 52:32.460
+neglecting possible collisions of the last step.
+
+52:32.460 --> 52:36.340
+In particular, we connect v to the node u such
+
+52:36.340 --> 52:40.500
+that the cost to arrive to u plus the cost of going from u1
+
+52:40.500 --> 52:47.900
+to v, or the cost to go from u2 to v, is minimized.
+
+52:47.900 --> 52:55.900
+In doing this, we are lazily neglecting collision avoidance.
+
+52:55.900 --> 52:58.580
+We just gradually select the node
+
+52:58.580 --> 53:03.460
+that minimize the cost to arrive to v, for example, through u2.
+
+53:03.460 --> 53:06.460
+And then, of course, we have to call the collision checker
+
+53:06.460 --> 53:09.780
+in order to validate whether this edge is in collision
+
+53:09.780 --> 53:10.740
+or not.
+
+53:10.740 --> 53:13.700
+In this case, this edge will be in collision.
+
+53:13.700 --> 53:17.660
+So you might say, well, then you should consider connecting v
+
+53:17.660 --> 53:18.740
+to u1.
+
+53:18.740 --> 53:22.700
+The algorithm actually says, OK, I will just keep v altogether,
+
+53:22.700 --> 53:24.180
+which means that for each sample,
+
+53:24.180 --> 53:26.740
+you only carry out one collision check.
+
+53:26.740 --> 53:30.620
+So the key thing that requires a little bit of math to prove
+
+53:30.620 --> 53:37.260
+is that since we are lazily collision checking edges,
+
+53:37.260 --> 53:39.340
+and sometimes we are suboptimally
+
+53:39.340 --> 53:43.020
+connecting due to this laziness, we sometimes
+
+53:43.020 --> 53:45.180
+do errors in building this roadmap.
+
+53:45.180 --> 53:47.860
+But as the number of points goes to infinity,
+
+53:47.860 --> 53:51.540
+such error becomes a vanishingly rare to the point
+
+53:51.540 --> 53:55.380
+that it actually will cover the same graph of PRM,
+
+53:55.380 --> 53:58.420
+but by only doing one collision check per sample.
+
+53:58.420 --> 54:01.780
+So basically, we have, in a way, the computational complexity
+
+54:01.780 --> 54:03.780
+of RRT, one collision check per sample,
+
+54:03.780 --> 54:08.180
+with the solution quality of PRM.
+
+54:08.180 --> 54:10.500
+This is the high-level idea.
+
+54:10.500 --> 54:11.900
+There are a few additional details,
+
+54:11.900 --> 54:13.700
+but this is basically the bottom line.
+
+54:13.740 --> 54:16.500
+And if you will, it's related to the comment
+
+54:16.500 --> 54:19.820
+that I think you made or somebody else made.
+
+54:19.820 --> 54:23.660
+So why is you connect to your roadmap?
+
+54:23.660 --> 54:26.180
+Why you're not more careful?
+
+54:26.180 --> 54:29.900
+And instead of just greedingly connect,
+
+54:29.900 --> 54:32.540
+you also come from the notion of cost to arrive,
+
+54:32.540 --> 54:36.420
+which is very much in style of pathfinding algorithms.
+
+54:36.420 --> 54:44.020
+Cool.
+
+54:44.020 --> 54:44.700
+All right.
+
+54:44.700 --> 54:48.220
+So somebody about sampling-based algorithms.
+
+54:48.220 --> 54:50.300
+So the idea of sampling-based algorithms
+
+54:50.300 --> 54:53.780
+is to represent obstacles in the workspace,
+
+54:53.780 --> 54:55.940
+implicitly in the workspace, and then
+
+54:55.940 --> 54:59.540
+to transform the problem of computing
+
+54:59.540 --> 55:04.260
+a path of a trajectory into a bunch of subproblems
+
+55:04.260 --> 55:07.300
+that are much easier to solve.
+
+55:07.300 --> 55:08.900
+And in particular, the subproblems
+
+55:08.900 --> 55:12.340
+are the problems whereby we try to connect two samples that
+
+55:12.340 --> 55:15.020
+are close to each other.
+
+55:15.020 --> 55:18.900
+The two main bottlenecks of sampling-based algorithms
+
+55:18.900 --> 55:21.140
+are, one, the collision checker.
+
+55:21.140 --> 55:22.620
+We already discussed it.
+
+55:22.620 --> 55:24.580
+There are libraries out there that
+
+55:24.580 --> 55:26.100
+do collision checking for you.
+
+55:26.100 --> 55:27.740
+As a roboticist, typically, you don't
+
+55:27.740 --> 55:30.660
+have to develop a new collision checker.
+
+55:30.660 --> 55:34.820
+So you have to be aware that collision checking, in general,
+
+55:34.820 --> 55:37.180
+is a time-consuming procedure.
+
+55:37.180 --> 55:38.820
+The second bottleneck is presented
+
+55:38.820 --> 55:40.940
+by nearest neighbor search.
+
+55:40.940 --> 55:45.340
+As you were pointing out, we need to search for neighbors.
+
+55:45.340 --> 55:48.300
+And even if you use dedicated data structures,
+
+55:48.300 --> 55:51.940
+that can be computationally intensive.
+
+55:51.940 --> 55:54.900
+But even in that case, there are good solutions
+
+55:54.900 --> 55:58.460
+that work well both theoretically and practically.
+
+55:58.460 --> 55:59.380
+Yeah?
+
+55:59.700 --> 56:02.500
+In your diagrams, I didn't see any path collisions
+
+56:02.500 --> 56:05.380
+between two feasible paths.
+
+56:05.380 --> 56:08.420
+Are you also checking those collisions, too?
+
+56:08.420 --> 56:10.580
+Path collisions between two feasible paths?
+
+56:10.580 --> 56:11.140
+Yeah.
+
+56:11.140 --> 56:12.900
+So first of all, there is no such a notion,
+
+56:12.900 --> 56:15.660
+because these are paths for individual robots.
+
+56:15.660 --> 56:18.260
+So the individual robot will take either one or the other.
+
+56:18.260 --> 56:20.820
+So it will never crash with itself.
+
+56:20.820 --> 56:25.220
+But of course, there are generalizations
+
+56:25.220 --> 56:26.740
+of these algorithms to the setting
+
+56:26.860 --> 56:30.620
+whereby you have multiple robots, in which case
+
+56:30.620 --> 56:33.140
+you have to account for collisions
+
+56:33.140 --> 56:36.740
+between trajectories of the different robots.
+
+56:36.740 --> 56:39.260
+Dealing with multiple robots is complicated,
+
+56:39.260 --> 56:42.420
+because quickly the configuration space
+
+56:42.420 --> 56:44.420
+scales up, because now you're adding
+
+56:44.420 --> 56:46.140
+the configuration of robot number one
+
+56:46.140 --> 56:48.580
+and configuration of robot number two.
+
+56:48.580 --> 56:50.500
+But there are techniques out there.
+
+56:50.500 --> 56:52.420
+In particular, the book from Steve Navalle
+
+56:52.420 --> 56:53.980
+covers some of these techniques.
+
+56:54.020 --> 56:57.820
+But again, those are a bit beyond the scope of this class.
+
+56:57.820 --> 56:58.780
+Oh, consistently?
+
+56:58.780 --> 57:01.900
+Always uniform across the configuration space?
+
+57:01.900 --> 57:02.420
+No.
+
+57:02.420 --> 57:04.620
+As I was mentioning before, practically
+
+57:04.620 --> 57:06.940
+it's done in non-uniform fashion.
+
+57:06.940 --> 57:11.660
+Non-uniform could be either driven by a prior information
+
+57:11.660 --> 57:14.060
+about a problem, say you want to sample more
+
+57:14.060 --> 57:16.700
+closely to your robot, or maybe you
+
+57:16.700 --> 57:19.460
+have some big idea about where the obstacle could
+
+57:19.460 --> 57:20.580
+be in computational space.
+
+57:20.580 --> 57:22.500
+But as I said, the other trend right now
+
+57:22.500 --> 57:25.820
+is to use data-driven methods to learn non-uniform sample
+
+57:25.820 --> 57:28.540
+distribution.
+
+57:28.540 --> 57:29.220
+Very good point.
+
+57:29.220 --> 57:32.500
+Yes, typically it's done in a non-uniform way.
+
+57:32.500 --> 57:34.180
+But again, these are all variants
+
+57:34.180 --> 57:36.820
+that unfortunately we're not going to cover in this class.
+
+57:36.820 --> 57:38.660
+But I'm going to go, but I'm giving you
+
+57:38.660 --> 57:43.700
+all the references for these variants I discussed at length.
+
+57:43.700 --> 57:45.900
+Second step, kino-dynamic.
+
+57:45.900 --> 57:48.420
+So you already know what kino-dynamic planning really
+
+57:48.420 --> 57:49.020
+entails.
+
+57:49.020 --> 57:50.820
+Now we want to find a trajectory that
+
+57:50.820 --> 57:53.540
+not only avoids obstacles and possibly
+
+57:53.540 --> 57:56.340
+optimizes the cost function, but also respects
+
+57:56.340 --> 58:00.780
+the dynamics constraints of your system, which basically means
+
+58:00.780 --> 58:06.820
+that at each configuration, your set of available motions
+
+58:06.820 --> 58:12.740
+as represented by the velocity vector is constrained.
+
+58:12.740 --> 58:15.700
+For example, with a car, you cannot move laterally.
+
+58:15.700 --> 58:19.460
+You can only go forward or turn.
+
+58:19.500 --> 58:25.420
+So the question is, how do we account for dynamic constraints
+
+58:25.420 --> 58:28.740
+into planning by using sampling-based algorithms?
+
+58:28.740 --> 58:32.260
+Conceptually, the good news is that this is relatively simple.
+
+58:32.260 --> 58:34.140
+The implementation is much more complicated.
+
+58:34.140 --> 58:35.940
+But conceptually, it's relatively simple.
+
+58:35.940 --> 58:40.340
+And there are two main ways of handling dynamics
+
+58:40.340 --> 58:43.020
+within motion planning with sampling-based algorithms.
+
+58:43.020 --> 58:44.820
+The first approach is referred to
+
+58:44.820 --> 58:48.420
+as a forward propagation-based approach.
+
+58:48.420 --> 58:52.900
+The idea is to only rely on the forward propagation
+
+58:52.900 --> 58:54.740
+of the dynamics.
+
+58:54.740 --> 58:58.820
+Specifically, let's consider again RRT.
+
+58:58.820 --> 59:01.420
+The way that the RRT can be implemented
+
+59:01.420 --> 59:05.140
+to account for kino-dynamic constraints is relatively simple.
+
+59:05.140 --> 59:11.220
+So what you do is to sample a new state randomly,
+
+59:11.220 --> 59:13.580
+as you do with RRT.
+
+59:18.580 --> 59:22.740
+So this is your tree.
+
+59:22.740 --> 59:25.140
+I have a banded path, because now I'm
+
+59:25.140 --> 59:27.220
+saying that we are doing kino-dynamic planning.
+
+59:27.220 --> 59:31.540
+So the way we go from one sample to the next one
+
+59:31.540 --> 59:32.980
+is not necessarily a straight line.
+
+59:32.980 --> 59:35.060
+It might be a curved line, because we
+
+59:35.060 --> 59:38.020
+have kino-dynamic constraints.
+
+59:38.020 --> 59:43.540
+So we sample a new point, which we call x run.
+
+59:43.540 --> 59:45.820
+So that's the line here.
+
+59:45.820 --> 59:53.620
+We find the closest sample in the tree to x run,
+
+59:53.620 --> 59:56.460
+say this one here.
+
+59:56.460 --> 01:00:00.500
+And at this point, I select randomly
+
+01:00:00.500 --> 01:00:04.020
+the amount of time through which I
+
+01:00:04.020 --> 01:00:07.460
+want to forward propagate the motion of the vehicle.
+
+01:00:07.460 --> 01:00:10.940
+And the control that I'm going to use in order
+
+01:00:10.940 --> 01:00:14.100
+to forward propagate the motion of the vehicle.
+
+01:00:14.100 --> 01:00:17.300
+So basically what I do is to solve the differential
+
+01:00:17.300 --> 01:00:22.900
+equation x dot equal f of x near.
+
+01:00:22.900 --> 01:00:24.820
+Sorry, hold on a second.
+
+01:00:24.820 --> 01:00:29.020
+x dot equal f of x and u.
+
+01:00:31.980 --> 01:00:36.060
+Let's call this sample x near.
+
+01:00:36.060 --> 01:00:41.100
+With the initial condition x0 equal x near.
+
+01:00:41.100 --> 01:00:46.460
+With a control input, input u, which
+
+01:00:46.460 --> 01:00:49.940
+has been randomly selected.
+
+01:00:57.620 --> 01:00:59.700
+So I call this input u bar.
+
+01:00:59.700 --> 01:01:02.900
+And then I integrate this differential equation forward
+
+01:01:02.900 --> 01:01:04.980
+for t time units.
+
+01:01:04.980 --> 01:01:09.340
+So say that this will lead to a path that looks like this.
+
+01:01:09.340 --> 01:01:10.340
+And then a stop.
+
+01:01:10.340 --> 01:01:12.020
+And this is my new sample.
+
+01:01:15.380 --> 01:01:17.420
+So just simulate the dynamics forward.
+
+01:01:17.420 --> 01:01:20.220
+But you have certain constraints on the sampling of u, right?
+
+01:01:20.220 --> 01:01:21.940
+It wouldn't go backwards?
+
+01:01:21.940 --> 01:01:24.900
+No, so you randomly sample u in such a way
+
+01:01:24.900 --> 01:01:27.420
+that it belongs to capital set u,
+
+01:01:27.420 --> 01:01:30.340
+which is the set of available controls at that state.
+
+01:01:35.620 --> 01:01:37.740
+So from intuition standpoint, that's probably the easiest
+
+01:01:37.740 --> 01:01:39.020
+thing that you can do.
+
+01:01:39.020 --> 01:01:40.980
+You just forward propagate your dynamics
+
+01:01:40.980 --> 01:01:42.980
+in order to expand your tree by using
+
+01:01:42.980 --> 01:01:45.980
+randomly selected controls and randomly selecting
+
+01:01:45.980 --> 01:01:49.820
+horizon to forward expand your dynamics.
+
+01:01:49.820 --> 01:01:52.300
+Why would you do that in a selection control?
+
+01:01:52.300 --> 01:01:55.980
+It might not renew it in the right direction
+
+01:01:55.980 --> 01:01:57.260
+towards the pointer.
+
+01:01:57.260 --> 01:01:58.380
+That's right.
+
+01:01:58.380 --> 01:02:03.140
+But the idea is that if you do this with one trillion nodes,
+
+01:02:03.140 --> 01:02:05.620
+then chances are the sooner or later
+
+01:02:05.620 --> 01:02:07.620
+you'll find something that brings you.
+
+01:02:07.620 --> 01:02:09.020
+But it's completely uninformed.
+
+01:02:09.020 --> 01:02:10.500
+And you are currently right.
+
+01:02:10.500 --> 01:02:14.540
+So this is the simplest version of a sampling-based algorithm
+
+01:02:14.540 --> 01:02:16.700
+for kinematic problems.
+
+01:02:16.700 --> 01:02:18.980
+But as I said, it's extremely wasteful
+
+01:02:18.980 --> 01:02:22.060
+because it does not capture any domain
+
+01:02:22.060 --> 01:02:25.620
+knowledge about the problem.
+
+01:02:25.620 --> 01:02:28.740
+So why would people consider this algorithm?
+
+01:02:28.740 --> 01:02:31.660
+It's that in some cases, the structure of the dynamics
+
+01:02:31.660 --> 01:02:34.100
+or the structure of the problem is so complicated
+
+01:02:34.100 --> 01:02:35.860
+that that's the best you can do.
+
+01:02:35.860 --> 01:02:37.540
+So this is your baseline.
+
+01:02:37.540 --> 01:02:40.420
+If the problem looks desperately complicated,
+
+01:02:40.420 --> 01:02:43.420
+at least you have this algorithm that you can basically always
+
+01:02:43.420 --> 01:02:44.700
+implement.
+
+01:02:44.700 --> 01:02:47.740
+But in some cases, in many cases, actually,
+
+01:02:47.740 --> 01:02:51.420
+and this goes back to your point,
+
+01:02:51.420 --> 01:02:53.060
+you can exploit domain knowledge.
+
+01:02:53.060 --> 01:02:56.820
+And in particular, what I refer to here as domain knowledge
+
+01:02:56.820 --> 01:02:57.940
+is the following.
+
+01:03:01.900 --> 01:03:09.380
+Let's assume that now, again, I sample a new node, Xand.
+
+01:03:09.380 --> 01:03:12.700
+But we spent two weeks on a trajectory optimization
+
+01:03:12.700 --> 01:03:17.140
+that basically is the problem of finding a trajectory that
+
+01:03:17.140 --> 01:03:19.220
+connects two points.
+
+01:03:19.220 --> 01:03:23.780
+So now, instead of just randomly selecting an input,
+
+01:03:23.780 --> 01:03:26.020
+you solve a trajectory optimization problem
+
+01:03:26.020 --> 01:03:28.180
+that optimally connects these two samples.
+
+01:03:28.180 --> 01:03:31.420
+This provides a much more direct way to get to your goal.
+
+01:03:32.420 --> 01:03:36.100
+And a much less wasteful way of sampling controls.
+
+01:03:36.100 --> 01:03:37.500
+What is the downside?
+
+01:03:37.500 --> 01:03:41.940
+That now, instead of forward propagating the dynamics,
+
+01:03:41.940 --> 01:03:47.860
+here, you're solving a trajectory optimization
+
+01:03:47.860 --> 01:03:53.460
+problem, which is more computationally intense.
+
+01:03:53.460 --> 01:03:55.260
+And that's where we actually bring together
+
+01:03:55.260 --> 01:03:57.860
+the field of motion planning and trajectory optimization.
+
+01:03:57.860 --> 01:03:59.420
+Kinonomic motion planning, if you
+
+01:03:59.420 --> 01:04:01.300
+want to account for domain knowledge,
+
+01:04:01.300 --> 01:04:04.980
+amounts to breaking the problem into small trajectory
+
+01:04:04.980 --> 01:04:08.300
+optimization problems, solve for those,
+
+01:04:08.300 --> 01:04:12.740
+and then a posteriori collision check for this path.
+
+01:04:12.740 --> 01:04:14.300
+Does it make sense?
+
+01:04:14.300 --> 01:04:16.580
+So in some cases, this trajectory optimization
+
+01:04:16.580 --> 01:04:19.540
+can be done analytically or by solving
+
+01:04:19.540 --> 01:04:21.300
+simple systems of linear equations,
+
+01:04:21.300 --> 01:04:23.260
+like by using differential flatness.
+
+01:04:23.260 --> 01:04:25.700
+In some other cases, you need to use
+
+01:04:25.700 --> 01:04:28.580
+full-blown optimal control methods,
+
+01:04:28.580 --> 01:04:31.180
+such as indirect methods or direct methods,
+
+01:04:31.180 --> 01:04:34.420
+best thoughts to the graduate students last week.
+
+01:04:34.420 --> 01:04:37.020
+Up to a point where it becomes so complicated,
+
+01:04:37.020 --> 01:04:40.220
+then then you go back to RRT with the forward expansion.
+
+01:04:40.220 --> 01:04:44.220
+Is it harder to collision check a current line
+
+01:04:44.220 --> 01:04:46.300
+generated by motion planning as opposed to a circle?
+
+01:04:46.300 --> 01:04:47.020
+No, it's the same.
+
+01:04:47.020 --> 01:04:51.900
+Because the way you do it is that you discretize the edge.
+
+01:04:51.900 --> 01:04:53.820
+Each point corresponds to a configuration.
+
+01:04:53.820 --> 01:04:55.220
+So you again call the very circle.
+
+01:04:55.220 --> 01:04:56.780
+So you don't necessarily use the linear structure
+
+01:04:56.780 --> 01:04:57.780
+in the previous example?
+
+01:04:57.780 --> 01:04:58.280
+No.
+
+01:04:58.280 --> 01:04:58.780
+Yeah.
+
+01:04:58.780 --> 01:05:00.660
+For collision checking, it's just a black box
+
+01:05:00.660 --> 01:05:02.820
+to give and dispose, M and a collision.
+
+01:05:02.820 --> 01:05:04.540
+That's exactly the same question that you answer,
+
+01:05:04.540 --> 01:05:06.340
+either in this setting or in the other setting.
+
+01:05:09.940 --> 01:05:12.420
+Yeah?
+
+01:05:12.420 --> 01:05:15.380
+In the trajectory optimization situation,
+
+01:05:15.380 --> 01:05:19.620
+what if you randomly sampled a point that was not
+
+01:05:19.620 --> 01:05:21.380
+available in your space?
+
+01:05:21.380 --> 01:05:22.540
+It is not reachable.
+
+01:05:22.540 --> 01:05:24.540
+Yeah, it is not reachable because of the dynamic.
+
+01:05:24.540 --> 01:05:25.580
+Yeah, no, great question.
+
+01:05:25.580 --> 01:05:28.980
+So one of the nuances of kinematic planning
+
+01:05:28.980 --> 01:05:32.740
+is that not only you have to reason about collision
+
+01:05:32.740 --> 01:05:36.020
+avoidance, but also about no reachability
+
+01:05:36.020 --> 01:05:39.300
+of some of the configurations.
+
+01:05:39.300 --> 01:05:43.820
+In particular, and this is related to this point here,
+
+01:05:43.820 --> 01:05:47.220
+the two differences between running, say,
+
+01:05:47.220 --> 01:05:52.020
+PRM or FMT star with and without kinematic constraints
+
+01:05:52.020 --> 01:05:55.060
+is that if you want to account for kinematic constraints,
+
+01:05:55.060 --> 01:05:57.140
+the connection between two points
+
+01:05:57.140 --> 01:05:59.420
+is not a straight line with actually a solution
+
+01:05:59.420 --> 01:06:02.100
+to trajectory optimization problem, number one.
+
+01:06:02.100 --> 01:06:06.740
+Number two, when you want to find neighbors,
+
+01:06:06.740 --> 01:06:11.020
+you're no longer just finding points within a given radius.
+
+01:06:11.020 --> 01:06:13.700
+That is really meaningless for kinematic systems.
+
+01:06:13.700 --> 01:06:17.220
+You have to somehow account for the dynamics of your system,
+
+01:06:17.220 --> 01:06:20.500
+in particular through the notion of reachable sets.
+
+01:06:20.500 --> 01:06:22.020
+What is a reachable set?
+
+01:06:22.020 --> 01:06:24.700
+Let's assume that this is the pose of your robot,
+
+01:06:24.700 --> 01:06:28.300
+like a unicycle.
+
+01:06:28.300 --> 01:06:32.340
+The reachable set is the set of points
+
+01:06:32.340 --> 01:06:36.340
+that can be reached within time t.
+
+01:06:36.340 --> 01:06:41.060
+So why it has this weird form is that for a car,
+
+01:06:41.060 --> 01:06:44.220
+reaching a point in the forward direction
+
+01:06:44.220 --> 01:06:46.620
+is easier than reaching it in the lateral direction,
+
+01:06:46.620 --> 01:06:48.780
+because to reach a point in the lateral direction,
+
+01:06:48.780 --> 01:06:53.220
+you have to go forward, say, and then backward,
+
+01:06:53.220 --> 01:06:55.060
+which means that the amount of travel
+
+01:06:55.060 --> 01:06:58.660
+that you can do laterally within a given time horizon t
+
+01:06:58.660 --> 01:07:00.260
+is less than the amount of travel
+
+01:07:00.260 --> 01:07:04.780
+that you can do frontally within a given time t.
+
+01:07:04.780 --> 01:07:07.740
+So in this class of algorithms, the way
+
+01:07:07.740 --> 01:07:09.100
+that you use nearest neighbors is
+
+01:07:09.100 --> 01:07:13.260
+by replacing bolts or spheres with reachable sets.
+
+01:07:13.260 --> 01:07:15.460
+And this would account for the fact of whether,
+
+01:07:15.460 --> 01:07:16.740
+for example, within a time.
+
+01:07:16.740 --> 01:07:21.980
+So for example, let's assume that I'm here,
+
+01:07:21.980 --> 01:07:23.420
+and I consider this reachable set.
+
+01:07:26.740 --> 01:07:28.420
+The point being here, it means that it
+
+01:07:28.420 --> 01:07:31.180
+is beyond what can be reached within time t,
+
+01:07:31.180 --> 01:07:35.220
+so it would not be considered for inclusion.
+
+01:07:35.220 --> 01:07:38.860
+So usually, instead of considering bolts of radius r,
+
+01:07:38.860 --> 01:07:43.060
+you consider reachable sets for a given time horizon t,
+
+01:07:43.060 --> 01:07:44.780
+or in general, for a given cost c,
+
+01:07:44.780 --> 01:07:47.180
+where the cost could be a combination of time and control
+
+01:07:47.180 --> 01:07:47.980
+effort.
+
+01:07:47.980 --> 01:07:49.340
+Does it make sense?
+
+01:07:49.340 --> 01:07:52.220
+The geometric case, if you think about it,
+
+01:07:52.220 --> 01:07:53.500
+is just a special case.
+
+01:07:53.500 --> 01:07:56.980
+For the geometric case, what is the reachable set?
+
+01:08:00.420 --> 01:08:03.540
+It's just a ball, because for a point with no constraints
+
+01:08:03.540 --> 01:08:07.980
+in the dynamics, every direction looks equally feasible.
+
+01:08:07.980 --> 01:08:12.260
+So space is isotropic, and the reachable set is a ball.
+
+01:08:12.260 --> 01:08:14.780
+You can view kinematic planning as a setting whereby
+
+01:08:14.780 --> 01:08:17.300
+you have to squish these balls in order to align them
+
+01:08:17.300 --> 01:08:18.900
+with the dynamics.
+
+01:08:18.980 --> 01:08:23.060
+So two main differences with respect to geometric planning.
+
+01:08:23.060 --> 01:08:28.580
+You have to connect points by using reachable sets that
+
+01:08:28.580 --> 01:08:30.860
+might have, sometimes, weird shapes.
+
+01:08:30.860 --> 01:08:34.180
+And two, when you connect two samples,
+
+01:08:34.180 --> 01:08:35.860
+you cannot just use a straight line,
+
+01:08:35.860 --> 01:08:38.360
+but actually, you have to solve the trajectory optimization
+
+01:08:38.360 --> 01:08:39.500
+problem.
+
+01:08:39.500 --> 01:08:41.940
+If you can do that quickly, for example,
+
+01:08:41.940 --> 01:08:44.500
+by exploiting offline computation,
+
+01:08:44.500 --> 01:08:46.460
+then this can run very fast.
+
+01:08:46.460 --> 01:08:50.340
+For example, for a double integrator model,
+
+01:08:50.340 --> 01:08:52.740
+which is simple, but arguably quite representative
+
+01:08:52.740 --> 01:08:55.620
+for a number of systems, because you account for momentum.
+
+01:08:55.620 --> 01:09:00.540
+In the dynamics, you can solve 3D kinematic planning problems
+
+01:09:00.540 --> 01:09:03.500
+in about 50 milliseconds.
+
+01:09:03.500 --> 01:09:07.740
+How do you generate the reachable set, or that shape?
+
+01:09:07.740 --> 01:09:08.980
+Yes.
+
+01:09:08.980 --> 01:09:11.340
+You take my class, it was in the spring.
+
+01:09:11.340 --> 01:09:18.220
+So there are well-known methods in optimal control
+
+01:09:18.220 --> 01:09:21.260
+to compute those reachable sets.
+
+01:09:21.260 --> 01:09:22.880
+So that reachable set, in some cases,
+
+01:09:22.880 --> 01:09:25.940
+can be computed analytically.
+
+01:09:25.940 --> 01:09:28.700
+Many cases can be computed numerically.
+
+01:09:28.700 --> 01:09:31.460
+But unfortunately, this is beyond the scope of this class.
+
+01:09:31.460 --> 01:09:38.060
+For this class, if we ask you to consider kinematic planning,
+
+01:09:38.060 --> 01:09:39.460
+we will give you that information
+
+01:09:39.460 --> 01:09:40.500
+about the reachable set.
+
+01:09:40.540 --> 01:09:42.740
+But knowing that for most representative systems,
+
+01:09:42.740 --> 01:09:44.020
+that is known.
+
+01:09:44.020 --> 01:09:45.780
+So practically, you can do it.
+
+01:09:45.780 --> 01:09:48.940
+So for PRM, when we had just a circle, we were doing this.
+
+01:09:48.940 --> 01:09:49.980
+Because of geometric.
+
+01:09:49.980 --> 01:09:52.380
+PRM, a kinematic, then you will have this.
+
+01:09:52.380 --> 01:09:52.860
+Right.
+
+01:09:52.860 --> 01:09:54.660
+But in that case, we were picking a radius.
+
+01:09:54.660 --> 01:09:56.700
+And that was a parameter we could change.
+
+01:09:56.700 --> 01:09:58.300
+So in this case, for the reachable set,
+
+01:09:58.300 --> 01:09:59.500
+would you be changing time?
+
+01:09:59.500 --> 01:10:00.000
+No.
+
+01:10:00.000 --> 01:10:00.500
+Yeah.
+
+01:10:00.500 --> 01:10:03.100
+So time, or in general, we talked
+
+01:10:03.100 --> 01:10:05.820
+about the cost-bounded reachable sets.
+
+01:10:05.820 --> 01:10:08.900
+So the set of the configuration that you can reach,
+
+01:10:08.940 --> 01:10:11.660
+within a cost c upper bar.
+
+01:10:11.660 --> 01:10:13.620
+Where c could be time.
+
+01:10:13.620 --> 01:10:16.980
+In this case, we talked about t limiting the reachable sets.
+
+01:10:16.980 --> 01:10:20.100
+Or it could be a combination of time and the control effort.
+
+01:10:20.100 --> 01:10:23.100
+So just for clarification, the reachable set
+
+01:10:23.100 --> 01:10:24.940
+for all configurations?
+
+01:10:24.940 --> 01:10:28.100
+It can be reached within a given cost.
+
+01:10:28.100 --> 01:10:29.460
+Subject to the differential cost.
+
+01:10:29.460 --> 01:10:31.220
+Subject to the differential cost.
+
+01:10:31.220 --> 01:10:35.940
+And here is, again, let's assume that the cost is really time.
+
+01:10:35.940 --> 01:10:37.700
+And you have a car.
+
+01:10:37.700 --> 01:10:41.340
+And the car has the heading in this direction.
+
+01:10:41.340 --> 01:10:47.060
+So you can go farther in the frontal direction.
+
+01:10:47.060 --> 01:10:48.660
+And you can travel a smaller distance
+
+01:10:48.660 --> 01:10:50.180
+in the lateral direction, because you
+
+01:10:50.180 --> 01:10:52.420
+need to concatenate motion primitives.
+
+01:10:52.420 --> 01:10:55.300
+You can still do it, because you can go forward and backward,
+
+01:10:55.300 --> 01:10:56.180
+and so on.
+
+01:10:56.180 --> 01:10:58.140
+But it takes more time.
+
+01:10:58.140 --> 01:11:00.700
+That's why, in terms of t limited reachable set,
+
+01:11:00.700 --> 01:11:03.220
+the space you can travel leads to the squishing
+
+01:11:03.220 --> 01:11:04.140
+of the reachable set.
+
+01:11:04.140 --> 01:11:04.620
+Make sense?
+
+01:11:07.860 --> 01:11:09.580
+So it's very natural, I think.
+
+01:11:09.580 --> 01:11:11.820
+So is the reachable set going to be a static thing?
+
+01:11:11.820 --> 01:11:14.380
+Or will you change it based off of the geology
+
+01:11:14.380 --> 01:11:16.860
+of the space, or are there any obstacles or something like
+
+01:11:16.860 --> 01:11:17.620
+that?
+
+01:11:17.620 --> 01:11:19.780
+Yeah, so the idea of planning is try
+
+01:11:19.780 --> 01:11:23.820
+to separate and decouple trajectory optimization
+
+01:11:23.820 --> 01:11:25.580
+from obstacle avoidance.
+
+01:11:25.580 --> 01:11:28.260
+So the reachable sets and the trajectory optimization
+
+01:11:28.260 --> 01:11:32.300
+problem are solved without accounting for obstacles.
+
+01:11:32.300 --> 01:11:34.780
+And then you account for obstacles up posteriorly
+
+01:11:34.780 --> 01:11:36.060
+through collision checking.
+
+01:11:36.060 --> 01:11:38.220
+That's really the hallmark of sampling-based planning,
+
+01:11:38.220 --> 01:11:40.260
+to try to decouple little things in such a way
+
+01:11:40.260 --> 01:11:42.860
+that you gain computational tractability.
+
+01:11:45.500 --> 01:11:49.740
+All right, very last topic, and here I'll be quite quick.
+
+01:11:49.740 --> 01:11:52.540
+Question, do probabilistic planners,
+
+01:11:52.540 --> 01:11:55.580
+like PRM, that stands for probabilistic roadmap,
+
+01:11:55.580 --> 01:11:58.500
+or RRT, that stands for collaborative exploring
+
+01:11:58.500 --> 01:12:01.420
+random tree, really need to be random,
+
+01:12:01.420 --> 01:12:04.380
+meaning relying on a randomized sequence?
+
+01:12:04.380 --> 01:12:06.140
+Answer to this question is important,
+
+01:12:06.140 --> 01:12:08.420
+because if you're able to actually deal
+
+01:12:08.420 --> 01:12:10.180
+with the deterministic sequences,
+
+01:12:10.180 --> 01:12:12.100
+you may have a number of advantages.
+
+01:12:12.100 --> 01:12:13.780
+It would ease certification process.
+
+01:12:13.780 --> 01:12:15.900
+So say that you want to apply this algorithm
+
+01:12:15.900 --> 01:12:20.220
+to a flying self-driving car, which is safety critical.
+
+01:12:20.220 --> 01:12:22.580
+Having a probabilistic guarantee is not the best
+
+01:12:22.580 --> 01:12:25.100
+you can hope for.
+
+01:12:25.100 --> 01:12:27.660
+It would allow you to reuse offline computation.
+
+01:12:27.660 --> 01:12:31.660
+So instead of sampling new roadmaps every time
+
+01:12:31.660 --> 01:12:33.460
+you want to solve a motion planning problem,
+
+01:12:33.460 --> 01:12:36.820
+you would use the same roadmap, which
+
+01:12:36.820 --> 01:12:39.580
+means that you can pre-store that roadmap,
+
+01:12:39.580 --> 01:12:42.300
+pre-compute the, say, two-point malleable problem
+
+01:12:42.300 --> 01:12:44.660
+reachable sets, and so on.
+
+01:12:44.660 --> 01:12:46.300
+It could also simplify some operations,
+
+01:12:46.300 --> 01:12:48.420
+like nearest network searches.
+
+01:12:48.420 --> 01:12:53.260
+Turns out that this question is related to the notion of L2
+
+01:12:53.260 --> 01:12:55.100
+dispersion.
+
+01:12:55.100 --> 01:12:58.100
+The L2 dispersion of a set of points
+
+01:12:58.100 --> 01:13:04.380
+is loosely defined as the radius of the largest ball
+
+01:13:04.380 --> 01:13:06.620
+that you can fit in that set of points
+
+01:13:06.620 --> 01:13:10.140
+without touching none of the points.
+
+01:13:10.140 --> 01:13:12.940
+So we say that we have large dispersion.
+
+01:13:12.940 --> 01:13:15.220
+If we can fit a ball, this does not
+
+01:13:15.220 --> 01:13:20.620
+intersect any of the points with a large radius.
+
+01:13:20.620 --> 01:13:23.940
+So given endpoints, the stupid way of sampling
+
+01:13:23.940 --> 01:13:26.740
+would be to put all the endpoints here,
+
+01:13:26.740 --> 01:13:29.100
+which would lead to a very large dispersion sequence,
+
+01:13:29.100 --> 01:13:31.460
+because then the ball that does not
+
+01:13:31.460 --> 01:13:33.740
+intersect any of the points would have, say,
+
+01:13:33.740 --> 01:13:35.940
+this radius here.
+
+01:13:35.940 --> 01:13:38.300
+This would be a decent sequence.
+
+01:13:38.300 --> 01:13:43.780
+In particular, formally, the dispersion for a set of points
+
+01:13:43.780 --> 01:13:47.660
+is defined as the supremum over all points
+
+01:13:47.660 --> 01:13:51.140
+in the space of the minimum distance between that point
+
+01:13:51.140 --> 01:13:53.620
+and one of the sample, which basically
+
+01:13:53.620 --> 01:13:57.100
+means fitting the largest ball that
+
+01:13:57.100 --> 01:14:00.700
+doesn't hit any of the points.
+
+01:14:00.700 --> 01:14:04.420
+So you can think that for planning,
+
+01:14:04.420 --> 01:14:13.100
+you want to have a set of samples that
+
+01:14:13.100 --> 01:14:15.300
+have low dispersion, because that
+
+01:14:15.300 --> 01:14:18.020
+ensures that you have good coverage on the environment.
+
+01:14:18.020 --> 01:14:24.300
+The natural question is, are sequences
+
+01:14:24.300 --> 01:14:27.420
+with the minimum possible dispersion known?
+
+01:14:27.420 --> 01:14:30.140
+The question is that, the answer is that, in general, that
+
+01:14:30.140 --> 01:14:31.660
+is not known.
+
+01:14:31.660 --> 01:14:33.420
+But what is known is that there are
+
+01:14:33.420 --> 01:14:36.100
+deterministic sequences whose dispersion
+
+01:14:36.100 --> 01:14:37.940
+is asymptotically optimal.
+
+01:14:37.940 --> 01:14:40.540
+So as n goes to infinity, at least the scaling
+
+01:14:40.540 --> 01:14:42.620
+is the asymptotically optimal scaling.
+
+01:14:42.620 --> 01:14:44.820
+And in particular, the scaling goes with n
+
+01:14:44.820 --> 01:14:47.140
+to the power of minus 1 over d.
+
+01:14:47.140 --> 01:14:48.380
+n is the number of samples.
+
+01:14:48.380 --> 01:14:51.100
+It makes sense that the optimal dispersion
+
+01:14:51.100 --> 01:14:55.580
+goes to 0 as the number of samples increases.
+
+01:14:55.580 --> 01:14:57.820
+But it's not clear how optimally it should go.
+
+01:14:57.820 --> 01:15:00.860
+That's the optimal scaling.
+
+01:15:00.860 --> 01:15:06.060
+Now, it turns out that if you go back to PRM, in PRM, as I said,
+
+01:15:06.060 --> 01:15:09.540
+there are two, basically, degrees of freedom.
+
+01:15:09.540 --> 01:15:15.460
+How big is the ball that you use to connect points?
+
+01:15:15.460 --> 01:15:19.500
+And then, how do you place the samples
+
+01:15:19.500 --> 01:15:21.620
+in the configuration space?
+
+01:15:21.620 --> 01:15:24.580
+This, again, the animation of how PRM works.
+
+01:15:24.580 --> 01:15:29.180
+So it turns out that if you choose as a sampling
+
+01:15:29.180 --> 01:15:32.660
+distribution, the distribution of samples that
+
+01:15:32.660 --> 01:15:35.860
+has low dispersion, meaning that the scaling is
+
+01:15:35.860 --> 01:15:37.660
+the asymptotically optimal scaling,
+
+01:15:37.660 --> 01:15:40.940
+and those sequences are known.
+
+01:15:40.940 --> 01:15:44.260
+And if the radius of the ball decreases
+
+01:15:44.260 --> 01:15:47.580
+no faster than n to the power of 1 over d,
+
+01:15:47.580 --> 01:15:51.380
+then PRM is guaranteed to converge to the optimal path,
+
+01:15:51.380 --> 01:15:53.060
+deterministically.
+
+01:15:53.060 --> 01:15:55.020
+Which basically means that contrary
+
+01:15:55.020 --> 01:15:57.980
+to what people believe for 25 years,
+
+01:15:57.980 --> 01:15:59.860
+you don't really need random sampling.
+
+01:15:59.860 --> 01:16:04.060
+A deterministic sequence that has low dispersion
+
+01:16:04.060 --> 01:16:08.660
+and those sequences are known achieve asymptotic optimality.
+
+01:16:08.660 --> 01:16:10.260
+So it was the result that I published
+
+01:16:10.260 --> 01:16:13.220
+with one of my students about three or four years ago.
+
+01:16:13.700 --> 01:16:15.460
+So it's pretty surprising that still people
+
+01:16:15.460 --> 01:16:17.420
+believe that the randomization is really
+
+01:16:17.420 --> 01:16:21.260
+the key to the success of RT and PRM, where
+
+01:16:21.260 --> 01:16:22.780
+that is absolutely not true.
+
+01:16:22.780 --> 01:16:24.980
+That's not really the reason why they are successful.
+
+01:16:24.980 --> 01:16:27.220
+They are successful because they cleverly
+
+01:16:27.220 --> 01:16:30.700
+exploit the notion of implicit representation of obstacles
+
+01:16:30.700 --> 01:16:32.420
+in the configuration space.
+
+01:16:32.420 --> 01:16:35.580
+For some reason, people believe that randomization, magically,
+
+01:16:35.580 --> 01:16:38.980
+was solving the problem, which is obviously not the case.
+
+01:16:38.980 --> 01:16:40.860
+Here is just a bunch of problems where
+
+01:16:40.860 --> 01:16:46.140
+I compare the performance of PRM on deterministic sequences.
+
+01:16:46.140 --> 01:16:50.540
+And PRM would run on randomized sequences
+
+01:16:50.540 --> 01:16:52.140
+and deterministic sequences.
+
+01:16:52.140 --> 01:16:56.740
+Basically, less than 100% means that deterministic sequences
+
+01:16:56.740 --> 01:16:57.820
+perform better.
+
+01:16:57.820 --> 01:17:00.620
+Higher than 100% means that the randomized sequences
+
+01:17:00.620 --> 01:17:01.740
+perform better.
+
+01:17:01.740 --> 01:17:04.100
+You can see that across the board for planning problem
+
+01:17:04.100 --> 01:17:07.180
+in different dimension from 2 to 8,
+
+01:17:07.180 --> 01:17:11.500
+with key dynamic chains like for manipulators, aircraft,
+
+01:17:11.500 --> 01:17:14.180
+and all sorts of systems, deterministic sampling
+
+01:17:14.180 --> 01:17:16.660
+not only has better theoretical properties,
+
+01:17:16.660 --> 01:17:19.820
+but actually perform also better in practice.
+
+01:17:19.820 --> 01:17:21.340
+On top of it, actually, it turns out
+
+01:17:21.340 --> 01:17:24.460
+that we can also provide the convergence rates guarantees,
+
+01:17:24.460 --> 01:17:26.820
+meaning how many samples you need in order
+
+01:17:26.820 --> 01:17:30.620
+to get to a solution within a certain optimality gap,
+
+01:17:30.620 --> 01:17:34.740
+something that was not known until a few years ago.
+
+01:17:34.740 --> 01:17:38.260
+So the remaining takeaway is that a synthetic optimality
+
+01:17:38.260 --> 01:17:41.420
+can indeed be achieved with the deterministic sequences
+
+01:17:41.420 --> 01:17:43.540
+and indeed with a smaller connection of values, which
+
+01:17:43.540 --> 01:17:45.540
+means less computation.
+
+01:17:45.540 --> 01:17:48.580
+And we can also provide convergence rates.
+
+01:17:48.580 --> 01:17:51.820
+And experimentally, deterministic sequences
+
+01:17:51.820 --> 01:17:53.900
+appear to provide superior performance.
+
+01:17:53.900 --> 01:17:56.140
+So this is something that we published quite recently.
+
+01:17:56.140 --> 01:17:58.380
+And it's quite surprising that for so many years,
+
+01:17:58.380 --> 01:18:00.620
+people believed that, as I said, randomization
+
+01:18:00.620 --> 01:18:02.660
+was the key to the success of these algorithms,
+
+01:18:02.660 --> 01:18:06.140
+whereby running the same algorithms on carefully
+
+01:18:06.140 --> 01:18:08.140
+constructed deterministic sequences,
+
+01:18:08.140 --> 01:18:10.820
+in particular, deterministic sequences with low dispersion,
+
+01:18:10.820 --> 01:18:14.780
+gives you better performance that is actually deterministic.
+
+01:18:14.780 --> 01:18:17.340
+That opens the door to apply these algorithms
+
+01:18:17.340 --> 01:18:20.580
+to synthetic systems, for example.
+
+01:18:20.580 --> 01:18:22.860
+All right, so the time is up.
+
+01:18:22.860 --> 01:18:26.180
+Next time, well, you had a midterm, sorry.
+
+01:18:26.180 --> 01:18:29.140
+But the next time, which is Tuesday,
+
+01:18:29.140 --> 01:18:31.780
+we start the second module of this class, which
+
+01:18:31.820 --> 01:18:35.140
+will deal with robotic perception.
+
+01:18:35.140 --> 01:18:39.180
+In particular, I'll first give an overview of the sensors that
+
+01:18:39.180 --> 01:18:41.580
+are available for robots.
+
+01:18:41.580 --> 01:18:45.020
+And then we'll focus on cameras, how to model them,
+
+01:18:45.020 --> 01:18:47.660
+how to process the data that is collected by camera,
+
+01:18:47.660 --> 01:18:50.420
+how to extract features, how to extract semantic meaning,
+
+01:18:50.420 --> 01:18:52.140
+and so on and so forth.
+
+01:18:52.140 --> 01:18:56.540
+All right, so I'm going to have office hours from now till 1.
+
+01:18:56.540 --> 01:18:59.180
+And otherwise, I'll see you on Tuesday.
+
+01:18:59.180 --> 01:19:01.340
+And good luck with the midterm.
+

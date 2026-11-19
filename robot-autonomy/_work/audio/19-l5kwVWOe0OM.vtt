@@ -1,0 +1,1751 @@
+WEBVTT
+
+00:00.000 --> 00:13.080
+All right. So today we're going to move on to the fourth module of this class that deals
+
+00:13.080 --> 00:20.640
+with reasoning and decision making. And in particular, today we're going to cover one
+
+00:20.640 --> 00:27.880
+of the most basic tools in order to endow a robot with basic reasoning capabilities,
+
+00:27.880 --> 00:34.420
+number two as state machines. In one another, you have already encountered state machines,
+
+00:34.420 --> 00:41.760
+at least implicitly in the past. Today we're going to discuss them a little bit more in
+
+00:41.760 --> 00:49.540
+detail. The topic of state machines is fairly simple. On the other hand, when you go to
+
+00:49.540 --> 00:56.120
+industry, most likely a lot of your time will be spent debugging state machines. Turns out
+
+00:56.120 --> 01:01.520
+the state machines can get extremely tricky and give rise to undesired behaviors that
+
+01:01.520 --> 01:10.120
+you will try to discover and correct, but the process will be very time consuming. Fortunately,
+
+01:10.120 --> 01:19.200
+there are some basic techniques and design patterns that you can use in order to engineer
+
+01:19.200 --> 01:26.700
+state machines that are less prone to errors. This is somewhat the objective of this lecture.
+
+01:26.700 --> 01:32.320
+So the key concept is simple, making them work on practical robots is quite complicated.
+
+01:32.320 --> 01:39.320
+In particular, the objectives of today's lecture are to introduce the notion of state machines,
+
+01:39.320 --> 01:43.360
+discuss the relevance in terms of strengths and limitations, and finally introduce some
+
+01:43.360 --> 01:51.080
+tools that you can use in order to properly set them up. Most of this lecture is taken
+
+01:51.080 --> 02:00.720
+from a lecture at MIT from Leslie Kebling and colleagues in a basic class taught in
+
+02:00.720 --> 02:11.720
+the EECS department at MIT. Now, a function in general is a map between
+
+02:11.760 --> 02:21.960
+an input and an output. A state machine instead is a methodology in order to model a system
+
+02:21.960 --> 02:29.960
+whose output depends on the entire history of the input. So in a map, you have an input,
+
+02:29.960 --> 02:34.200
+that input gets transformed, perhaps very non-linearly, into an output, but there's
+
+02:34.200 --> 02:38.880
+no notion of a history of an input. While in a state machine, the notion of history
+
+02:38.880 --> 02:45.280
+of an input is the defining concept. So we can basically define a state machine as a
+
+02:45.280 --> 02:51.080
+computational model for systems whose output depends on the entire history of their inputs
+
+02:51.080 --> 02:56.800
+at a very high level. Now, a state machine per se is not an algorithm,
+
+02:56.800 --> 03:01.840
+it's just a modeling framework. The same way you would use market decision processes or
+
+03:01.840 --> 03:09.200
+probability densities in order to model a problem. We look at probability formulations
+
+03:09.200 --> 03:14.440
+of filtering as a modeling tool, but then we have to divide algorithms. We use market
+
+03:14.440 --> 03:19.000
+decision processes as a modeling tool for decision making. Actually, we will see that
+
+03:19.000 --> 03:23.680
+in the next lecture, but then you have to design algorithms. Similarly, for finite state
+
+03:23.680 --> 03:27.120
+machines, they are a modeling tool, but then you have to design algorithms in order to
+
+03:27.120 --> 03:33.200
+manipulate them. Now, state machines can be used in a variety
+
+03:33.200 --> 03:39.240
+of ways, for a variety of tasks. First of all, and this is the most basic application
+
+03:39.240 --> 03:48.520
+of state machines, you can use them synthetically in order to specify a program for a robot.
+
+03:48.520 --> 03:54.680
+Like for example, a simple robot could be an ATM machine. Behind the hood in the ATM
+
+03:54.680 --> 04:00.340
+machine, there is a state machine that says, if I send a card in the card reader, I should
+
+04:00.340 --> 04:05.680
+ingest the card, then I should read the numbers, then I should some other operations. All of
+
+04:05.680 --> 04:12.220
+that is encoded into a state machine. But another way of using state machines is
+
+04:12.220 --> 04:19.000
+in terms of analysis. Like for example, you can use a state machine to model the interaction
+
+04:19.000 --> 04:25.340
+between an autonomous agent and some other agents in the environment, say a self-driving
+
+04:25.340 --> 04:31.960
+car and some pedestrian, and try to reason about the possible failure modes that your
+
+04:31.960 --> 04:37.480
+control algorithm for the autonomous agent could give rise to. So this is more for analysis
+
+04:37.480 --> 04:42.360
+as opposed to control synthesis. Finally, you can use a state machine in order
+
+04:42.360 --> 04:48.440
+to predict the behavior of other agents in order to simulate, for example, the safety
+
+04:48.440 --> 04:53.380
+and efficiency of the autonomous stack of a robot. For example, it's very typical to
+
+04:53.380 --> 04:59.620
+model pedestrians in simulation by using a finite state machine, and then test in simulation
+
+04:59.620 --> 05:03.760
+and the behavior of your autonomous car when it interacts with the pedestrian, where the
+
+05:03.760 --> 05:11.100
+pedestrian is going to interact with your autonomous car according to some state machine.
+
+05:11.100 --> 05:15.780
+So there are many different ways you can use a state machine, all of them quite important,
+
+05:15.780 --> 05:20.960
+to the point that if you stick with robotics fields, you'll be working with state machines
+
+05:20.960 --> 05:28.320
+for the rest of your life. Most likely, unless deep learning takes over everything and state
+
+05:28.320 --> 05:36.160
+machine becomes obsolete. Now, state machines are useful quite a big
+
+05:36.160 --> 05:40.760
+deal to the practitioner for all the reasons that I've just discussed in order to synthesize
+
+05:40.760 --> 05:45.560
+a controller, in order to analyze a controller, in order to predict the behavior of other
+
+05:45.560 --> 05:51.660
+agents on the roads. But it is also of interest to researchers, there is still quite a bit
+
+05:51.660 --> 05:57.340
+of work on developing new tools for state machines, for example, in order to prove their
+
+05:57.340 --> 06:04.180
+correctness in order to learn them from data and so on and so forth. For example, here,
+
+06:04.180 --> 06:09.000
+we just pulled up a paper from Chris Manning, who is a professor here in computer science
+
+06:09.000 --> 06:16.860
+from 2019, doing some work blending the field of learning with the field of state machines.
+
+06:16.860 --> 06:21.780
+So it's still, even though it's a very old topic, probably one of the oldest topic in
+
+06:21.780 --> 06:26.260
+the field of robotics, it's still an active field of research.
+
+06:26.260 --> 06:35.460
+Now, what is a state machine from a mathematical standpoint? To specify a system whose output
+
+06:35.460 --> 06:41.760
+depends on the history of an input. In principle, we could have a very complicated function
+
+06:41.760 --> 06:48.280
+that for each possible history of an input, it maps a given output. But that function
+
+06:48.280 --> 06:55.620
+will be very difficult to specify because the space of possible histories grows exponentially.
+
+06:55.620 --> 07:00.720
+So you will need to specify the behavior of that function for an exponentially large number
+
+07:00.720 --> 07:05.160
+of possible inputs. That from a practical standpoint will be horrible.
+
+07:05.160 --> 07:09.680
+So the approach of a state machine, which is, by the way, the approach that we've already
+
+07:09.680 --> 07:16.980
+seen in most of this class, this quarter, is to introduce the notion of a state that
+
+07:16.980 --> 07:24.940
+in a compact way captures whatever it matters in order to predict an input based on the
+
+07:24.940 --> 07:30.460
+history, predict an output, well, output and information based on the input sequence.
+
+07:30.460 --> 07:38.060
+In particular, a state machine comprises a set of states, a set of inputs called the
+
+07:38.060 --> 07:46.240
+input vocabulary, and a set of outputs called the output vocabulary. Then comprises two
+
+07:46.240 --> 07:52.900
+key maps. One is the state transition function, very similar conceptually to the state transition
+
+07:52.900 --> 07:57.420
+model that we use in order to specify the dynamics of a robot. This is a map that maps
+
+07:57.420 --> 08:05.340
+the current input and the current state into a new state. And then an output function,
+
+08:05.340 --> 08:12.560
+a map that maps the current input and the current state into an output level. Note that
+
+08:12.560 --> 08:16.620
+here there is no dependency on the entire history of the inputs because the idea is
+
+08:16.620 --> 08:24.680
+that all that dependency is encapsulated into the notion of a state, S of T.
+
+08:24.680 --> 08:34.460
+This is in general a key theme in modeling and control. You have two different approaches.
+
+08:34.460 --> 08:39.840
+One is a purely input-output and another one is a state space approach whereby you introduce
+
+08:39.840 --> 08:45.160
+a notion of a state in order to simplify the map from the input to the output through the
+
+08:45.160 --> 08:52.120
+notion of the state. And of course, you also have to specify an initial state, S of zero.
+
+08:52.120 --> 08:55.520
+For the very abstract level, then the way that the state machine would look like is
+
+08:55.520 --> 09:02.880
+that we have a bunch of states. In this case, we have three states. We have an input vocabulary.
+
+09:02.880 --> 09:08.000
+In this case, we have three possible inputs. And then we have the space of outputs. That's
+
+09:08.000 --> 09:12.280
+the output vocabulary. And then we had to specify the two maps, the input map and the
+
+09:12.280 --> 09:19.360
+output map. The input map from a graphical perspective is represented via arcs. So an
+
+09:19.360 --> 09:26.460
+arc means that if you are in state S of zero and you apply input I one, then you transition
+
+09:26.460 --> 09:32.100
+to state S of one. If instead you apply input I zero, then you transition to state S of
+
+09:32.100 --> 09:39.320
+two. So again, here, conceptually nothing new. In a way, this is the very same model
+
+09:39.320 --> 09:45.920
+we use in order to model the state evolution of a robot. The point here is that the same
+
+09:45.920 --> 09:52.320
+model can be used much more generally to specify the high level behavior of a robot
+
+09:52.320 --> 09:57.600
+or any automated machine for what matters, for example, an ATM machine.
+
+09:57.600 --> 10:07.960
+As I said, we have a second map, which is the output map that specify the output that
+
+10:07.960 --> 10:14.680
+the state machine would provide when from a given state, you transition to another state
+
+10:14.680 --> 10:19.440
+and a given input. So for example, if you are in state S of zero and you apply input
+
+10:19.440 --> 10:27.080
+I one, then the state machine outputs a level O one. We'll see some example later on that
+
+10:27.080 --> 10:33.400
+will clarify this concept. And actually, let's see an example right away. So this is a fairly
+
+10:33.400 --> 10:39.720
+simple example, but actually a very real example. Let's assume that you are at a gate and at
+
+10:39.720 --> 10:46.280
+the gate is a bar that can be in three possible positions, either the top, meaning that the
+
+10:46.280 --> 10:51.960
+bar has been raised, at the bottom or somewhat in the middle, meaning that the bar is either
+
+10:51.960 --> 10:59.880
+raising or lowering. Now, there is a sensor that tells us if the car is in front of the
+
+10:59.880 --> 11:07.560
+bar or if the car has just passed through the bar. And the gate can take the following
+
+11:07.560 --> 11:15.000
+actions. It can raise the bar, lower the bar or do nothing, waiting, for example, for
+
+11:15.000 --> 11:20.920
+the next car. Now, as you can imagine, we want a behavior that looks something like
+
+11:20.920 --> 11:27.560
+if a car wants to enter, then the bar should go up. In reality, it will be more complicated.
+
+11:27.560 --> 11:33.760
+Most likely we need to enter a ticket or something. But let's assume that this is free parking.
+
+11:33.760 --> 11:39.120
+The only thing is that you want to regulate the rate at which new vehicles enter the parking.
+
+11:39.120 --> 11:44.800
+The gate has to stay open until the car has gone through the gate. And finally, the gate
+
+11:44.800 --> 11:51.440
+has to lower the bar once the car has gone through the gate. So how do we model this
+
+11:51.440 --> 11:56.720
+behavior by using a state machine? Well, first of all, we have to introduce the notion of
+
+11:56.720 --> 12:03.520
+states. And here there is some freedom. I mean, we can specify a state machine in many
+
+12:03.520 --> 12:07.520
+different ways. Obviously, you would like to have a state machine where the number of states
+
+12:07.520 --> 12:14.320
+is as small as possible. Copy occupies less memory, but most importantly is easier to
+
+12:14.320 --> 12:20.640
+understand and easier to verify its correctness. But having said that, sometimes there is some
+
+12:20.640 --> 12:27.520
+flexibility. So coming up with good set machines is actually an art. So in this case, it's quite
+
+12:27.520 --> 12:35.040
+simple. So the states, you can think of them as being waiting for the next car, raising the bar,
+
+12:35.040 --> 12:40.640
+the bar has been raised, or we're logged in the bar. So four states. Inputs are a little bit more
+
+12:40.640 --> 12:47.040
+complicated. And again, here you can see how there is some freedom. The key question is that machines
+
+12:47.040 --> 12:50.960
+is trying to find a minimal representation in terms of states and inputs that produce a
+
+12:50.960 --> 12:58.240
+desired behavior. More on this later. But in this case, we choose to use as inputs the no car at gate,
+
+12:58.240 --> 13:04.080
+car at gate, gate at top, not gate at top, gate at bottom, no gate at bottom, car just exited,
+
+13:04.080 --> 13:11.120
+no car just exited. And then the output, think of this as a sort of a display that the gate is
+
+13:11.120 --> 13:18.720
+given to the driver or any bystander, is whether the gate is raised, lowered, or not. Not means
+
+13:18.720 --> 13:33.760
+no operation. So we're just waiting for the next car. So there is no car at gate.
+
+13:33.760 --> 13:38.480
+You only get one of those inputs per time set, or do you get multiple of those inputs per time set?
+
+13:38.480 --> 13:44.320
+No, you get, so in a given state, you have one input only that allows you to go to the next state.
+
+13:45.200 --> 13:50.960
+Yeah. So when the gate is at top, the car has to be there. Otherwise,
+
+13:51.920 --> 13:54.640
+the gate will be not at top. And that's exactly what the state machine.
+
+13:55.200 --> 13:56.240
+Maybe something messed up.
+
+13:56.240 --> 14:04.560
+Yeah, that's a very good point. So when you analyze the state machines, usually you also
+
+14:04.560 --> 14:11.440
+have to introduce additional states that then capture the notion that there is some anomaly.
+
+14:12.080 --> 14:18.240
+Like, for example, here the idea, as we will see in the state machine, is that we are constantly
+
+14:18.240 --> 14:24.400
+polling the sensor to check whether there is a car. What if the sensor is not returning any value?
+
+14:24.400 --> 14:28.160
+We're not capturing that here. But in principle, we should capture that.
+
+14:28.160 --> 14:32.400
+And that will lead us into another state that we don't have here for simplicity,
+
+14:32.400 --> 14:38.560
+which is we have an anomaly. Or what if we have some inconsistency in
+
+14:40.400 --> 14:45.520
+the states that we observe? Absolutely. But for simplicity here, I just want to convey the notion
+
+14:45.520 --> 14:50.880
+of what the basic state machine looks like. So the state machine then, as I said, is represented
+
+14:50.880 --> 14:57.120
+as a graph where nodes are the states, and then the arcs are leveled by the input
+
+14:57.680 --> 15:01.920
+that triggers the transition from a given state to the next one, and the corresponding level.
+
+15:02.560 --> 15:10.800
+Like, for example, if you're waiting, we constantly poll a sensor. If the input is not
+
+15:10.800 --> 15:17.360
+car at gate, then we do nothing, and the level is no operation. If instead there is a car at gate,
+
+15:18.000 --> 15:23.440
+then the level is raised, and we go into the state where we are in raising mode.
+
+15:24.400 --> 15:34.560
+Then we constantly poll the sensor to measure the angle of the gate. If the gate is not at top,
+
+15:35.280 --> 15:41.840
+keep raising it. Basically do nothing. Well, actually keep raising it. And once we're at top,
+
+15:41.840 --> 15:48.720
+we transition into the state that says raised. Say that we poll the sensor every second or so.
+
+15:49.280 --> 15:55.520
+And then again, we have these loops waiting for the car to go through, or once a car goes through,
+
+15:55.520 --> 16:00.160
+then we go into the lowering, then it takes some time to go into lowering, and then we go back to
+
+16:00.160 --> 16:05.600
+the waiting. What are the tricky things that can happen? Like, for example, maybe there is a car
+
+16:05.600 --> 16:12.000
+that is tailgating, and the sensor has not detected that. So we might have a car that is
+
+16:12.000 --> 16:16.320
+going through where the bar is lowering, and in the state machine we have no provision to handle
+
+16:16.320 --> 16:22.800
+that gate. So you can see how immediately state machines can become quite complicated. You might
+
+16:22.800 --> 16:29.600
+find the failure modes that maybe you do not consider when you first design a state machine.
+
+16:29.600 --> 16:33.360
+So that machine is actually, architecting a state machine is a bit of an iterative process.
+
+16:34.000 --> 16:40.960
+The state machine, you test what happens. Most likely you forgot to account for some failure
+
+16:40.960 --> 16:48.640
+mode. You add new states, new inputs, new outputs, and you keep iterating. And we'll see, even though
+
+16:48.640 --> 16:55.200
+again, state machines are not the sexiest, most popular topic in robotics. You'll see that when
+
+16:55.200 --> 17:01.360
+there are open source projects, many of the complaints or open tickets are about the behavior
+
+17:01.360 --> 17:09.040
+of the underlying state machine. And then we'll give an example later on. Now, state machines
+
+17:09.040 --> 17:15.440
+allow us to specify the behavior for a very broad class of tasks we're interested in,
+
+17:16.080 --> 17:22.640
+but not for everything. Like, for example, let's assume that we want to devise a state machine that
+
+17:22.640 --> 17:30.560
+tells us whether a given string of arbitrary length has a number of parentheses that is
+
+17:30.560 --> 17:35.120
+balanced, meaning that you have an equal number of opening parentheses and equal number of closing
+
+17:35.120 --> 17:45.120
+parentheses. Simple task, right? Now, the problem is that we're saying here that the string can be
+
+17:45.120 --> 17:52.720
+of equal length. And so you might have cases whereby you keep counting and you have a certain
+
+17:52.720 --> 17:56.240
+number of parentheses and a bigger number of parentheses that are opening, bigger number of
+
+17:56.240 --> 18:01.360
+parentheses that are closing. The problem is that, as you may try to convince yourselves,
+
+18:01.920 --> 18:07.760
+is that devising a state machine for this task will require an infinite number of states, which
+
+18:07.760 --> 18:11.760
+is in contrast to our assumption of a finite state machine where we have a finite number of states.
+
+18:13.360 --> 18:20.240
+And in reality, it turns out, and here it will be quite brief, that the state machine are a
+
+18:20.240 --> 18:26.640
+computational method in order to specify behaviors. But in terms of its modeling power,
+
+18:26.640 --> 18:34.560
+they're quite low in the stack of the possible tools that you will be using.
+
+18:34.560 --> 18:38.880
+Turing machine, if you're aware of it, is basically at the top in terms of
+
+18:41.520 --> 18:45.760
+modeling computational power. Finite state machines are more or less at the bottom of the ladder.
+
+18:46.560 --> 18:49.760
+Having said that, are still very useful and widely used.
+
+18:52.320 --> 18:59.680
+All right, so the concept of a state machine is relatively simple. But as I already mentioned,
+
+19:00.400 --> 19:06.480
+a key challenge is how to architect them in a way that they are not overly complex.
+
+19:07.200 --> 19:12.320
+And second of all, they're correct. One of the most basic tasks that
+
+19:12.400 --> 19:21.760
+one has to deal with when architecting a state machine is try to reduce the number of states
+
+19:21.760 --> 19:28.080
+in your state machine without losing any behavior that you would like the state machine to generate.
+
+19:29.280 --> 19:36.160
+Now, there are different ways of architecting a state machine in a principal way. The first way
+
+19:36.720 --> 19:43.280
+that deals with the problem of reducing the number of states encompasses a set of algorithms that
+
+19:43.280 --> 19:48.960
+take as an input a state machine and as an output produces a state machine that produces the state
+
+19:48.960 --> 19:53.920
+behavior, but with a number of states it is minimized. Basically, the idea is to remove
+
+19:53.920 --> 20:01.520
+redundant states. And we'll see an example in a second. A second approach for architecting a
+
+20:01.520 --> 20:07.600
+state machine in a principal way is to use hierarchical decompositions, whereby you put
+
+20:07.600 --> 20:13.840
+together some states into super states and this hierarchical composition allows you to
+
+20:13.840 --> 20:18.560
+better understand the behavior of the whole system without losing any information.
+
+20:19.760 --> 20:25.360
+And finally, using some common design patterns in order to architect state machines in a way
+
+20:25.360 --> 20:30.720
+that is as modular as possible. First of all, in order to have interpretability. Second of all,
+
+20:30.720 --> 20:34.960
+in order to possibly swap different modules if you want to update some part of your autonomy stack.
+
+20:36.320 --> 20:42.320
+So let's look first at the notion of reducing the number of states of a state machine.
+
+20:43.200 --> 20:50.400
+So the idea of, and there are different ways to do it, but the idea is to identify combined states
+
+20:50.400 --> 20:56.480
+that have equivalent behavior in an effort to reduce the size of a state machine. Equivalent
+
+20:56.480 --> 21:03.040
+states, broadly speaking, are those states that produce the same output and for all input
+
+21:03.040 --> 21:10.160
+combinations, they transition to the same states or equivalent states. So basic idea is if by
+
+21:10.160 --> 21:15.760
+mistake, and that happens when state machines become very complex, you have redundant states,
+
+21:16.400 --> 21:21.280
+you duplicate states, you try to remove them. So there are different algorithms to do that,
+
+21:21.280 --> 21:28.720
+but one of the most, one of the simplest ones proceeds by first placing all states into
+
+21:29.520 --> 21:34.000
+an equivalent class of states. This is, of course, a coarse simplification. It means that
+
+21:34.960 --> 21:38.560
+you start with the hypothesis that your state machine can be modeled with a single state,
+
+21:39.520 --> 21:47.360
+which in general is not true. And then you start partitioning this coarse state by dividing into
+
+21:47.360 --> 21:54.400
+sub-partitions of states that are not equivalent to each other. And particularly the way to do it
+
+21:54.400 --> 22:01.280
+is to partition this initial set based on how to behavior, meaning states that produce different
+
+22:01.280 --> 22:07.920
+outputs should belong to different classes, they are not duplicates. And second, you continue
+
+22:07.920 --> 22:16.720
+partitioning the superset by forming subsets that transition to different states. So the
+
+22:16.720 --> 22:22.160
+idea is that you have a big state machine, you collapse everything into one state that in general
+
+22:22.160 --> 22:28.320
+is too coarse, and then you start partitioning. We're going to see an example. The good news is
+
+22:28.320 --> 22:34.960
+that these algorithms are relatively fast. Let's see an example. So here the task is to
+
+22:36.720 --> 22:46.160
+detect a given sequence. Basically, we are given as an input a sequence of 0, 1 numbers. We want
+
+22:46.240 --> 22:52.640
+for the state machine to output after it has seen the third number, whether one of those two
+
+22:52.640 --> 23:00.400
+sequences have been detected. So if you give us an input sequence to the state machine 0, 1, 0,
+
+23:00.400 --> 23:09.200
+it should output true. I recognize it. And we symbolize that with a 1. If we see instead 1, 1, 0,
+
+23:10.160 --> 23:17.040
+we should also output 1. If we see any other three number, three digit sequence,
+
+23:17.040 --> 23:22.880
+we should output false. We have not recognized that sequence. So how would you design a state
+
+23:22.880 --> 23:31.200
+machine for this problem? Well, the most obvious way is to consider a tree structure whereby
+
+23:31.760 --> 23:38.800
+you start at a state s of 0. That's an initial state. At this initial state,
+
+23:38.800 --> 23:44.480
+you can see two possible inputs, either the digit 0 or the digit 1. This will be the first
+
+23:44.480 --> 23:55.280
+digit in the sequence. So if you see 0, then you go into a new state. And if you see 1, then you
+
+23:55.280 --> 24:03.280
+go into the other state, s2. Then you get to serve the second digit. So again, you split into two
+
+24:03.280 --> 24:18.880
+possible states, s3, s4, s5, s6. So this is if you get as an input 0, this is if you get as input 1,
+
+24:18.960 --> 24:26.960
+input 0, input 1. Now we want to detect input sequences 0, 1, 0 or 1, 1, 0.
+
+24:31.600 --> 24:35.840
+So in the third, we consider further the third digit.
+
+24:38.880 --> 24:43.280
+So this will be 0, this will be 1, this will be 0, this will be 1, this will be 0,
+
+24:43.280 --> 24:47.440
+this will be 1, this will be 0. These numbers are the inputs that I observe.
+
+24:49.360 --> 24:57.920
+And then finally, we reset the state machine to, again, the initial state at 0. After we've seen
+
+24:57.920 --> 25:03.840
+three digits, either we recognize the sequence or not, whatever, we go through the initial state.
+
+25:04.560 --> 25:11.600
+Now, here we have just to specify the behavior in terms of state input next state mapping.
+
+25:11.600 --> 25:17.280
+What about the outputs? Well, we want to detect a sequence at either 0, 1, 0 or 1, 1, 0. Let's
+
+25:17.280 --> 25:23.440
+consider 0, 1, 0. The sequence 0, 1, 0 will be detected if we are in this following path.
+
+25:24.320 --> 25:31.120
+So if we had this transition, then we output 1, which means that we've seen the sequence,
+
+25:31.120 --> 25:33.440
+but all the other transitions should output 0.
+
+25:37.040 --> 25:45.120
+While for 1, 1, 0, it means that we are here. So here we output 1, but here we output 0, 0, and 0.
+
+25:45.120 --> 25:53.760
+Does it make sense? So this is a state machine that would detect a sequence at 0, 1, 0 or 1,
+
+25:53.760 --> 26:02.880
+1, 0. I would say that the sequence is 0, 0, 0 as an input. So I start here, first digit brings me
+
+26:02.880 --> 26:13.440
+to S1, second digit brings me to S3, second digit brings me to the initial state, and it outputs at
+
+26:13.440 --> 26:16.320
+0, which means that this sequence was not recognized. Yeah?
+
+26:18.320 --> 26:26.320
+Instead from S1 down to the S3, S4, just to go to S2, because that's also the state 1.
+
+26:28.480 --> 26:33.760
+If you go from S0 to S1, that's taking a 0, and you know the state S.
+
+26:33.760 --> 26:36.400
+That's exactly right. And that's the point of this example.
+
+26:37.280 --> 26:40.160
+This is the most trivial way of setting up the state machine,
+
+26:40.800 --> 26:45.440
+but it uses a number of states that is not minimal. Actually, we can find a state machine
+
+26:45.440 --> 26:51.920
+that produces the same desired behavior with a lower number of states. And as you correctly
+
+26:51.920 --> 27:00.400
+mentioned, notionally, S1 and S2 do not need to be split, because they capture the same notion.
+
+27:01.040 --> 27:06.720
+So they could be actually put together as equivalent states. And that's exactly what
+
+27:06.720 --> 27:13.360
+the algorithm does. What the algorithm does is to start by putting all states
+
+27:14.080 --> 27:21.040
+into an equivalent class of state. So essentially we're saying, let's try to see if actually we can
+
+27:21.040 --> 27:24.560
+run the state machine with the same input output behavior with only one state.
+
+27:25.440 --> 27:28.880
+But in general, this is not true. And in particular, the first way to split
+
+27:29.760 --> 27:39.360
+this partitioning is to note that states S6 and S4 produce as an output something that is different
+
+27:39.360 --> 27:48.320
+from the other states. So obviously, we needed to split this partition into two equivalent classes.
+
+27:49.760 --> 27:56.240
+Now, the question is, can I then use these two states in order to craft the state machine,
+
+27:56.240 --> 28:03.360
+or in order to keep splitting? Well, we have to see again if indeed all the states here belong
+
+28:03.360 --> 28:10.320
+to the same equivalent class, or actually they model different behavior. Well, let's first see
+
+28:11.920 --> 28:22.560
+the next state behavior. So in case of S0, S0 goes to S1, S2. So the same partition.
+
+28:23.360 --> 28:31.120
+Okay, so that's fine. S3 goes to S0 that belongs to this partition, and S5
+
+28:31.120 --> 28:39.520
+goes to this partition. So these are compatible with this partition. But S1 goes to either S3 or
+
+28:39.520 --> 28:45.200
+S4. But S4 belongs to the other partition. So actually, it does not belong to this partition,
+
+28:45.200 --> 28:50.880
+I have to introduce a new class. And then I keep going. And as a result, if I do this algorithm,
+
+28:50.880 --> 28:56.000
+and one should do a proof that actually this algorithm produces the right results,
+
+28:56.000 --> 29:03.200
+I find the four states that allow me to specify the state machine. In particular,
+
+29:03.200 --> 29:07.600
+the state machine in terms of those four states looks like this, which is basically
+
+29:07.600 --> 29:16.480
+what you were saying. So we go from S0, no matter what output, I say x, x means that the output,
+
+29:16.480 --> 29:25.120
+no matter what input, x means that the input can be either 0 or 1. We go to S1 prime.
+
+29:26.720 --> 29:32.640
+This will be the set, the modest equivalent class, S1, S2, exactly what you were saying.
+
+29:33.520 --> 29:39.440
+Then from S1 prime, we can go to S3 prime or
+
+29:39.440 --> 29:56.800
+S4 prime. Then from S3 prime, we go, no matter what the input, to S0. So there is that.
+
+29:56.800 --> 30:09.360
+Well, from S4 prime, in the case of the input 1 and 0, we also go to the reset. But in the
+
+30:09.360 --> 30:20.640
+case of input 1, also in the case of input 0, we output 1. Otherwise, we output 0.
+
+30:20.640 --> 30:27.840
+So let's see if this reduced state machine produces the same behavior. Like, for example,
+
+30:27.840 --> 30:34.960
+let's assume that we want to detect 0, 1, 0. So whatever the first digit, we go to S1 prime,
+
+30:34.960 --> 30:40.800
+exactly what you were saying. Also, this is 0, this is 1. If we get 1, we go into this state here.
+
+30:41.840 --> 30:45.520
+And then if we get 0, we output 1. We have recognized this sequence.
+
+30:45.520 --> 30:55.680
+So let's look at 1, 1, 0. We go to S1, we go to here. Again, we see S0, so we output 1.
+
+30:55.680 --> 30:58.640
+So we have recognized this sequence. Everything else will be recognized as
+
+31:00.640 --> 31:02.160
+another sequence, so not recognized.
+
+31:03.920 --> 31:09.120
+I thought in the previous slide, it was written that this algorithm will take polynomial time.
+
+31:09.200 --> 31:18.000
+But if you have to generate the tree and then kind of split from the tree outwards,
+
+31:18.000 --> 31:20.400
+would that be a polynomial explanation?
+
+31:20.400 --> 31:23.600
+Yeah, I mean, it's polynomial in a number of states.
+
+31:24.480 --> 31:27.680
+So the polynomialities refer to the number of splittings.
+
+31:30.080 --> 31:33.200
+No, the generation of the tree is something that you have done,
+
+31:33.200 --> 31:36.800
+but it's not part of the algorithm. So now there should be proof to show
+
+31:36.800 --> 31:40.560
+that actually this algorithm is correct. Turns out it is correct, and there are tools out there
+
+31:40.560 --> 31:46.960
+to take a state machine as an input and produce one with minimal dimensionality, which is pretty
+
+31:46.960 --> 31:54.800
+cool. Another way, and here we'll be quite brief, of probably architecting a state machine
+
+31:54.800 --> 32:03.040
+is to introduce hierarchical decomposition, whereby basically you aggregate states into
+
+32:03.040 --> 32:08.960
+super states, and then you have transition in between super states. This is basically to have
+
+32:08.960 --> 32:15.200
+more interpretability for your system. Again, there are tools out there, but I won't go into
+
+32:15.200 --> 32:21.760
+further details. And finally, a principal way of architecting a large state machine
+
+32:21.760 --> 32:29.120
+is try to modularize it. So to have small state machines that take care of individual behaviors,
+
+32:29.120 --> 32:34.560
+and then you compose them according to some basic operations. The three basic
+
+32:34.560 --> 32:39.920
+operations entail sequential decomposition, whereby the output of one of the state machines
+
+32:39.920 --> 32:45.680
+becomes input for the next one. Of course, here we're assuming that the output vocabulary for
+
+32:45.680 --> 32:49.280
+the first state machine corresponds to the input vocabulary for the second state machine.
+
+32:52.720 --> 32:56.880
+This is the so-called cascade combination. You can also do a parallel combination,
+
+32:57.520 --> 33:01.600
+whereby the assumption is that the input vocabulary for the two state machines is the
+
+33:01.600 --> 33:05.920
+same, and then the output is simply the concatenation of the two outputs.
+
+33:09.600 --> 33:14.800
+And again, here's not much magic, it's more like a design pattern. Try to think in a modularized way
+
+33:14.800 --> 33:23.360
+in order to ease the convection certification process. And finally, the feedback construction,
+
+33:23.360 --> 33:30.480
+whereby the output is fed back as an input. This is, for example, used in order to
+
+33:31.120 --> 33:36.320
+have counters or this kind of state machines. All right, so
+
+33:40.000 --> 33:48.080
+state machines, as I already said, are relatively easy to grasp. But designing good state machines
+
+33:48.080 --> 33:55.120
+is remarkably hard. So now one of my PhD students, Pinoy, is going to give you some hands-on
+
+33:56.720 --> 34:02.960
+guidelines about how to properly design a state machine. In particular, as it is in the spirit
+
+34:02.960 --> 34:08.720
+of this class, we are going to introduce a tool that is available within the ROS environment
+
+34:08.720 --> 34:11.360
+that allows you to design state machines in ROS.
+
+34:12.320 --> 34:12.820
+OK?
+
+34:19.040 --> 34:19.920
+You had his rights, right?
+
+34:19.920 --> 34:20.640
+Sorry?
+
+34:20.640 --> 34:21.280
+You had his rights?
+
+34:21.280 --> 34:25.840
+Yeah. I should probably get through this.
+
+34:25.840 --> 34:26.400
+I had the mic.
+
+34:31.680 --> 34:34.640
+All right. OK, so just bear with me for a second.
+
+34:34.640 --> 34:42.160
+Sweet. OK. So thank you, Marco, for the interest. Yeah, so for those who don't know me, I'm
+
+34:42.160 --> 34:48.080
+Pinoy. I'm one of Professor Pavone's PhD students. And so, yeah, we'll talk a little bit about
+
+34:48.080 --> 34:52.800
+implementing these state machines. And we'll look at code, which I think is exciting. So
+
+34:52.800 --> 34:57.440
+we'll look a little bit at kind of, practically speaking, how we can leverage some of these tools.
+
+34:58.240 --> 35:06.560
+And, yeah, so first, basically a common strategy. So, yeah, let's just backtrack a little bit for
+
+35:06.560 --> 35:11.760
+one second. Basically, what I'm going to try to convey in this section is a couple of things.
+
+35:11.760 --> 35:18.160
+So first, make it clear that all the tools that I'm presenting here are optional. So unlike a lot
+
+35:18.160 --> 35:23.840
+of things when you're designing your robot, you don't have to actually use a tool for, like,
+
+35:24.320 --> 35:29.280
+an existing tool to design your state machine. But it is nice to know that there are
+
+35:29.280 --> 35:33.520
+both existing tools out there to help you. And there's also not only existing tools,
+
+35:33.520 --> 35:38.640
+but very, very common ways of implementing it that you should get kind of more familiar with.
+
+35:38.640 --> 35:44.160
+Mostly because, chances are, if you join, like, Zoox or Waymo, one of the first thing you'll have
+
+35:44.160 --> 35:48.720
+to do is just look at their ginormous code base and then try and navigate your way around and find
+
+35:48.720 --> 35:53.040
+where their, basically, state machine is. And so there's a lot of, kind of a lot of this that
+
+35:53.040 --> 35:57.920
+you'll probably have to do. So recognizing the kind of, like, usual patterns is a good thing.
+
+35:58.640 --> 36:02.800
+So yeah, so one of the thing that most people do for is to leverage, basically,
+
+36:02.800 --> 36:07.600
+object-oriented programming. I mean, everyone does this nowadays. So you basically will build,
+
+36:07.600 --> 36:12.800
+like, a class that will kind of abstract your state machine. And that class is going to keep
+
+36:12.800 --> 36:16.480
+track, for example, I mean, a common way is to keep track of kind of your state and, for example,
+
+36:16.480 --> 36:23.440
+like, a variable that stays in that class. And then you'll have some sort of fixed rate that
+
+36:23.440 --> 36:28.160
+will, you'll have some sort of method that will be run at some fixed rate that will update your
+
+36:28.160 --> 36:34.160
+state, update your transition, get your inputs, do all the kind of transitions that you need to
+
+36:34.160 --> 36:40.240
+actually run your state machine. We'll look at things a little bit more concrete, just to give
+
+36:40.240 --> 36:47.840
+you a sense. So this is the state machine for the flight mode of PX4. So for those who don't know
+
+36:47.840 --> 36:53.600
+what PX4 is, it's basically one of the most popular, probably the most popular open source
+
+36:54.640 --> 37:00.480
+flight software for drones. So it can do quadrotors, fixed rings, a lot of things. So if
+
+37:00.480 --> 37:07.120
+you ever have to fly a robot, you probably will find out about PX4. And so one of the things that
+
+37:07.120 --> 37:11.600
+they have in their documentation to just kind of convince you that this is, you know, these ideas
+
+37:11.600 --> 37:15.680
+of finite state machines actually being relevant is that basically that their transition diagram
+
+37:15.680 --> 37:20.880
+for their flight modes. And there's a lot of care that goes into this and making sure that it's
+
+37:20.880 --> 37:25.520
+simple and making sure that it also reflects the code properly or that the code that you're
+
+37:25.520 --> 37:29.760
+implementing reflects the state machine properly. But yeah, it just gives you a sense, for example,
+
+37:29.760 --> 37:33.040
+in this, like, they have the different flight mode that they describe as, you know, for example,
+
+37:33.040 --> 37:37.280
+RTL is returned to land. Then it tells you that, you know, you have a state that corresponds to
+
+37:38.240 --> 37:45.120
+being landed or to landing. And then you have a state that corresponds to loitering,
+
+37:45.120 --> 37:50.000
+which is just like kind of staying in the air. So if you go look at kind of any existing
+
+37:50.640 --> 37:57.600
+robotics stack that runs on robot, chances are you will be able to find a finite state machine
+
+37:57.600 --> 38:03.280
+diagram like this. And we'll look a little bit, so, and then if you go look in the actual code,
+
+38:03.280 --> 38:08.640
+so I'll go around a little bit and try to find a little bit kind of the specific lines of what
+
+38:08.640 --> 38:13.760
+I'm talking about. So if you look in the PX4 flight stack, they'll have a file, for example,
+
+38:13.760 --> 38:19.760
+commander.cpp. That's just like a C++ file that essentially has this for loop that I'm talking
+
+38:19.760 --> 38:24.400
+about. So in that class, you have a for loop that gets executed, and you can think of this as, like,
+
+38:24.400 --> 38:28.320
+the main loop of the robot, of the drone that's flying. It's just going to execute that at some
+
+38:28.320 --> 38:33.360
+fixed rate. And then do, inside that loop, do all this state transition among a different state
+
+38:33.360 --> 38:38.720
+that you need. And it's, the state machine abstraction is helpful enough, was it helpful
+
+38:38.720 --> 38:44.640
+enough to, like, the hundreds of developers on PX4 that they, you know, they have abstracted that as,
+
+38:44.640 --> 38:50.160
+like, kind of a helper function. So they even, if you just go and kind of try to track how they're
+
+38:50.160 --> 38:53.760
+actually implementing a state machine, they have, like, their dedicated tools to just do that.
+
+38:54.400 --> 38:58.480
+And so you go look at, for example, in their state machine implementation, they'll have something
+
+38:58.480 --> 39:06.320
+that will check, you know, for a given state. If, like, the given input was, in that case,
+
+39:06.320 --> 39:13.520
+it's asking it to change the navigation mode into acro mode, then it will try to update the vehicle
+
+39:13.520 --> 39:17.600
+status to say that you're in acro mode. So this is obviously, like, very simple. Usually you do,
+
+39:17.600 --> 39:21.280
+like, I mean, this implies, this actually triggers a whole bunch of other things, but this is, like,
+
+39:21.280 --> 39:26.560
+the simplest version you can think of a transition. For those who are curious, acro mode is the ones
+
+39:26.560 --> 39:30.240
+that people used to do backflips and things, so you might not want to trigger it by accident.
+
+39:31.520 --> 39:36.720
+If you go look, so something that Professor Pavone mentioned, I was kind of curious to see
+
+39:36.720 --> 39:42.640
+how mature their state machine was, and on PX4, and see if you just go look at, like, the issues
+
+39:42.640 --> 39:49.760
+on their state machine for, for PX4. There's a lot of them that are still open. There's about,
+
+39:49.760 --> 39:56.640
+yeah, about, like, 14 or 15 with very intense discussions and back and forth with 24 comments
+
+39:56.640 --> 40:01.600
+and people screaming at each other about how it's the right way of doing this. So it's very
+
+40:01.600 --> 40:05.600
+interesting, and it's all open source, so if you're curious, and if you want to help out designing
+
+40:05.600 --> 40:11.120
+this, feel free to jump in. There's another implementation of the state machine, of a state
+
+40:11.120 --> 40:16.960
+machine that you probably have seen. Have you guys looked at navigator.py in the homework? You have?
+
+40:16.960 --> 40:21.760
+Okay, sweet. So that's your state machine, right? And it's, like, the simplest probably
+
+40:21.760 --> 40:24.880
+state machine you could possibly come up with for a robot that does something interesting.
+
+40:25.440 --> 40:30.960
+But if you go look at just how it's implemented, you basically have, right, you have this run
+
+40:30.960 --> 40:36.720
+function, and then in that, your run function, you have a bunch of LF statements, which gives you,
+
+40:37.600 --> 40:41.760
+tells you basically, you know, given that you're a certain mode, so a mode in our case would probably
+
+40:41.760 --> 40:46.720
+corresponds to a state, right, of our state machine. It will check different things, whether,
+
+40:46.720 --> 40:49.920
+for example, you're aligned or whether you're near your goal, and then it will switch your,
+
+40:49.920 --> 40:57.840
+your mode in the right, to the right mode. Okay, let's talk a little bit more about ROS,
+
+40:58.720 --> 41:05.920
+like ROS tools specifically for state machines. So something that you might not know is that ROS
+
+41:05.920 --> 41:12.400
+actually comes with, yeah, a tool that allows you to do that. So that's also one of the reasons
+
+41:12.400 --> 41:17.760
+why we teach, I guess, like, the concept of state machine is because, you know, at the beginning of
+
+41:17.760 --> 41:21.360
+the class, we basically explained that ROS comes with all these tools that do all these magic
+
+41:21.360 --> 41:26.560
+things that you can leverage. That's only true if you can cast your problem to the format that
+
+41:26.560 --> 41:32.800
+those tools want, right? And so if you can think of your problem in terms of, like, designing a
+
+41:32.800 --> 41:37.520
+formal state machine, then DAL actually allows you to use some of these tools. So the part that
+
+41:37.520 --> 41:40.080
+you understand kind of, like, the first part of that lecture, so you can think of your problem,
+
+41:40.080 --> 41:44.240
+okay, you recognize it, that this, I'm designing a finite state machine right now, and then maybe
+
+41:44.240 --> 41:48.480
+it's, like, worth for me to think about, like, the transitions and the actual, like, formalism of it,
+
+41:48.480 --> 41:55.600
+so then you can use tools like SMAC, which stands for state machine, and then, and then, yeah,
+
+41:55.600 --> 41:59.840
+kind of have, like, a whole bunch of tools with that. So not only does it allow you to kind of
+
+41:59.840 --> 42:04.160
+implement this in, like, a very clean way, in an abstract way, and if you actually use SMAC,
+
+42:04.160 --> 42:08.960
+then it also comes with visualization tools, so you can monitor your state machine so that you can,
+
+42:08.960 --> 42:12.880
+you know, share your state machine amongst each other, or even, like, include it in a
+
+42:12.880 --> 42:18.560
+report, on that final report, for example. So we'll go a little bit into, like, how SMAC works,
+
+42:18.560 --> 42:25.520
+the basic syntax, and we'll look at code as a promise. So the SMAC, like, framework
+
+42:26.080 --> 42:32.720
+is, basically comes with, like, these two main components, which are basically state and
+
+42:32.720 --> 42:38.240
+containers. So a container, you can think, so a state is a state, I mean, exactly what you'd
+
+42:38.240 --> 42:43.280
+expect it to be. A container is, for example, a finite state machine. So they have a slightly
+
+42:43.280 --> 42:48.240
+more generic version of what a state machine is, just because they do kind of fancier things with
+
+42:48.240 --> 42:53.120
+it, but you can think of, yeah, a container as a state machine, and, and I'll explain how you can
+
+42:54.000 --> 43:00.480
+use that later. So the state, basically, yeah, so the state corresponds one-on-one with the state
+
+43:00.480 --> 43:05.440
+that we described earlier. You, basically, when you implement state, and I'll show you example
+
+43:05.440 --> 43:12.160
+code of this, you'll inherit from SMAC that state, which basically only requires you,
+
+43:12.160 --> 43:16.800
+so Python has no way of actually enforcing you to do that, but you should implement two functions,
+
+43:16.800 --> 43:22.560
+which is the constructor, and then the execute function, which will basically execute the state.
+
+43:23.760 --> 43:27.440
+And then the requirement is that you execute returns outcomes.
+
+43:29.120 --> 43:35.840
+Let's, yeah, okay, so this basic syntax, literally, you know, taken from the documentation, a lot of
+
+43:35.840 --> 43:39.760
+this is online, so we're just going to walk through some of this, so that we can, you know, if you have
+
+43:39.760 --> 43:45.840
+questions, you can just ask. And so, as I said, basically, you'll have the constructor, you can do
+
+43:45.840 --> 43:49.680
+kind of arbitrary initialization, which you'll have, the important thing is that when you, in your
+
+43:49.680 --> 43:54.400
+constructor, you'll want to define what the potential outcome of your state is, you'll see
+
+43:54.400 --> 43:58.880
+where the outcome come in. Basically, you can think of outcome, like a common outcome would be,
+
+43:58.880 --> 44:02.800
+like, success or failure, so let's say you're running a state, and you have, like, a success,
+
+44:02.800 --> 44:08.880
+successful outcome, or a, like, failure outcome, then that could map to, for example, a different
+
+44:08.880 --> 44:14.880
+transition. And then your execute, basically, just does what it needs to do, so do a backflip,
+
+44:14.880 --> 44:19.280
+and then outcome success or failure, for example. So pretty simple.
+
+44:22.000 --> 44:26.480
+So now the container is basically the state, the state machine, the state machine abstraction,
+
+44:26.480 --> 44:30.320
+and then what you're going to do is you're going to essentialize a container, and then
+
+44:30.320 --> 44:37.120
+you can add state to it, and then add, basically, the transition to that. So if you go look at,
+
+44:37.120 --> 44:42.720
+basically, the basic example also, so if you create a state machine, which just is that
+
+44:42.720 --> 44:46.640
+container, essentially what you'll want to do is then create, so foo in that case is, for example,
+
+44:46.640 --> 44:50.560
+the state that I just showed you, so that'd be, like, one of the state implementation,
+
+44:50.560 --> 44:54.640
+and bar would be a different state. After you've created a state machine, you would basically add
+
+44:55.280 --> 45:00.400
+two different, the two different state, foo and bar, and then you could, you'd say, okay, outcome
+
+45:00.400 --> 45:04.480
+one, which could be, for example, success, what you're going to want to do is transition back to
+
+45:04.480 --> 45:09.520
+bar, and then, you know, failure could be a different outcome. You can also map to outcomes
+
+45:09.520 --> 45:15.120
+of the state machine. It might be clearer in this diagram, actually. There we go. So what you just
+
+45:15.120 --> 45:20.640
+saw basically corresponds to this state machine, so the two state, whether the outcome one basically
+
+45:20.640 --> 45:25.040
+means that you're going to go to bar, so you can take outcome a little bit as corresponding to,
+
+45:25.040 --> 45:30.160
+like, the input formalism that we had before in the state machines, and then outcome two will do
+
+45:30.160 --> 45:34.160
+the other transition, and some of the outcomes are basically, like, outcome of the container,
+
+45:34.160 --> 45:37.760
+not of the state, but you don't really need to worry about this.
+
+45:41.280 --> 45:50.960
+Let's maybe look at the actual code of this, and then let's look at composition, and then we'll
+
+45:50.960 --> 45:56.400
+look at code. So two things, so you, all these things that we talked about, so the composition
+
+45:56.400 --> 46:02.400
+that we talked about, sequence, cascade, parallel, and feedback, sorry, they actually have basically
+
+46:02.400 --> 46:09.520
+one-on-one correspondence with smack, basically, a container. So what you can do is you can create
+
+46:09.520 --> 46:13.760
+basically containers, like a sequence container, which is basically you're going to give it, like,
+
+46:13.760 --> 46:16.960
+two state machine, and you're going to basically, that state machine, the resulting state machine
+
+46:16.960 --> 46:21.520
+is now, like, the cascaded version of the state machines, and you can look up in the, I won't,
+
+46:22.480 --> 46:25.920
+you know, we're not going to go into too much of details of the syntax for this, but just
+
+46:25.920 --> 46:30.320
+suffice to know that, you know, if you can break down your state machine and kind of that with
+
+46:30.320 --> 46:35.280
+these different patterns, then it makes it super easy to use smack and design the overall state
+
+46:35.280 --> 46:39.040
+machine. And the other thing, we'll look at visualization a little bit, but smack allows you
+
+46:39.040 --> 46:46.000
+to visualize very easily. So let's look at code because that's more fun. Okay, let's look at,
+
+46:46.000 --> 46:50.080
+like, the simple example, the foo bar, right, that we just looked at, just so that you see
+
+46:50.880 --> 46:54.080
+basically what this would look like, this would look like, does, can everyone see this?
+
+46:54.080 --> 47:00.640
+Is it, like, big enough? Okay, so this is literally just, like, the example that we had earlier.
+
+47:01.520 --> 47:07.600
+This is a state, maybe I'll start with this section here. So in our main function, right,
+
+47:07.600 --> 47:12.000
+what we're going to do is we're going to initialize our node, as we always do, then we will create a
+
+47:12.000 --> 47:16.880
+state machine container, and we'll specify, you know, those are the outcomes that are basically
+
+47:16.880 --> 47:23.280
+the outcomes of the state machine. And then, is everyone familiar with the width syntax?
+
+47:25.040 --> 47:30.240
+Probably not, right? It's, like, weird syntax. Okay, so all this does, so you have to use this for
+
+47:30.240 --> 47:36.960
+smack, but basically it defines a block that sets, like, a context, essentially. So it's very, it's
+
+47:36.960 --> 47:44.000
+really just a fancy way to, for, to tell Python to basically go look at this class, and then this
+
+47:44.000 --> 47:48.640
+class basically has a couple of functions that will set up things in the background for you,
+
+47:48.640 --> 47:55.520
+and then even if your code here fails, it will tear it down. So, like, a classic example for this
+
+47:55.520 --> 48:00.640
+is, like, a file. So you could think of, like, you could say, okay, with, like, this file opened,
+
+48:00.640 --> 48:05.440
+go write this code in the file, and then maybe your writing code fails, and you want to make
+
+48:05.440 --> 48:10.400
+sure that the file gets closed, basically, so it doesn't stay open, and your your crash program is,
+
+48:10.400 --> 48:14.880
+like, holding on to open resources on your computer, then that'll allow you to do that.
+
+48:14.880 --> 48:20.000
+But that's kind of, you kind of don't really need to understand any of this to just use it.
+
+48:20.000 --> 48:26.160
+You suffice to just, like, remember that this is how you make sure that you basically say that,
+
+48:26.160 --> 48:30.480
+like, that state machine is the state machine that all these states are being added to.
+
+48:30.480 --> 48:35.200
+So you're basically saying with state machine, I'm going to call add, so I'm going to add those
+
+48:35.200 --> 48:40.800
+two states, foo and bar, and then I'm going to execute the state machine. So executing will
+
+48:41.760 --> 48:47.760
+basically start in an initial state, and then will the first state that you added, and then will
+
+48:49.280 --> 48:53.520
+will do the transition until it exits, until there's basically no more transition to do.
+
+48:54.800 --> 48:58.560
+And we can run this code very easily, and feel free to run it yourself too.
+
+48:59.440 --> 49:00.960
+So we're just going to start a little raw score,
+
+49:03.760 --> 49:09.920
+and it will give us a bunch of very little useful info here that just telling us basically
+
+49:09.920 --> 49:16.880
+the different transition that we implemented. So it's basically telling us, you know,
+
+49:16.880 --> 49:21.360
+just a setup code. Essentially all of this is just telling us what, like, what you've just built.
+
+49:21.360 --> 49:25.360
+And then this is telling you, like, the state, so it's executing the first state foo,
+
+49:25.360 --> 49:31.200
+and then basically it's saying that foo gave the outcome, outcome one, which the state machine
+
+49:31.200 --> 49:35.040
+knows that means it needs to transition to state bar, and then as expected you're executing the
+
+49:35.040 --> 49:40.560
+state bar after. Okay, I know this is not interesting, but I will just show you something
+
+49:40.560 --> 49:45.760
+now that is probably way more interesting, because it's relevant to your final project
+
+49:45.760 --> 49:50.720
+that you will need to implement. So I think this is interesting, but maybe not an interesting
+
+49:50.720 --> 49:59.360
+example. So the, something that we can do, right, so as like I said that basically navigator l pi
+
+49:59.360 --> 50:06.560
+is a state machine, and I was curious to see if, you know, would it be possible to rewrite
+
+50:06.560 --> 50:12.080
+basically our navigator in the smack framework, and what that would kind of look like. So just
+
+50:12.080 --> 50:16.800
+having a kind of a crack at it, and this is not like the only implementation obviously you can do,
+
+50:16.800 --> 50:21.600
+but I'm going to show you a little bit what, you know, you could do for your own, for example,
+
+50:21.600 --> 50:25.760
+final project if you're trying to do something that's more complicated. So I didn't include all
+
+50:25.760 --> 50:29.600
+the states, but I included some of them, but if you were trying, for example, to implement
+
+50:29.600 --> 50:35.200
+something that does way more complicated states. So one thing that happened a lot in the previous
+
+50:35.200 --> 50:40.000
+years is people would have things like they would get stuck in a corner, and then their state
+
+50:40.000 --> 50:44.800
+machine was not, was basically just stuck there. It had like no kind of detection of the fact that,
+
+50:44.800 --> 50:50.720
+you know, their EKF was going haywire, or that their sensors were all bad. Well, really all
+
+50:50.720 --> 50:53.760
+they should have done is just, you know, reset all the localization, get to a state that just
+
+50:53.760 --> 50:58.400
+restates everything, potentially like moves backwards a little bit, and then keep going.
+
+50:58.400 --> 51:02.480
+So, you know, implementing these sort of like failsafe state can get you very, very far for
+
+51:02.480 --> 51:07.360
+the final project, and SMAC can help you do that more effectively. So if you look at just kind of
+
+51:07.360 --> 51:13.680
+what we implemented for the kind of navigation, there's basically just kind of three states,
+
+51:13.680 --> 51:17.360
+right? So waiting state, that's just like your total bot, your total bot is going to be waiting
+
+51:18.240 --> 51:22.080
+and kind of not doing like anything other than just waiting for commands.
+
+51:22.560 --> 51:27.360
+And so, you know, executing that state essentially means that all you're doing is,
+
+51:27.360 --> 51:33.920
+you know, you're sending zero velocity to your actuator. And then there's going to be another
+
+51:33.920 --> 51:40.960
+state, which is going to be the planning state. So the planning state will basically define a couple
+
+51:40.960 --> 51:45.200
+of outcomes, right? So we've successfully, which corresponds to basically whether the planner has
+
+51:45.200 --> 51:50.480
+been, what the planner thinks just happened. So the outcomes could be a success, so you've
+
+51:50.480 --> 51:56.560
+successfully computed a plan for your total bot, failure, you've received a new command that is
+
+51:56.560 --> 52:00.560
+basically giving you like a new goal, right? Or you've received a new map, which probably
+
+52:00.560 --> 52:06.880
+means you should re-plan, or you have an error, like when you computed it. So if you look at like
+
+52:06.880 --> 52:10.880
+the code inside, this looks a lot, I mean, it's basically, you know, what your like re-plan
+
+52:10.880 --> 52:15.680
+function and navigator is doing. And then we're going to have a third state, which is a tracking
+
+52:15.680 --> 52:21.120
+state. And the tracking state is going to be basically you're, you have an existing plan,
+
+52:21.120 --> 52:26.720
+and all you're doing is just kind of following it until you, until you reach the end. And I think,
+
+52:26.720 --> 52:31.440
+so the state individually, there's a lot of like, little like syntactic details here, which I think
+
+52:31.440 --> 52:38.480
+are not super interesting. But what's interesting is this, I think. So if you take time to actually
+
+52:38.480 --> 52:43.520
+write your state of your total bot in kind of this nice abstracted framework, then when you're
+
+52:43.520 --> 52:47.840
+designing your transition, they could basically just boil down to these couple of lines. And it's
+
+52:47.840 --> 52:52.960
+super clean, it's super simple, it's easy to change, modify, to do whatever you want to test.
+
+52:53.520 --> 52:58.640
+So for example, right, all I'm doing, creating a state machine, I'm saying, if you're in the
+
+52:58.640 --> 53:06.240
+waiting state, and you know, the output is like, nothing happened, then stay in the waiting state,
+
+53:06.240 --> 53:10.880
+right? But if you have a new command, if you're in the waiting state, and you're getting a new
+
+53:10.880 --> 53:15.920
+command from someone on Rvis, for example, then you should probably switch to mode planning,
+
+53:15.920 --> 53:21.440
+you should plan something. For example, or planning, if, you know, you're, if you're
+
+53:21.440 --> 53:25.920
+planning and you have a success, then you should start tracking it. Or if you have a failure,
+
+53:25.920 --> 53:29.680
+then you should probably just stop and wait, because you don't have any good plans, you should
+
+53:29.680 --> 53:34.480
+probably just hang tight. And so you can like define all these, or for example, that's like a
+
+53:34.480 --> 53:39.440
+nice little, makes it easy for you to define like, this transition without having to like,
+
+53:39.440 --> 53:43.680
+think about too much of the details, it's like, okay, I will make sure that like, that state,
+
+53:43.680 --> 53:49.760
+when it detects like, the plan is old, or the tracking state, so the state that's tracking
+
+53:49.760 --> 53:53.840
+controller, that's tracking the existing path, right? If it detects that it's old,
+
+53:53.840 --> 53:57.760
+for whatever reason, like maybe you're far from your start, or the timer has expired,
+
+53:59.040 --> 54:02.960
+then I'll just say that the plan is expired. And then like, whoever is defining the state machine
+
+54:02.960 --> 54:07.040
+is going to decide what to do. Maybe you re-plan, right? Or maybe when the plan's expired, you just
+
+54:07.040 --> 54:12.320
+like, stop and you wait. So yeah, so super easy to like, abstract and kind of think about this
+
+54:12.880 --> 54:17.680
+in like, very much like, the same framework, like some very like, theoretically grounded framework
+
+54:17.680 --> 54:22.240
+that we just talked about. So I'm going to run this and just show you something else that you
+
+54:22.240 --> 54:35.120
+can do that I think is useful. So I basically just have this launch file that's running this like,
+
+54:35.680 --> 54:39.600
+modified navigator along with like, all this simulation stuff.
+
+54:42.640 --> 54:48.960
+And then, so I have Rvis, and then what I'm also going to finish with is basically just talk about
+
+54:48.960 --> 54:55.840
+this other tool now that this allows you to do, to use, which is a visualizer, which is called
+
+54:55.840 --> 55:02.080
+smack viewer. And so if you run this, so if you install this tool, it's called smack underscore
+
+55:02.080 --> 55:08.080
+viewer, and then you can run it. Basically what it allows you to do is, without like,
+
+55:08.080 --> 55:13.440
+any additional work on your part, because you use the right formalism of state machine,
+
+55:13.440 --> 55:18.000
+and because you use the right tool, you basically get this like, nice little visualization
+
+55:18.000 --> 55:32.000
+of what your state is. And sorry, that trackpad is horrible.
+
+55:32.080 --> 55:38.320
+And now, not only does it give you a visualization to like, make sure that, you know,
+
+55:38.320 --> 55:43.600
+now you can inspect your state machine, and you can argue for hours with your teammate whether,
+
+55:44.960 --> 55:49.040
+whether, you know, the error after waiting should transition to tracking or should transition to
+
+55:49.040 --> 55:53.920
+planning. But when you're executing your state machine, for example, by giving your robot
+
+55:53.920 --> 55:59.520
+a new plan, you can actually see the state evolve on your state machine, right. So it went to
+
+55:59.520 --> 56:04.080
+tracking, so it went very quickly to planning, and then because it's super easy plan, it went
+
+56:04.880 --> 56:09.440
+to tracking almost immediately. But then, and then you knew the entire time that it was in that
+
+56:09.440 --> 56:14.720
+state. And as soon as it transitioned back to the waiting state, then, you know, so that's,
+
+56:14.720 --> 56:18.560
+I think it's a super powerful tool when you're instead of sitting there and just kind of
+
+56:18.560 --> 56:22.560
+wondering what is my turtle bot doing, just kind of trying to running over that fence,
+
+56:22.560 --> 56:26.240
+and I have no idea what's going on. Having something like smack viewer running and just
+
+56:26.240 --> 56:29.920
+telling you, oh you're in this state, looks like this transition is not being triggered,
+
+56:29.920 --> 56:34.560
+that can give you a lot of insight and it can save you a lot of time. It's also just like a nice way
+
+56:34.560 --> 56:38.560
+to document for other people jumping in and just kind of trying to figure out what you implemented
+
+56:38.560 --> 56:44.880
+over the weekend. So, so yeah, that's it. Do smack is good. There's obviously open source software,
+
+56:44.880 --> 56:49.360
+there's always little quirks here and there, but I think generally it's like basically there. We're
+
+56:49.360 --> 56:53.520
+happy to help you guys kind of figuring out how to set it up for your project if that's needed,
+
+56:53.600 --> 56:58.400
+and then smack viewer just like basically comes for free, right? It gives you awesome visualization
+
+56:58.400 --> 57:02.160
+and just like good monitoring. So yeah, that's it. If you guys have questions,
+
+57:02.160 --> 57:15.920
+I'm happy to answer anything. So yeah, so I recommend you to use smack. So traditionally
+
+57:15.920 --> 57:21.280
+what happens in the final project is that the state machine that the students architected
+
+57:21.280 --> 57:27.600
+were fairly simplistic, not accounting for failure modes and so on. And then in the
+
+57:32.000 --> 57:38.160
+rush and under pressure, it was very difficult for them to debug errors. They had this monolithic,
+
+57:38.160 --> 57:43.920
+humongous navigator.pi file, very difficult to understand what was going wrong, what type of
+
+57:43.920 --> 57:48.480
+transition was creating issues and so on. So having said that, I encourage you to be
+
+57:48.640 --> 57:54.960
+more disciplined in programming. That is one of the key learning objectives of this class.
+
+57:54.960 --> 58:00.640
+And in particular, I believe that smack is a relatively easy tool to use, but also quite
+
+58:00.640 --> 58:06.960
+powerful. So give it a try if you have time. So what we're going to do next time is then to
+
+58:06.960 --> 58:12.960
+move to the topic of decision-making and uncertainty. So for now we have been talking
+
+58:12.960 --> 58:19.120
+about uncertainty only from the perspective of localization and mapping. We're going to talk
+
+58:19.120 --> 58:27.280
+about how uncertainty can be accounted for in order to compute decisions. That will lead to
+
+58:27.280 --> 58:32.240
+the topic of Markov decision processing and in particular dynamic programming and
+
+58:32.240 --> 58:38.080
+approximate dynamic programming. Based on that, we'll have a final lecture after the Thanksgiving
+
+58:38.640 --> 58:45.600
+on reinforcement learning. Of course, it's just a preview of what you will see if you enroll in
+
+58:45.600 --> 58:53.600
+274B about the topic of learning-based perception and control. All right, so see you next time.
+

@@ -1,0 +1,3983 @@
+WEBVTT
+
+00:00.000 --> 00:08.160
+Right, so also good news for you.
+
+00:08.160 --> 00:10.840
+The hardest part of this course is over.
+
+00:10.840 --> 00:14.360
+The hardest parts of this course are the first two weeks for two reasons.
+
+00:14.360 --> 00:18.160
+One because the topic of trajectory optimization easily be complicated
+
+00:18.160 --> 00:25.560
+because it entails quite sophisticated concepts in mathematics, differential equations, and
+
+00:25.560 --> 00:26.600
+so on.
+
+00:26.600 --> 00:31.320
+From now on, the difficulty of the class is going to stay at the same level or lower.
+
+00:31.320 --> 00:36.240
+Second of all, another reason why typically the first two weeks are the hardest for this
+
+00:36.240 --> 00:42.640
+course is that at the same time you also need to get used to the tools of the trade.
+
+00:42.640 --> 00:52.340
+So basically how to use a terminal, how to revisit your knowledge of Python, and so on.
+
+00:52.340 --> 00:55.120
+So expected by now you have done all of that.
+
+00:55.120 --> 00:59.700
+So that is also going to be settled for the rest of the quarter.
+
+00:59.700 --> 01:03.240
+So if you've been fine for the first couple of weeks, you'll be enjoying the rest of this
+
+01:03.240 --> 01:05.300
+class for sure.
+
+01:05.300 --> 01:08.120
+Any questions or concerns?
+
+01:08.120 --> 01:14.080
+Any questions about the midterm?
+
+01:14.080 --> 01:16.080
+All right.
+
+01:16.080 --> 01:24.520
+So today we're going to start the first lecture of two lectures on the topic of motion planning.
+
+01:24.520 --> 01:32.040
+As I referred to and mentioned many times, motion planning can be seen as an instantiation
+
+01:32.040 --> 01:38.420
+of optimal control problem whereby we account for state constraints, complicated state constraints.
+
+01:38.420 --> 01:42.940
+In particular state constraints are in general non-convex constraints.
+
+01:42.940 --> 01:48.400
+Motion planning problem at a high level can be defined as a problem of computing a sequence
+
+01:48.400 --> 01:57.000
+of actions that drive a robot from an initial condition to a terminal condition while avoiding
+
+01:57.000 --> 02:01.880
+obstacles, respecting motion constraints, and possibly optimizing a cost function.
+
+02:01.880 --> 02:08.280
+We have already seen techniques that aim at planning motions to respect motion constraints,
+
+02:08.280 --> 02:10.200
+possibly optimizing a cost function.
+
+02:10.200 --> 02:16.160
+But so far we have not really dealt with the topic of how to handle state constraints.
+
+02:16.160 --> 02:20.560
+In particular, as I said, obstacle avoidance constraints that clearly for robotic systems
+
+02:20.560 --> 02:22.940
+are of pivotal importance.
+
+02:22.940 --> 02:26.460
+So today and on Thursday, we're going to do exactly that.
+
+02:26.460 --> 02:31.480
+In particular, the goal of today is to give an introduction to the topic of motion planning,
+
+02:31.480 --> 02:37.400
+also with a little bit of historical context, and then to learn about the most basic techniques
+
+02:37.400 --> 02:44.720
+in motion planning that are rooted in the notion of discretization and graph search.
+
+02:44.720 --> 02:49.920
+These are the very first algorithms that were introduced and are widely used in practice.
+
+02:49.920 --> 02:56.680
+For example, Mars rovers use a variant of graph search algorithms to plan the motion
+
+02:56.680 --> 03:02.120
+on the surface of Mars, a variant of D star algorithm that we will see later on.
+
+03:02.120 --> 03:05.280
+Readings for today.
+
+03:05.280 --> 03:09.800
+One of the main references for motion planning is a book by Steve LaValle, a little bit dated
+
+03:09.800 --> 03:10.800
+by now.
+
+03:10.800 --> 03:15.200
+It's from 2006, but there has been a lot of progress in the past 10 years.
+
+03:15.200 --> 03:16.400
+But still a very good reference.
+
+03:16.400 --> 03:21.320
+In particular, the material covered today is taken from chapter 6.
+
+03:21.320 --> 03:25.240
+Another very good reference is a book from Dimitri Bersekas on dynamic programming and
+
+03:25.240 --> 03:26.240
+optimal control.
+
+03:26.240 --> 03:31.440
+In particular, this book has a chapter, chapter 2, that does a very good job at covering search
+
+03:31.440 --> 03:32.680
+algorithms.
+
+03:32.680 --> 03:38.500
+In particular, the class of search algorithms is referred to as label correcting methods.
+
+03:38.500 --> 03:44.200
+It is the class that we're going to cover today.
+
+03:44.200 --> 03:46.560
+Motion planning obviously is a big deal in robotics.
+
+03:46.560 --> 03:53.220
+Just to give you some context and some excitement, here I'm showing one of my students testing
+
+03:53.220 --> 03:59.100
+his motion planning algorithms against a quadrotor.
+
+03:59.100 --> 04:00.500
+Suspense with the quadrotor.
+
+04:00.500 --> 04:05.860
+The quadrotor is trying to plan its motion, obviously by avoiding a state constraint presented
+
+04:05.860 --> 04:07.820
+by this word.
+
+04:07.820 --> 04:12.300
+So that's what I really mean by motion planning, trying to reason about motion constraints
+
+04:12.300 --> 04:18.140
+and at the same time constraints in the environment that can be even time-varying, adversarial
+
+04:18.140 --> 04:21.420
+in this case, uncertain and so on.
+
+04:21.420 --> 04:23.840
+Motion planning, as I said, is ubiquitous.
+
+04:23.840 --> 04:28.780
+For the sake of this class, our key application domain will be the application of trying to
+
+04:28.780 --> 04:36.020
+find a path for the wheeled vehicle that avoids obstacles, but can be used in many other settings.
+
+04:36.220 --> 04:41.540
+For example, in order to control a humanoid robot that is trying to grasp a cup, but it
+
+04:41.540 --> 04:45.340
+has to account for the fact that the cup might be in a drawer.
+
+04:45.340 --> 04:49.780
+So it has to be very carefully not hitting the walls of the drawer.
+
+04:49.780 --> 04:56.060
+Another exciting application of motion planning is how to carefully maneuver robotic probes
+
+04:56.060 --> 04:59.020
+in order to perform surgeries.
+
+04:59.020 --> 05:03.260
+For example, how to maneuver the probe in order to get into the blood vessels and then
+
+05:03.300 --> 05:07.580
+deliver a medicine at a very specific target location.
+
+05:07.580 --> 05:11.820
+Or it can even be applied to domains that have very little to do with robotics, like
+
+05:11.820 --> 05:14.260
+for example, protein folding.
+
+05:14.260 --> 05:20.780
+You can think of the problem of protein folding as a problem of sequencing a number of maneuvers
+
+05:20.780 --> 05:23.060
+in order to get to the desired protein.
+
+05:23.060 --> 05:26.260
+That can be cast, believe it or not, as a motion planning problem.
+
+05:26.260 --> 05:29.660
+It's a very general problem, very important.
+
+05:29.660 --> 05:34.780
+Not surprisingly, people have been working on it for the past several decades.
+
+05:34.780 --> 05:39.540
+The problem was first formulated in the 70s.
+
+05:39.540 --> 05:45.420
+And the first exact algorithms, we'll discuss a bit better what I mean by exact algorithms
+
+05:45.420 --> 05:49.980
+later on, were developed in the 80s.
+
+05:49.980 --> 05:55.380
+The problem with the exact algorithms is that in general they do not scale well to high
+
+05:55.380 --> 05:56.380
+dimensional spaces.
+
+05:56.420 --> 06:04.660
+By high dimensional, I mean to robots, whereby the configuration factor has a number of dimensions
+
+06:04.660 --> 06:08.100
+that is, say, larger than four or five.
+
+06:08.100 --> 06:13.540
+So as long as you have a unicycle, you have x, y, theta, three dimensional, it's fine.
+
+06:13.540 --> 06:16.340
+But you have kinematics, so it's a little bit more complicated.
+
+06:16.340 --> 06:17.340
+Four is fine.
+
+06:17.340 --> 06:19.180
+Five tend to be already complicated.
+
+06:19.180 --> 06:25.300
+Unfortunately, this problem has inevitably an exponential scaling with respect to the
+
+06:25.420 --> 06:28.660
+configuration factor in terms of complexity.
+
+06:28.660 --> 06:33.020
+This prompted people in the 90s to look at approximation algorithms.
+
+06:33.020 --> 06:39.780
+So algorithms that deliver a solution that is good enough, but the advantage is that
+
+06:39.780 --> 06:41.660
+that can be done very quickly.
+
+06:41.660 --> 06:47.700
+And this is a recurrent theme in robotics, since real time implementation is of such
+
+06:47.700 --> 06:51.660
+an importance, oftentimes they're willing to sacrifice a little bit of the correctness
+
+06:51.700 --> 06:56.380
+of the algorithm, or the quality of the output, in favor of real time computation.
+
+06:58.380 --> 07:03.860
+2000s have seen widespread application of these methodologies on real systems.
+
+07:03.860 --> 07:11.300
+I already mentioned mass rovers, but obviously self-driving cars, drones, you name it.
+
+07:11.300 --> 07:17.140
+Basically every robot that moves around has to reason about environment, meaning that
+
+07:17.180 --> 07:22.700
+the environment cannot be completely predicted at the design stage, has to run in the form
+
+07:22.700 --> 07:26.900
+of another motion planning algorithm.
+
+07:26.900 --> 07:32.020
+If you already know exactly what the environment that the robot is going to operate in, then
+
+07:32.020 --> 07:36.460
+in principle you can pre-script the trajectory of every configuration, and you don't have
+
+07:36.460 --> 07:38.420
+to run a motion planning algorithm.
+
+07:38.420 --> 07:40.980
+But in general, that is not possible, so you have to do it.
+
+07:40.980 --> 07:44.900
+And in particular, each one of you, every day, runs a motion planning algorithm in your
+
+07:44.900 --> 07:45.900
+brain.
+
+07:46.380 --> 07:49.700
+This is a very active field of research.
+
+07:49.700 --> 07:54.340
+Here is a very partial list of the topics people are currently working on.
+
+07:54.340 --> 07:59.860
+For example, inclusion of increasingly sophisticated motion constraints in a motion planning process,
+
+07:59.860 --> 08:01.580
+even logical constraints.
+
+08:01.580 --> 08:07.420
+What I mean by logical constraints is that as you plan the trajectory for your robot,
+
+08:07.420 --> 08:12.820
+you account for logical constraints, like for example, rules of the road.
+
+08:12.820 --> 08:18.260
+Think of a self-driving car, that as it plans its maneuver, not only has to obey collision
+
+08:18.260 --> 08:23.980
+constraints, but also has to obey rules of the road, cannot move laterally if there is
+
+08:23.980 --> 08:26.580
+a solid lane.
+
+08:26.580 --> 08:31.340
+Planning under uncertainty, in many applications you have imperfect state information, so you
+
+08:31.340 --> 08:37.700
+don't measure directly for the case of unicycle what x, y, and theta are, but you have a noisy
+
+08:37.700 --> 08:39.580
+version of x, y, and theta.
+
+08:39.580 --> 08:42.900
+So how do you plan your trajectory if, for example, you don't know exactly what your
+
+08:42.900 --> 08:43.900
+configuration is?
+
+08:43.900 --> 08:47.100
+For example, you don't know exactly what your position is.
+
+08:47.100 --> 08:52.620
+Parallel implementation, of course, there has been a lot of development from the hardware
+
+08:52.620 --> 08:56.680
+side, for example, with the advent of GPUs.
+
+08:56.680 --> 09:02.700
+So one active research topic is how do you design algorithms that are specifically targeting
+
+09:02.700 --> 09:08.180
+the platform over which these algorithms will be from?
+
+09:08.180 --> 09:15.340
+Which means thinking about parallel versions of the algorithms that can be actively implemented,
+
+09:15.340 --> 09:17.060
+for example, in GPUs.
+
+09:17.060 --> 09:22.540
+And finally, motion planning, as in general trajectory optimization, is going to deliver
+
+09:22.540 --> 09:25.100
+you an open-loop trajectory.
+
+09:25.100 --> 09:31.220
+So the question is how do you endow that open-loop trajectory with a feedback tracking, a feedback
+
+09:31.220 --> 09:36.340
+correction term, very similar to what we already did in the context of trajectory optimization
+
+09:36.340 --> 09:39.180
+through the lens of differential flatness.
+
+09:39.180 --> 09:46.100
+Okay, so let's dig a little bit deeper into the problem of motion planning in the simplest
+
+09:46.100 --> 09:47.600
+possible setup.
+
+09:47.600 --> 09:53.340
+So assume that we have a two-dimensional environment, and then we have a Lego block that we have
+
+09:53.340 --> 09:57.580
+to move from an initial condition to a final condition.
+
+09:57.580 --> 10:04.860
+So the motion planning problem entails finding a sequence of maneuvers, like, for example,
+
+10:04.860 --> 10:10.140
+rotations and rotations that deliver your Lego block at the final destination.
+
+10:10.140 --> 10:17.020
+This is a simple problem because it's in 2D, and because you don't have complicated motion
+
+10:17.020 --> 10:18.020
+constraints.
+
+10:18.020 --> 10:25.500
+You can move the Lego block laterally, you can rotate it as you want, and so on.
+
+10:25.500 --> 10:31.420
+Now there are several approaches to motion planning.
+
+10:31.420 --> 10:36.500
+The very first one is referred to as potential fields.
+
+10:36.500 --> 10:44.740
+The idea is to create potentials whose derivative give forces on the robot, these are vehicle
+
+10:44.740 --> 10:51.380
+forces on the robot, that pull it toward the goal and repel it from the obstacles.
+
+10:51.380 --> 11:01.220
+So think of creating, let's assume that this is your 2D environment.
+
+11:01.220 --> 11:06.380
+So this is an obstacle, this is the goal.
+
+11:06.380 --> 11:16.300
+So think about, actually, let me turn the perspective, maybe like this.
+
+11:16.300 --> 11:20.060
+So this is your obstacle, this is your goal.
+
+11:20.060 --> 11:26.060
+So the idea is to create artificial potentials, so basically hills around the obstacles, and
+
+11:26.060 --> 11:31.700
+the valleys around the goal.
+
+11:31.700 --> 11:37.580
+So that you can think then of a robot as a sort of a ball that is moving in this kind
+
+11:37.580 --> 11:39.900
+of a hill-shaped environment.
+
+11:39.900 --> 11:45.240
+It is repelled from the obstacles and is attracted toward the goal.
+
+11:45.240 --> 11:49.940
+Now the problem is that if you don't design these hills well, there is a danger that your
+
+11:49.940 --> 11:53.780
+ball gets stuck in a local minimap and never reaches the goal.
+
+11:53.820 --> 11:59.580
+So that's one of the main difficulties with the potential field motion planning.
+
+11:59.580 --> 12:03.940
+The advantage is that it is very intuitive, and there are different ways of setting the
+
+12:03.940 --> 12:08.100
+hills, but usually that is very intuitive design, so this is good.
+
+12:08.100 --> 12:13.020
+It's extremely fast, the only thing that you have to do in order to control the robot is
+
+12:13.020 --> 12:21.380
+at each point in the state space, you look at where you are, you compute the gradient
+
+12:21.380 --> 12:25.460
+of your potential, that basically gives you the direction with respect to which your motion
+
+12:25.460 --> 12:30.060
+should go, and then you just follow it for a couple of, for a one-time step.
+
+12:30.060 --> 12:33.900
+So from a computational standpoint, it is extremely effective.
+
+12:33.900 --> 12:40.380
+On the other hand, it's prone to this issue of getting stuck in a local minimap, so designing
+
+12:40.380 --> 12:45.300
+potential so that you don't have this issue is extremely tricky.
+
+12:45.300 --> 12:50.100
+This has prompted the design of other classes of planning algorithms.
+
+12:50.140 --> 12:56.740
+Another approach, and this approach is extremely popular, is to take the problem that is naturally
+
+12:56.740 --> 13:03.980
+defined in a continuous space, and then discretize the environment, and turn the problem of motion
+
+13:03.980 --> 13:11.260
+planning in the problem of searching on a graph, whereby the graph represents the underlying
+
+13:11.260 --> 13:14.580
+discretization of your environment.
+
+13:14.580 --> 13:17.140
+And this is something that we're going to look into in more detail.
+
+13:17.140 --> 13:23.300
+So this class of algorithms belong to the Jackson algorithm for motion planning, A-star,
+
+13:23.300 --> 13:25.580
+D-star, and so on.
+
+13:25.580 --> 13:27.980
+Very popular in robotics.
+
+13:27.980 --> 13:32.620
+The third class is referred to as combinatorial planning.
+
+13:32.620 --> 13:39.380
+So here the idea is to construct structures that allow you to discretize the problem,
+
+13:39.380 --> 13:44.260
+yet retain all the information that is needed in order to solve the motion planning problem.
+
+13:44.260 --> 13:47.980
+So basically, the idea is to have a discretization that is lossless.
+
+13:47.980 --> 13:52.620
+If you're able to solve the discretized problem, the solution that you get will be the same
+
+13:52.620 --> 13:59.820
+as if you were solving the continuous problem, different from the grid planning approach,
+
+13:59.820 --> 14:07.300
+whereby you have some approximation in the output that you compute.
+
+14:07.300 --> 14:12.260
+Now this is great, because basically you're turning a problem into something you can do
+
+14:12.260 --> 14:17.900
+computation with, without losing any information that stems from the continuous formulation
+
+14:17.900 --> 14:19.620
+of the problem.
+
+14:19.620 --> 14:28.980
+The disadvantage is that the computation of the data structures is in general complicated.
+
+14:28.980 --> 14:32.540
+It doesn't scale well with the dimension of the problem.
+
+14:32.540 --> 14:37.860
+So this is the reason why actually this approach is not very widely used in practice.
+
+14:37.860 --> 14:41.180
+It doesn't really scale to most of the problems that are of practical interest.
+
+14:41.180 --> 14:43.780
+But in some cases, it's still useful.
+
+14:43.780 --> 14:51.380
+And finally, a fourth class of motion planning is represented by simply-based planning, which
+
+14:51.380 --> 14:59.260
+tries to somehow merge the advantages of combinatorial planning with grid-based planning.
+
+14:59.260 --> 15:06.580
+So the idea is to still try to reason about the continuous problem, but do computation
+
+15:06.580 --> 15:10.180
+with respect to a discretization that is a little bit more adaptive than what you would
+
+15:10.180 --> 15:12.140
+do with a standard grid-based approach.
+
+15:12.140 --> 15:14.060
+And we'll see this in much more detail.
+
+15:14.060 --> 15:20.060
+In particular, in this class, we're going to focus on these three classes of planning
+
+15:20.060 --> 15:24.180
+algorithms, grid-based, combinatorial, and sampling-based.
+
+15:24.180 --> 15:27.420
+In particular today, we're going to talk about grid-based and combinatorial.
+
+15:27.420 --> 15:33.500
+And on Thursday, we're going to talk about sampling-based, and then going to summarize
+
+15:33.500 --> 15:38.700
+all of them and draw a conclusion about the relative advantages and disadvantages.
+
+15:38.740 --> 15:39.740
+So that's a plan.
+
+15:43.460 --> 15:47.940
+All right, so let's start with the grid-based approaches.
+
+15:47.940 --> 15:52.300
+Grid-based approaches are arguably the most natural one.
+
+15:52.300 --> 15:58.460
+So what you do is you have a motion planning problem that
+
+15:58.460 --> 16:06.460
+is defined over a continuous space, say for example, a square.
+
+16:06.540 --> 16:14.540
+And then you have obstacles here and there, something like that.
+
+16:14.540 --> 16:17.340
+So this is your start point.
+
+16:17.340 --> 16:19.740
+This is your goal region.
+
+16:19.740 --> 16:23.380
+So what you do is just to discretize the problem.
+
+16:23.380 --> 16:25.900
+So you just grid your environment.
+
+16:34.700 --> 16:38.660
+You put a representative point within each cell.
+
+16:49.500 --> 16:50.380
+And so on.
+
+16:50.380 --> 16:54.380
+You connect these points, for example,
+
+16:54.380 --> 16:58.580
+by using four neighbors or maybe eight neighbors.
+
+17:05.180 --> 17:10.300
+And then you clip your goal and your start position
+
+17:10.300 --> 17:12.060
+to the closest point on the grid.
+
+17:15.620 --> 17:18.580
+So having done that, what you're left with
+
+17:18.580 --> 17:25.540
+is a graph, meaning a set of vertices, these points over here,
+
+17:25.540 --> 17:33.300
+and a set of edges, the links between these points.
+
+17:33.300 --> 17:35.180
+So now the motion planning problem.
+
+17:35.180 --> 17:36.780
+Yes?
+
+17:36.780 --> 17:40.780
+What do you discretize to?
+
+17:40.780 --> 17:45.100
+So that's one of the pain points of grid-based approaches,
+
+17:45.100 --> 17:48.060
+is that the quality of the solution in general
+
+17:48.060 --> 17:50.900
+depends on the resolution.
+
+17:50.900 --> 17:53.500
+You have to be a little bit careful with,
+
+17:53.500 --> 17:55.220
+I'll come back to this in a second,
+
+17:55.220 --> 17:57.580
+on how you choose your neighbors.
+
+17:57.580 --> 18:00.340
+But in general, as the resolution gets smaller
+
+18:00.340 --> 18:03.780
+and smaller, then the solution that you compute
+
+18:03.780 --> 18:06.220
+is going to converge to the one that you will compute
+
+18:06.220 --> 18:07.980
+in a continuous problem.
+
+18:07.980 --> 18:10.940
+The question is that as the resolution gets smaller,
+
+18:10.940 --> 18:14.620
+then the number of vertices gets larger, which basically means
+
+18:14.620 --> 18:16.460
+you run more computation, which basically means
+
+18:16.460 --> 18:20.220
+that this becomes more compute intense.
+
+18:20.220 --> 18:21.980
+So there is a trade-off.
+
+18:21.980 --> 18:24.780
+Nobody tells you what the trade-off is there.
+
+18:24.780 --> 18:27.140
+It really also depends on the obstacle space.
+
+18:27.140 --> 18:29.140
+So indeed, the resolution is something
+
+18:29.140 --> 18:31.740
+that is very difficult to tune.
+
+18:31.740 --> 18:35.180
+So what people do is a little bit of trial and error,
+
+18:35.180 --> 18:41.380
+even if you have time, and also try to do adaptive grids,
+
+18:41.380 --> 18:44.340
+whereby you have a finer discretization
+
+18:44.340 --> 18:46.700
+in regions of the environment when you think
+
+18:46.700 --> 18:49.620
+it's more promising to do motion planning and coarser
+
+18:49.620 --> 18:50.380
+discretization.
+
+18:50.380 --> 18:53.700
+So there is a lot of work on dealing with that issue.
+
+18:53.700 --> 18:56.100
+But in general, there is not an exact answer.
+
+18:56.100 --> 18:58.700
+It is one of the difficulties and disadvantages
+
+18:58.700 --> 19:00.260
+of grid-based approaches.
+
+19:00.260 --> 19:01.660
+What I was saying is that you have
+
+19:01.660 --> 19:03.460
+to be careful with the neighbors,
+
+19:03.460 --> 19:09.300
+is that consider this example, whereby we
+
+19:09.300 --> 19:19.260
+start on a square, discretize, so you start here
+
+19:19.260 --> 19:20.260
+and you want to get here.
+
+19:20.260 --> 19:21.420
+So this is the goal.
+
+19:21.420 --> 19:23.220
+This is the start.
+
+19:23.220 --> 19:27.140
+And so we consider as the points in the vertices
+
+19:27.140 --> 19:29.620
+these points here.
+
+19:29.620 --> 19:33.460
+And we only connect them by looking at the four neighbors.
+
+19:33.460 --> 19:35.960
+So essentially, we consider this connection, this connection,
+
+19:35.960 --> 19:37.020
+and this connection.
+
+19:37.020 --> 19:41.260
+We don't consider the diagonal connections.
+
+19:41.260 --> 19:44.460
+So we want to get from here to here.
+
+19:44.460 --> 19:50.300
+And we assume that each edge is of length 1.
+
+19:50.300 --> 19:55.300
+So the optimal path, meaning this path,
+
+19:55.300 --> 19:58.700
+has length square root of 2.
+
+19:58.700 --> 20:04.300
+But the problem is that any path that I consider in this grid
+
+20:04.300 --> 20:08.940
+to go to the goal has length what?
+
+20:08.940 --> 20:09.820
+What's that?
+
+20:09.820 --> 20:14.740
+2, because at least I have to go one up and one right.
+
+20:14.740 --> 20:17.180
+And this doesn't really depend on the resolution.
+
+20:17.180 --> 20:29.700
+If I make the resolution finer and finer,
+
+20:29.700 --> 20:32.860
+so now these will be my connections.
+
+20:32.860 --> 20:34.860
+I still have this issue that at the very least I
+
+20:34.860 --> 20:36.980
+have to go one up and one right.
+
+20:36.980 --> 20:39.900
+So basically, the length of the optimal solution
+
+20:39.900 --> 20:43.460
+that I get by optimizing over this graph
+
+20:43.460 --> 20:45.840
+is going to be equal to 2, no matter
+
+20:45.840 --> 20:47.740
+how small the resolution is.
+
+20:50.700 --> 20:53.020
+But you will say, OK, so then the right way to do it
+
+20:53.020 --> 20:57.140
+is actually to also include for the diagonal motions, which
+
+20:57.140 --> 20:59.220
+is what people typically do.
+
+20:59.220 --> 21:00.860
+The point of this example is to tell you
+
+21:00.860 --> 21:06.820
+that some care has to be taken in order to come up
+
+21:06.820 --> 21:10.100
+with the right neighborhood.
+
+21:10.100 --> 21:11.980
+Having said that, then the resolution
+
+21:11.980 --> 21:14.260
+is really a trade-off between the quality of the solution
+
+21:14.260 --> 21:15.900
+and computation time.
+
+21:15.900 --> 21:19.660
+What is the right solution is experience,
+
+21:19.660 --> 21:22.700
+and there are some guidelines out there as well.
+
+21:22.700 --> 21:27.460
+The key point is that the resolution problem
+
+21:27.460 --> 21:29.700
+notwithstanding, we have translated the motion planning
+
+21:30.420 --> 21:34.140
+into the problem of searching a path over a grid, so something
+
+21:34.140 --> 21:40.700
+that is a typical problem in the field of computer science.
+
+21:40.700 --> 21:42.060
+So in other words, we have turned
+
+21:42.060 --> 21:46.220
+a problem of motion planning into a graph search problem.
+
+21:46.220 --> 21:47.580
+So then the next logical question
+
+21:47.580 --> 21:53.860
+is, how do we best search a path over this graph?
+
+21:53.860 --> 21:55.420
+So the class of algorithms that we're
+
+21:55.420 --> 21:57.900
+going to consider in this class is a very broad class
+
+21:57.940 --> 22:02.420
+of algorithms referred to as label-correcting algorithms.
+
+22:02.420 --> 22:10.500
+Where the idea is to label each node in the graph
+
+22:10.500 --> 22:14.020
+with a function, so this is the node q,
+
+22:14.020 --> 22:20.740
+with a function c of q that represents the cost to arrive
+
+22:20.740 --> 22:24.260
+to this node from the origin, meaning
+
+22:24.260 --> 22:27.740
+from the start point of your motion planning problem.
+
+22:27.740 --> 22:32.100
+We refer to the best path that we have found so far.
+
+22:32.100 --> 22:37.180
+And the idea is to iteratively improve over these levels
+
+22:37.180 --> 22:39.740
+until we find an optimal path to the goal.
+
+22:39.740 --> 22:45.140
+In particular, the way it works is relatively simple.
+
+22:45.140 --> 22:48.460
+So this is also referred to as a cost to arrive.
+
+22:48.460 --> 23:01.540
+As I said, is the cost to arrive to node q
+
+23:01.540 --> 23:04.140
+with respect to the best path that we've found so far,
+
+23:04.140 --> 23:05.940
+which is not necessarily the optimal one.
+
+23:05.940 --> 23:08.460
+This is something that we're going to iteratively improve
+
+23:08.460 --> 23:11.060
+along the algorithm, but it's the best one
+
+23:11.060 --> 23:12.620
+that we have found so far.
+
+23:12.620 --> 23:17.180
+If we haven't found any path to a given node, say q prime,
+
+23:17.180 --> 23:19.540
+then the algorithm is simply initialized
+
+23:19.540 --> 23:23.020
+with the cq prime equal infinity.
+
+23:23.020 --> 23:26.140
+And then progressively, this level goes down.
+
+23:26.140 --> 23:28.060
+Of course, in practice, you cannot code infinity
+
+23:28.060 --> 23:29.300
+in the computer.
+
+23:29.300 --> 23:33.700
+It will be a very large number, so say one trillion.
+
+23:33.700 --> 23:35.820
+So the way these algorithms work is
+
+23:35.820 --> 23:42.500
+that we maintain a list of nodes or vertices.
+
+23:42.500 --> 23:46.700
+I'm going to use the words nodes or vertices equivalently.
+
+23:46.740 --> 23:49.700
+Into a queue, depends everything in the community
+
+23:49.700 --> 23:53.060
+as either frontier queue, allowed queue, priority queue.
+
+23:53.060 --> 23:54.740
+These are all synonyms.
+
+23:54.740 --> 24:02.460
+So this is a list of nodes that we are currently considering
+
+24:02.460 --> 24:07.900
+as milestones, meaning as nodes that are included
+
+24:07.900 --> 24:10.620
+in the optimal path to the goal.
+
+24:10.620 --> 24:13.020
+So I currently note that we are considering
+
+24:13.020 --> 24:15.860
+for further exploration in order to see whether they
+
+24:15.860 --> 24:19.740
+should belong or not to the optimal path to the goal.
+
+24:19.740 --> 24:22.580
+And the idea of level-correcting algorithms then is as follows.
+
+24:22.580 --> 24:27.460
+Is to iterate on the nodes, and in particular, at each step,
+
+24:27.460 --> 24:31.500
+we extract a node q, or vertex q, as I said.
+
+24:31.500 --> 24:33.460
+Node and vertices are the same.
+
+24:33.460 --> 24:38.540
+We extract the vertex from the frontier queue,
+
+24:38.540 --> 24:41.820
+and we look at all its neighbors.
+
+24:41.860 --> 24:43.860
+So assume...
+
+24:54.340 --> 25:02.220
+So we extract node q, for which we have a label Cq,
+
+25:02.220 --> 25:06.940
+and we look at all its neighbors, q prime.
+
+25:06.940 --> 25:12.420
+q prime 1, q prime 2, q prime 3, and so on.
+
+25:12.420 --> 25:16.540
+These are nodes that can be reached from the origin
+
+25:16.540 --> 25:22.660
+by going through q first, and then in one step to q prime.
+
+25:22.660 --> 25:26.220
+And then we ask the following question.
+
+25:26.220 --> 25:30.340
+Is it possible to get to q prime?
+
+25:30.340 --> 25:36.940
+So now we focus on a specific neighbor.
+
+25:43.180 --> 25:44.820
+That will be q prime.
+
+25:44.820 --> 25:49.540
+So is it possible to get to q prime through q in a way
+
+25:49.540 --> 25:52.780
+that is cheaper than the current path that I currently
+
+25:52.780 --> 25:54.580
+have found for q prime?
+
+25:54.580 --> 26:01.900
+Meaning, is c of q plus the cost of going from q to q prime
+
+26:01.900 --> 26:06.820
+directly less than c of q prime?
+
+26:10.580 --> 26:15.660
+Again, what this means, don't consider for now upper.
+
+26:15.660 --> 26:17.580
+Consider just this.
+
+26:17.580 --> 26:24.220
+So what this is saying is, can I get to q prime
+
+26:24.220 --> 26:27.140
+by going through q and then directly to q prime
+
+26:27.140 --> 26:30.460
+with a cost that is less than the cost of the path
+
+26:30.460 --> 26:34.380
+that I have found in some previous iteration?
+
+26:34.380 --> 26:40.340
+If yes, let's revise the path to q prime with this new path
+
+26:40.340 --> 26:42.740
+that we have just found.
+
+26:42.740 --> 26:43.940
+Does it make sense?
+
+26:43.940 --> 26:48.060
+That's one of the core routines in the label-correcting
+
+26:48.060 --> 26:50.380
+algorithms.
+
+26:50.380 --> 26:53.340
+Any questions about this?
+
+26:54.060 --> 26:57.860
+So the notation cqq prime is from q to q prime?
+
+26:57.860 --> 26:59.980
+In one step.
+
+26:59.980 --> 27:01.820
+So in the case of the graph, we'll
+
+27:01.820 --> 27:03.660
+be going diagonal one step.
+
+27:09.180 --> 27:11.740
+I have a question about the grid formation stuff.
+
+27:11.740 --> 27:15.100
+What's the rule of the outer boundary of your robot
+
+27:15.100 --> 27:16.660
+when you're forming this grid?
+
+27:16.660 --> 27:18.700
+Are you assuming it's just a point moving along?
+
+27:18.700 --> 27:20.300
+Yeah, no, very good question.
+
+27:20.340 --> 27:26.340
+So typically, once we discretize the problem this way,
+
+27:26.340 --> 27:30.820
+we are essentially viewing the robot as a point.
+
+27:30.820 --> 27:34.340
+But in general, the robot is not a point.
+
+27:34.340 --> 27:37.020
+So for example, a typical thing to do
+
+27:37.020 --> 27:40.780
+is that if you're a robot with some weird shape,
+
+27:40.780 --> 27:46.460
+say with six wheels, like a Mars rover, then what you do,
+
+27:46.460 --> 27:51.300
+you be like a circle, so an over-approximating object.
+
+27:51.300 --> 27:54.300
+And then you inflate all obstacles
+
+27:54.300 --> 27:56.620
+by the radius of the circle.
+
+27:56.620 --> 27:59.020
+And then you shrink the robot to a point.
+
+27:59.020 --> 28:00.900
+Does it make sense?
+
+28:00.900 --> 28:04.300
+This is basically what is done on the Mars rovers.
+
+28:04.300 --> 28:05.500
+I can't tell you the radius.
+
+28:05.500 --> 28:08.980
+For whatever reason, that is considered a script.
+
+28:08.980 --> 28:12.980
+So but you can assume what the radius could be, right?
+
+28:12.980 --> 28:13.480
+Yeah?
+
+28:13.480 --> 28:15.540
+In the practice, what is your cost of arrival?
+
+28:15.540 --> 28:17.580
+Is that like path length?
+
+28:17.580 --> 28:21.620
+Yeah, typically it's path length in the setting of.
+
+28:21.620 --> 28:23.780
+So there are versions of grid-based algorithms
+
+28:23.780 --> 28:27.780
+that also account for motion constraints.
+
+28:27.780 --> 28:30.340
+Here, we're not accounting for any dynamics and so on.
+
+28:30.340 --> 28:32.140
+This is a purely geometric setting
+
+28:32.140 --> 28:34.500
+in which a typical cost is just the path length.
+
+28:34.500 --> 28:37.540
+OK, so then when you're doing this algorithm,
+
+28:37.540 --> 28:40.740
+is the robot actually going down that path
+
+28:40.740 --> 28:42.860
+and just going back and forth?
+
+28:42.860 --> 28:43.780
+Or how is it?
+
+28:43.780 --> 28:44.280
+Right.
+
+28:44.320 --> 28:48.480
+How can it know ahead of time without traveling there?
+
+28:48.480 --> 28:50.880
+So you have found a path like this one.
+
+28:50.880 --> 28:52.400
+You've already found that, right?
+
+28:52.400 --> 28:52.920
+Oh, yes.
+
+28:52.920 --> 28:57.200
+So we're assuming that we have already
+
+28:57.200 --> 28:59.520
+found another path to q prime.
+
+28:59.520 --> 29:03.640
+If we have not, remember that we initialized all nodes
+
+29:03.640 --> 29:04.720
+with infinity?
+
+29:04.720 --> 29:08.480
+It means that this is certainly the best-found path
+
+29:08.480 --> 29:10.880
+that we've found so far, since there is no other paths.
+
+29:10.880 --> 29:12.800
+So we just consider this one.
+
+29:12.800 --> 29:13.960
+Does it make sense?
+
+29:14.600 --> 29:17.120
+So at the beginning, we initialized the cost to arrive
+
+29:17.120 --> 29:18.840
+for all nodes as infinity.
+
+29:18.840 --> 29:22.880
+Yeah, so then you just full pick a node and travel there?
+
+29:22.880 --> 29:25.080
+No, we don't.
+
+29:25.080 --> 29:28.800
+So the way that it works is that you start from,
+
+29:28.800 --> 29:30.680
+so this is an iterative algorithm.
+
+29:30.680 --> 29:35.640
+So we start from the start, and we put the start node
+
+29:35.640 --> 29:37.400
+into the open list.
+
+29:37.400 --> 29:39.560
+At the beginning, there is only one.
+
+29:39.560 --> 29:44.320
+We pull it out, and we look at all its neighbors.
+
+29:44.320 --> 29:46.640
+And then we say, for all its neighbors,
+
+29:46.640 --> 29:50.200
+is the cost to arrive to this node,
+
+29:50.200 --> 29:52.360
+the current cost to arrive to this node,
+
+29:52.360 --> 29:54.560
+less or larger than the cost to arrive to this node
+
+29:54.560 --> 29:57.160
+by going to start and then doing this one step?
+
+29:57.160 --> 30:00.080
+The answer is yes, because we're internationalizing all the costs
+
+30:00.080 --> 30:01.320
+to arrive with infinity.
+
+30:01.320 --> 30:04.520
+So we start building a tentative path, this path.
+
+30:04.520 --> 30:06.800
+And then we put this node into the open list.
+
+30:06.800 --> 30:09.360
+We do the same for this one and the same for this one.
+
+30:09.360 --> 30:11.280
+So at the end of the first iteration,
+
+30:11.280 --> 30:13.440
+we have these three nodes in the open list.
+
+30:13.440 --> 30:17.400
+And then we start extracting from the open list this one,
+
+30:17.400 --> 30:19.360
+and then we look at its neighbors.
+
+30:19.360 --> 30:24.400
+Look at it now and considering for the second time this node.
+
+30:24.400 --> 30:27.080
+My last question is, how can you know the cost of arrival
+
+30:27.080 --> 30:30.440
+to the neighbors without going in there?
+
+30:30.440 --> 30:33.000
+How will people know what the cost of arrival
+
+30:33.000 --> 30:35.960
+is when it's sitting at that node?
+
+30:35.960 --> 30:41.880
+So this is the start position for your problem.
+
+30:41.880 --> 30:44.440
+And this is the goal position for your problem.
+
+30:44.440 --> 30:46.200
+And you have a map on environment,
+
+30:46.200 --> 30:47.840
+so you have a notion of learning.
+
+30:47.840 --> 30:49.360
+Oh, you have a map.
+
+30:49.360 --> 30:49.840
+Oh, yes.
+
+30:49.840 --> 30:51.240
+Oh, it's a known environment.
+
+30:51.240 --> 30:51.720
+Oh, yeah.
+
+30:51.720 --> 30:54.120
+So maybe this was not here.
+
+30:54.120 --> 30:55.520
+So thank you for the question.
+
+30:55.520 --> 30:57.320
+Yeah, absolutely.
+
+30:57.320 --> 30:58.920
+I thought it was an unknown environment.
+
+30:58.920 --> 30:59.800
+No, no, no.
+
+30:59.800 --> 31:01.000
+That's a very good point.
+
+31:01.000 --> 31:03.080
+And thank you very much for that question.
+
+31:03.080 --> 31:05.920
+So now let's take a question, which is a very good one.
+
+31:05.920 --> 31:10.000
+So here, so this is your start position.
+
+31:10.000 --> 31:12.600
+This is your goal position.
+
+31:12.600 --> 31:18.480
+So from here, it seems that you don't have the visibility
+
+31:18.480 --> 31:20.000
+for what you have here.
+
+31:20.000 --> 31:23.640
+So how do you know if you can travel this corridor or not?
+
+31:23.640 --> 31:25.800
+So in the standard motion planning formulation,
+
+31:25.800 --> 31:28.280
+we're assuming that we have a static formulation.
+
+31:28.280 --> 31:29.840
+So the map of the environment is known.
+
+31:29.840 --> 31:32.760
+So the input to the algorithm is the full specification
+
+31:32.760 --> 31:34.000
+of the problem.
+
+31:34.000 --> 31:38.160
+So the full specification of obstacles and so on.
+
+31:38.160 --> 31:39.640
+That's a standard setting.
+
+31:39.640 --> 31:46.080
+Now, which, for example, in some applications
+
+31:46.080 --> 31:49.920
+like warehousing robotics and so on is a very good one.
+
+31:49.920 --> 31:53.080
+But say that you have a robot that is exploring an environment.
+
+31:53.080 --> 31:56.480
+Obviously, that robot does not have information
+
+31:56.480 --> 32:02.320
+beyond its visibility core, which means that now you're
+
+32:02.320 --> 32:04.120
+planning under occlusions.
+
+32:04.120 --> 32:05.280
+That's the term.
+
+32:05.280 --> 32:08.160
+Which is very much still a state-of-the-art topic.
+
+32:08.160 --> 32:10.800
+So in that case, what you do is you plan a trajectory
+
+32:10.800 --> 32:13.800
+within the known or observed space.
+
+32:13.800 --> 32:16.680
+So this will be the environment with respect
+
+32:16.680 --> 32:18.440
+to which you do motion planning.
+
+32:18.440 --> 32:23.240
+And then you are careful in putting some intermediate goals
+
+32:23.240 --> 32:25.200
+at the frontier of the environment.
+
+32:25.200 --> 32:28.360
+The frontier of the environment is what divides what is seen
+
+32:28.360 --> 32:29.400
+from what is unknown.
+
+32:29.400 --> 32:31.120
+And there are different ways of doing it.
+
+32:31.120 --> 32:33.560
+And that gives rise to different algorithms.
+
+32:33.560 --> 32:34.880
+This is a very different problem.
+
+32:34.880 --> 32:37.400
+For example, when a self-driving car approaches
+
+32:37.400 --> 32:40.720
+an intersection, part of the scene might be occluded.
+
+32:40.720 --> 32:49.080
+For example, so this is an intersection.
+
+32:49.080 --> 32:50.400
+So this is your car.
+
+32:50.400 --> 32:54.280
+Your car is not seeing what is here.
+
+32:54.280 --> 32:57.000
+So that's what it means to be planning under occlusions.
+
+32:57.000 --> 32:59.320
+So this is beyond the scope of this class.
+
+32:59.320 --> 33:02.600
+But this is, in many ways, still a research problem
+
+33:02.600 --> 33:05.840
+and a very valuable problem.
+
+33:05.840 --> 33:08.440
+Is there anything else here?
+
+33:08.440 --> 33:09.920
+All right, cool.
+
+33:09.920 --> 33:11.080
+Yeah, so please ask questions.
+
+33:11.080 --> 33:14.160
+Because sometimes I take things for granted,
+
+33:14.160 --> 33:16.960
+having done this stuff for several years.
+
+33:16.960 --> 33:19.920
+But I acknowledge that sometimes things cannot solve this.
+
+33:19.920 --> 33:23.360
+All right, so we take a note.
+
+33:23.360 --> 33:25.480
+We said there's not Q prime.
+
+33:25.480 --> 33:28.600
+We may have a path that we have already completed
+
+33:28.640 --> 33:29.480
+to this note.
+
+33:29.480 --> 33:33.800
+In this case, we refer to the cost of the path as CQ prime.
+
+33:33.800 --> 33:36.560
+If you don't have that, CQ prime is set to infinity.
+
+33:36.560 --> 33:38.080
+And then we ask the question,
+
+33:38.080 --> 33:42.000
+is the cost of the path Q prime through Q lower
+
+33:42.000 --> 33:44.400
+than the cost of the path we currently have?
+
+33:44.400 --> 33:46.160
+If you don't have it, there will be infinity.
+
+33:46.160 --> 33:51.160
+If yes, then we update the level of node Q prime
+
+33:52.320 --> 33:57.560
+with the cost of the path that we have just found.
+
+33:57.560 --> 34:02.000
+And then we put Q prime into the open list
+
+34:02.000 --> 34:04.960
+unless Q prime is the gold node,
+
+34:04.960 --> 34:07.360
+in which case we have found the path to the gold.
+
+34:09.040 --> 34:09.880
+And we just iterate.
+
+34:09.880 --> 34:12.520
+So we start with the start node,
+
+34:12.520 --> 34:14.640
+we expand to its neighbors,
+
+34:14.640 --> 34:17.560
+and then we keep essentially moving upwards.
+
+34:17.560 --> 34:19.160
+So it's a sort of a wave front.
+
+34:21.440 --> 34:22.920
+So I would claim it's a very intuitive
+
+34:22.920 --> 34:24.880
+and reasonable algorithm.
+
+34:24.880 --> 34:26.000
+Any other questions?
+
+34:28.560 --> 34:32.440
+So why I refer to the level correcting algorithms
+
+34:32.440 --> 34:35.440
+as a class of algorithms instead of a single algorithm?
+
+34:35.440 --> 34:38.640
+Because indeed, there are a number of degrees of freedom
+
+34:38.640 --> 34:42.200
+in how you select the node
+
+34:42.200 --> 34:44.120
+that you extract from the open list.
+
+34:45.080 --> 34:46.960
+In general, you may have many.
+
+34:46.960 --> 34:48.440
+Which one do you pick?
+
+34:48.440 --> 34:52.120
+Randomly, with some more clever strategy, and some.
+
+34:52.120 --> 34:55.000
+And how you strengthen some steps.
+
+34:55.200 --> 35:00.200
+For example, here, upper is an additional variable
+
+35:00.240 --> 35:04.440
+that encodes a notion of the cost of the best path
+
+35:04.440 --> 35:06.600
+that we've found so far to the goal.
+
+35:08.000 --> 35:11.640
+Initially, upper is set to equal to infinity.
+
+35:11.640 --> 35:16.520
+But then as we progress, we may find a path to the goal.
+
+35:16.520 --> 35:18.840
+We don't know yet if that is the optimal path.
+
+35:18.840 --> 35:20.800
+But say that we find a path to the goal.
+
+35:21.800 --> 35:25.840
+So then the idea is that there is no reason
+
+35:25.840 --> 35:28.360
+to further considering a node Q prime
+
+35:28.360 --> 35:31.640
+if you already know that the cost to arrive to Q prime
+
+35:31.640 --> 35:36.080
+is larger than the cost of a path to arrive to the goal
+
+35:36.080 --> 35:37.200
+that we have already found.
+
+35:37.200 --> 35:39.680
+Simply because we're assuming that the cost is not negative.
+
+35:39.680 --> 35:43.360
+So if the cost to arrive to Q prime is already larger
+
+35:43.360 --> 35:46.240
+than the cost of a path to the goal that we already found,
+
+35:46.240 --> 35:48.600
+there is no hope that an optimal path
+
+35:48.600 --> 35:50.360
+is going to go to that node Q prime.
+
+35:51.720 --> 35:54.520
+Make sense?
+
+35:54.520 --> 35:56.680
+An equation or you want a drawing?
+
+35:59.320 --> 36:03.720
+Upper is basically an upper bound on the optimal cost.
+
+36:03.720 --> 36:05.480
+Initially set to infinity.
+
+36:05.480 --> 36:08.680
+As soon as we find the path to the goal,
+
+36:08.680 --> 36:10.720
+we set it to the cost of that path.
+
+36:13.480 --> 36:16.640
+And then we discard the nodes whose cost to arrive
+
+36:16.640 --> 36:19.120
+is greater than an upper bound on cost.
+
+36:19.160 --> 36:21.600
+Because there is no point in considering those paths
+
+36:21.600 --> 36:23.960
+because it's guaranteed that an optimal path
+
+36:23.960 --> 36:27.480
+is not going to go through that point or node of vertex.
+
+36:29.880 --> 36:31.520
+All right.
+
+36:31.520 --> 36:32.680
+So this is how it works.
+
+36:35.160 --> 36:37.840
+This is the start position, this is the goal.
+
+36:37.840 --> 36:41.040
+The blue nodes are the ones that are currently
+
+36:41.040 --> 36:44.160
+in the open list and are considered for further evaluation.
+
+36:44.160 --> 36:48.600
+And you see how this algorithm basically expand upward.
+
+36:49.480 --> 36:53.120
+Keeping evaluating new neighbors at each stage.
+
+36:54.800 --> 36:58.960
+The color basically denotes the cost.
+
+36:58.960 --> 37:03.960
+Red means highest, green means lower.
+
+37:04.680 --> 37:07.000
+Meaning that we are very close to the goal.
+
+37:07.000 --> 37:09.400
+Does it require that you complete the entire path
+
+37:09.400 --> 37:11.600
+before you start a movement,
+
+37:11.600 --> 37:14.920
+or you can do this as you're moving through the world?
+
+37:14.920 --> 37:17.720
+Oh yeah, you can do it.
+
+37:18.720 --> 37:22.520
+But the danger is that you may not find
+
+37:22.520 --> 37:24.680
+that the a priori optimal path.
+
+37:24.680 --> 37:25.680
+But certainly.
+
+37:26.760 --> 37:29.880
+And as I said, most likely instead of doing that,
+
+37:29.880 --> 37:34.320
+what you would do is to have a final discretization here,
+
+37:34.320 --> 37:36.920
+and then a coarser discretization here,
+
+37:36.920 --> 37:39.960
+and then move a little bit and then recompute.
+
+37:39.960 --> 37:42.040
+With the idea that what matters is that
+
+37:42.040 --> 37:44.440
+you're very careful about what is around you.
+
+37:44.440 --> 37:45.880
+So yes, there are a lot of variations,
+
+37:45.880 --> 37:48.280
+but here in the philosophy of this class
+
+37:48.280 --> 37:49.600
+I want to give you the main concepts.
+
+37:49.600 --> 37:50.440
+Yeah.
+
+37:51.680 --> 37:55.840
+When do you know when to stop picking up notes?
+
+37:55.840 --> 38:00.840
+Right, so let me first summarize the algorithm,
+
+38:02.080 --> 38:04.280
+and then I'll come back to that question.
+
+38:04.280 --> 38:07.520
+So this is just a summary of what I've just discussed so far
+
+38:07.520 --> 38:10.200
+is mostly for such consistency of the slides.
+
+38:10.200 --> 38:11.880
+The way the algorithm works is that
+
+38:11.880 --> 38:14.840
+we remove a note from the frontier queue,
+
+38:14.840 --> 38:16.520
+and for each child or neighbor,
+
+38:16.520 --> 38:18.520
+child or neighbor are synonyms,
+
+38:18.520 --> 38:20.000
+we execute the step two,
+
+38:20.000 --> 38:22.240
+which is whether we see if we've found
+
+38:22.240 --> 38:26.080
+a better path to Q prime than what we had before.
+
+38:28.160 --> 38:32.720
+At some point, the frontier is going to become depleted
+
+38:32.720 --> 38:36.960
+of notes, so it's empty.
+
+38:36.960 --> 38:39.120
+At that point we terminate the algorithm.
+
+38:39.120 --> 38:40.440
+So then the natural equation is
+
+38:40.440 --> 38:43.800
+once the frontier queue is empty,
+
+38:43.840 --> 38:45.760
+and we have terminated the algorithm,
+
+38:47.200 --> 38:48.520
+are we guaranteed to have a path?
+
+38:48.520 --> 38:50.920
+In particular, are we guaranteed to have the optimal path
+
+38:50.920 --> 38:52.200
+with respect to the vertex,
+
+38:52.200 --> 38:54.640
+with respect to the discretization?
+
+38:55.560 --> 38:58.320
+And the answer is, oops, here.
+
+38:58.320 --> 38:59.320
+The answer is yes.
+
+39:00.200 --> 39:02.560
+Actually you can prove, we're not going to do a proof,
+
+39:02.560 --> 39:07.040
+that once, if a feasible path exists
+
+39:07.040 --> 39:09.640
+between the start and goal notes,
+
+39:09.640 --> 39:12.560
+here the start note is referred to as QI,
+
+39:12.560 --> 39:15.920
+Q init, Q initial, and Q goal,
+
+39:15.920 --> 39:18.160
+then the algorithm terminates in finite time,
+
+39:18.160 --> 39:21.960
+so it does not start oscillating or doing weird stuff,
+
+39:21.960 --> 39:24.800
+and the cost of the path that you find to the goal
+
+39:24.800 --> 39:26.760
+is indeed the optimal cost to the goal.
+
+39:27.800 --> 39:29.840
+That's a correctness that applies
+
+39:29.840 --> 39:33.840
+to all variations of the level-correcting algorithms.
+
+39:33.840 --> 39:35.320
+But there are several variations,
+
+39:35.320 --> 39:38.720
+depending on how you pull nodes out of the queue.
+
+39:38.720 --> 39:39.560
+You had a question?
+
+39:39.600 --> 39:42.480
+I'm trying to find them, but it seems pretty terrible.
+
+39:42.480 --> 39:44.560
+They guarantee you.
+
+39:44.560 --> 39:46.160
+Well, no, I mean, because some algorithms
+
+39:46.160 --> 39:48.360
+could be actually guaranteed to converge
+
+39:48.360 --> 39:50.480
+only in infinite time, only syntactically.
+
+39:50.480 --> 39:53.160
+Yeah, we see that, for example, sampling-based algorithms
+
+39:53.160 --> 39:56.920
+are guaranteed to find a solution that is feasible
+
+39:56.920 --> 39:59.960
+or that is optimal only when the number of steps
+
+39:59.960 --> 40:00.800
+goes to infinity.
+
+40:01.960 --> 40:05.120
+No, actually these algorithms are incredibly fast,
+
+40:05.120 --> 40:05.960
+super fast.
+
+40:06.960 --> 40:09.400
+So, running the algorithm per se
+
+40:09.400 --> 40:11.200
+is not what consumes time.
+
+40:11.200 --> 40:13.400
+What consumes time is to build the discretization
+
+40:13.400 --> 40:14.760
+and represent the obstacles.
+
+40:15.960 --> 40:18.000
+But let me talk a little bit about the differences
+
+40:18.000 --> 40:21.720
+about the implementation of level-correcting algorithms.
+
+40:23.080 --> 40:24.880
+As I said, there are many different ways
+
+40:24.880 --> 40:26.600
+you can pull over the way.
+
+40:27.760 --> 40:31.080
+As already mentioned, but let me re-mention it,
+
+40:31.080 --> 40:33.580
+is to initialize the algorithm,
+
+40:33.580 --> 40:36.460
+we set the levels of all nodes to infinity
+
+40:36.460 --> 40:40.100
+except for the start vertex or origin vertex,
+
+40:40.100 --> 40:41.900
+whereby the level is set to zero
+
+40:41.900 --> 40:45.660
+and that vertex is placed into the open list
+
+40:45.660 --> 40:46.740
+or frontier list.
+
+40:52.140 --> 40:54.420
+Typically, in this setting, it's just a path length,
+
+40:54.420 --> 40:55.900
+so it would be just Euclidean distance
+
+40:55.900 --> 40:57.020
+between the two points.
+
+40:58.700 --> 41:01.940
+Or, in some cases, could be the Manhattan distance,
+
+41:01.940 --> 41:03.460
+so basically the path distance
+
+41:03.460 --> 41:05.580
+as you go through the edges of the grid.
+
+41:17.300 --> 41:20.260
+Yeah, so if you have that knowledge,
+
+41:20.260 --> 41:23.060
+it can be included into your discretization
+
+41:23.060 --> 41:28.060
+and that leads to multi-resolution discretization schemes
+
+41:28.180 --> 41:33.180
+that I mentioned before, whereby you discretize more finally
+
+41:34.220 --> 41:35.980
+in regions around the obstacles
+
+41:35.980 --> 41:38.300
+and you discretize less finally in open space.
+
+41:38.300 --> 41:39.340
+Yeah, absolutely.
+
+41:39.340 --> 41:42.300
+This is really the most basic version of the algorithm.
+
+41:44.820 --> 41:47.220
+So different ways of implementing the algorithm.
+
+41:47.220 --> 41:52.220
+How do we pull the nodes from the frontier list?
+
+41:52.660 --> 41:54.780
+One way, obviously, is to do it randomly,
+
+41:54.780 --> 41:55.980
+but there are better ways.
+
+41:55.980 --> 41:58.700
+So one way is to implement the strategy
+
+41:58.700 --> 42:00.620
+of last in, first out,
+
+42:02.020 --> 42:03.820
+which means that the last node
+
+42:03.820 --> 42:06.060
+that we have put in the frontier list
+
+42:06.060 --> 42:08.420
+is the first one that is going to be retrieved
+
+42:08.420 --> 42:10.500
+from the frontier list.
+
+42:10.500 --> 42:14.620
+This corresponds to a depth-first search strategy,
+
+42:14.620 --> 42:18.500
+whereby if we have a graph that looks like a tree,
+
+42:18.500 --> 42:21.100
+we first go deep into a branch
+
+42:21.100 --> 42:23.660
+before moving into the other branches.
+
+42:26.980 --> 42:30.220
+This is opposite to what bad-first search does.
+
+42:30.220 --> 42:33.580
+The idea is to keep Q as a list,
+
+42:33.580 --> 42:37.500
+whereby we apply the strategy first in, first out,
+
+42:39.900 --> 42:41.900
+which means that basically if we have a graph
+
+42:41.900 --> 42:44.060
+that looks like here as a tree,
+
+42:46.940 --> 42:51.140
+we first explore all the vertices at one level
+
+42:51.140 --> 42:52.700
+before going to the next level,
+
+42:52.700 --> 42:57.700
+because the first one that is going to be expanded
+
+43:00.540 --> 43:05.540
+is the first one that was put into the frontier list.
+
+43:06.380 --> 43:08.540
+So these two strategies are really orthogonal
+
+43:08.540 --> 43:09.380
+to each other.
+
+43:11.740 --> 43:13.500
+By the way, the bad-first search applied
+
+43:13.500 --> 43:15.580
+to level-correcting methods is also referred to
+
+43:15.580 --> 43:17.940
+as the Bellman-Ford algorithm for graph search.
+
+43:18.060 --> 43:23.060
+The last one, very popular,
+
+43:23.060 --> 43:27.220
+is to pick the node in the frontier Q
+
+43:27.220 --> 43:29.820
+that has the lowest cost to arrive,
+
+43:29.820 --> 43:32.220
+which arguably is the most natural.
+
+43:32.220 --> 43:35.180
+Since we're trying to find an optimal path,
+
+43:35.180 --> 43:40.180
+it's natural to consider as the candidate
+
+43:40.460 --> 43:43.460
+as the most promising node along the optimal path,
+
+43:43.460 --> 43:45.540
+the one that has the lowest cost to arrive.
+
+43:46.540 --> 43:49.060
+The downside of this approach, though,
+
+43:49.060 --> 43:53.140
+is that performing this operation can be expensive.
+
+43:54.020 --> 43:56.260
+So there are specialized data structures
+
+43:56.260 --> 43:59.780
+that allow you to perform this operation fairly efficiently,
+
+43:59.780 --> 44:03.380
+but in general, it takes a little bit longer.
+
+44:03.380 --> 44:08.300
+So for problems where you have several nodes,
+
+44:08.300 --> 44:13.300
+this could, so this operation could be time-consuming,
+
+44:14.140 --> 44:16.620
+but the advantage is that actually,
+
+44:16.620 --> 44:18.980
+the JAXA performs a number of steps
+
+44:18.980 --> 44:21.580
+that is lower in general than the other algorithms.
+
+44:22.740 --> 44:24.540
+And one of the key properties of the JAXA
+
+44:24.540 --> 44:28.500
+that is intuitive but not straightforward,
+
+44:28.500 --> 44:30.620
+you will need a proof that we're not going to do,
+
+44:30.620 --> 44:33.220
+is that under this exploration scheme,
+
+44:33.220 --> 44:36.420
+each node enters the frontier Q only once.
+
+44:36.420 --> 44:38.860
+In general, it might enter multiple times.
+
+44:38.860 --> 44:41.740
+We are guaranteed by the theorem that I stated before
+
+44:41.740 --> 44:44.220
+that these algorithms eventually will converge,
+
+44:44.220 --> 44:46.300
+but a node in general might enter
+
+44:46.300 --> 44:47.780
+the frontier Q many times.
+
+44:47.780 --> 44:51.340
+With the JAXA algorithm, it enters only once.
+
+44:52.860 --> 44:54.340
+Again, this would require proof.
+
+44:54.340 --> 44:55.980
+It's not entirely straightforward.
+
+44:58.540 --> 45:00.100
+Any question about a different,
+
+45:01.180 --> 45:05.180
+for your P-set, you're going to implement
+
+45:05.180 --> 45:07.700
+a variant of the JAXA algorithm.
+
+45:07.700 --> 45:09.740
+What are used in robotics?
+
+45:10.420 --> 45:12.460
+What do you mean about depth-first search?
+
+45:12.460 --> 45:15.300
+Usually it's not finding optimal path, right?
+
+45:15.300 --> 45:18.780
+Or unless you're exhausted researching the entire problem.
+
+45:20.460 --> 45:23.220
+When depth-first is executed
+
+45:23.220 --> 45:25.420
+within the level-correcting framework,
+
+45:25.420 --> 45:27.700
+it indeed finds the optimal path.
+
+45:27.700 --> 45:29.900
+But yes, it might eventually have to search
+
+45:29.900 --> 45:32.380
+the entire space absolutely.
+
+45:32.380 --> 45:34.980
+Otherwise, yes, you wouldn't find the optimal path.
+
+45:34.980 --> 45:37.660
+One advantage of the depth-first search
+
+45:37.660 --> 45:40.500
+is that you, at any point in time,
+
+45:40.500 --> 45:42.940
+you only need to store in memory a part of the graph
+
+45:42.940 --> 45:44.900
+because you go deep into a branch.
+
+45:44.900 --> 45:47.100
+Well, with depth-first, you may need to store
+
+45:47.100 --> 45:49.020
+the entire graph as you keep exploring.
+
+45:51.620 --> 45:54.180
+Okay, so this is again how,
+
+45:54.180 --> 45:55.740
+in particular, this is the JAXA algorithm,
+
+45:55.740 --> 45:57.580
+how it looks like.
+
+45:57.580 --> 46:01.380
+So you expand almost uniformly as a wavefront
+
+46:01.380 --> 46:02.960
+on the way to the goal.
+
+46:02.960 --> 46:07.720
+This is fine, but for example,
+
+46:07.720 --> 46:12.080
+assume that you had actually an environment
+
+46:12.080 --> 46:14.240
+that looked more like a circle.
+
+46:14.240 --> 46:17.200
+The expansion will be isotropic,
+
+46:17.200 --> 46:19.080
+which means that you will expand in this direction
+
+46:19.080 --> 46:21.920
+toward the goal, but also in the opposite direction.
+
+46:21.920 --> 46:25.940
+The reason is that in the level-correcting algorithm,
+
+46:25.940 --> 46:30.240
+even with the JAXA strategy for node selection,
+
+46:30.240 --> 46:33.200
+you only look at the cost to arrive,
+
+46:33.200 --> 46:35.760
+but you don't have any biasing term
+
+46:35.760 --> 46:40.280
+that tries to favor nodes that are closer to the goal.
+
+46:40.280 --> 46:42.560
+So that's why you have a wavefront
+
+46:42.560 --> 46:44.040
+that expands isotropically.
+
+46:44.040 --> 46:47.560
+You're only capturing the notion of cost to arrive,
+
+46:47.560 --> 46:50.540
+which does not capture any notion of where the goal is,
+
+46:50.540 --> 46:52.720
+where it's with your start region.
+
+46:52.720 --> 46:57.720
+So the point is that by running the JAXA,
+
+46:58.000 --> 47:02.420
+the JAXA, also referred to as uninformed search,
+
+47:02.420 --> 47:03.920
+because you don't use the information
+
+47:03.920 --> 47:06.060
+of where the goal is with respect to the start,
+
+47:06.060 --> 47:07.800
+you may be wasting some computation
+
+47:07.800 --> 47:09.800
+because you are searching in a region
+
+47:09.800 --> 47:13.620
+where probably you shouldn't search,
+
+47:13.620 --> 47:18.160
+which motivates the topic of informed search,
+
+47:18.160 --> 47:22.020
+how to bias the search toward those nodes
+
+47:22.020 --> 47:25.840
+that have more potential to lead you to the goal
+
+47:25.840 --> 47:27.000
+in a minimum cost.
+
+47:27.720 --> 47:32.720
+So as I said, by only account for uninformed,
+
+47:35.840 --> 47:40.840
+by only account for cost to arrive,
+
+47:41.960 --> 47:44.200
+we said that the search is uninformed.
+
+47:44.200 --> 47:46.560
+Now we're trying to include some information
+
+47:46.560 --> 47:51.120
+about where the goal is with respect to the start vertex
+
+47:51.120 --> 47:54.760
+in order to inform the search, bias it more toward the goal
+
+47:54.760 --> 47:56.820
+so that you don't waste effort in regions
+
+47:56.820 --> 48:00.100
+where you know that basically an optimal path
+
+48:00.100 --> 48:01.760
+is not going to go through.
+
+48:03.460 --> 48:08.340
+The idea, one of the key ideas is to order the nodes
+
+48:08.340 --> 48:11.940
+not only by cost to arrive, that is what the JAXA does,
+
+48:11.940 --> 48:16.460
+but by cost to arrive plus an approximation
+
+48:16.460 --> 48:17.880
+of the cost to go.
+
+48:19.660 --> 48:23.100
+In particular, that approximation has to be a lower bound
+
+48:23.660 --> 48:28.660
+for the cost of the path between the node Q and the goal.
+
+48:31.260 --> 48:32.420
+More specifically,
+
+48:40.380 --> 48:45.380
+let this be the goal, this is your start node,
+
+48:46.260 --> 48:51.260
+this is Q, you have found a path to Q,
+
+48:53.260 --> 48:58.260
+this is CQ, in standard JAXA nodes are ordered by CQ,
+
+48:59.940 --> 49:01.740
+and you pick from the frontier Q
+
+49:01.740 --> 49:04.140
+the node that has lowest CQ.
+
+49:04.140 --> 49:09.140
+The idea is to look at CQ plus an approximation
+
+49:09.580 --> 49:11.060
+of the cost to go.
+
+49:13.320 --> 49:17.740
+The cost to go is the cost of the path
+
+49:17.740 --> 49:21.280
+from node Q to the goal.
+
+49:21.280 --> 49:23.120
+You don't know the cost exactly
+
+49:23.120 --> 49:26.800
+because you haven't computed any paths yet.
+
+49:26.800 --> 49:29.760
+But in many cases, you have an approximation
+
+49:29.760 --> 49:31.320
+of that cost to go.
+
+49:31.320 --> 49:33.900
+For example, a very simple approximation
+
+49:33.900 --> 49:38.400
+is just a straight line that neglects all obstacles,
+
+49:38.400 --> 49:40.240
+so basically just Euclidean distance.
+
+49:47.500 --> 49:48.920
+Euclidean distance.
+
+49:51.920 --> 49:56.920
+So the idea then is to order the nodes
+
+49:58.800 --> 50:03.420
+by cost to arrive plus approximation of the cost to go.
+
+50:03.420 --> 50:07.920
+In particular, for this procedure to be well posed,
+
+50:07.920 --> 50:11.600
+the approximation of the cost to go, referred to as HQ,
+
+50:12.760 --> 50:17.600
+has to be a lower bound of the actual cost to go.
+
+50:17.600 --> 50:22.600
+Otherwise, you might not include nodes in your search
+
+50:24.800 --> 50:27.880
+that actually could be part of the optimal path.
+
+50:27.880 --> 50:30.400
+As I said, from all practical purposes,
+
+50:30.400 --> 50:33.400
+very common choice is just the Euclidean length
+
+50:33.400 --> 50:36.560
+of a straight line neglecting all obstacles.
+
+50:36.560 --> 50:38.520
+What really matters is that in this approximation,
+
+50:38.520 --> 50:40.720
+you have a lower bound, so this is lower
+
+50:40.720 --> 50:44.600
+than the actual optimal path from node Q to the goal.
+
+50:44.600 --> 50:48.000
+Second of all, it has to be something very quick to compute.
+
+50:48.000 --> 50:50.580
+Usually, straight line works very well.
+
+50:50.580 --> 50:52.440
+So then what you do is to order the nodes
+
+50:52.440 --> 50:55.260
+by cost arrival plus approximation of cost to go,
+
+50:55.260 --> 50:59.600
+so the function HQ, and if you're doing the test
+
+50:59.600 --> 51:01.160
+with respect to the upper bound,
+
+51:01.160 --> 51:03.120
+to speed up the algorithm even further,
+
+51:03.120 --> 51:08.120
+you strengthen the test by adding also the cost to go.
+
+51:08.640 --> 51:13.520
+The idea again is that if you have a node Q prime
+
+51:14.200 --> 51:17.680
+for which the cost to arrive plus the underestimate
+
+51:17.680 --> 51:21.560
+is larger than the best path that you have found so far
+
+51:21.560 --> 51:24.560
+to the goal, then it's worthless to consider it any longer.
+
+51:26.480 --> 51:28.080
+Key point is that in this way,
+
+51:28.960 --> 51:32.760
+fewer nodes are placed in the priority queue,
+
+51:32.760 --> 51:34.280
+and in particular, your P set,
+
+51:34.280 --> 51:37.840
+so this strategy is referred to as the A star algorithm,
+
+51:37.840 --> 51:40.400
+one of the main algorithms for graph search,
+
+51:40.400 --> 51:42.640
+and in your P set, you will implement it,
+
+51:42.640 --> 51:45.840
+you will be implementing exactly A star,
+
+51:45.840 --> 51:48.160
+and A star will be your reference planner
+
+51:48.160 --> 51:49.820
+for the rest of the quarter.
+
+51:52.700 --> 51:54.760
+So this is again the jextra.
+
+51:54.760 --> 51:58.440
+As you see, uniform search, you expand as a boyfriend.
+
+51:58.440 --> 52:01.040
+This will be the implementation with A star.
+
+52:01.040 --> 52:05.400
+You see how now you are favoring those nodes
+
+52:05.400 --> 52:08.820
+that are closer to the goal,
+
+52:08.820 --> 52:10.960
+so it's much more direct way of searching.
+
+52:11.960 --> 52:15.720
+The reason being that we include this approximate notion
+
+52:15.720 --> 52:17.640
+of how far we are from the goal
+
+52:17.640 --> 52:19.860
+in order to bias our search,
+
+52:19.860 --> 52:23.100
+so we don't waste effort around here or around here,
+
+52:23.100 --> 52:24.720
+because we already know that an optimal path
+
+52:24.720 --> 52:26.080
+wouldn't go through there.
+
+52:27.520 --> 52:28.360
+Yeah.
+
+52:28.360 --> 52:31.120
+Is this also outside the most optimal path?
+
+52:31.120 --> 52:33.920
+Yeah, by the way, there is no notion of most optimal path,
+
+52:33.920 --> 52:35.560
+the optimal path, yeah.
+
+52:36.240 --> 52:40.280
+All right, so to sum up,
+
+52:40.280 --> 52:42.240
+the advantage of grid-based approaches
+
+52:42.240 --> 52:44.520
+is that they are simple to use,
+
+52:44.520 --> 52:46.300
+and in general, very fast.
+
+52:46.300 --> 52:49.960
+The disadvantage is that since you rely on discretization,
+
+52:49.960 --> 52:51.280
+as you pointed out,
+
+52:51.280 --> 52:54.840
+there is the issue of how to select that discretization,
+
+52:54.840 --> 52:57.080
+that oftentimes is not very clear,
+
+52:57.080 --> 53:00.700
+and moreover, since you are discretizing an environment,
+
+53:00.700 --> 53:03.800
+the number of vertices scale exponentially
+
+53:03.800 --> 53:06.880
+with the number of dimensions.
+
+53:06.880 --> 53:08.840
+If you have a three-dimension,
+
+53:08.840 --> 53:11.520
+then the number of vertices will scale
+
+53:11.520 --> 53:13.760
+with two to the power of the dimensions.
+
+53:13.760 --> 53:16.560
+So three is fine, four is fine, five becomes a problem.
+
+53:18.240 --> 53:20.480
+Having said that, very useful approach,
+
+53:20.480 --> 53:24.860
+so make sure that you familiarize yourself with a star.
+
+53:24.860 --> 53:27.880
+And the first problem in the pset will help you to do so.
+
+53:29.920 --> 53:33.000
+All right, so this is a grid-based approach.
+
+53:33.040 --> 53:35.920
+Another approach is the one where we try
+
+53:35.920 --> 53:39.040
+to solve the problem directly in the continuous space
+
+53:39.040 --> 53:42.120
+by using data structures that retain all the information
+
+53:42.120 --> 53:44.480
+from the continuous formulation on the problem.
+
+53:44.480 --> 53:45.800
+I'll be a little bit faster here
+
+53:45.800 --> 53:48.940
+because this class of algorithms is useful conceptually,
+
+53:48.940 --> 53:51.480
+but is much less useful from a practical standpoint.
+
+53:53.380 --> 53:56.280
+So as we already said, the problem of motion planning
+
+53:56.280 --> 53:59.280
+is to plan the motion for a robot from initial configuration
+
+53:59.280 --> 54:02.240
+to a final configuration in a continuous space.
+
+54:03.920 --> 54:08.600
+Let's look again at the setup that we looked before.
+
+54:08.600 --> 54:11.160
+So for example, in this case, the problem is to find
+
+54:11.160 --> 54:13.360
+a sequence of translations and notations
+
+54:13.360 --> 54:15.340
+that deliver us to the goal region.
+
+54:16.600 --> 54:18.120
+This actually
+
+54:22.440 --> 54:25.720
+allow us to reinterpret the motion of planning,
+
+54:25.720 --> 54:28.500
+the problem of motion planning in a more unified way
+
+54:28.500 --> 54:29.560
+of what we've done so far.
+
+54:29.560 --> 54:31.600
+And this goes also back to the previous question
+
+54:31.600 --> 54:34.880
+about how do we account for the dimension of the robot.
+
+54:34.880 --> 54:37.120
+The problem of motion planning is really to find
+
+54:37.120 --> 54:39.040
+a sequence, a trajectory basically
+
+54:39.040 --> 54:41.300
+for your configuration variables.
+
+54:41.300 --> 54:43.760
+Once you've done that identification,
+
+54:43.760 --> 54:46.160
+the problem of motion planning reduces to the problem
+
+54:46.160 --> 54:49.240
+of planning the motion of a point in configuration space.
+
+54:50.160 --> 54:53.360
+So in general, the motion planning problem is defined
+
+54:53.360 --> 54:55.240
+with respect to the configuration space,
+
+54:55.240 --> 54:57.960
+meaning the set of all the configurations
+
+54:57.960 --> 54:59.600
+that the robot can assume.
+
+54:59.640 --> 55:03.200
+To be specific, in the case of two-dimensional robots,
+
+55:03.200 --> 55:07.000
+like for example a triangle, its configuration will be
+
+55:07.000 --> 55:10.500
+its Cartesian position x, y and its heading.
+
+55:11.800 --> 55:14.400
+So the problem of motion planning is to find a sequence
+
+55:14.400 --> 55:19.400
+for the x, y and theta so that the real robot
+
+55:19.720 --> 55:24.720
+do not collide with obstacles and reaches the goal.
+
+55:25.480 --> 55:28.460
+Now in the case, so the configuration in this case
+
+55:28.500 --> 55:30.380
+is a subset of R3.
+
+55:30.380 --> 55:32.940
+In reality, there is a nuance due to the fact
+
+55:32.940 --> 55:36.140
+that the theta is an angle and theta plus two pi
+
+55:36.140 --> 55:37.600
+is the same.
+
+55:37.600 --> 55:39.980
+So in reality, the correct way of representing this
+
+55:39.980 --> 55:42.260
+mathematically is a subset of R2.
+
+55:42.260 --> 55:45.940
+This is the Cartesian space for the position
+
+55:45.940 --> 55:50.360
+times the space for the rotation, so basically a circle.
+
+55:50.360 --> 55:55.360
+Why you have to account for the fact that theta plus two pi
+
+55:55.520 --> 55:56.680
+is equal to theta?
+
+56:01.440 --> 56:02.340
+Let's assume that,
+
+56:08.140 --> 56:11.880
+let's assume that, so this is zero and this is two pi
+
+56:11.880 --> 56:15.000
+and you do not recognize that zero is equal to two pi.
+
+56:15.000 --> 56:19.000
+So you may think that going in this direction
+
+56:19.000 --> 56:22.860
+is not possible, so basically swinging around from two pi
+
+56:22.860 --> 56:24.200
+to zero is not possible.
+
+56:24.200 --> 56:28.080
+So let's assume that this is your origin
+
+56:28.080 --> 56:29.380
+and this is your goal.
+
+56:30.320 --> 56:33.080
+So if you don't identify two pi with zero,
+
+56:33.080 --> 56:35.440
+then the motion that you will plan is something like this
+
+56:35.440 --> 56:36.520
+which is very long.
+
+56:36.520 --> 56:38.880
+If indeed you identify two pi with zero,
+
+56:38.880 --> 56:40.720
+then the motion that you will plan is this one
+
+56:40.720 --> 56:41.720
+that is much shorter.
+
+56:45.640 --> 56:49.400
+But so anyway, the point here is that in general,
+
+56:49.400 --> 56:52.400
+the motion planning problem and its full generality
+
+56:52.400 --> 56:55.560
+can be considered as a problem of finding a path
+
+56:55.560 --> 56:58.840
+in the configuration space, whereby the robot
+
+56:58.840 --> 57:02.400
+has been shrunk to a point and accordingly,
+
+57:02.400 --> 57:05.840
+the obstacles have been enlarged in order to account
+
+57:05.840 --> 57:10.000
+for the fact that the robot has been shrunk to a point.
+
+57:10.000 --> 57:13.040
+Like for example here, if we have a triangular,
+
+57:14.700 --> 57:17.560
+yeah, so we have a triangular obstacle and a circular robot
+
+57:18.480 --> 57:20.760
+in the configuration space, so in the space
+
+57:20.760 --> 57:25.760
+of xy positions, the obstacle will be represented
+
+57:25.820 --> 57:30.820
+as this inflated set, with the idea that if the xy position,
+
+57:31.560 --> 57:33.900
+so the center of your robot is here,
+
+57:33.900 --> 57:36.400
+then the true robot will collide with the obstacle.
+
+57:36.400 --> 57:38.920
+If it is outside, then the robot does not collide
+
+57:38.920 --> 57:40.300
+with the obstacle.
+
+57:40.300 --> 57:43.480
+So this goes back to the discussion we had before
+
+57:43.480 --> 57:46.560
+about the need to inflate the obstacles
+
+57:46.560 --> 57:48.840
+and basically represent, or more technically,
+
+57:48.840 --> 57:51.220
+to represent the obstacles in the configuration space
+
+57:51.220 --> 57:54.480
+in order to do motion planning, whereby we interpret
+
+57:54.480 --> 57:58.660
+the robot as a point, in particular, its configuration.
+
+58:00.120 --> 58:02.040
+It's a little subtle point, but something important
+
+58:02.040 --> 58:03.520
+to keep in mind.
+
+58:03.520 --> 58:07.880
+Is there any non-circular robots that are efficient
+
+58:07.880 --> 58:10.480
+possible ways to account for the robot's geometry
+
+58:10.480 --> 58:11.320
+when inflating the obstacles?
+
+58:11.320 --> 58:13.400
+Right, and the answer is no.
+
+58:13.400 --> 58:16.780
+That's why motion planning is a hard problem.
+
+58:16.780 --> 58:17.840
+Very good point.
+
+58:17.840 --> 58:21.440
+In general, how do we represent the obstacles
+
+58:21.440 --> 58:24.460
+that are in the workspace, so in the three dimensions,
+
+58:24.460 --> 58:26.400
+into the configuration space,
+
+58:26.400 --> 58:28.660
+which might be much higher dimensional?
+
+58:28.660 --> 58:31.180
+For example, if you have a robot with a manipulator,
+
+58:31.180 --> 58:33.780
+the configuration space accounts for the joint angles
+
+58:33.780 --> 58:37.640
+of your arm, plus the Cartesian position of the base
+
+58:37.640 --> 58:39.900
+of your manipulator, plus the heading,
+
+58:39.900 --> 58:42.200
+so the space could be like 10 dimensional.
+
+58:42.200 --> 58:45.520
+So now you have an obstacle in the workspace,
+
+58:45.520 --> 58:49.000
+so in the real world, you have to inflate it
+
+58:49.000 --> 58:53.080
+in the configuration space that has a different number
+
+58:53.080 --> 58:55.320
+of dimensions, in particular, much larger.
+
+58:55.320 --> 58:57.840
+How you do that, extremely complicated.
+
+58:57.840 --> 59:00.440
+That's exactly the reason why these combinatorial algorithms
+
+59:00.440 --> 59:02.120
+do not work in practice.
+
+59:02.120 --> 59:04.360
+Because they require an explicit representation
+
+59:04.360 --> 59:06.680
+of the obstacles in the configuration space
+
+59:06.680 --> 59:10.640
+that oftentimes, I'll say, almost always is not available,
+
+59:10.640 --> 59:12.840
+which motivates the sampling-based algorithms
+
+59:12.840 --> 59:14.800
+that we're going to discuss on Thursday.
+
+59:15.640 --> 59:17.600
+But yes, that's the entire point of these slides,
+
+59:17.600 --> 59:21.200
+to show that conceptually, if you can represent obstacles
+
+59:21.200 --> 59:23.960
+from the real world into the configuration space,
+
+59:23.960 --> 59:26.660
+where the motion planning problem really lives,
+
+59:26.660 --> 59:29.160
+then you can apply the algorithm that I'm going to mention
+
+59:29.160 --> 59:31.320
+in a second, and everything is easy.
+
+59:31.320 --> 59:34.000
+But in reality, this translation is very difficult.
+
+59:34.000 --> 59:36.000
+That's what motivates the sampling-based algorithms
+
+59:36.000 --> 59:39.140
+that we're going to discuss on Thursday.
+
+59:40.000 --> 59:42.640
+So this point here is a bit subtle.
+
+59:42.640 --> 59:45.280
+I would say that a good fraction of roboticists
+
+59:45.280 --> 59:46.600
+missed this point.
+
+59:46.600 --> 59:49.200
+I routinely review papers where this point is missed,
+
+59:49.200 --> 59:52.800
+and the claims that people make are completely nonsensical.
+
+59:54.760 --> 59:57.200
+So as I said, the conceptually, the problem, again,
+
+59:57.200 --> 01:00:01.160
+for the 10th time, is to shrink the point,
+
+01:00:01.160 --> 01:00:03.840
+the robot to a point, its configuration,
+
+01:00:03.840 --> 01:00:06.040
+which might be a high-dimensional object.
+
+01:00:06.040 --> 01:00:08.400
+The heading, the position, possibly the joints
+
+01:00:08.400 --> 01:00:11.840
+for the manipulator on top of your robot, and so on.
+
+01:00:11.840 --> 01:00:16.840
+But accordingly, you have to represent the obstacles
+
+01:00:16.980 --> 01:00:20.080
+from the real world, referred to as workspace,
+
+01:00:20.080 --> 01:00:23.160
+into the configuration space.
+
+01:00:23.160 --> 01:00:26.160
+This mapping, in general, is complicated.
+
+01:00:26.160 --> 01:00:28.800
+In this case, whereby the dimension of the configuration
+
+01:00:28.800 --> 01:00:31.760
+space and the dimension of the workspace are the same,
+
+01:00:31.760 --> 01:00:33.760
+is very easy to understand.
+
+01:00:33.760 --> 01:00:35.960
+But in general, it is very difficult
+
+01:00:35.960 --> 01:00:37.240
+to represent explicitly.
+
+01:00:37.240 --> 01:00:38.080
+Yes?
+
+01:00:38.080 --> 01:00:41.440
+And what is the robot, like, modern robot?
+
+01:00:41.440 --> 01:00:45.600
+The robot arm can change shape, so potentially,
+
+01:00:45.600 --> 01:00:49.200
+in a string, the obstacles differently based on how you're,
+
+01:00:49.200 --> 01:00:51.280
+how the pose of the robot is.
+
+01:00:51.280 --> 01:00:53.800
+It can change shape in a sense that it's not a rigid body,
+
+01:00:53.800 --> 01:00:55.200
+it's a soft robot?
+
+01:00:55.200 --> 01:00:58.040
+No, but like, for example, if the arm is extended this way,
+
+01:00:58.040 --> 01:01:00.800
+then it's gonna have a larger kind of radius,
+
+01:01:00.800 --> 01:01:03.800
+but if the arm kind of contracts back to the body,
+
+01:01:03.800 --> 01:01:06.400
+then it's gonna be, it's gonna be smaller.
+
+01:01:06.400 --> 01:01:09.360
+So how do you account for that when you are inflating
+
+01:01:09.360 --> 01:01:11.400
+the obstacles, do you think?
+
+01:01:11.400 --> 01:01:15.240
+Right, so in general, representing explicitly
+
+01:01:15.240 --> 01:01:19.200
+obstacles from the workspace into configuration space
+
+01:01:19.200 --> 01:01:21.820
+of robot manipulator with multiple joints
+
+01:01:21.820 --> 01:01:23.320
+is extremely difficult.
+
+01:01:23.320 --> 01:01:26.440
+That's why this is basically never done explicitly
+
+01:01:26.440 --> 01:01:29.160
+like here, but it's done implicitly
+
+01:01:29.160 --> 01:01:30.920
+through the notion of sampling-based algorithms
+
+01:01:30.920 --> 01:01:32.520
+that we're going to see next time.
+
+01:01:32.520 --> 01:01:35.160
+But again, very good point, that's why these algorithms,
+
+01:01:35.160 --> 01:01:38.260
+even though we're going to spend 50 minutes on them,
+
+01:01:38.260 --> 01:01:39.980
+more for self consistency of this class,
+
+01:01:39.980 --> 01:01:42.800
+are not really that useful in practice,
+
+01:01:42.800 --> 01:01:44.760
+because of, for example, this problem.
+
+01:01:46.560 --> 01:01:51.560
+Okay, having said that, in the context of planning
+
+01:01:51.560 --> 01:01:55.260
+configuration space, then the problem formally becomes
+
+01:01:55.260 --> 01:01:58.280
+the problem finding a continuous path
+
+01:01:58.280 --> 01:02:03.280
+for your configuration vector that maps the interval zero,
+
+01:02:04.160 --> 01:02:08.920
+one into a trajectory that does not intersect
+
+01:02:08.920 --> 01:02:11.960
+with any obstacle, so it belongs to the free portion
+
+01:02:11.960 --> 01:02:15.440
+of the configuration space, with a property that at zero,
+
+01:02:15.440 --> 01:02:17.040
+we are at the initial node, at the end,
+
+01:02:17.040 --> 01:02:18.660
+we are at the goal node.
+
+01:02:18.660 --> 01:02:20.600
+The free portion of the configuration space
+
+01:02:20.600 --> 01:02:25.600
+is the set of configuration such that when the robot
+
+01:02:25.720 --> 01:02:28.820
+in the workspace is at that configuration,
+
+01:02:28.820 --> 01:02:31.200
+it does not intersect with an obstacle.
+
+01:02:33.760 --> 01:02:34.800
+Does that make sense?
+
+01:02:36.540 --> 01:02:39.000
+So that's really the link between configuration space
+
+01:02:39.000 --> 01:02:40.040
+and workspace.
+
+01:02:40.040 --> 01:02:43.300
+The collision checking is done obviously in the workspace,
+
+01:02:43.300 --> 01:02:46.800
+and this is the formula that allows you to translate
+
+01:02:46.800 --> 01:02:50.400
+conceptually obstacles in the configuration space
+
+01:02:50.400 --> 01:02:53.700
+into constraints, sorry, obstacles in the workspace
+
+01:02:53.700 --> 01:02:56.280
+into constraints in the configuration space.
+
+01:02:56.280 --> 01:02:58.200
+Unfortunately, there is no general algorithm
+
+01:02:58.200 --> 01:03:01.240
+that will allow you to do that explicitly and efficiently.
+
+01:03:01.240 --> 01:03:03.080
+Does that mean that the free space is different
+
+01:03:03.080 --> 01:03:05.520
+for different orientations of the robot?
+
+01:03:05.520 --> 01:03:07.760
+Or for different configurations of the robot?
+
+01:03:07.760 --> 01:03:10.820
+So the free space is the set of all configurations
+
+01:03:10.820 --> 01:03:14.080
+such that the robot does not intersect an obstacle
+
+01:03:14.080 --> 01:03:15.240
+in the workspace.
+
+01:03:15.240 --> 01:03:17.400
+So the configuration space is a space,
+
+01:03:17.400 --> 01:03:20.960
+so it's a set of an uncountable number of configurations.
+
+01:03:20.960 --> 01:03:23.120
+All right, so having said that,
+
+01:03:23.120 --> 01:03:27.200
+the idea of combinatorial planning is to steal
+
+01:03:27.720 --> 01:03:31.360
+a computer roadmap, so basically a graph,
+
+01:03:31.360 --> 01:03:33.160
+similar to grid-based search,
+
+01:03:33.160 --> 01:03:37.120
+but in a way that we are not losing any information
+
+01:03:37.120 --> 01:03:40.460
+with respect to the underlying continuous problem.
+
+01:03:41.480 --> 01:03:44.000
+This means that this roadmap needs to have
+
+01:03:44.000 --> 01:03:45.640
+two key properties.
+
+01:03:45.640 --> 01:03:50.640
+Accessibility, which means that for every configuration,
+
+01:03:52.560 --> 01:03:54.480
+QI, so initial configuration,
+
+01:03:54.480 --> 01:03:56.740
+and the final configuration of Q goal,
+
+01:03:57.300 --> 01:03:59.900
+there is a way to connect this configuration
+
+01:03:59.900 --> 01:04:02.960
+to at least a node in the roadmap.
+
+01:04:02.960 --> 01:04:07.400
+So you don't end up in situations whereby, say,
+
+01:04:07.400 --> 01:04:08.400
+where is it?
+
+01:04:23.760 --> 01:04:27.480
+So there's an obstacle, this is your QI,
+
+01:04:27.480 --> 01:04:32.240
+and this is your roadmap, so basically this is the graph
+
+01:04:32.240 --> 01:04:35.240
+that you use to represent your continuous space.
+
+01:04:35.240 --> 01:04:37.840
+So this is a case whereby you would like to solve
+
+01:04:37.840 --> 01:04:39.920
+the motion planning problem from here,
+
+01:04:39.920 --> 01:04:44.000
+but you don't have an easy way to connect QI
+
+01:04:44.000 --> 01:04:47.440
+to any node in the roadmap, so there will be a bad roadmap.
+
+01:04:48.360 --> 01:04:52.680
+And connectivity, if there exists a path from QI to QG,
+
+01:04:52.680 --> 01:04:56.080
+there exists a path on the roadmap from S1 to S2.
+
+01:04:56.080 --> 01:04:59.320
+This basically means that you're not losing any information
+
+01:04:59.320 --> 01:05:01.080
+by having discrete representation
+
+01:05:01.080 --> 01:05:02.840
+of your underlying continuous space.
+
+01:05:05.920 --> 01:05:10.100
+Because given QI and QG, I can always connect those
+
+01:05:10.100 --> 01:05:12.400
+to at least a node in the roadmap,
+
+01:05:12.400 --> 01:05:14.140
+and there is always a path in the roadmap
+
+01:05:14.140 --> 01:05:19.140
+that brings me to the node S2 that I can connect to QG.
+
+01:05:22.000 --> 01:05:23.080
+Does that make sense?
+
+01:05:24.720 --> 01:05:26.960
+So the question, of course, is how do you compute
+
+01:05:26.960 --> 01:05:29.600
+a roadmap with these two properties?
+
+01:05:29.600 --> 01:05:31.320
+If you have these two properties,
+
+01:05:31.320 --> 01:05:34.480
+then you're guaranteed that the roadmap provides
+
+01:05:34.480 --> 01:05:36.640
+discrete representation of the continuous motion planning
+
+01:05:36.640 --> 01:05:39.000
+problem without losing any of the original
+
+01:05:39.000 --> 01:05:41.800
+connectivity information needed to solve it.
+
+01:05:41.800 --> 01:05:44.080
+The question now, of course, is how do you compute
+
+01:05:44.080 --> 01:05:44.920
+such a roadmap?
+
+01:05:47.260 --> 01:05:50.640
+So in the case of 2D, and again, the reason why I use
+
+01:05:50.640 --> 01:05:53.700
+the 2D case is A, because it's easy to visualize,
+
+01:05:53.700 --> 01:05:56.340
+two, because this class of algorithm work well
+
+01:05:56.340 --> 01:05:59.160
+for the simple problems that don't really work well
+
+01:05:59.160 --> 01:06:00.880
+for more complicated problems.
+
+01:06:00.880 --> 01:06:03.480
+A simple way to compute such a roadmap
+
+01:06:03.480 --> 01:06:07.280
+is to use the notion of self-decomposition,
+
+01:06:07.280 --> 01:06:10.600
+whereby the environment is decomposing to cells
+
+01:06:10.600 --> 01:06:15.600
+that are easy to compute, and then connectivity
+
+01:06:15.800 --> 01:06:18.440
+within each cell is straightforward.
+
+01:06:18.440 --> 01:06:20.820
+For example, you consider cells that are convex,
+
+01:06:20.820 --> 01:06:22.820
+which means that between any two nodes,
+
+01:06:22.820 --> 01:06:24.680
+you have an interpolating line that belongs
+
+01:06:24.680 --> 01:06:25.740
+to that set as well.
+
+01:06:27.080 --> 01:06:30.880
+And finally, the adiancy between the cells
+
+01:06:30.880 --> 01:06:32.920
+is also straightforward.
+
+01:06:33.200 --> 01:06:36.040
+So a simple way to compute a cell decomposition
+
+01:06:36.040 --> 01:06:39.960
+is by computing a trapezoidal cell decomposition.
+
+01:06:39.960 --> 01:06:42.640
+Trapezoidal cell decomposition works as follows.
+
+01:06:42.640 --> 01:06:47.640
+You start from each vertex of the forbidden space
+
+01:06:48.320 --> 01:06:52.340
+of obstacle space, like for example here or here,
+
+01:06:52.340 --> 01:06:56.220
+and you start shooting rays downward and upward
+
+01:06:56.220 --> 01:07:00.460
+until you intersect the boundary of the feasible space.
+
+01:07:01.460 --> 01:07:03.300
+Okay?
+
+01:07:03.300 --> 01:07:07.980
+Every time you have an intersection, you build a cell.
+
+01:07:07.980 --> 01:07:11.220
+And then you place a representative point in,
+
+01:07:11.220 --> 01:07:14.780
+for example, at the center, at the centroid of that cell.
+
+01:07:14.780 --> 01:07:16.940
+In this way, you're guaranteed that each cell
+
+01:07:16.940 --> 01:07:21.500
+is indeed convex, so you have the first accessibility
+
+01:07:21.500 --> 01:07:24.740
+property, and also due to the adiancy with which
+
+01:07:24.740 --> 01:07:27.640
+you compute these trapezoidal cell decomposition,
+
+01:07:27.640 --> 01:07:29.580
+you also have the connectivity property.
+
+01:07:30.640 --> 01:07:32.880
+So then the way that motion planning would work
+
+01:07:32.880 --> 01:07:35.720
+is that if you're given a QI here,
+
+01:07:35.720 --> 01:07:37.680
+you connect it to the closest,
+
+01:07:38.780 --> 01:07:42.540
+well, you connect it to the centroid of the cell
+
+01:07:42.540 --> 01:07:45.620
+where QI lies, then you do planning by using,
+
+01:07:45.620 --> 01:07:48.380
+for example, A star on the roadmap,
+
+01:07:48.380 --> 01:07:52.620
+and then you connect the QG to the node
+
+01:07:52.620 --> 01:07:54.720
+that is representative in the same cell.
+
+01:07:54.720 --> 01:07:59.160
+This is a purely geometric formulation
+
+01:07:59.160 --> 01:08:00.480
+of motion planning problem.
+
+01:08:04.000 --> 01:08:04.840
+Yep?
+
+01:08:04.840 --> 01:08:08.440
+So the vertices are not necessarily all sharp points,
+
+01:08:08.440 --> 01:08:11.680
+but on the space, there's some curves,
+
+01:08:11.680 --> 01:08:15.520
+so you can't necessarily draw a streamline trapezoid.
+
+01:08:15.520 --> 01:08:20.520
+Yeah, so these algorithms are simple to explain
+
+01:08:21.140 --> 01:08:24.160
+and to visualize, to implement, are really a pain,
+
+01:08:24.160 --> 01:08:29.040
+because of basically doing these geometric constructions,
+
+01:08:29.040 --> 01:08:30.940
+like computation is not easy.
+
+01:08:30.940 --> 01:08:34.260
+There is a tool that I'm going to mention in a second,
+
+01:08:34.260 --> 01:08:37.520
+but in general, coding this stuff is not easy,
+
+01:08:37.520 --> 01:08:39.360
+and then if you start having curves,
+
+01:08:39.360 --> 01:08:41.880
+then you have to do some polygonal approximation
+
+01:08:41.880 --> 01:08:43.440
+in order to run the scheme.
+
+01:08:44.720 --> 01:08:47.120
+So these algorithms are easy to explain
+
+01:08:47.120 --> 01:08:49.880
+and easy to understand, but they're difficult
+
+01:08:49.880 --> 01:08:52.760
+to implement and not very practical.
+
+01:08:52.760 --> 01:08:55.720
+So again, this is just, I'm talking about these algorithms
+
+01:08:55.720 --> 01:08:59.400
+more for your knowledge, but what you really need to learn
+
+01:08:59.400 --> 01:09:02.200
+from this class is the A star search algorithm,
+
+01:09:02.200 --> 01:09:04.940
+from this lecture, the A star search algorithm.
+
+01:09:04.940 --> 01:09:07.480
+There are other ways to build the roadmap,
+
+01:09:07.480 --> 01:09:10.120
+so like for example, visibility graphs
+
+01:09:10.120 --> 01:09:13.520
+that allow you to reason about optimality,
+
+01:09:13.520 --> 01:09:16.360
+basically beyond the scope of this class.
+
+01:09:18.120 --> 01:09:20.240
+As we already mentioned, a key difficulty
+
+01:09:20.280 --> 01:09:22.800
+with these algorithms is that we are assuming
+
+01:09:22.800 --> 01:09:25.760
+that we can represent in the computational space
+
+01:09:25.760 --> 01:09:28.440
+the set of configurations that are obstacle-free.
+
+01:09:28.440 --> 01:09:31.680
+In general, this is very hard to do.
+
+01:09:31.680 --> 01:09:33.160
+Going back to your question,
+
+01:09:36.160 --> 01:09:39.880
+there are actually computational procedures to do it,
+
+01:09:39.880 --> 01:09:41.880
+but they have a terrible scaling,
+
+01:09:41.880 --> 01:09:44.280
+like double exponential and these kind of things.
+
+01:09:44.280 --> 01:09:47.280
+So conceptually, it's possible,
+
+01:09:47.280 --> 01:09:48.960
+practically, it's not possible.
+
+01:09:50.320 --> 01:09:52.800
+And by stretching my drawing skills,
+
+01:09:52.800 --> 01:09:57.040
+I want to give you yet another explanation
+
+01:09:57.040 --> 01:10:02.040
+about why it's so hard to go from the world space
+
+01:10:02.960 --> 01:10:06.840
+to the representation of the obstacles in the world space
+
+01:10:06.840 --> 01:10:08.400
+into a representation of the obstacles
+
+01:10:08.400 --> 01:10:09.860
+in the configuration space.
+
+01:10:09.860 --> 01:10:11.280
+Let's go back to the previous example,
+
+01:10:11.280 --> 01:10:13.280
+so moving in triangles from initial position
+
+01:10:13.280 --> 01:10:14.360
+to the goal position.
+
+01:10:15.200 --> 01:10:16.800
+The configuration space is three-dimensional.
+
+01:10:16.800 --> 01:10:20.180
+You have translations, X, Y, and the theta, the heading.
+
+01:10:22.720 --> 01:10:26.480
+So for example, we can take any point on the triangle
+
+01:10:26.480 --> 01:10:28.280
+to be our representative point,
+
+01:10:28.280 --> 01:10:29.780
+like for example, this vertex.
+
+01:10:31.120 --> 01:10:34.600
+So the first thing to do is to, as we did say before,
+
+01:10:34.600 --> 01:10:37.980
+to enlarge the obstacles by using the geometry
+
+01:10:37.980 --> 01:10:38.820
+of the robots.
+
+01:10:39.800 --> 01:10:42.680
+So if your vertex, upper left vertex is here,
+
+01:10:42.680 --> 01:10:45.240
+then, so okay, so here I'm only considering translation,
+
+01:10:45.240 --> 01:10:46.760
+sorry, so in this problem,
+
+01:10:46.760 --> 01:10:48.520
+the configuration is two-dimensional.
+
+01:10:49.400 --> 01:10:52.520
+So if my upper vertex is here,
+
+01:10:52.520 --> 01:10:55.520
+two robots will be in collision, otherwise it is not.
+
+01:10:55.520 --> 01:10:58.600
+So it slides this robot along the shape of the obstacle,
+
+01:10:58.600 --> 01:11:01.640
+and this will be the enlarged version of the obstacle
+
+01:11:01.640 --> 01:11:04.660
+in the configuration space that will lead it to a collision
+
+01:11:04.660 --> 01:11:07.360
+for the two robots in the world space.
+
+01:11:07.360 --> 01:11:08.920
+Same for the other obstacle.
+
+01:11:09.760 --> 01:11:12.760
+Then I have to trim the environment,
+
+01:11:12.760 --> 01:11:16.480
+and having done that, then in the configuration space,
+
+01:11:16.480 --> 01:11:18.480
+which is just X, Y for the triangular robot,
+
+01:11:18.480 --> 01:11:20.540
+we are not allowing for now rotation,
+
+01:11:20.540 --> 01:11:23.940
+the problem is just to find a path for a point.
+
+01:11:23.940 --> 01:11:25.480
+By using, for example, either a star,
+
+01:11:25.480 --> 01:11:28.400
+or the trapezoidal side of the composition, and so on.
+
+01:11:28.400 --> 01:11:30.600
+But let's now put the heading
+
+01:11:30.600 --> 01:11:31.700
+as an additional degree of freedom.
+
+01:11:31.700 --> 01:11:33.800
+So now the robot can also rotate.
+
+01:11:33.800 --> 01:11:36.960
+So now the world space is two-dimensional,
+
+01:11:36.960 --> 01:11:39.240
+but the configuration space is three-dimensional.
+
+01:11:39.240 --> 01:11:40.600
+You have X, Y, and theta,
+
+01:11:40.600 --> 01:11:43.600
+which means that you have to do that sliding procedure
+
+01:11:43.600 --> 01:11:48.440
+to increase the obstacles for each fixed value of theta,
+
+01:11:48.440 --> 01:11:51.200
+which will give rise to this very weird shape
+
+01:11:51.200 --> 01:11:52.620
+in three dimensions.
+
+01:11:52.620 --> 01:11:56.960
+So those two seemingly benign obstacles in 2D
+
+01:11:56.960 --> 01:11:58.720
+becomes these two horrible things
+
+01:11:58.720 --> 01:12:00.160
+in the configuration space.
+
+01:12:01.320 --> 01:12:04.240
+And this is just to go from a two-dimensional world space
+
+01:12:04.240 --> 01:12:06.920
+into a three-dimensional configuration space.
+
+01:12:06.920 --> 01:12:10.340
+Think about six-dimensional configuration spaces
+
+01:12:10.940 --> 01:12:12.020
+with dynamics.
+
+01:12:12.020 --> 01:12:13.620
+No way you can do it.
+
+01:12:13.620 --> 01:12:17.120
+Which motivates the algorithm I'm going to discuss
+
+01:12:17.120 --> 01:12:20.140
+on Thursday, which is the class of sampling-based algorithms.
+
+01:12:20.140 --> 01:12:23.660
+Before leaving, though, so there was a question about
+
+01:12:23.660 --> 01:12:25.700
+if you really want to apply combinatorial algorithms,
+
+01:12:25.700 --> 01:12:26.540
+how you do it.
+
+01:12:27.580 --> 01:12:30.460
+So dealing with the geometric construction
+
+01:12:30.460 --> 01:12:32.840
+is actually not easy.
+
+01:12:32.840 --> 01:12:35.180
+Part of my PhD was in doing so,
+
+01:12:35.180 --> 01:12:36.900
+and it was really pain in the neck.
+
+01:12:36.900 --> 01:12:39.820
+Fortunately, there is a library called SIGAL,
+
+01:12:40.180 --> 01:12:42.020
+the computational geometry algorithm library
+
+01:12:42.020 --> 01:12:45.740
+that I extensively leveraged for my PhD
+
+01:12:45.740 --> 01:12:49.100
+that allows you to do a number of primitive
+
+01:12:49.100 --> 01:12:52.160
+geometric computation, like computing Boronoi diagrams
+
+01:12:52.160 --> 01:12:54.200
+and a lot of things.
+
+01:12:54.200 --> 01:12:56.380
+Taffy-Seidel set the composition and so on
+
+01:12:56.380 --> 01:12:58.260
+in a very simple way.
+
+01:12:58.260 --> 01:13:01.520
+So if you want to use combinatorial algorithms
+
+01:13:01.520 --> 01:13:04.740
+and in particular geometry computation,
+
+01:13:04.740 --> 01:13:07.660
+I strongly encourage you to look at the SIGAL.
+
+01:13:08.580 --> 01:13:11.340
+This link, you can find, you should click on it.
+
+01:13:11.340 --> 01:13:13.340
+You can find an interesting visualization
+
+01:13:13.340 --> 01:13:15.860
+of the computational space for a polygonal robot.
+
+01:13:15.860 --> 01:13:18.100
+This gives you yet more insight
+
+01:13:18.100 --> 01:13:19.400
+on the challenge of motion planning,
+
+01:13:19.400 --> 01:13:21.420
+which is again this translation from the workspace
+
+01:13:21.420 --> 01:13:23.380
+to the computational space.
+
+01:13:23.380 --> 01:13:26.780
+And finally, some additional readings if you're interested.
+
+01:13:26.780 --> 01:13:29.860
+So to sum up, for combinatorial planning algorithms,
+
+01:13:29.860 --> 01:13:32.460
+the advantage is that these approaches are complete.
+
+01:13:32.460 --> 01:13:35.900
+If there is a feasible path, they will find it,
+
+01:13:35.900 --> 01:13:38.900
+and they also have better guarantees on the running time.
+
+01:13:38.900 --> 01:13:42.000
+Unfortunately, due to this complication
+
+01:13:42.000 --> 01:13:45.860
+of translating obstacles from the workspace
+
+01:13:45.860 --> 01:13:48.220
+to the computational space in explicit manner,
+
+01:13:48.220 --> 01:13:50.660
+as required by combinatorial algorithms,
+
+01:13:50.660 --> 01:13:53.860
+running these algorithms on problems
+
+01:13:53.860 --> 01:13:57.140
+with more than three or four degrees of freedom
+
+01:13:57.140 --> 01:13:59.540
+is not really practical.
+
+01:13:59.540 --> 01:14:03.260
+And also, they're difficult to implement.
+
+01:14:03.260 --> 01:14:05.420
+I gave you a reference for a library
+
+01:14:05.780 --> 01:14:07.060
+that would ease the implementation,
+
+01:14:07.060 --> 01:14:08.980
+but they're still very tricky to implement.
+
+01:14:08.980 --> 01:14:12.300
+The algorithms that I'm going to discuss on Thursday
+
+01:14:12.300 --> 01:14:14.820
+actually are much simpler to implement
+
+01:14:14.820 --> 01:14:16.300
+and scale much better with respect
+
+01:14:16.300 --> 01:14:17.740
+to the number of dimensions.
+
+01:14:18.620 --> 01:14:22.020
+And in particular, we look at those algorithms on Thursday.
+
+01:14:22.020 --> 01:14:23.540
+So to sum up this lecture,
+
+01:14:23.540 --> 01:14:26.580
+I talked about grid-based approaches to motion planning.
+
+01:14:26.580 --> 01:14:29.660
+This is really what you have to remember from this lecture.
+
+01:14:29.660 --> 01:14:31.540
+It's going to, it's a very important tool
+
+01:14:31.540 --> 01:14:33.540
+in the field of robotics, and you're going to use
+
+01:14:33.540 --> 01:14:36.540
+in particular A star for the rest of the quarter.
+
+01:14:36.540 --> 01:14:39.060
+As a bonus material, I talked a little bit
+
+01:14:39.060 --> 01:14:41.860
+about combinatorial planning,
+
+01:14:41.860 --> 01:14:44.100
+with the idea that conceptually this is
+
+01:14:44.100 --> 01:14:46.180
+a very interesting approach to motion planning,
+
+01:14:46.180 --> 01:14:48.100
+practically not that useful.
+
+01:14:48.100 --> 01:14:51.460
+For your midterm, I will ask you conceptual questions
+
+01:14:51.460 --> 01:14:54.840
+about grid-based approaches, like for example,
+
+01:14:54.840 --> 01:14:56.620
+what's the difference between Dijkstra
+
+01:14:56.620 --> 01:14:58.100
+and the breadth-first search,
+
+01:14:58.100 --> 01:15:01.360
+and questions about sampling-based algorithms
+
+01:15:01.360 --> 01:15:02.780
+that I will explain on Thursday.
+
+01:15:02.860 --> 01:15:05.060
+I won't ask questions about combinatorial planning
+
+01:15:05.060 --> 01:15:08.700
+since, as I said, it was more like a bonus introduction
+
+01:15:08.700 --> 01:15:12.500
+to this material, but I really didn't go into the details.
+
+01:15:12.500 --> 01:15:13.580
+Okay?
+
+01:15:13.580 --> 01:15:15.560
+So I'll see you on Thursday.
+
