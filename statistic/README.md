@@ -1,0 +1,66 @@
+# 統計學 ＋ 高等統計學 隨堂筆記
+
+課本：Hogg, McKean & Craig《Introduction to Mathematical Statistics》8th ed.（`statbook2.pdf`）
+
+任務說明見 [BRIEF.md](BRIEF.md)，進度見 [PROGRESS.md](PROGRESS.md)。
+
+## 統計學（27 集）
+
+- [第 1 集 · Lec01：隨機實驗、隨機變數、分配函數](basic/01-random-experiment-random-variable-df.md)
+- [第 2 集 · Lec02：Bernoulli、二項、常態、Poisson、Gamma 分配](basic/02-bernoulli-binomial-normal-poisson-gamma.md)
+- [第 3 集 · Lec03：卡方分配、期望值、平均數與變異數](basic/03-chi-square-expectation-mean-variance.md)
+- [第 4 集 · Lec04：動差生成函數；Bernoulli、二項、Poisson、常態的 mean 與 variance](basic/04-mgf-bernoulli-binomial-poisson-normal.md)
+- [第 5 集 · Lec05：Gamma 與卡方的 mgf；分配函數法](basic/05-gamma-mgf-cdf-technique.md)
+- [第 6 集 · Lec06：Gamma→卡方；mgf 唯一性；隨機向量、獨立、同分配](basic/06-mgf-uniqueness-random-vectors-independence.md)
+- [第 7 集 · Lec07：iid；連續型一對一變換公式；均勻分配](basic/07-iid-one-to-one-transformation-uniform.md)
+- [第 8 集 · Lec08：$-2\log X$ 是卡方；多個隨機變數的變換與 Jacobian](basic/08-multivariate-transformation-jacobian.md)
+- [第 9 集 · Lec09：變換例題 $X_1\pm X_2$；隨機樣本、參數、統計量；mgf 與獨立](basic/09-transformation-example-random-sample-statistic-mgf-independence.md)
+- [第 10 集 · Lec10：幾個預備結果；獨立卡方相加；$Z^2\sim\chi^2(1)$；$\bar X$ 是常態](basic/10-independence-lemmas-chi-square-sum-xbar-normal.md)
+- [第 11 集 · Lec11：證明 $\bar X\perp S^2$ 與 $(n-1)S^2/\sigma^2\sim\chi^2(n-1)$；統計推論的兩條路](basic/11-xbar-s2-independence-chi-square-statistical-inference.md)
+- [第 12 集 · Lec12：參數空間、估計量與估計值、不偏估計量](basic/12-estimator-unbiasedness.md)
+- [第 13 集 · Lec13：依機率收斂、Markov 與 Chebyshev、弱大數法則、一致估計量](basic/13-convergence-in-probability-wlln-consistency.md)
+- [第 14 集 · Lec14：$S^2$ 是 $\sigma^2$ 的不偏且一致估計量；動差法預告](basic/14-sample-variance-unbiased-consistent-method-of-moments.md)
+- [第 15 集 · Lec15：動差法；概似函數與最大概似估計量](basic/15-method-of-moments-likelihood-mle.md)
+- [第 16 集 · Lec16：MLE 的兩種情形；順序統計量（最大、最小的 pdf）](basic/16-mle-two-cases-order-statistics.md)
+- [第 17 集 · Lec17：MLE 例題（均勻、二項、常態）與不變性定理](basic/17-mle-examples-uniform-binomial-normal-invariance.md)
+- [第 18 集 · Lec18：不變性定理的例子；什麼是「最好的」估計量：UMVUE](basic/18-invariance-examples-umvue.md)
+- [第 19 集 · Lec19：$\tau(\theta)$ 的 UMVUE；Cramér–Rao 下界與證明](basic/19-umvue-cramer-rao-lower-bound.md)
+- [第 20 集 · Lec20：用 Cramér–Rao 下界證明 UMVUE（Poisson、Bernoulli）；條件機率與條件 pdf](basic/20-cramer-rao-examples-conditional-pdf.md)
+- [第 21 集 · Lec21：充分統計量（定義、意義、三個例子）](basic/21-sufficient-statistic-definition-examples.md)
+- [第 22 集 · Lec22：$U(0,\theta)$ 的 $Y_n$ 是充分統計量；因子分解定理（⇒ 方向）](basic/22-uniform-max-sufficient-factorization-theorem.md)
+- [第 23 集 · Lec23：因子分解定理（⇐）；Poisson 與常態的充分統計量；條件期望值與變異數](basic/23-factorization-proof-examples-conditional-expectation.md)
+- [第 24 集 · Lec24：證明 $\text{Var}(Y)=E[\text{Var}(Y|X)]+\text{Var}[E(Y|X)]$；Rao–Blackwell 的想法](basic/24-conditional-variance-identity-rao-blackwell.md)
+- [第 25 集 · Lec25：Rao–Blackwell 定理；完備統計量（Bernoulli 例）](basic/25-rao-blackwell-theorem-completeness.md)
+- [第 26 集 · Lec26：$U(0,\theta)$ 的 $Y_n$ 是完備充分統計量；指數族；Lehmann–Scheffé 定理（敘述）](basic/26-uniform-max-complete-exponential-family-lehmann-scheffe.md)
+- [第 27 集 · Lec27：Lehmann–Scheffé 定理的證明；UMVUE 例題（均勻、Bernoulli、常態）](basic/27-lehmann-scheffe-proof-umvue-examples.md)
+
+## 高等統計學（27 集，接續統計學）
+
+- [第 1 集 · 第一週 (1/2)：非一對一變換；順序統計量的 joint pdf](advanced/01-non-one-to-one-transformation-order-statistics-joint-pdf.md)
+- [第 2 集 · 第一週 (2/2)：從 joint pdf 積出最小、最大、第 j 個順序統計量的 pdf](advanced/02-order-statistics-marginal-pdf-min-max-jth.md)
+- [第 3 集 · 第二週：兩個順序統計量的 joint pdf；$t$ 分配的推導](advanced/03-two-order-statistics-joint-pdf-t-distribution.md)
+- [第 4 集 · 第三週 (1/2)：查標準常態表；信賴區間的定義與意義；樞紐量法](advanced/04-standard-normal-table-confidence-interval-pivotal-quantity.md)
+- [第 5 集 · 第三週 (2/2)：常態平均數 $\mu$ 的信賴區間（$\sigma$ 已知／未知）；查卡方表](advanced/05-normal-mean-ci-sigma-known-unknown-chi-square-table.md)
+- [第 6 集 · 第四週 (1/2)：$\sigma^2$ 的信賴區間；兩個常態平均數差 $\mu_X-\mu_Y$ 的信賴區間](advanced/06-variance-ci-difference-of-means-ci.md)
+- [第 7 集 · 第四週 (2/2)：大樣本理論——中央極限定理、弱大數法則、三種收斂的強弱](advanced/07-large-sample-theory-clt-wlln-modes-of-convergence.md)
+- [第 8 集 · 第五週 (1/2)：Slutsky 定理；近似信賴區間（$\mu$、$p$、$p_1-p_2$）；什麼是好的信賴區間](advanced/08-slutsky-approximate-ci-mean-proportion.md)
+- [第 9 集 · 第五週 (2/2)：假設檢定入門——統計假設、簡單／複合假設、虛無假設與對立假設](advanced/09-hypothesis-testing-intro-null-alternative.md)
+- [第 10 集 · 第六週 (1/2)：檢定與拒絕域；型一、型二錯誤；檢定力函數](advanced/10-test-critical-region-type-errors-power-function.md)
+- [第 11 集 · 第六週 (2/2)：檢定力函數再解釋；檢定的大小與顯著水準；最強力檢定](advanced/11-size-significance-level-most-powerful-test.md)
+- [第 12 集 · 第七週 (1/2)：最強力檢定再解釋；概似函數與概似比；Neyman–Pearson 定理（敘述）](advanced/12-likelihood-ratio-neyman-pearson-statement.md)
+- [第 13 集 · 第七週 (2/2)：Neyman–Pearson 定理的證明；找 k 的轉換技巧；例：N(θ,1) 的最強力檢定](advanced/13-neyman-pearson-proof-normal-mean-example.md)
+- [第 14 集 · 第八週 (1/2)：例：Poisson 的最強力檢定；一致最強力檢定（UMP）的定義](advanced/14-poisson-mp-test-ump-definition.md)
+- [第 15 集 · 第八週 (2/2)：UMP 的例子——常態平均數、常態變異數；雙邊 Poisson 沒有 UMP；四種假設的整理](advanced/15-ump-examples-normal-mean-variance-poisson-two-sided.md)
+- [第 16 集 · 第九週 (1/2)：複合假設下的 size 與 UMP 定義；單調概似比（MLR）](advanced/16-ump-composite-definition-monotone-likelihood-ratio.md)
+- [第 17 集 · 第九週 (2/2)：MLR 下的 UMP 拒絕域（四種情形）；例：Uniform(0,θ)、N(μ,1)](advanced/17-mlr-ump-four-cases-uniform-normal-examples.md)
+- [第 18 集 · 第十週 (1/2)：概似比檢定（LRT）的定義與直覺](advanced/18-likelihood-ratio-test-definition.md)
+- [第 19 集 · 第十週 (2/2)：概似比檢定例題——指數分配單邊、常態平均數雙邊（變異數已知／未知）](advanced/19-lrt-examples-exponential-normal-mean.md)
+- [第 20 集 · 第十一週 (1/2)：LRT 化成 t 檢定；「心裡要先知道最後用什麼」；兩變異數相等的問題與 F 分配](advanced/20-lrt-to-t-test-f-distribution.md)
+- [第 21 集 · 第十一週 (2/2)：F 分配的查表技巧；兩變異數比的信賴區間與檢定](advanced/21-f-table-variance-ratio-ci-test.md)
+- [第 22 集 · 第十二週 (1/2)：兩變異數相等的檢定就是概似比檢定（推導）](advanced/22-lrt-equal-variances-derivation.md)
+- [第 23 集 · 第十二週 (2/2)：兩平均數的信賴區間與檢定（兩階段）；比例 p 的大樣本檢定；p₁−p₂](advanced/23-two-sample-means-proportion-test-summary.md)
+- [第 24 集 · 第十三週 (1/2)：H₀:p₁=p₂ 的大樣本檢定；二維常態分配的預備：從函數到 joint pdf](advanced/24-p1-p2-test-bivariate-normal-preliminaries.md)
+- [第 25 集 · 第十三週 (2/2)：二維常態分配——joint pdf、邊際、條件分配；卡方適合度檢定的想法](advanced/25-bivariate-normal-marginal-conditional-chi-square-intro.md)
+- [第 26 集 · 第十四週 (1/2)：Pearson 卡方適合度檢定——Q_k 趨近 χ²(k−1)（k=2 的證明）；例：孟德爾遺傳理論](advanced/26-pearson-chi-square-test-mendel-example.md)
+- [第 27 集 · 第十四週 (2/2)：統計推論總整理；參數需估計時的卡方檢定（自由度 k−p−1）；例：檢定常態性](advanced/27-chi-square-test-estimated-parameters-normality.md)
+
