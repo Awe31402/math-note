@@ -1,0 +1,2069 @@
+WEBVTT
+
+00:00.000 --> 00:05.160
+So welcome to the second part of the lecture on the iterative closest point
+
+00:05.160 --> 00:10.980
+algorithm or looking into the registration of point clouds and today
+
+00:10.980 --> 00:15.360
+we are looking into the realistic aspect of the problem that we have an unknown
+
+00:15.360 --> 00:20.520
+data association. That means we do not know precisely our correspondences. In the
+
+00:20.520 --> 00:24.460
+first part of the lecture we looked into the problem of point cloud registration
+
+00:24.460 --> 00:30.200
+with given correspondences and now we are looking here into the fact that how
+
+00:30.200 --> 00:34.860
+it looks like when the correspondences are not given. And this will lead us to
+
+00:34.860 --> 00:40.680
+a point cloud registration method that allows us to align two different point
+
+00:40.680 --> 00:43.520
+clouds and let me illustrate that with this example. So you have two point
+
+00:43.520 --> 00:48.860
+clouds of that bunny example over here and the approach will try to find
+
+00:48.860 --> 00:54.300
+transformation so that these points clouds will overlap as close as
+
+00:54.300 --> 00:59.420
+possible. As you can see here the blue and the red point cloud perfectly
+
+00:59.420 --> 01:04.300
+overlay each other and that's kind of the result that we want to obtain. We can
+
+01:04.300 --> 01:08.460
+not only do this for these artificial objects we can also do this with
+
+01:08.460 --> 01:13.420
+surfaces for example of landscapes here and find an alignment so that those
+
+01:13.420 --> 01:20.060
+surfaces will overlay. And we do this by finding a transformation, typically a
+
+01:20.060 --> 01:24.540
+rigid body transformation, that tells us in this case for example how that yellow
+
+01:24.540 --> 01:31.300
+surface should be rotated and moved so that it best aligns with the gray point
+
+01:31.300 --> 01:36.700
+cloud and that's what we are going to talk about in this lecture. So the goal
+
+01:36.700 --> 01:41.940
+is to find the parameters of a rigid body transformation that overlays the two
+
+01:41.980 --> 01:46.380
+point clouds or surfaces with each other. And we can do this based on an
+
+01:46.380 --> 01:50.940
+optimization procedure. This can either be done an approach which is based on
+
+01:50.940 --> 01:55.380
+the singular value decomposition, this is also what the ICP approach uses
+
+01:55.380 --> 02:00.740
+and that's what we basically derived in the first part of that course, or you can
+
+02:00.740 --> 02:05.860
+use a robustly squares approach performing iterative error minimization
+
+02:05.860 --> 02:10.660
+that is also very popular today in those registration techniques. And again part
+
+02:10.660 --> 02:13.820
+one was looking on known correspondences, today we look into the
+
+02:13.820 --> 02:18.820
+question how can we actually estimate those correspondences and still get a
+
+02:18.820 --> 02:23.420
+good registration. So as a one minute reminder what we have done the first
+
+02:23.420 --> 02:28.140
+part of the lecture when we are looking into the known data station part of it
+
+02:28.140 --> 02:31.820
+and in this case we have derived actually an efficient to compute
+
+02:31.820 --> 02:35.940
+algorithm that is a direct solution meaning doesn't require an initial guess
+
+02:36.140 --> 02:41.020
+and it is optimal that means there is no better alignment. So this task can
+
+02:41.020 --> 02:45.500
+actually be considered as being solved because we have all the desired
+
+02:45.500 --> 02:50.820
+properties that we want but it only holds for known data associations so
+
+02:50.820 --> 02:54.980
+assuming we know the correspondences which point in point cloud number one
+
+02:54.980 --> 02:58.660
+corresponds to which point in point cloud number two then we can actually go
+
+02:58.660 --> 03:03.820
+ahead and compute this desirable solution. How does it work? So just as a
+
+03:03.860 --> 03:09.780
+very short repetition our formal problem definition said we have two sets of
+
+03:09.780 --> 03:15.900
+points yn and xn we have n of those points and they are corresponding with
+
+03:15.900 --> 03:20.860
+each other so point one in the set y corresponds to point one in the set x
+
+03:20.860 --> 03:25.420
+optionally we also have weights that means we can say a correspondences more
+
+03:25.420 --> 03:28.860
+valuable for us than another correspondency and then we want to find
+
+03:28.860 --> 03:32.820
+the rotation matrix and the translation parameter so that this rigid body
+
+03:32.820 --> 03:38.540
+transformation can transform the point set x into a new point set x bar so that
+
+03:38.540 --> 03:44.380
+the discrepancy of the distance between the transformed point set and the other
+
+03:44.380 --> 03:49.380
+point set is actually minimal and for that we provided an approach that
+
+03:49.380 --> 03:54.420
+computes us this rotation matrix and this translation vector very briefly
+
+03:54.420 --> 03:59.020
+just reporting the results we can compute a rotation matrix and a
+
+03:59.020 --> 04:03.020
+translation vector for the rotation matrix what we need to do we need to
+
+04:03.020 --> 04:08.940
+perform singular value decomposition or called SVD on some matrix H and this
+
+04:08.940 --> 04:13.820
+gives us three matrices and based on u and v we can actually design our
+
+04:13.820 --> 04:19.380
+rotation matrix and the SVD we need to compute over a matrix H which is the
+
+04:19.380 --> 04:24.340
+cross covariance matrix of our data points in order to compute that we need
+
+04:24.340 --> 04:29.700
+to have the mean of the points in point number one and the mean of the points in
+
+04:29.700 --> 04:34.180
+point cloud number two then we can compute this matrix H and then perform
+
+04:34.180 --> 04:40.300
+the SVD and for the translation vector we basically use those x zeros and y zeros
+
+04:40.300 --> 04:44.780
+over here and the rotation matrix to define the translation vector and this
+
+04:44.780 --> 04:50.200
+result reported here is the optimal solution on how to do that and what it
+
+04:50.200 --> 04:53.700
+basically visually boils down to is we have these two point clouds here that
+
+04:53.700 --> 04:58.300
+red circle and that blue circle we basically shift them onto each other in
+
+04:58.300 --> 05:03.940
+the sense that the location of the weighted mean is identical and then we
+
+05:03.940 --> 05:11.820
+are basically rotating one cloud around this the the center of mass on which we
+
+05:11.820 --> 05:15.740
+align them in order to find the orientation alignment and this then
+
+05:15.740 --> 05:20.820
+provides us with an aligned point set and we've shown that this is an optimal
+
+05:20.820 --> 05:24.820
+solution in the last lecture so check out the previous lecture if you're
+
+05:24.820 --> 05:29.380
+interested in why this is actually the optimal solution today we will dive into
+
+05:29.380 --> 05:33.620
+the second part saying what are we now doing if we don't know our data
+
+05:33.620 --> 05:38.740
+association if we don't have perfect data associations unfortunately there is
+
+05:38.740 --> 05:44.620
+no direct or optimal solution to this type of problem which is said to some
+
+05:44.620 --> 05:49.500
+degree but that means we still need to find a way on how to solve this in
+
+05:49.500 --> 05:54.900
+practice because the point cloud registration problem is an important
+
+05:54.900 --> 05:58.060
+problem in practice so we need to provide a solution for that but it
+
+05:58.060 --> 06:01.100
+typically leads to an iterative solution means a technique where we need to have
+
+06:01.100 --> 06:05.780
+an initial guess and the optimality is also something the which is debatable
+
+06:05.780 --> 06:10.340
+because in the end we don't know our data association and in the general case
+
+06:10.340 --> 06:16.860
+we can't come up with an optimal solution okay and this an approach which
+
+06:16.860 --> 06:21.020
+tries to estimate the data association and then performs the alignment given
+
+06:21.020 --> 06:24.140
+the techniques we have discussed in the previous lecture is the so-called
+
+06:24.140 --> 06:29.340
+iterative closest point algorithm or also called ICP it's around things
+
+06:29.340 --> 06:35.140
+nearly 30 years from now on and it's an absolute standard technique used in
+
+06:35.140 --> 06:38.980
+different disciplines not just in robotics or computer vision but also
+
+06:38.980 --> 06:43.540
+computer graphics and large number of other disciplines in order to align
+
+06:43.540 --> 06:47.620
+point clouds it's kind of one of the standard algorithms that is being used
+
+06:47.620 --> 06:53.140
+today so the problem however is that if we don't know the correspondences so
+
+06:53.140 --> 06:56.860
+which pair in point cloud number one corresponds which point in point cloud
+
+06:56.860 --> 07:01.540
+number one corresponds to which point in point cloud number two we need to
+
+07:01.540 --> 07:06.300
+estimate estimate those correspondences so if you don't know them we can't find
+
+07:06.300 --> 07:10.020
+the optimal parameters of that transformation in a single step that's
+
+07:10.020 --> 07:14.700
+something which is not possible so we can't easily align those two surfaces
+
+07:14.700 --> 07:21.940
+for example what we however can do we can guess those correspondences and then
+
+07:21.940 --> 07:26.780
+use our previous approach in order to compute an alignment based on the gases
+
+07:26.780 --> 07:31.220
+that we have done and if the guesses for data association indicated here by this
+
+07:31.220 --> 07:36.660
+dark blue lines are not too bad we may get an alignment which may not be
+
+07:36.700 --> 07:42.660
+perfect but which is much closer to the situation with which we started so that
+
+07:42.660 --> 07:47.260
+the idea is that we can iterate this procedure and then start from this
+
+07:47.260 --> 07:50.740
+guessing our data stations again and continue this process multiple times
+
+07:50.740 --> 07:57.140
+until we have aligned surfaces and that's already the core idea of the ICP
+
+07:57.140 --> 08:01.260
+algorithm which is actually a fairly simple but effective algorithm for this
+
+08:01.260 --> 08:05.420
+type of problems so the idea is to iteratively estimate the data
+
+08:05.420 --> 08:08.740
+association or guess the data association and then assume this data
+
+08:08.740 --> 08:13.580
+station to be correct and compute the transformation for example using this
+
+08:13.580 --> 08:16.980
+SVD based approach that we have discussed in the previous lecture and
+
+08:16.980 --> 08:20.440
+then simply repeating this process so given the better alignment that I
+
+08:20.440 --> 08:25.980
+hopefully have by now I am reevaluating my data association see if I can find a
+
+08:25.980 --> 08:29.340
+better data association if the data station has been changed given my
+
+08:29.340 --> 08:32.940
+current estimates I compute the transformation parameters again and
+
+08:32.980 --> 08:39.180
+basically iterating this process over and over again and this is an effective
+
+08:39.180 --> 08:46.460
+approach iterative not direct anymore and the initial guess matters so that's
+
+08:46.460 --> 08:49.940
+kind of suboptimal in the sense but the best thing we can do if we don't know
+
+08:49.940 --> 08:54.660
+our data station the underlying assumptions underneath this is typically
+
+08:54.660 --> 08:59.420
+that we have some form of initial guess so we have some idea how the point clouds
+
+08:59.420 --> 09:05.140
+are aligned it doesn't have to be perfect but if we are very far off the
+
+09:05.140 --> 09:09.940
+probability that we're not going to converge is actually high so we assume
+
+09:09.940 --> 09:13.680
+to have an initial guess either about the point locations in a common
+
+09:13.680 --> 09:17.260
+reference frame maybe with some uncertainties involved because for
+
+09:17.260 --> 09:21.940
+example I have a moving platform which drives through the environment and based
+
+09:21.940 --> 09:27.740
+on where it is given wheel encoders or wheel ticks we can estimate where a scan
+
+09:27.740 --> 09:31.860
+has been taken and this can serve as an initial guess or alternatively we have
+
+09:31.860 --> 09:36.540
+some ideas about the potential correspondences that we may see this can
+
+09:36.540 --> 09:42.180
+be due to the fact that there are some distinct points or features in the space
+
+09:42.180 --> 09:45.500
+and based on those features we can actually guess correspondences there's
+
+09:45.500 --> 09:50.380
+another alternative but one of those initial guesses I typically need to have
+
+09:50.380 --> 09:57.740
+at least if those point clouds are forming or having scanned kind of
+
+09:57.740 --> 10:04.180
+complex structures okay and so the key idea is again in every iteration pick a
+
+10:04.180 --> 10:07.820
+data association and we typically do this in the simplest form by saying for
+
+10:07.820 --> 10:11.260
+every point in point cloud number one give me the closest point in point cloud
+
+10:11.260 --> 10:15.760
+number two and that's my data station that what also gave the ICP algorithm
+
+10:15.760 --> 10:21.120
+its name the iterative closest point algorithm and then we compute the rigid
+
+10:21.120 --> 10:24.520
+body transformation we perform the alignment and we repeat this process
+
+10:24.520 --> 10:28.920
+until the data station doesn't change anymore because then I have converged
+
+10:28.920 --> 10:34.400
+to my solution again that works but it only works if my initial configuration
+
+10:34.400 --> 10:38.720
+or my initial guess or my initial guess of correspondences is kind of close
+
+10:38.720 --> 10:44.960
+enough and this kind of close enough is somewhat hard to specify in the first
+
+10:44.960 --> 10:48.920
+place so it's hard to say initially if the algorithm is actually going to
+
+10:48.920 --> 10:54.720
+converge so just as a small illustration with pictures or beautiful images and we
+
+10:54.720 --> 10:59.680
+can illustrate the ICP algorithm that we first say we select points in one one of
+
+10:59.680 --> 11:03.200
+the measures or in one point cloud depending if I'm using a point cloud or
+
+11:03.200 --> 11:09.320
+some surface representation and then I'm looking for correspondences in the other
+
+11:09.320 --> 11:14.600
+mesh on the other point cloud here illustrated by those lines and then I'm
+
+11:14.600 --> 11:20.120
+computing the alignment based on those correspondences so this step assumes
+
+11:20.120 --> 11:25.680
+that those correspondences have been correct and then I'm typically I'm in
+
+11:25.680 --> 11:29.240
+the state that I can select points in a better way and then I'm basically
+
+11:29.240 --> 11:33.960
+iterating this process over and over again until my data station doesn't
+
+11:33.960 --> 11:39.200
+change anymore and that's kind of the ICP algorithm in images illustrated in
+
+11:39.200 --> 11:44.960
+that form we can also look how would code look like it is sort of code that
+
+11:44.960 --> 11:49.880
+would describe the ICP algorithm so given the notation that we had before we
+
+11:49.880 --> 11:55.640
+can say okay we start out and defining our point set X bar which is our first
+
+11:55.640 --> 11:59.560
+initial guess is original point set we have some error term e which we set to
+
+11:59.560 --> 12:04.280
+infinity and then we basically have a while loop over here which describes a
+
+12:04.280 --> 12:09.440
+different iteration so while e has decreased and it's still larger than a
+
+12:09.440 --> 12:12.680
+certain threshold under which I want to for example abort the process I'm
+
+12:12.680 --> 12:16.760
+guessing my correspondences or determining my correspondences based on
+
+12:16.760 --> 12:21.800
+the current information that I have the current estimate of where the point
+
+12:21.800 --> 12:26.640
+cloud X is and then I'm computing my transformation transformation parameters
+
+12:26.640 --> 12:30.720
+based on the correspondences so this is basically running part one of that
+
+12:30.720 --> 12:34.760
+lecture and then I'm running the alignment I'm recomputing the error term
+
+12:34.760 --> 12:40.640
+with my objective function so that I get a new value for e and while e is still
+
+12:40.640 --> 12:45.440
+decreasing and is larger than a certain threshold I'm repeating this process I'm
+
+12:45.440 --> 12:49.200
+guessing my correspondences again and now I'm using the updated point set
+
+12:49.200 --> 12:53.600
+points that I've updated in the previous iteration to hopefully find better
+
+12:53.600 --> 12:57.640
+correspondences and I'm iterating this process until I'm done and as soon as I
+
+12:57.640 --> 13:02.960
+don't find a better data station the error will not decrease anymore and then
+
+13:02.960 --> 13:08.240
+I've found a solution again the bunny example they had we had initially here
+
+13:08.240 --> 13:12.840
+this is our initial configuration we really look for the closest point just a
+
+13:12.840 --> 13:16.640
+Euclidean distance between the blue and the red point set and then we perform
+
+13:16.640 --> 13:22.560
+the alignment and align this bunny over here and this is here done generated a
+
+13:22.600 --> 13:29.320
+simple project called simple ICP which you can find online program in different
+
+13:29.320 --> 13:33.200
+languages and it's a very simple form of the ICP algorithm for educational
+
+13:33.200 --> 13:37.960
+purposes in order to easily play around with this and this is some is it this
+
+13:37.960 --> 13:41.760
+isn't some something that we call the vanilla ICP algorithm so the standard
+
+13:41.760 --> 13:45.720
+approach which is fairly easy to implement and it works well if you have
+
+13:45.720 --> 13:51.240
+a good initial guess of those point sets but depends on your initial configuration
+
+13:51.240 --> 13:55.760
+you may require a large number of iterations until you converge to results
+
+13:55.760 --> 13:59.520
+so you've seen this in this bunny example already you're aligning it and
+
+13:59.520 --> 14:03.400
+the results actually get close but until it fully converged it actually takes a
+
+14:03.400 --> 14:09.520
+while and the second disadvantage is if the correspondences are bad that may
+
+14:09.520 --> 14:13.760
+seriously impact the result that you get so you may get wrongly aligned point
+
+14:13.760 --> 14:19.320
+clouds and in order to overcome those downsides of the vanilla ICP algorithm a
+
+14:19.360 --> 14:24.160
+large variety of different ICP algorithms has actually been proposed in
+
+14:24.160 --> 14:28.880
+the past so it's a large number of algorithms try to very vary parts in
+
+14:28.880 --> 14:32.720
+this for example how to look for correspondences which points to take for
+
+14:32.720 --> 14:37.880
+the alignment in order to overcome those issues either generating fast algorithms
+
+14:37.880 --> 14:43.360
+or generating algorithms which are more robust with respect to the initial guess
+
+14:43.360 --> 14:50.440
+and still converge to a good result overall and the goal for the remaining
+
+14:50.440 --> 14:54.400
+part of the lecture is to introduce you to some at least of the popular variants
+
+14:54.400 --> 14:59.320
+of the ICP algorithm and tell you which knobs you can actually turn in order to
+
+14:59.320 --> 15:04.120
+come up with a robust registration technique and we can actually break that
+
+15:04.120 --> 15:07.560
+down into different things that we can do or different variants of the ICP
+
+15:07.560 --> 15:11.800
+algorithm that change different parts in here the first question you may ask
+
+15:11.880 --> 15:15.440
+yourself is which points should you consider should you consider your whole
+
+15:15.440 --> 15:19.400
+point cloud if you have very large point clouds for example those recorded with a
+
+15:19.400 --> 15:23.180
+terrestrial laser scanner this may be too time-consuming to do all the
+
+15:23.180 --> 15:26.320
+operations you may want to restrict yourself to just a small subset of the
+
+15:26.320 --> 15:31.000
+points and the question is how to choose that subset this can substantially impact
+
+15:31.000 --> 15:35.320
+your result then you may want to consider different data association
+
+15:35.320 --> 15:39.960
+strategies is the closest point strategy the best one no it is not there are
+
+15:40.040 --> 15:43.880
+other ways how you can actually do that in a better way you may want to weigh
+
+15:43.880 --> 15:47.080
+your correspondence you're saying oh with one about one correspondences I'm
+
+15:47.080 --> 15:50.960
+more certain that it's correct so let's give it a higher weight or you say one
+
+15:50.960 --> 15:54.240
+is likely to be wrong maybe we want to reduce the weight maybe even put it to
+
+15:54.240 --> 15:58.320
+zero and fully reject it and so that actually the step three and four
+
+15:58.320 --> 16:02.780
+rejecting potential outliers and can be done why are those weights and I'm
+
+16:02.780 --> 16:06.360
+basically eliminating those which are potentially wrong and only perform
+
+16:06.360 --> 16:11.240
+optimization optimizations on the other parts and again what people want to
+
+16:11.240 --> 16:15.560
+optimize with those different variants is speed so generating faster algorithms
+
+16:15.560 --> 16:21.200
+more stable solutions being more tolerant have more higher tolerance with
+
+16:21.200 --> 16:26.120
+respect to sensor noise for example or outliers or my initial configuration
+
+16:26.120 --> 16:30.320
+terms of what's called the basin of conversion how far can you be away from
+
+16:30.320 --> 16:37.520
+from the final configuration and still find the precise optimal on your optimal
+
+16:37.520 --> 16:41.080
+parameters so your maximum initial misalignment is something which is
+
+16:41.080 --> 16:45.360
+important for real-world applications and different variants optimize
+
+16:45.360 --> 16:51.600
+different aspects of this performance criteria so let's have a look and go
+
+16:51.600 --> 16:55.720
+through those four steps one after the other and see what different variants
+
+16:55.720 --> 17:01.080
+out there and what their impact on the result will actually be so let's start with
+
+17:01.080 --> 17:04.640
+considering different subsets of points so there are different strategies out
+
+17:04.640 --> 17:10.840
+there the naive approaches use all points right just don't throw away any
+
+17:10.840 --> 17:15.000
+information that's kind of the standard approach if you want to take all the
+
+17:15.000 --> 17:19.280
+information that you have into account if you have too many points you may want
+
+17:19.280 --> 17:23.280
+to consider a uniform subsampling of those points or generally subsampling
+
+17:23.280 --> 17:27.760
+and this can be done in a uniform way that means that you have a uniform to
+
+17:27.760 --> 17:31.760
+be refers having a uniform distribution of points a uniform density of points
+
+17:31.760 --> 17:37.520
+all over the space and that already means you choose not just kind of
+
+17:37.520 --> 17:42.000
+whatever every tenth point but you were constraining this uniform lean is
+
+17:42.000 --> 17:46.520
+typically in a spatial description that means points which are nearby should
+
+17:46.520 --> 17:51.440
+have the same density then points in a further way and given your the principle
+
+17:51.440 --> 17:55.920
+of your sensor typically it generates a higher density in areas of points where
+
+17:55.920 --> 18:00.280
+they are nearby compared to areas where the bear which are further away from the
+
+18:00.280 --> 18:06.120
+sensor so you want to sample differently depending how far the the object that
+
+18:06.120 --> 18:11.680
+caused the reflection was actually away from your sensor or you just perform a
+
+18:11.680 --> 18:16.760
+random subsampling or you may want to do things like taking features into
+
+18:16.760 --> 18:21.320
+account so you know this from for example working with camera images you
+
+18:21.320 --> 18:24.720
+can extract key points and feature descriptors and maybe you want to
+
+18:24.720 --> 18:29.440
+select features based on certain descriptors or features which have
+
+18:29.440 --> 18:33.200
+certain properties maybe only points which are good for registration maybe
+
+18:33.200 --> 18:39.240
+corners are good things and so you want may want to constrain your sampling to
+
+18:39.240 --> 18:42.560
+points which are potentially good for the alignment that's also a strategy
+
+18:42.560 --> 18:46.200
+that you can go for or you go to something which is called normal space
+
+18:46.200 --> 18:49.840
+sampling especially if you have large smooth surfaces with only small
+
+18:49.840 --> 18:54.280
+variations of the normal normals you want to actually sample more densely in
+
+18:54.280 --> 18:58.360
+areas where the normals are changing you know to get a good alignment so they're
+
+18:58.360 --> 19:01.480
+different variants how you can reduce the number of points that you're
+
+19:01.480 --> 19:06.560
+considering in order to get the best possible alignment so one example over
+
+19:06.560 --> 19:11.880
+here is kind of uniform sampling this is a work done by Andreas Nüchter where you
+
+19:11.880 --> 19:15.800
+take 3d scans from an underground environment and you incrementally align
+
+19:15.800 --> 19:20.280
+those points you always see the blue point cloud is the current observation
+
+19:20.280 --> 19:25.880
+which is then registered into the existing point cloud and with this you
+
+19:25.880 --> 19:31.880
+can actually generate accurate maps of the environment taking only a subset of
+
+19:31.880 --> 19:38.120
+the points into account for the registration you can compare the uniform
+
+19:38.120 --> 19:41.760
+sampling with respect to what was I recently referred to as normal space
+
+19:41.760 --> 19:46.600
+sampling so instead of sampling your correspondences of the point you want to
+
+19:46.600 --> 19:52.800
+consider rather uniformly over the space you may want to vary this depending on
+
+19:52.800 --> 19:56.400
+the normal or based on the curvature of this point so whenever the normal
+
+19:56.400 --> 20:01.960
+changes you want to do that in the space of normals and this can be advantages
+
+20:01.960 --> 20:07.440
+especially for situations where you have large flat surfaces so planes large
+
+20:07.440 --> 20:14.720
+planes and only small variations so small areas where the normal changes
+
+20:14.720 --> 20:21.800
+because they are objects sticking out or curvatures in certain areas or carvings
+
+20:21.800 --> 20:25.080
+for example and you want to register those you want to give a higher weight
+
+20:25.080 --> 20:30.640
+to those areas because on the surface itself you can actually slide quite well
+
+20:30.640 --> 20:35.480
+and this is known since quite a long time so these an example where you
+
+20:35.520 --> 20:40.000
+randomly sub sample your points and here you do some sampling in normal space and
+
+20:40.000 --> 20:43.200
+what happens is here you're basically randomly putting points over your
+
+20:43.200 --> 20:48.640
+surfaces it's basically a plane just here with very small structures but if
+
+20:48.640 --> 20:52.200
+you put a higher weight into those structures you will actually get a
+
+20:52.200 --> 20:56.040
+better alignment over here because you have a higher number of points which are
+
+20:56.040 --> 20:59.600
+curved in this curved regions you can also zoom in a little bit you can see it
+
+20:59.600 --> 21:03.480
+better and then you get a better alignment over here compared to this
+
+21:03.480 --> 21:08.760
+example where this bar should actually be over here so taking this normal space
+
+21:08.760 --> 21:12.760
+into account for sampling can help you in situations where you have a lot of
+
+21:12.760 --> 21:19.200
+flat surfaces and only small areas where this varies the small specialized
+
+21:19.200 --> 21:23.280
+application in more general scan matching algorithms you typically don't
+
+21:23.280 --> 21:27.400
+perform this normal space sampling anymore depending on your environment if you
+
+21:27.400 --> 21:31.000
+know something about your space you may want to do a feature based sub sampling
+
+21:31.000 --> 21:35.480
+that means you only take into account a small subset of points and compute an
+
+21:35.480 --> 21:39.520
+initial alignment for that so this is an example of a 3d scene where you have
+
+21:39.520 --> 21:43.200
+some features extracted also doing some classification on what you're seeing if
+
+21:43.200 --> 21:48.080
+this is a building surface vegetation or other poles and then you're basically
+
+21:48.080 --> 21:52.520
+sampling points based on how interesting they are in that feature space so to say
+
+21:52.520 --> 21:56.560
+in order to get a small set of highly distinct points that you can then use
+
+21:56.560 --> 22:01.280
+for your registration that simplifies your search for correspondences and can
+
+22:01.280 --> 22:05.720
+also lead to better accuracy because the likelihood of making a mistake is larger
+
+22:05.720 --> 22:10.640
+under the assumption that your feature extractor was very expressive of course
+
+22:10.640 --> 22:16.520
+if your feature extractor is suboptimal then there is no gain for you so there
+
+22:16.520 --> 22:20.960
+are different variants how you can sub sample your points often especially in
+
+22:20.960 --> 22:26.440
+robotics applications where we have not too dense point clouds but getting the
+
+22:26.440 --> 22:29.960
+point clouds at a higher frequency for example vehicle driving through the
+
+22:29.960 --> 22:34.560
+environment generating point clouds with 10 Hertz or 20 Hertz the density is
+
+22:34.560 --> 22:40.120
+typically not too large and then we most of the time take all points into account
+
+22:40.120 --> 22:44.280
+all points for which we likely to have a corresponding partner but this may be
+
+22:44.280 --> 22:49.120
+different in applications where you generate highly dense point clouds like
+
+22:49.120 --> 22:55.800
+terrestrial laser scanning and perform the alignments based on that then I want
+
+22:55.840 --> 23:00.280
+to look into the second part so what about the data association strategies
+
+23:00.280 --> 23:05.080
+ICP itself just computes the data station based on a nearest neighbor
+
+23:05.080 --> 23:11.080
+criterion and that can work well but hasn't doesn't has to work well and I
+
+23:11.080 --> 23:15.200
+would actually say that finding the right data stations is one of the most
+
+23:15.200 --> 23:19.320
+tricky parts in here so it's it's worth spending a lot of brainpower on how to
+
+23:19.320 --> 23:23.920
+do this data association strategy well in order to get a good alignment because
+
+23:23.920 --> 23:28.120
+remember once we have the right data association we actually have the optimal
+
+23:28.120 --> 23:33.600
+solution easily being computed so the data association strategy or your way
+
+23:33.600 --> 23:37.600
+for defining your correspondences for estimating your correspondences will
+
+23:37.600 --> 23:44.240
+have a substantial impact on your result in terms of convergence and in terms of
+
+23:44.240 --> 23:47.440
+speed especially if you need to re-estimate your data stations all the
+
+23:47.440 --> 23:50.740
+time then you need a large number of iterations until you converge but also
+
+23:50.740 --> 23:54.740
+it's important for the quality of your results the better your data station you
+
+23:54.740 --> 23:58.540
+better the final your final result it will be and again there are a lot of
+
+23:58.540 --> 24:03.780
+strategies closest point is basically the standard ICP approach you can do
+
+24:03.780 --> 24:07.140
+other things like closest compatible point if you know more about your
+
+24:07.140 --> 24:10.880
+points let's say you also have a camera on board and see the color value of a
+
+24:10.880 --> 24:14.060
+point you can say for example I only want to match red objects with red
+
+24:14.060 --> 24:17.220
+objects and not red with blue for example so you can define a
+
+24:17.340 --> 24:21.900
+compatibility based on additional information on points and take that
+
+24:21.900 --> 24:25.660
+information into account to only search for correspondences in areas where they
+
+24:25.660 --> 24:30.380
+are kind of compatible you can do things like taking normal information to count
+
+24:30.380 --> 24:35.420
+doing strategies such as normal shooting or point to plane metrics we don't
+
+24:35.420 --> 24:40.060
+consider a mapping a point to a point but a point to a plane they are our
+
+24:40.060 --> 24:46.100
+projective approaches which especially became very popular since the we have
+
+24:46.100 --> 24:50.900
+RGBD camera so cameras which also provide you with depth information they've
+
+24:50.900 --> 24:55.220
+been they made them popular or popular again these approaches so it's a large
+
+24:55.220 --> 24:59.380
+variety of those different techniques and actually want to go through them and
+
+24:59.380 --> 25:03.060
+investigate and tell you why they are useful what their advantages and
+
+25:03.060 --> 25:08.020
+disadvantages least to some degree let's start with standard ICP the closest
+
+25:08.020 --> 25:13.460
+point matching and here we have two point sets or two surfaces the blue one
+
+25:13.460 --> 25:17.820
+and the red one over here and we start for example with the blue point cloud
+
+25:17.820 --> 25:21.180
+selecting the points of the blue point cloud and looking for the corresponding
+
+25:21.180 --> 25:26.300
+partner in the red point cloud always looking for the closest point in the
+
+25:26.300 --> 25:31.540
+other point the one which is closest to our location and that's something that
+
+25:31.540 --> 25:35.980
+we can efficiently do where for example using such techniques like KD trees
+
+25:35.980 --> 25:41.500
+where we can comparably quickly look for points which are close at least
+
+25:41.500 --> 25:45.540
+faster than naive search we would basically have a quadratic runtime
+
+25:45.540 --> 25:49.420
+taking the points in the individual points that's into account we can do
+
+25:49.420 --> 25:53.020
+this faster with the KD tree so let's say we select the point here this blue
+
+25:53.020 --> 25:59.260
+point over here and then we look to the to a point which is closest to this
+
+25:59.260 --> 26:04.020
+point on the red surface so this may be this point over here and that's
+
+26:04.060 --> 26:07.060
+basically then we have found a corresponding partner and the other
+
+26:07.060 --> 26:11.260
+point on saying this is our correspondence this is the standard
+
+26:11.260 --> 26:17.660
+approach it is generally applicable it's very easy to do the only problem that we
+
+26:17.660 --> 26:23.100
+have it's not always really good and you typically need a lot of iterations until
+
+26:23.100 --> 26:28.180
+this approach converges again we have seen this in the bunny in the in the
+
+26:28.180 --> 26:30.980
+beginning of the lecture it was a motivating example you could see that
+
+26:30.980 --> 26:33.980
+you need a lot of iteration especially already when you're really close to
+
+26:33.980 --> 26:37.980
+your result it still takes a while until all the data stations are actually
+
+26:37.980 --> 26:43.900
+correct and you converge to the right solution what this requires however is
+
+26:43.900 --> 26:48.100
+that you have an initial alignment of those point thoughts if you have no idea
+
+26:48.100 --> 26:52.060
+where those points cause have been taken looking for the closest point in
+
+26:52.060 --> 26:56.220
+Euclidean space it's tricky to do and therefore you need to have a different
+
+26:56.220 --> 27:00.340
+strategy if you have no initial guess about this alignment and kind of the
+
+27:00.340 --> 27:04.900
+better your initial alignment the more successful you will be here and this is
+
+27:04.900 --> 27:09.980
+kind of the standard approach that you should try first or could try first when
+
+27:09.980 --> 27:13.820
+you're building your ICP algorithm at least if you try to find a new metric or
+
+27:13.820 --> 27:17.780
+propose a new metric this will be always the standard approach to compare to but
+
+27:17.780 --> 27:21.380
+also a couple of others but it's kind of be the first one which was out there
+
+27:21.380 --> 27:25.540
+kind of what is called the metric for the vanilla ICP algorithm if you don't
+
+27:25.540 --> 27:29.700
+have an initial guess what to do if you really have no information at all at
+
+27:29.700 --> 27:34.300
+hand one thing you could do is you could compute an initial guess based on
+
+27:34.300 --> 27:38.820
+the center of mass so you basically compute the center of mass of both point
+
+27:38.820 --> 27:42.740
+sets so if this is your point set and there's another point set and you have
+
+27:42.740 --> 27:46.180
+no idea where they are located in the coordinate system you could compute the
+
+27:46.180 --> 27:50.500
+center of mass and basically shift the center of mass on top of each other you
+
+27:50.500 --> 27:54.820
+may even do things like computing a principal component analysis to get a
+
+27:54.900 --> 27:59.740
+first initial guess of the orientation there are things that you could do
+
+27:59.740 --> 28:04.580
+typically shifting them on top of each other if the first starting point so
+
+28:04.580 --> 28:08.220
+let's say however you have that situation you have these two point clouds
+
+28:08.220 --> 28:11.580
+you have no idea where they are what you could do you can shift them on top of
+
+28:11.580 --> 28:16.020
+each other align the center of mass and then you perform your nearest neighbor
+
+28:16.020 --> 28:20.620
+search so you always try to find corresponding partners over here and
+
+28:20.700 --> 28:27.060
+maybe your alignment is illustrated with those gray lines over here these are
+
+28:27.060 --> 28:31.020
+your estimated correspondences based on a nearest neighbor approach and here
+
+28:31.020 --> 28:36.260
+basically ignoring distances which are too far away and then what you could do
+
+28:36.260 --> 28:41.620
+is you perform your iteration your alignment and then this is the next
+
+28:41.620 --> 28:46.500
+configuration that you have and then what happens you again need to look for
+
+28:46.500 --> 28:51.140
+correspondences and repeat this process over and over again for whatever 20 30
+
+28:51.140 --> 28:55.940
+50 times until you find an alignment but in the end you have the alignment that
+
+28:55.940 --> 29:03.220
+the blue point cloud perfectly overlaps here with the orange point cloud and you
+
+29:03.220 --> 29:10.020
+find the correct alignment of these in this way based on just looking for the
+
+29:10.020 --> 29:16.580
+closest point again this is what we call the vanilla ICP algorithm so the
+
+29:16.580 --> 29:23.260
+closest point works well but if you have more information about your points you
+
+29:23.260 --> 29:27.220
+may want to only match points which are compatible with each other so for
+
+29:27.220 --> 29:31.340
+example if you have the example I used before a camera together with your
+
+29:31.340 --> 29:35.140
+range skin then you may want to take the color information into account nor do
+
+29:35.140 --> 29:39.020
+you find if those points are compatible or not and that's something that you can
+
+29:39.020 --> 29:43.620
+exploit you can use other things such as normal information or the curvature
+
+29:43.620 --> 29:47.980
+or any other information that you have about your point cloud or that you get
+
+29:47.980 --> 29:51.820
+from different sensing modalities and then match only those points which are
+
+29:51.820 --> 29:55.580
+compatible so this was the image that I've showed before for the feature-based
+
+29:55.580 --> 30:01.700
+approach you can do similar tricks here with doing certain projections and only
+
+30:01.700 --> 30:05.340
+matching those points which are compatible with each other and then
+
+30:05.340 --> 30:08.780
+align only those which are compatible at least in the first couple of iterations
+
+30:08.780 --> 30:13.460
+in order to get a good initial alignment and then you may take further points
+
+30:13.460 --> 30:19.700
+into account or the whole point set into account and not only a small subset but
+
+30:19.700 --> 30:22.660
+this basically strongly depends on the information you actually have available
+
+30:22.660 --> 30:26.020
+another approach is out there is something is called normal shooting
+
+30:26.020 --> 30:32.100
+where you take their surface normal of your points into account sorry and so if
+
+30:32.100 --> 30:36.420
+you are here at that surface you basically approximate the surface here
+
+30:36.420 --> 30:41.340
+look into the direction the normal then shoot out a ray in the direction of the
+
+30:41.340 --> 30:46.900
+normal see until it intersects with the other surface and then that's the point
+
+30:46.900 --> 30:51.820
+that you can take into account and has been shown that this gives you slightly
+
+30:51.820 --> 30:57.060
+better convergent results if you have a lot of smooth surfaces but
+
+30:57.060 --> 31:01.620
+whenever you have very complex scenes or a lot of noise in the range measurement
+
+31:01.620 --> 31:05.020
+that you have then it doesn't perform well it actually gets worse in terms of
+
+31:05.020 --> 31:08.860
+performance so that this normal shooting is something that is not that
+
+31:08.860 --> 31:13.580
+popular anymore today what however is out there and what is frequently used
+
+31:13.580 --> 31:18.220
+and especially the RGBD based mapping systems here to mention for example
+
+31:18.220 --> 31:22.700
+connect fusion made those kind of projective data stations popular again
+
+31:22.700 --> 31:26.580
+the key idea is that you take a point from your blue surface and you basically
+
+31:26.580 --> 31:32.500
+project it into the sensor or given the initial guess of your of your sensor
+
+31:32.500 --> 31:36.660
+location from that surface that's indicated here by this ray and then see
+
+31:36.660 --> 31:40.700
+where this ray projected onto the projection center of your camera for
+
+31:40.700 --> 31:46.180
+example intersects with the blue surface and take this as your corresponding
+
+31:46.180 --> 31:50.940
+point in order to perform the alignment so this projective data station is also
+
+31:50.940 --> 32:00.020
+something which you find commonly most of the time point to plane metrics are
+
+32:00.260 --> 32:04.860
+being used today the idea of the point to plane metric is still to find the
+
+32:04.860 --> 32:09.180
+closest point but not take the Euclidean distance into account but to take the
+
+32:09.180 --> 32:12.340
+distance into account and project it onto the normal information that you
+
+32:12.340 --> 32:16.540
+have so as a result of this if you have kind of a comparison between the kind of
+
+32:16.540 --> 32:20.500
+point to point metric given that you have basically sub sampled your surfaces
+
+32:20.500 --> 32:25.460
+with through point clouds you actually get an arrow vector which is not if this
+
+32:25.460 --> 32:29.020
+is the closest points over here but you basically project it onto the normal
+
+32:29.020 --> 32:33.020
+information that you have and as a result of this it basically the the
+
+32:33.020 --> 32:38.300
+arrow vector shrinks here and takes the normal information account for this
+
+32:38.300 --> 32:43.140
+alignment and this is a technique which is fairly popular and used most of the
+
+32:43.140 --> 32:48.220
+time today in ICP algorithms because it provides to be a better convergence
+
+32:48.220 --> 32:51.820
+property and what you're basically doing you're still computing your nearest
+
+32:51.820 --> 32:55.140
+neighbor so if this these two points are the nearest neighbor points so this
+
+32:55.140 --> 32:58.860
+would be the point to point metric over here you basically compute the normal
+
+32:58.860 --> 33:02.820
+information and then project this distance onto this normal information
+
+33:02.820 --> 33:09.660
+which gives you these these values here as your as your error terms over here
+
+33:09.660 --> 33:15.460
+you can take that into account in your approach and basically it is taking the
+
+33:15.460 --> 33:20.340
+error vector from the point to point metric and computing the dot product
+
+33:20.340 --> 33:24.980
+with the corresponding normal vector and using this as your cost function so as a
+
+33:24.980 --> 33:30.500
+comparison point to point versus point to plane so if this is your your point
+
+33:30.500 --> 33:34.540
+to point metric and then this is the function that you're minimizing if you
+
+33:34.540 --> 33:37.740
+go to this point to plane metric you're basically using one of those normal
+
+33:37.740 --> 33:42.460
+vectors to kind of say this is my plane and then basically computing the
+
+33:42.460 --> 33:46.140
+distance of this point to that plane and this is basically the same arrow vector
+
+33:46.140 --> 33:50.980
+that you have over here but you compute the dot product with the corresponding
+
+33:50.980 --> 33:54.500
+normal information that you have in here and this is kind of a fairly standard
+
+33:54.540 --> 33:59.860
+technique today that probably most ICP registration algorithms use today in
+
+33:59.860 --> 34:05.380
+practice is this point to plane metric it converges faster an example here
+
+34:05.380 --> 34:08.180
+again the bunny example so this is basically the iteration that we have
+
+34:08.180 --> 34:13.020
+seen before and this is the same with the point to plane metric and what you
+
+34:13.020 --> 34:18.500
+see now we are starting out but very quickly the point to plane metric
+
+34:18.500 --> 34:23.820
+already is generated the perfect result there no changes here anymore and this
+
+34:23.820 --> 34:28.220
+one is still iterating so you can see that the number of iterations that you
+
+34:28.220 --> 34:34.540
+need in order to converge to a solution is larger for the point to point and
+
+34:34.540 --> 34:37.740
+smaller for the point to plane metric so you're converging faster to your result
+
+34:37.740 --> 34:44.140
+and therefore this point to plane metric is frequently used and I would say most
+
+34:44.140 --> 34:48.500
+techniques today at least for 3d registration use these point to plane
+
+34:48.500 --> 34:53.180
+metric also have a few examples how you can actually do this let's say you have
+
+34:53.180 --> 34:56.380
+a vehicle driving through the environment equipped with a scanner so
+
+34:56.380 --> 35:02.140
+it takes a 3d scan of the scene this gives you your point cloud where maybe
+
+35:02.140 --> 35:05.500
+with some initial gas based on the odometry information then the vehicle
+
+35:05.500 --> 35:08.940
+moves on moves through the environment at some point in time gets another scan
+
+35:08.940 --> 35:12.740
+what you can do is besides this odometry information where the platform has moved
+
+35:12.740 --> 35:16.860
+you take this 3d data in order to compute the full point clouds and
+
+35:16.860 --> 35:22.340
+register those point clouds with an ICP algorithm so that you get rigid body
+
+35:22.380 --> 35:25.500
+transformations between the locations where the scanner has been taken and
+
+35:25.500 --> 35:28.780
+they can then you can change this information and build maps of the
+
+35:28.780 --> 35:34.300
+environment so one example over here is a robot mapping task in the Roman
+
+35:34.300 --> 35:38.300
+catacombs where depth cameras installed here in front of the platform and you
+
+35:38.300 --> 35:43.460
+can perceive the environment and then actually registering the individual depth
+
+35:43.460 --> 35:50.540
+scans into with a point of plane metric in this example and computing a 3d model
+
+35:50.540 --> 35:53.940
+of the environment you can actually chain up the information and turn them
+
+35:53.940 --> 36:00.260
+into one consistent again as I said before very popular and is the
+
+36:00.260 --> 36:04.540
+projective data Association then typically combined with a point to plane
+
+36:04.540 --> 36:08.940
+metric and this is something which is used for example in Kinect fusion so one
+
+36:08.940 --> 36:13.220
+of the mapping algorithms and using the Kinect camera or camera which gives you
+
+36:13.220 --> 36:18.620
+RGB information and a range of depth information in order to register point
+
+36:18.620 --> 36:23.420
+clouds or having already built a model and then computing the data Association
+
+36:23.420 --> 36:27.220
+by saying okay where I'm intersecting with a model how where is this ray
+
+36:27.220 --> 36:31.660
+intersecting with the point cloud and then performing this registration using
+
+36:31.660 --> 36:35.700
+a point to plane metric so that's something that is very popular for this
+
+36:35.700 --> 36:40.540
+it's a Kinect base or range camera based mapping systems today but it can also be
+
+36:40.540 --> 36:45.420
+used in the context of standard LIDAR based SLAM for example there's an
+
+36:45.420 --> 36:49.420
+approach where you have a vehicle driving through the environment building
+
+36:49.420 --> 36:53.500
+obtaining range data from its LIDAR scanner while moving through the scene
+
+36:53.500 --> 36:58.780
+and you're basically registering 10 times per second your range scans into
+
+36:58.780 --> 37:05.860
+an awesome protective ICP approach using point-to-plane metrics in order to come
+
+37:05.860 --> 37:09.700
+up with a proper alignment of the individual range scan so that you then
+
+37:09.700 --> 37:13.780
+can build map of the maps of the environment and localize yourself in
+
+37:13.780 --> 37:19.340
+those maps and plan in those maps this all becomes possible just based on
+
+37:19.340 --> 37:25.140
+incremental scan matching once of course you re-enter a known area you may do
+
+37:25.140 --> 37:28.060
+also some other forms of post corrections like loop closers in the
+
+37:28.060 --> 37:31.740
+context of the SLAM problem but you can actually go quite far just with
+
+37:31.740 --> 37:38.860
+incremental registration today so in some the data Association is key for
+
+37:38.860 --> 37:43.260
+making your ICP algorithm work and there are different ways how you can actually
+
+37:43.260 --> 37:47.660
+find your correspondences or determine your data Association and investing into
+
+37:47.660 --> 37:51.100
+a good data Association strategy may be exploiting additional information that
+
+37:51.100 --> 37:55.540
+you have is key in order to get good results the better your data Association
+
+37:55.540 --> 37:59.820
+the more likely you will converge and the faster you will actually converge
+
+37:59.820 --> 38:04.100
+it's always worse exploiting an initial guess so if you have information about
+
+38:04.100 --> 38:08.300
+the initial alignment you should actually use it and the general rule of
+
+38:08.300 --> 38:13.420
+thumb those normal based metrics like point-of-plane metric are typically
+
+38:13.420 --> 38:17.540
+perform better or are performing better than the standard point appointment
+
+38:17.540 --> 38:22.540
+point-to-point metric so most approaches today will use some form of normal
+
+38:22.540 --> 38:28.620
+information in order to come up with a good alignment you may also want to take
+
+38:28.620 --> 38:32.380
+into account weights so if you see you can either say all the points count the
+
+38:32.380 --> 38:36.540
+same or some points are more important than other points and you can take this
+
+38:36.620 --> 38:40.460
+weight information into account in the alignment and we have taken that already
+
+38:40.460 --> 38:45.740
+into account in the previous lecture where we introduced a weight for all of
+
+38:45.740 --> 38:51.460
+those correspondences and then weighing computing the weighted mean of the
+
+38:51.460 --> 38:54.620
+points in the different point sets and also for computing the cross-covariance
+
+38:54.620 --> 38:58.740
+matrix and then you can directly take this weight information into account so
+
+38:58.740 --> 39:02.420
+if you have additional information about which points or which correspondences
+
+39:02.420 --> 39:06.460
+are more valuable for your registration problem you can directly put it into
+
+39:06.460 --> 39:09.740
+this system for example noise information can be taken into account
+
+39:09.740 --> 39:15.020
+this may be less critical for laser range scans but more critical if you use
+
+39:15.020 --> 39:19.660
+information for example from a stereo camera and want to do the stereo the
+
+39:19.660 --> 39:22.940
+camera registration because the 3d reconstruction that you build from a
+
+39:22.940 --> 39:29.540
+stereo setup gives you different precisions or accuracies depending how
+
+39:29.540 --> 39:33.100
+far the point is actually way based on your baseline information so points
+
+39:33.100 --> 39:36.300
+which are further away have a higher uncertainty and this is something that
+
+39:36.300 --> 39:42.020
+you can for example exploit for for the weighing term so you would give a higher
+
+39:42.020 --> 39:46.180
+weight to terms where you know both points and both points that have a
+
+39:46.180 --> 39:50.180
+smaller uncertainty compared to situations where they have a larger
+
+39:50.180 --> 39:54.100
+uncertainty because you can trust those points more they are more valuable for
+
+39:54.100 --> 39:58.660
+your registration process you can also go a step further and say are there
+
+39:58.660 --> 40:01.060
+certain points I should completely discard because they're probably
+
+40:01.100 --> 40:06.180
+outliers or stem from moving objects in the environment then this is an
+
+40:06.180 --> 40:10.660
+information that you may want to take into account as well and can take into
+
+40:10.660 --> 40:15.140
+account quite easily here this brings us already to the last point what happens
+
+40:15.140 --> 40:19.140
+if I want to reject certain points because they are potential outliers and
+
+40:19.140 --> 40:23.620
+this is also a strategy that you have to take into account in order to build a
+
+40:23.620 --> 40:29.340
+robust ICP algorithm today you typically can't do that without you will need some
+
+40:29.340 --> 40:34.060
+form of outlier rejection techniques or down weighing points which are potential
+
+40:34.060 --> 40:38.180
+outliers the one thing you can do is if you have a good initial guess you can
+
+40:38.180 --> 40:43.540
+first of all ignore all points which are very far away by saying I have no idea
+
+40:43.540 --> 40:49.740
+if they are right or wrong let's ignore those points which potentially have a
+
+40:49.740 --> 40:53.860
+large distance between those point clouds and I'm starting with only these
+
+40:53.860 --> 40:57.940
+kind of correspondences where the difference is small compute an initial
+
+40:57.940 --> 41:02.380
+alignment maybe those will change as well and later on I will be able to make
+
+41:02.380 --> 41:06.260
+a good alignment so that's kind of something which is very easy to do based
+
+41:06.260 --> 41:11.140
+on a large point-to-point distance you are basically rejecting certain points
+
+41:11.140 --> 41:14.460
+and not take these correspondences into account in the current iteration and
+
+41:14.460 --> 41:20.060
+this is kind of the the simplest thing that you can actually do you can also
+
+41:20.060 --> 41:23.860
+say okay let's look to neighboring points if I have a point in here by
+
+41:23.860 --> 41:28.460
+another point are they roughly mapped to the same area on the other surface if
+
+41:28.460 --> 41:32.220
+they are mapped to positions in the surface which are very far away like in
+
+41:32.220 --> 41:35.700
+this example over here so they are very the points are very close on the red
+
+41:35.700 --> 41:39.420
+surface but very far away on the blue surface they are probably not the right
+
+41:39.420 --> 41:45.060
+ones and so you can come up with different types of compatibilities and
+
+41:45.060 --> 41:50.460
+taking pairs of points into account and then reject those which are potentially
+
+41:50.460 --> 41:56.100
+wrong ones you can also do things was called trimmed ICP ways you simply sort
+
+41:56.100 --> 42:00.100
+your correspondences based on the error that you have and then say okay for
+
+42:00.100 --> 42:05.260
+example I am ignoring the worst 10% or the first 20% of the correspondences and
+
+42:05.260 --> 42:10.820
+only focus on the best 80% and then come up with a good alignment the question is
+
+42:10.820 --> 42:15.820
+how to set this T is kind of related to how many what's your expected outlier
+
+42:15.820 --> 42:19.980
+ratio and how much do the scans actually overlap which may be hard to identify
+
+42:20.140 --> 42:24.100
+so you need to have an idea of the overlap in order to set this parameter
+
+42:24.100 --> 42:28.900
+T here correctly so how many points you actually want to ignore if you go for a
+
+42:28.900 --> 42:33.100
+certain percentage like ignoring 50% of the points if you have a high outlier
+
+42:33.100 --> 42:40.140
+ratio and small overlaps this may be too much that you ignore and or and you can
+
+42:40.140 --> 42:44.180
+also end up in situations where you will simply not be able to find correct data
+
+42:44.180 --> 42:47.820
+sessions anymore and then don't come up with the improvement of your alignment
+
+42:47.860 --> 42:53.060
+and you will fail with your registration if you want to do this in a kind of more
+
+42:53.060 --> 42:57.220
+formal structured way what you can do is you can actually use robust kernels so
+
+42:57.220 --> 43:02.420
+kernel function that are common in robustly squares for example in order to
+
+43:02.420 --> 43:07.700
+down way the impact of potentially large errors in your data association and you
+
+43:07.700 --> 43:13.760
+can either commit towards a fixed kernel whatever there are things such as a
+
+43:13.800 --> 43:17.080
+Hoover kernel or something like this that you may want to take into account
+
+43:17.080 --> 43:22.200
+so this is kind of different kernels so this is a standard quadratic function if
+
+43:22.200 --> 43:26.640
+you're minimizing the squared errors and these are basically other forms of
+
+43:26.640 --> 43:32.000
+kernels which give less weight to points which are further away so this gives you
+
+43:32.000 --> 43:36.080
+then corresponding weight factor and this is the weight factor that you can
+
+43:36.080 --> 43:42.200
+directly put then as this weight P of n into your your error minimization
+
+43:42.240 --> 43:46.240
+approach and there are also techniques which actually estimate the shape of
+
+43:46.240 --> 43:52.480
+that kernel online for your problem and this can also be used for ICP this for
+
+43:52.480 --> 43:56.760
+example one example this is a famous example in the so-called kitty highway
+
+43:56.760 --> 44:01.120
+scene you have a car driving over a highway not many structures around and
+
+44:01.120 --> 44:06.200
+then other cars are overtaking and then the overtaking car which is actually
+
+44:06.200 --> 44:10.440
+moving and generates very good features for the registration and if you if the
+
+44:10.480 --> 44:15.760
+ICP algorithm commits to registering against that car then your algorithm
+
+44:15.760 --> 44:21.160
+will actually fail and if you have these adaptive outlier ejection techniques you
+
+44:21.160 --> 44:25.960
+are able to say no this is most likely to be an outlier the other results are
+
+44:25.960 --> 44:29.920
+potentially better and then get good results so there's an example here where
+
+44:29.920 --> 44:34.040
+the car is actually driving with a fixed kernel which has been tuned so there's
+
+44:34.040 --> 44:37.560
+overall okay you see the car driving around here you see the second car
+
+44:37.560 --> 44:41.720
+coming at some point in time there are no other structures around and this car
+
+44:41.720 --> 44:45.440
+moving you can see how the registration fails and the car virtually moves
+
+44:45.440 --> 44:49.040
+backwards because it aligns to the forward moving car which leads to a
+
+44:49.040 --> 44:52.560
+wrong registration if you're on the other hand using this adaptive kernels
+
+44:52.560 --> 44:56.360
+and you see the scene coming here here is the car driving further you can see
+
+44:56.360 --> 45:01.840
+that here the kernel goes to a very low value batch basically means it rejects a
+
+45:01.840 --> 45:06.560
+lot of those outlier techniques and then comes up with a good alignment so a good
+
+45:06.560 --> 45:13.320
+strategy for rejecting your outliers is key in order to come up with good
+
+45:13.320 --> 45:19.040
+results and therefore often multiple things are done so you on the what
+
+45:19.040 --> 45:22.600
+people often do is they have some heuristics for rejecting outliers
+
+45:22.600 --> 45:26.800
+certain things they assume not to happen in their environment and then still
+
+45:26.800 --> 45:31.800
+combining this with a robust kernel this can be in the easiest case for example
+
+45:31.800 --> 45:35.240
+the Hooper kernel but more advanced techniques will use adaptive kernels
+
+45:35.240 --> 45:40.200
+that adjust themselves to the current situation out there and in this way come
+
+45:40.200 --> 45:45.160
+up with a better alignment so you may want to ask yourself are there certain
+
+45:45.160 --> 45:49.760
+things I can rely on are there certain points which are most likely to be
+
+45:49.760 --> 45:53.880
+outliers or moving objects what can I make certain assumptions about the ego
+
+45:53.880 --> 45:58.040
+motion if I know that I'm on a car of a sense on a car it's very unlike that the
+
+45:58.040 --> 46:02.200
+car moves sight words for example these are additional constraints I can take
+
+46:02.200 --> 46:07.200
+into account in order to avoid making wrong data associations I just provided
+
+46:07.200 --> 46:12.280
+a few examples so there are approaches which try to learn how moving objects
+
+46:12.280 --> 46:15.720
+look like and where they are moving in the environment not to identify them and
+
+46:15.720 --> 46:20.000
+then take them out of the registration procedure so this is one recent example
+
+46:20.000 --> 46:23.560
+where you have a point cloud over here you can basically see that there are two
+
+46:23.560 --> 46:27.440
+cars but one car is parking and actually provides really good features for your
+
+46:27.440 --> 46:31.560
+registration and the other car is moving and if you do this what's called moving
+
+46:31.600 --> 46:35.680
+object segmentation so segmenting your scan into the moving parts and static
+
+46:35.680 --> 46:40.360
+parts you can use this basically as a mask for your algorithm ignoring the
+
+46:40.360 --> 46:44.960
+moving points for your registration and in this way come up with a better
+
+46:44.960 --> 46:48.720
+alignment and those approaches actually work fairly well so this is your raw
+
+46:48.720 --> 46:51.920
+point all this is actually a ground truth of the moving object so whatever
+
+46:51.920 --> 46:56.000
+is red here is moving and these are the estimates you can see there are a few
+
+46:56.000 --> 46:59.400
+too many objects being identified as moving but all the moving parts are
+
+46:59.400 --> 47:03.840
+actually segmented out correctly so if you then perform only your data
+
+47:03.840 --> 47:08.400
+association on the black points ignoring the points labeled in
+
+47:08.400 --> 47:12.400
+red you will get a better data association and it's unlikely that you
+
+47:12.400 --> 47:18.120
+will make mistakes and commit yourself to the moving objects for example so
+
+47:18.120 --> 47:21.920
+there is one example where you can do this even without learning based
+
+47:21.920 --> 47:25.480
+approach if you mapping in dynamic environments so what you see here in
+
+47:25.560 --> 47:30.840
+this video is the RGBD camera frames or the depth camera and here the 3d model
+
+47:30.840 --> 47:35.800
+built from the from the depth information that the camera provides and
+
+47:35.800 --> 47:39.120
+you can see that you can actually build an accurate model of the environment so
+
+47:39.120 --> 47:42.200
+this is basically the model projected back into the camera for camera frame
+
+47:42.200 --> 47:48.080
+that works well it works only well as soon as the world is static so here you
+
+47:48.080 --> 47:51.160
+can see people moving through the environment moving through the scene and
+
+47:51.160 --> 47:55.240
+this actually leads to registration errors and in the end will lead to an
+
+47:55.240 --> 47:58.840
+highly inconsistent model of the environment so while the people are
+
+47:58.840 --> 48:02.960
+moving through the scene you can see the model gets completely corrupted and the
+
+48:02.960 --> 48:06.440
+estimation of where the camera was and how the point clouds should be aligned
+
+48:06.440 --> 48:10.520
+screws up substantially so that the resulting model is shown over here is
+
+48:10.520 --> 48:15.400
+not usable anymore what you can however do is you can look to the residuals of
+
+48:15.400 --> 48:18.920
+those errors and this is similar to these kernel based approaches and try to
+
+48:18.960 --> 48:23.000
+identify those points which are potentially dynamic and which are static
+
+48:23.000 --> 48:28.720
+just based on distance criteria so if this is kind of the model that you have
+
+48:28.720 --> 48:33.400
+so far and you get a new scan let's say this is the scan that you have you will
+
+48:33.400 --> 48:37.800
+perform a first initialization using for example robust kernels taking them into
+
+48:37.800 --> 48:43.960
+account to not be too much subject to mistakes and then you're looking to the
+
+48:43.960 --> 48:47.240
+different mistakes so these are the residuals that you have between your
+
+48:47.280 --> 48:51.480
+surface or your model which is here shown in black and the green dots over
+
+48:51.480 --> 48:55.080
+here and then you can actually look into statistics and say how those
+
+48:55.080 --> 48:59.680
+distributions typically look like and you will see a lot of errors are here
+
+48:59.680 --> 49:03.720
+and then there's a small peak over here which are often the dynamic objects in
+
+49:03.720 --> 49:07.520
+the scene and then you can basically with some threshold do a rich very
+
+49:07.520 --> 49:11.120
+simple and straightforward rejection technique say okay those guys are
+
+49:11.120 --> 49:14.280
+probably the wrong ones and I exploit the knowledge that I have about my
+
+49:14.320 --> 49:19.160
+problem in order to eliminate them and say visit dynamic object don't take it
+
+49:19.160 --> 49:24.280
+into account and do the registration only with the static information and if
+
+49:24.280 --> 49:29.440
+you do this you are able to identify which are the moving objects so this is
+
+49:29.440 --> 49:34.040
+kind of just one single frame of that scene if you print the residuals with
+
+49:34.040 --> 49:37.280
+respect to the previous model you can actually very well identify where the
+
+49:37.280 --> 49:40.560
+persons are there also some other structures which are not perfect but you
+
+49:40.560 --> 49:44.480
+can clearly see where the high residuals are and then with some image
+
+49:44.480 --> 49:50.640
+processing techniques you are actually able to identify which or can generate a
+
+49:50.640 --> 49:54.800
+mask which masks out all the dynamic objects so that the registration will
+
+49:54.800 --> 49:59.600
+only work in those black areas and the here the bright areas will not be taken
+
+49:59.600 --> 50:04.120
+into account and if you do this can same scene as before but now with this
+
+50:04.120 --> 50:07.320
+outlier rejection technique and you can see you're building a map you get a
+
+50:07.320 --> 50:10.520
+consistent model of the environment the projected frames look similar to the
+
+50:10.520 --> 50:14.600
+real camera frames and here you see persons are identified through this
+
+50:14.600 --> 50:18.560
+approach not integrated into the model so that you can register your currents
+
+50:18.560 --> 50:23.200
+observation that you have against this 3d model without screwing it up it's not
+
+50:23.200 --> 50:26.640
+absolutely perfect so there it gets a little bit blurry the alignment is not
+
+50:26.640 --> 50:30.720
+absolutely perfect but it's much much better compared to the situation that we
+
+50:30.720 --> 50:34.720
+had before that you can actually use this information in order to build an
+
+50:34.720 --> 50:38.320
+accurate model of the environment so if you're just integrating those scans you
+
+50:38.320 --> 50:42.400
+can actually hear the part of the room which are fairly well aligned given that
+
+50:42.400 --> 50:48.240
+there have been so many dynamic objects in the scene before and there's another
+
+50:48.240 --> 50:53.200
+example of that same technique that you can actually use and then also render
+
+50:53.200 --> 50:56.640
+away this information from the model so you have people moving around and you
+
+50:56.640 --> 51:00.120
+can actually also remove those objects which had been moving like the people
+
+51:00.120 --> 51:03.360
+were originally sitting here on the chairs but they identified as being
+
+51:03.360 --> 51:07.760
+movable and then can even be removed from those models and then basically
+
+51:07.760 --> 51:11.040
+have an iterative approach between updating the model in improving your
+
+51:11.040 --> 51:18.120
+poses for some back in order to get accurate models so in some this leads us
+
+51:18.120 --> 51:23.280
+to an ICP algorithm which works in the following way first we are sub sampling
+
+51:23.280 --> 51:28.280
+or potentially sub sampling our point set to a smaller set of points hopefully
+
+51:28.280 --> 51:33.360
+those which are good ones and this again is a step that not every approach does
+
+51:33.360 --> 51:37.320
+but if you have too many points you may want to down sample your points then you
+
+51:37.360 --> 51:40.560
+try to determine your correspondences whatever at this point a plane metric or
+
+51:40.560 --> 51:45.160
+any other tank that you're using out there you do some outlier rejection and
+
+51:45.160 --> 51:48.440
+compute some weights given the current knowledge that you have about those
+
+51:48.440 --> 51:52.520
+points and then you're computing the rotation translation given the approach
+
+51:52.520 --> 51:56.280
+we have done lecture number one in order to come up with a solution here you
+
+51:56.280 --> 52:00.480
+apply that the registered point cloud you compute the error and then you
+
+52:00.480 --> 52:05.080
+basically repeat the same process over and over again until the error yes
+
+52:05.080 --> 52:10.520
+reduces and you're able to come up with a final result so you repeat this
+
+52:10.520 --> 52:14.960
+process over and over again until convergence and then come up with a good
+
+52:14.960 --> 52:21.720
+registration and that's basically what the ICP algorithm does in its slightly
+
+52:21.720 --> 52:26.960
+more advanced form and these are ways I can compute behind it with this thank
+
+52:26.960 --> 52:31.680
+you very much for your attention and we are going to continue here with a third
+
+52:31.680 --> 52:35.840
+part on the lecture looking into the least squares approach so what can we
+
+52:35.840 --> 52:41.040
+do if you want to do don't rely on this SVD based approach but at least squares
+
+52:41.040 --> 52:44.800
+solution thank you very much for attention
+

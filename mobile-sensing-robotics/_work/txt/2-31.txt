@@ -1,0 +1,421 @@
+[00:00] So, I want to talk today about spatial resectioning or the so-called projective three-point algorithm.
+[00:08] So, the goal of that algorithm is to estimate the position of a camera which observes a known scene.
+[00:15] So, we assume to know a couple of points in the environment where we know they are full 3D locations
+[00:21] and then we want to estimate where the camera has been taken.
+[00:25] That means we want to determine where is the projection center of the camera and where is the camera pointing to.
+[00:31] So, from at least three observed known control points in the environment,
+[00:36] we want to estimate the rotation matrix of the camera as well as the position of the camera in the world.
+[00:43] So, in the reference frame in which we know the locations of the 3D points.
+[00:48] So, one concrete example, let's say you have this beautiful square here in Rome
+[00:53] and you know the four locations or three or four locations which are marked here with red crosses in the world.
+[01:02] So, you know the 3D coordinates of those points.
+[01:05] And then you want to estimate the position and orientation from where the image has been taken.
+[01:12] So, you want to basically localize the photographer or you want to localize the camera.
+[01:16] That's what that all is about and this is our task.
+[01:20] So, given the 3D coordinates of object points, we call them xi.
+[01:25] Again, x capitalized because in the 3D world and we observe the 2D coordinates of these points.
+[01:31] So, we know to which pixel these individual 3D points are actually mapped to
+[01:36] and this is given by lowercase xi which is the pixel location of that 3D point projected to the image.
+[01:45] And what we want to estimate are the extrinsic parameters, so the rotation matrix and the projection center of our camera.
+[01:52] And an important assumption here is we assume this camera to be calibrated.
+[01:56] So, if you compare that to the estimation of the direct linear transform, there we did not assume a calibrated camera.
+[02:04] So, we assume to know nothing about our camera.
+[02:07] In contrast to that, here we assume we know that our camera is calibrated.
+[02:11] So, we know the calibration matrix of our camera.
+[02:14] And if we know the calibration matrix, we have a smaller number of parameters that we need to estimate.
+[02:18] And therefore, this is an easier task and we need a smaller number of control points in the environment.
+[02:26] So, for the projective 3-point algorithm, we need 3 points or actually 4 points if you don't have an initial guess at all
+[02:34] because there's some ambiguity in the solution, but otherwise 3 points are sufficient.
+[02:40] So, just as a reminder, because what we need to know here is we need to know how a 3D point is mapped to the 2D world.
+[02:47] That's something that I expect you to know just as a very short reminder.
+[02:52] We assume we have our points in the 3D object world and they are projected onto our 2D image.
+[02:58] And this happens via this equation.
+[03:01] So, lowercase x is the point in the image is equal to a projection matrix which is a 3x4 matrix times the location of the point in the 3D world.
+[03:11] And this projection matrix P can be split up into one part which is the calibration matrix K over here
+[03:18] which contains all the intrinsic parameters.
+[03:21] So, everything for the parameters inside our camera, the calibration of our camera.
+[03:25] And then it contains of a rotation matrix which is the rotation of the camera in the world.
+[03:31] And then this matrix, identity matrix over here and this is the location of the projection center.
+[03:39] So, the point in our camera through which all the rays actually pass.
+[03:44] And again, we assume to know K and we want to estimate R and x0.
+[03:48] So, the intrinsic or the interior orientation of our camera which is the calibration matrix are assumed to be given.
+[03:56] And the extrinsic or the exterior orientation are our unknowns which is x0 and the rotation matrix R.
+[04:04] And these are the parameters that we want to estimate.
+[04:06] So, basically localizing the calibrated camera in the world given we know three known points in the environment.
+[04:14] And if we kind of relate that to the DLT that we have done before.
+[04:18] So, in the DLT we tried to estimate the 11 parameters, intrinsic and extrinsic.
+[04:24] So, K, R and x0, the red ones are unknown given our known points.
+[04:31] And today we'll be looking into the projective three-point algorithm or spatial resectioning.
+[04:36] There we assume the matrix K to be given and our unknowns are only the three rotation components and three translation components.
+[04:43] So, there's six extrinsic parameters of the camera that we want to estimate.
+[04:48] And for that we have six unknowns.
+[04:51] So, we need to have at least three points in the environment observing always an x and y coordinate of that point.
+[05:00] So, minimum three points in order to do this which is different compared to the DLT which required six points.
+[05:07] Because it additionally had these five unknown parameters about the camera calibration.
+[05:13] But again, the camera calibration problem we assume to be solved here at that point for us.
+[05:18] So, we will now dive into the question how can we actually orient or complete the orientation of our calibrated camera using at least three points in the environment.
+[05:29] And what I'm providing here is a direct solution.
+[05:33] So, a solution which does not require an initial guess.
+[05:36] It's not a statistically optimal solution.
+[05:38] As we will see, we will not exploit any uncertainties about this point.
+[05:42] So, for example, we assume the pixel coordinate to be perfect and we don't have any noise in our measurement process.
+[05:50] Nor do we consider that maybe some of the 3D points of our control points in the environment are not perfectly known and have some uncertainty associated to that.
+[05:59] That's something that we ignore in this direct solution.
+[06:02] And so we directly compute the direct solution without any initial guess.
+[06:07] And this can serve as an initial guess for a subsequent least squares approach in order to take the uncertainties into account in an appropriate way.
+[06:16] But we are looking here mainly into the direct solution.
+[06:19] So, slightly more precise.
+[06:21] We have given 3D coordinates xi with capital I larger or equal than zero.
+[06:28] These are our three locations of the point in the object or in the world coordinate system.
+[06:33] And we know the corresponding image coordinates of these points that are recorded with our calibrated camera that we want to localize.
+[06:41] So, these are our observations and we assume to have them.
+[06:45] And we also have the data cessation.
+[06:47] So, the eye of the 3D point and the eye of the point in the image, we know the correspondency.
+[06:53] So, there's no ambiguity in the data cessation, for example.
+[06:57] And given that, our task is to estimate the six parameters associated with the translation and the rotational components of our camera location doing this in a direct solution, so not requiring any initial guess.
+[07:11] And this is so-called the spatial resectioning problem.
+[07:14] We should mention that this is a problem which has been studied for quite a while now.
+[07:21] Solutions are known since approximately 160 years and we are looking here into the original solution proposed by Gounod.
+[07:29] There are other solutions which are also out there but we kind of stick here with the original solution to do that.
+[07:36] And this is a two-step process.
+[07:39] So, if you think about these are our object points in the environment x0, x1 and x2.
+[07:46] And this is our camera observing those three points in the 3D world.
+[07:51] The approach basically is a two-step process.
+[07:54] So, first, estimating the lines of these projection vectors.
+[07:58] So, of these vectors from x0 to x1, 2 and 3.
+[08:03] And once we have that, we basically know our points in the camera coordinate system but then we have the correspondences between the point in the world coordinate system and the camera coordinate system.
+[08:13] And then we can simply compute a similarity transform or a rigid body transform of three known corresponding points.
+[08:20] And that's a basic task that you need to know or you know how to do that.
+[08:26] So, just as an illustration, so we have here again our camera location, the points x1, x2, x3.
+[08:34] So, these are my known points and this is my unknown point as well as the orientation.
+[08:39] But what we also have, we have the image coordinates x1, x2, x3.
+[08:44] And given that we know our camera is calibrated, those points in the camera coordinate system, so with k here, directly indicate direction vectors.
+[08:55] Known direction vectors in the camera coordinate system which pass from the projection center, so from x0 to the point x1, x2 and x3.
+[09:07] So, these vectors are supposed to be known because we know the calibration matrix.
+[09:11] So, if you remember that, if you multiply from the left hand side the inverse of the calibration matrix to the point on our sensor, so our pixel coordinate, then we actually obtain the direction vectors towards this point in the 3D world.
+[09:30] And as we assume to have a calibrated camera, we know where those directions point to.
+[09:37] And then we have the lengths s1, s2 and s3.
+[09:40] This is basically the distance from x0 to x1, x0 to x2, x0 to x3.
+[09:45] This is kind of the lengths of those vectors.
+[09:47] And these lengths are those things which we typically cannot determine from an image because this is kind of the depth information which is lost.
+[09:55] But given that in this example we know the 3D points of the environment, we will see that we can actually compute s1, s2 and s3.
+[10:04] Furthermore, we have the distances a, b and c which form the triangle of the three points in my world coordinate system.
+[10:13] This is also a quantity that we will need to exploit in the subsequent process.
+[10:19] So now let's look again into our camera model.
+[10:22] And this is basically what I briefly explained before.
+[10:26] So we have our points in the 3D world put into the camera coordinate system.
+[10:34] So this is by subtracting the translation and multiplying with the rotation matrix here.
+[10:41] We basically obtain our rays of the points, so these rays over here, from the projection center of our camera through the image plane to the point in the 3D world.
+[10:57] This is given by this equation over here which is equal to k inverse times the pixel coordinate in the sensor frame.
+[11:05] And we need to multiply it by a scalar s1 which describes this length assuming this to be a unit vector.
+[11:12] So to make sure that this vector here actually points into the right direction, we need to do a few things over here.
+[11:19] We need to make sure, because again we have this coordinate system where the camera constant can be positive or negative, so we need to take into account that we do it in the right way.
+[11:29] We ensure that we use our, we take into account the sign of our camera constant.
+[11:36] So for us we were always assuming a negative camera constant over here, therefore we have the negative sign here.
+[11:43] And then this is simply a normalization of the vector so that this vector in here has unit length,
+[11:54] so the direction vector has unit length so that the sI that we multiply with this gives us actually the length in the world coordinate system between the projection point,
+[12:06] the projection center of the camera and the points in the 3D world.
+[12:09] Okay?
+[12:10] So let's start and start with the first process, actually estimating those lengths.
+[12:15] So estimating these parameters s is now the exercise that we're going to do on the next couple of slides.
+[12:21] So what do we have?
+[12:22] We have our point in the environment x1, x2 and x3.
+[12:26] These are the three known points that I have.
+[12:29] And then somewhere my camera is located, but I don't know where, that's what I want to ask.
+[12:34] So we can put this point x0 over here and then we can place the three rays going from x0 to x1, x2 and x3 in the world.
+[12:45] And what we want to have are those s1, s2 and s3 which are the length of those vectors.
+[12:52] So this is what I want to do, the length of the rays from the projection center of the camera to my known points in my world.
+[13:01] So what I start doing is I start considering the angle between those rays.
+[13:07] So where do I get the angle between those rays from?
+[13:10] So for example, if I have here the angle between those two rays, how can we actually do this?
+[13:17] And there's a way how we can compute this angle if you remember that.
+[13:22] So you can use the cosine here.
+[13:24] The cosine is given by basically the dot product of the two involved angles if the angles are normalized.
+[13:31] So I can write cosine of this angle here is basically this vector, dot product, this vector if those vectors both are normalized.
+[13:42] So I can just write that down saying this is x1 minus x0.
+[13:46] So this is this vector over here, x2 minus x0 which is this vector over here and then normalized by the length of those vectors.
+[13:54] So this actually gives me the cosine and from the cosine I can compute this.
+[14:00] And again, as you remember, those direction vectors is actually something that I obtain from my camera calibration.
+[14:09] So I can do this for all.
+[14:11] So those vectors here are the known vectors that I have from knowing the pixel coordinate in my camera calibration parameters.
+[14:18] So I get those vectors directly basically and then can compute alpha, beta and gamma simply by using the aqueous cosine and aqueous cosine for taking these three vectors into account.
+[14:34] So this is a straightforward exercise.
+[14:36] It basically means you know the direction vectors from your camera projection center to the point in the 3D world so you can compute the angle in between them just by exploiting the cosine.
+[14:46] So these angles are directly computable given that we know the intrinsics of our camera.
+[14:52] Again, if you wouldn't have not a calibrated camera this would not be possible because if our camera would not be calibrated that means we would not know these direction vectors.
+[15:03] Only by knowing the calibration matrix k of our camera we can compute the points in the camera coordinate system directly out of our pixel coordinates.
+[15:14] So this is important to know.
+[15:15] That's the reason why our camera needs to be calibrated over here otherwise we wouldn't get those angles over here.
+[15:21] Okay, so by now we know those angles alpha, beta and gamma.
+[15:26] Those three angles are known to us.
+[15:28] We know how to compute them directly out of the pixel coordinates and our camera calibration matrix.
+[15:35] Now the next step is to look into this triangle over here with a, b and c connecting the points x1, x2 and x3.
+[15:45] And so the lengths of a, b, c is something I can straightforwardly compute using the Euclidean distance of my known 3D points.
+[15:54] Consider I know x1, x2, x3 so I can compute the distances between them in a straightforward manner.
+[16:02] That means now we have different triangles involved in here.
+[16:06] So we have one triangle from x0, x2, x1.
+[16:13] We have another triangle from x0, x2, x3.
+[16:17] And we have a third triangle x0, x3, x1.
+[16:21] So we have three triangles now and we know always these angles here in the triangles and we know the lengths of a, b and c.
+[16:32] So one side of this triangle all the time.
+[16:35] We want to estimate the other two lengths of each triangle which will form s1, s2 and s3.
+[16:41] So let's start out using the triangle x0, x1, x2.
+[16:47] So we're now looking into this triangle over here.
+[16:49] So I'm fading out all the other triangles so I'm considering this triangle over here.
+[16:54] So what is known are the green elements.
+[16:56] My gamma is known and my c is known but what is unknown is s1 and s2.
+[17:03] So the question is how can I relate them with each other?
+[17:06] And I can relate them with each other through the law of the cosines or cosine law.
+[17:12] So it basically tells me that this length squared plus this length squared minus two times s1, s2 and the cosine of this angle gamma which I know must be equal to c squared.
+[17:30] So just if you consider this to be a triangle where you have, where this is a 90 degree angle, if this is a 90 degree angle this element would go to zero.
+[17:43] So this whole element would drop and you would have s1 squared plus s2 squared equals c squared.
+[17:49] Again this only holds if you have a triangle which has a 90 degree angle.
+[17:52] If we have a triangle which doesn't have a 90 degree angle we need to take this form which is the basic law of the cosine.
+[17:58] So in this triangle I can generate one equation which contains two known parameters gamma and c and it contains two unknown parameters s1 and s2.
+[18:09] So these are my unknowns and these are my knowns.
+[18:15] And now I can repeat the same process for x0, x2, x3, x0, x1, x3 and x0, x1, x2 what I just did.
+[18:26] So I can repeat this process two times more so in sum I can do that three times so I get three equations of that type.
+[18:34] So I can just add them and analog this way we get the same thing for the first triangle, the second triangle and the third triangle.
+[18:42] And again these a, b and c are my known parameters, this is what I know.
+[18:47] My alpha, beta, gamma angles is something that I do know and I have my unknowns as 1, s2 and a 3 involved in here.
+[18:56] And so we have now three equations which contain quadratic elements and non-quadratic elements of our unknowns.
+[19:06] And three equations with two unknowns and now I can do some mathematical exercise in order to bring them into one equation.
+[19:17] It will turn out we will get a polynomial of degree 4 which we need to solve.
+[19:22] And this then we solve this polynomial of degree 4 then we actually get the solution to our question what are the lengths s1, s2 and s3.
+[19:33] Let's see how we can do that.
+[19:37] So we start with computing those distances.
+[19:40] So we start with the first equation, so we go back, take the first equation, just copy paste it here and say a2 is s2 squared plus s3 squared minus 2 s2 s3 cos alpha.
+[19:54] So what I do now, I just define two new variables, a variable u and a variable v.
+[20:01] So here are u and v given, u is the ratio of s2 to s1 and v is f3 to s1.
+[20:09] So both elements divided by the length s1.
+[20:13] And now what I can do is I can do a substitution.
+[20:16] So I want to substitute s2 and f3 with the variables u and v.
+[20:24] So just an example, if I take the u over here and want to replace this part over here.
+[20:30] So this would be s1 squared times u squared.
+[20:38] So because if I take s1 squared times u squared, the s1 goes away and just s2 squared remains which is exactly this term over here.
+[20:48] Same is done here, this equals to s1 squared times v squared.
+[20:56] And here minus 2 times s1 squared u v cos alpha.
+[21:05] So as a result of this, s2 is gone, s3 is gone, I only have u and v in there and the term s1 squared.
+[21:14] So this substitution as I explained it directly leads me to this equation over here.
+[21:21] And now I can rearrange this equation, get s1 on one side.
+[21:26] So basically I'm dividing by this term over here and so that my result is then s1 squared equals a squared divided by this expression over here.
+[21:39] So through this rearrangement I obtain exactly this expression over here.
+[21:44] So the only thing I've done, I've rearranged my equation, introduced two new variables u and v in here.
+[21:52] And if I have u and v, I can go back to my original parameters and then get an equation which contains u and v and also contains my s1 squared.
+[22:03] And now I can use exactly the same definition of u and v and perform the same substitution for the other two equations which contain b squared and c squared.
+[22:15] So I'm doing exactly the same thing.
+[22:18] So s2 and f3 always gets replaced with u and v as one stays in there.
+[22:27] So as a result I obtain three equations which are all equal and all relate u and v with respect to s1.
+[22:37] So I just obtained s1 equals to this expression so this was kind of the thing that I showed you how to do just a second ago.
+[22:44] And we can do the same thing for the two other equations where we obtain this equation and this equation over here.
+[22:50] And we know that all the three are equal and they're equal to s1 squared.
+[22:54] And so now I have my equation and just containing u's and v's squared and in linear terms in here and the remaining parameters a, b and c are unknown.
+[23:08] So what I now can simply do, I take one of those equations, solve it for u and then put that one into the other equations in there.
+[23:19] And so just by solving that, moving it in there, I in the end get a polynomial of degree four that I need to solve.
+[23:28] So it's a polynomial which depends on v. So by eliminating u and then putting the other two as equal, I lose even s1.
+[23:39] And then my only unknown is v and I have a polynomial of degree four with four coefficients, a4, a3, a2, a1 and a0.
+[23:50] So it was five coefficients, sorry. Four coefficients in front of v and my constant term and this should be equal to zero.
+[23:57] And of course this a4, 3, 2, 1, a0 may be terms which are now look a little bit ugly or non-straightforward to derive.
+[24:06] But just by sitting down and putting all the equations here, we can actually write that down.
+[24:12] So again, cosine will pop up a few times and elements up to degree four are likely to pop up because u was squared and v was squared.
+[24:23] We solve with respect to u, put it into the other equations, so we may end up with elements of up to degree four.
+[24:30] And we can actually do this and just kind of save, after let's say two pages of derivations on how to put both things together, we would come up with the following solution.
+[24:39] So we have our polynomial here and now we can actually spell down the four coefficients or five coefficients.
+[24:46] a0, a4 would be this expression over here, a3 turns into this expression down here.
+[24:55] We can do the same thing for a2, a1 and a0.
+[25:00] So a2 gets this expression over here.
+[25:03] Again, this is something I don't expect you to derive very easily by hand.
+[25:07] It will take you a couple of minutes to actually do this, but there is no very complicated transformation involved in order to derive them.
+[25:14] And the same for a1 and a0.
+[25:17] So that we have our coefficients of our polynomial of degree four.
+[25:23] And the important thing to note in here is that all those coefficients, they only depend on a, b and c and on our alpha, beta and gamma.
+[25:31] And these are all known parameters.
+[25:34] So even if you go back, so you only have a, b, c, b, c, alpha, a, b, c, a, b, c, beta, a, b, c, alpha, gamma, alpha, beta.
+[25:48] And again here, so there are no unknowns involved anymore.
+[25:52] So just by putting in our values for a, b and c, we actually get our four coefficients.
+[25:59] And then we have our polynomial of degree four, v to the power of four to the power of three, two, one and our constant coefficient.
+[26:10] And then we need to solve the degree of polynomial four.
+[26:14] So what we do, we solve this polynomial of degree four with respect to v.
+[26:19] And this will then allow us to get our lengths s1, s2 and s3.
+[26:24] Because you remember our original equations was relating s1 with all the other equations.
+[26:30] So s1 is then directly given.
+[26:32] And then s2 and s3 was the ratio of, so u was the ratio of s2 divided by s1 and v, s3 divided by s1.
+[26:43] And then I can simply put in our numbers.
+[26:46] s1 again gets through one equation when I know v.
+[26:51] And then s3 is v times s1.
+[26:56] And then for getting the s2 in, I just need to put the other equation of s2 in here, s3, s2, 3.
+[27:03] Those are known, can, no, sorry, I can move s2 to the other side and then simply solve this and also get my solution out.
+[27:14] And then I basically have computed my lengths s1, s2 and s3.
+[27:20] The only thing I need to be careful in here is, as a degree, a polynomial of degree four,
+[27:27] we don't have, obtain necessary unique solution.
+[27:30] So the problem that we actually have, that there's a possibility of having up to four possible solution for that system.
+[27:36] So four possible lengths s1, s2 and s3.
+[27:40] So there are four triplets of s1, s2, s3 which would actually explain me this equation.
+[27:47] And so now you see that we actually have a problem in here because we cannot uniquely locate our camera because we get up to four solutions.
+[27:56] So we have four possible solutions that would tell us where the camera could be given those lengths.
+[28:04] And the interesting thing is that we can actually visualize this.
+[28:07] We can generate four geometric explanations on that where all the lengths are the same and all the angles are the same,
+[28:15] but we can actually place the camera in four different locations and can illustrate you that there are actually really four different possibilities to do this.
+[28:23] And so let's have a look to the geometry so that you understand where those four solutions actually come from.
+[28:31] So again we had our setup x0, x1, x2 and x3 and what we exploited were those angles alpha, beta and gamma and the lengths a, b and c, right?
+[28:42] So these were the information that we have used.
+[28:44] That was the stuff that was supposed to be known.
+[28:48] And now the question is, can we generate another geometric configuration so that we either move x0 somewhere else
+[28:59] or we move one of those points x1, x2, x3 somewhere else which would basically be a rotation of my main coordinate system
+[29:07] so that a, b, c stays the same and alpha, beta, gamma stays the same and we still have a valid configuration.
+[29:14] And we actually can do this by basically tilting this triangle down here which is equivalent basically to moving x0
+[29:23] but it's easier visualized if we keep x0 fixed and change the triangle down here.
+[29:28] And we can do this by basically tilting the triangle x1, x2 and x3 along one axis.
+[29:36] So we can perform a rotation where a is the rotation axis, where b is the rotation axis and where c is the rotation axis
+[29:43] and would still end up with the same overall configuration in terms of a, b, c, alpha, beta, gamma.
+[29:49] So what we can do in here is we can basically rotate this point around the x1 around these axis.
+[29:55] So if we rotate x1, this point would rotate probably up here and you can see if it goes up here and intersects again with this ray
+[30:03] then we have a configuration where a, b, c stays the same and alpha, beta, gamma stays the same.
+[30:07] So just kind of a visualization, if you kind of rotate this point upwards then we could get a triangle which looks like this
+[30:14] which has exactly the same lengths a, b and c and the same angles alpha, beta, gamma
+[30:19] but which is again a different configuration, different spatial configuration.
+[30:24] So if these points are fixed of course you can also envision that this is equivalent to moving the x0 basically over here
+[30:32] and then we would get this configuration but it's easy to visualize like this.
+[30:36] And we can do this rotation with the rotation a, axis as a, b and c and therefore get four different solutions which are actually illustrated here.
+[30:45] So if this was our original configuration then we have three other possible configurations.
+[30:50] This one I showed on the previous slide or the same one if our rotation axis is c or the same one if our rotation axis is b.
+[30:58] And so as a result of this we have, if this is our actual solution, there are three other solutions which are actually wrong
+[31:08] so they don't correspond to the actual location of our camera but they are the same geometric configuration in terms of the a, b, c, alpha, beta, gamma.
+[31:19] So just by exploiting a, b, c, alpha, beta, gamma I cannot resolve more than saying I'm in one of those four solutions.
+[31:26] So we cannot uniquely determine the camera location if we just exploit these three points.
+[31:34] So the question is what can we do? How can we solve this problem by having some idea where our camera actually is
+[31:44] so finding that this is the right solution and those solutions are not the correct ones.
+[31:48] And for this we actually need further information and there are two ways we can do this.
+[31:53] The first thing is maybe we have a good initial guess for our x0, for the information where our camera actually is always pointing to.
+[32:03] And this may be for example the GPS receiver installed on our camera.
+[32:06] So if our camera comes as a GPS receiver we may be able just to the initial guess saying oh the initial guess is actually pretty close to this solution
+[32:14] and actually very far away from all the other solutions so this is a much more likely solution.
+[32:19] So that's one thing that we can do.
+[32:21] The other option, except of using a known solution just from GPS for example or any other post prior that we have about our camera,
+[32:30] the other option is to simply use a fourth point.
+[32:33] So not just using three control points of the environment but using a fourth point so that we then can see if we have this fourth point
+[32:43] we can check with which of those locations is the fourth point actually compatible with.
+[32:49] Or we can do the thing we could also solve it for S1, S2, S4 and then see which of the solution actually overlaps.
+[32:57] So different ways how we can generate a unique solution so getting the right S1, S2, S3 if we take into account a fourth point.
+[33:06] So with three points I can only resolve the issue up to an ambiguity of up to four solutions
+[33:14] and if I want to uniquely determine that I actually need four points and not only three points for locating my camera in the world.
+[33:22] So what we have done so far we have actually determined the lengths of those projection vectors.
+[33:30] So that means we have the course and based on this we can compute if we know the lengths of the projection vectors
+[33:38] we can actually estimate where those 3D points are in my camera coordinate system
+[33:44] and then I still need to compute a rigid body transform to move the two coordinate systems on top of each other.
+[33:49] And this is the second step but the comparably easy step is actually computing the orientation of the camera.
+[33:55] Now we have given the distances from the projection center of the camera to the control points and of course also the direction vectors
+[34:02] so it's distances and direction vectors actually over here.
+[34:05] And what we need to estimate we need to estimate the six extrinsic parameters so x0 and the rotation matrix
+[34:11] but assume we know those direction vectors and we know also the lengths of those vectors.
+[34:16] So that means this x1, x2, x3 are known in the camera coordinate system
+[34:22] and now we need to estimate where they are in reality.
+[34:26] So the first step was to compute the lengths and then the second thing is to actually compute the transformation.
+[34:37] So what we have we know the point now in the camera coordinate system, the 3D point and we know the point in the 3D world
+[34:44] and we need to estimate those two parameters and this is something which you quite know well how to do.
+[34:50] So you have basically you have a set of three points and you know them in you have them in different coordinate systems
+[34:57] so you directly have the point correspondences so you can compute the rigid body transformation of those points
+[35:03] and how to rotate them on top of each other and this then gives you x0 and r.
+[35:07] So just kind of as a short reminder if you forgot how you could do that so one option is you take one of those points
+[35:13] let's say x1 and move the points and compute the vectors from x1 to x2 and x1 to x3
+[35:23] and then move the points so that the point x1 is a new reference center
+[35:28] so you move both point sets so that they overlap in one point
+[35:31] and then you basically have two direction vectors one from x1 to x2 and one from x1 to x3
+[35:38] and then you can compute your rotation matrix so that those two vectors coincide.
+[35:42] And then you get the rotation matrix and can also directly compute the shift how the two coordinate systems are transformed with respect to each other.
+[35:51] And as a result of this you obtain your rotation matrix and your shift vector for aligning those two points.
+[36:00] So it's a standard way you have three points in the environment in two point sets you have the correspondences
+[36:06] and they are kind of exactly lying on top of each other and how do you need to translate and rotate them
+[36:10] so that you have that which gives you then the direct rotation matrix and translation vector for your camera
+[36:18] and then you solved your camera localization problem.
+[36:21] So in a nutshell what do we have?
+[36:24] Our input are let's say four points, 3D coordinates of the four points, pixel coordinates of the four points and your camera calibration matrix.
+[36:34] This is the input.
+[36:35] The first thing is you compute your angles alpha, beta, gamma.
+[36:38] Again you do this simply by using the calibration matrix inverted and multiplied from the left hand side to xi.
+[36:45] This gives you then the direction vectors and from the direction vectors via the cosine or arcus cosine you get alpha, beta and gamma.
+[36:55] Then you compute your distances as one is two and three which you do solving this polynomial of degree four.
+[37:03] This gives you as one is two or three but up to four solutions so it's not an ambiguity in there
+[37:10] and then you identify the correct solution by taking the fourth point into account
+[37:15] which gives you then the correct as one is two or three so it identifies which of the triplets are actually the right one
+[37:21] and then you compute the coordinate transformation between this which gives you r and x0.
+[37:27] Then you localized your camera in the environment by just knowing three points in the world.
+[37:34] We have to say however that there are some numerically instable solution.
+[37:40] It's something which is called the critical cylinder.
+[37:42] So if you think that you have a cylinder and x1, x2 and x3 lie on the circle of the basis of this cylinder
+[37:51] and the projection center lies on the boundary here of this tubeless of this cylinder
+[37:58] and then all the points to lie here on the tubeless of this cylinder is what is called the critical cylinder
+[38:04] and it can lead to a situation that small changes in the angles lead to strong changes in the large changes in the coordinates
+[38:12] which leads to a numerically instable solution.
+[38:14] So there are certain configurations we cannot localize your camera well with this approach.
+[38:21] So there are some situations where you need to take care that you're not in one of those end up in one of those degenerated cases.
+[38:30] And there's another important remark here that I want to make and this another important remark is what happens in real world situations.
+[38:39] So in real world situations you often do not have perfect data cessation.
+[38:44] So perfect correspondences between what you see in your camera image and the points in the 3D world.
+[38:51] So there may be control points and you mix up those control points.
+[38:54] And this will of course, a wrong data cessation will lead you to a completely wrong solution.
+[38:59] So there's no way that you can proceed with this solution.
+[39:03] And therefore what you need to do is you need to take into account or the one option to do this is to take that into account by saying
+[39:11] I assume still that I have a substantial number of points for which my data station is correct but there may be a few wrong ones in there.
+[39:19] And through let's say trial and error approach and this actually and actually it's a RANSAC algorithm that's running here
+[39:26] but we can explain this without going to details of the RANSAC algorithm.
+[39:29] We can use this trial and error approach to actually come up with the right solution.
+[39:35] So let's assume we have more than three points. Let's say we have six or seven points in our environment.
+[39:40] So what we do is we select from this let's say six or seven points we select three points randomly
+[39:45] and we simply run our projective three-point algorithm and we get a result.
+[39:51] And then based on this result we take the remaining points and say how many points agree with this solution?
+[39:58] So how many other points I actually map if I map them from my 3D coordinate into my image
+[40:07] if the image coordinate that I actually compute actually the observed image coordinate?
+[40:11] So I'm basically checking if the localization of the camera that I computed is in line what I actually observe.
+[40:18] And I simply count how often how many of the remaining points actually agree with this solution.
+[40:23] And I simply repeat this process again take three other points or randomly sample those three points
+[40:29] and then take the result where most of the points agree on if I repeat this process over and over.
+[40:34] So this basically says if I have one outlier in there I will still have two other remaining points which agree with my solution
+[40:41] and say okay maybe I have one outlier in there.
+[40:43] And of course the more outliers I have the more points I would need here but there's one way on dealing with outliers.
+[40:51] And this actually works well in practice.
+[40:53] And if I have enough control points or points I approximately know in the environment
+[40:57] we can actually even deal with a large number of outliers in the data association.
+[41:02] So if you run this in practice you will need to have some of those RANSAC steps in there
+[41:07] because you can never make sure that you are free of outliers in your overall approach.
+[41:15] So as a result take RANSAC into account if you're not perfectly certain about your data associations.
+[41:23] Okay last but not least what would happen if I have more than three points and I provide an iterative solution.
+[41:31] So special resectioning as an iterative solution.
+[41:34] Why do I want to do this?
+[41:36] We may want to take into account uncertainties of all points for example.
+[41:40] So that means we want to take into account that certain points in our image or the point in the 3D world are not perfectly known
+[41:47] but let's say we have an uncertainty associated with them.
+[41:51] We know the error as covariance matrix for example which tells us the uncertainty of the point in the 3D world.
+[41:59] How do we actually take that into account?
+[42:01] And we do this with a nonlinear least squares approach where we are performing a least square error minimization
+[42:09] and then compute the solution over here.
+[42:13] Again this will turn out to be a statistically optimal solution under the assumption that all the noise that I have is Gaussian distributed.
+[42:20] And of course it's a nonlinear system so I need to perform my linearizations and this is done in the standard least squares way.
+[42:28] So we need to build our system of observation equations.
+[42:31] We need as our observations we have our image points so our pixel coordinates in our image.
+[42:39] We have an initial solution that we typically compute for example using the projective three point algorithm that I just explained.
+[42:46] And then I need to linearize my error equation.
+[42:49] I need to then I can estimate my extrinsic parameters by solving a linear system and I update my parameters
+[42:57] and I do this until a certain convergence criterion has been achieved.
+[43:03] So that means for example that the difference of the estimated parameters between one iteration and the next iteration is close to zero
+[43:12] and I said I converged, I actually found my solution.
+[43:16] And that will be the approach that you would do if you want to get a more precise result than with the projective three point algorithm
+[43:23] especially if you have uncertainties for example that you want to take into account about your data points.
+[43:29] But still you need the projective three point algorithm in order to come up with your initial guess so now to have the starting point for your least squares approach.
+[43:38] And again the angular mistake that you may want to have in here shouldn't be too large if you run this approach.
+[43:45] So let's say if you are something below five degrees in your orientation you are still fine but the nonlinearities can be to issues if you have large deviations from your initial solution.
+[43:56] So having a good initial solution is important here and the projective three point algorithm is the approach in order to do that.
+[44:03] So to sum up what you should have learned today, so we talked about estimating the pose so the position and orientation of a calibrated camera
+[44:12] given at least three control points that are four or even more.
+[44:16] Calibrated camera means a camera for which we know the calibration matrix k.
+[44:21] And we introduced the direct solution here using the projective three point algorithm which is fast to compute so it's not an iterative procedure which requires a lot of operations
+[44:32] so something that you can do very quickly and therefore it's well suited to be combined with a technique such as RANSEC in order to deal with the outliers in your data association.
+[44:41] And that was kind of the main topic of the course here.
+[44:44] If you want to go a step further and want to get to a statistically optimal solution, not optional, optimal solution then you would go for an iterative nonlinearly squares approach
+[44:58] where you can use all the available points that you have and the uncertainties involved but already assumes that it's outlier free.
+[45:06] So you would run your projective three point algorithm here as an initial guess and you would run RANSEC as well before that to get rid of your outliers
+[45:14] so that only the outlier three points where RANSEC said they were outlier free would be taken into account until the squares approach.
+[45:21] And this then allows you to also make statements about the precision that you can obtain with this approach and how well you know your individual parameters
+[45:30] so you can even make more informed statement than what the basic projective three point algorithm actually provides you.
+[45:36] With this, I thank you very much for your attention and I hope you learned how you can actually localize a camera just by knowing a few points in the world.
+[45:45] Thank you very much for your attention.

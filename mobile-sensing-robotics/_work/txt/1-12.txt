@@ -1,0 +1,331 @@
+[00:00] Welcome everyone. In today's lecture we'll see an application of the extended Kalman filter for solving the task of localization.
+[00:08] So previously we saw the theory behind the Kalman filter. We derived an algorithm to do the state estimation using this Kalman filter equations.
+[00:17] And what we'll do today is to see a concrete example of how to use these equations in order to estimate the states of our robot which is moving in a 2D environment.
+[00:29] So before I start I would like to give a motivation example of what the localization problem is.
+[00:35] So what you see here is the north coast of Germany and the North Sea.
+[00:40] And let's say we are in a boat which is located here at the red point shown here.
+[00:45] And then what we know for example is our current position, we know our velocity and we know the winds that are there on the sea.
+[00:53] So using this information we can do a dead reckoning and say in one hour we'll end up at this black point there.
+[01:01] So this could be like we saw in the previous lectures, this could be using velocity information or using some kind of encoders that are usually on your robots.
+[01:10] So this is one kind of information which tells you what's your predicted motion, what's the motion that you made.
+[01:16] The other kind of information often comes from sensors when you detect some landmarks.
+[01:20] In this example a landmark could be a lighthouse which is on the coast somewhere on the land.
+[01:26] And then if we have a map of these lighthouses then we can infer where we are with respect to these lighthouses in order to have another estimate of where we are.
+[01:38] And here we denote this using this other cross which is shown by the blue line.
+[01:43] So what we have now is two estimates, one coming from the motion and one coming from the measurement.
+[01:50] And each of them has associated with them different uncertainties.
+[01:54] For example if you have a higher uncertainty on the motion then we know we have this particular estimate with a greater uncertainty.
+[02:03] Whereas if we are quite sure of our measurements we know the other measurement with a lower uncertainty or much more concretely.
+[02:14] And what basically the Kalman filter does is provide a way to use this uncertainty information and fuse them in a proper manner to obtain a third estimate which fuses these two information sources.
+[02:29] So the example here you see it seems that the Kalman filter estimate is somewhere halfway between the two estimates, one from the motion and the measurement.
+[02:38] In this case we would infer that the certainty with which these two measurements were made are roughly the same.
+[02:45] However this could be anywhere in between these two measurements given different configurations of these uncertainties themselves.
+[02:54] So this is the goal of Kalman filters.
+[02:57] So we have multiple sources of information and then we want to fuse these different sources of information by using the uncertainty information that's attached to these measurements.
+[03:09] And when we derive the equations we made certain assumptions for the Kalman filter.
+[03:14] The number one assumption was that the state that we track is actually or has a Gaussian distribution.
+[03:21] So here is just the equation of the Gaussian distribution and this could be for example a problem in 1D as shown here or in multiple dimensions as shown here.
+[03:31] So the main, the important aspect here is that the variable or the state that we want to track is distributed in a Gaussian manner.
+[03:40] This is one of the main assumptions that we make.
+[03:42] The next assumption that we make is that this motion prediction or the motion model and the observation model which are here on the first and the second lines respectively, that these models are linear.
+[03:54] So what you see in the first equation here is a linear motion model which means that your state at time t depends linearly on the state at time t minus 1 and also linearly on your controls.
+[04:09] If this is the case and you have a noise which is Gaussian in nature, in this particular case we can assume that the solution that the Kalman filter finds is actually the optimal one.
+[04:22] Of course the same needs to hold with the observation model itself.
+[04:26] In the observation model this CT, something that maps your current position into an expected measurement, also needs to be linear with Gaussian noise which can be on top of that.
+[04:40] And given these conditions of having linear motion models, linear measurement model and Gaussian noise, the estimate that the Kalman filter will find is the optimal one.
+[04:51] However, in practice it's often the case that these models are not linear.
+[04:56] For example, if you think of an Ackerman drive which is basically our cars or even a differential drive, we had seen the equations and these were non-linear equations.
+[05:05] And even the standard measurement models where you detect say features which are around the environment or you have a camera which detects certain features, all these models are also non-linear.
+[05:16] So what do we do in that case?
+[05:18] So basically we saw that if these models are linear then we can use the Kalman filter and we get the optimal solution.
+[05:26] However, when they're not linear then we have something like this where the motion model which is given here by G and the measurement model which is given here by H can in principle be any non-linear function.
+[05:38] In that case the solution that the Kalman filter finds is no longer the optimal one.
+[05:44] And we had seen a way around this and the way around this was to define or to linearize these models around some linearization point.
+[05:53] So this is basically the standard Taylor series expansion.
+[05:56] So you take some linearization point, so here as we see it's the mu t minus one which basically is just the mean estimate of your state at time t minus one.
+[06:08] So usually you linearize around your previous best estimate and then you have the first derivatives here inside this G t which is basically the Jacobian.
+[06:17] And this Jacobian captures, it's the first derivative of your motion models of G with respect to your state variables that you have.
+[06:26] So this could be for example in a mobile robot, your state variables would be your poles, so x, y and theta.
+[06:33] And this G is then basically the first derivative of G with respect to all your state variables, what we also call as the Jacobian.
+[06:42] And again this is the same R t, so this is the covariance matrix associated with the noise parameters that's involved in your motion.
+[06:52] So once we have this set up now, now instead of using our G which was originally a non-linear function, we now have a linear equivalent of that function.
+[07:03] So it's an approximation that we did of course, but once we make this approximation then we can go back to our original framework of using the Kalman filter for estimating our states.
+[07:14] And here we show the linearized model for the motion, but you can do the same for the observation model, where the observation model was given by H.
+[07:24] And what we find now is you linearize around mu t bar which we'll see is the estimated pose or the estimated state after you propagate your motion into it.
+[07:39] So basically you do a linearization also on your measurement model and then you end up with a distribution for your measurement model which is also Gaussian and linear.
+[07:52] So given these two conditions, we can then go back to our nice algorithm that we had from the last lecture, where the input to this algorithm is like any other base filter, it's a recursive algorithm.
+[08:07] So you would get your previous best estimate in terms of the previous best mean and the previous best covariance that you have.
+[08:16] Since everything here is Gaussian, we can represent the entire probability distribution just using these two terms, the mean and the covariance.
+[08:25] Then of course we also get our command ut and our measurement set t.
+[08:30] So each step of this Kalman filter would include two main parts.
+[08:36] The first part is the so-called prediction step, where we compute the mu t bar which is basically the predicted mean using our non-linear motion model function.
+[08:48] Then we also compute a predicted covariance which depends one on the previous covariance sigma t minus one and also depends on the noise that's involved in your motion step that's there.
+[09:02] And this covariance is then modified through the gt which was the Jacobian of your motion model.
+[09:09] And this is how you can find the new mean and the covariance after a particular motion step has been performed.
+[09:17] The next block of things that you see here relate to the measurement update or the measurement model related equations.
+[09:25] So what you see here is the Kalman gain.
+[09:29] This gain is the main parameter which kind of trades off between how much importance should I give to the motion step and how much importance should I give to the measurement step.
+[09:40] So as you can see this k is one directly proportional to this sigma bar t which is the covariance of your state estimate after you did the motion.
+[09:52] And it's inversely proportional to two terms.
+[09:57] One that's related to the measurement model ht so which was the Jacobian of the measurement model and the noise on your measurement.
+[10:06] So it's inversely related to your noise on your measurement and directly proportional to your uncertainty once you had executed your motion.
+[10:16] So it kind of performs a weighted mean between your motion noise and your measurement noise.
+[10:22] And then what we do is to use this k so this what we call also as the Kalman gain and multiply it with this factor which we had learned was called as innovation.
+[10:34] So this is the difference between the actual measurement that you make so zt is the actual measurement that your sensor gives.
+[10:41] And this h of mu t is basically your measurement model which basically tells if I am at mu t so if I am at this state what is the expected measurement.
+[10:52] And what I then do is compute the difference between the actual measurement and the expected measurement and use our gain which was the tradeoff between the two noises in the measurement and the motion model to update my new mean.
+[11:06] So I have my new mean which is my mean coming from the motion step updated via your Kalman gain and the difference in the actual and the expected measurements.
+[11:18] Similarly we also will then update the covariance after this measurement model which includes some term that comes from the Jacobians of your measurement model.
+[11:29] So we had seen this scheme last time and what we will do in today's lecture is basically modify these equations for the particular case of a localization example.
+[11:40] And we will focus basically on a 2D localization example so our state vectors are x, y and theta so the x, y position in the pose of the 2D robot.
+[11:51] And our map so to say is just landmark so there are some unique features in our environment so this could be in the example of the boat be the lighthouses or this could be salient features if you are talking about images and so on.
+[12:05] And once we have these features as map how do we then integrate these features into our state estimation process.
+[12:13] So we look at the equations that form the motion model, the prediction model, we look at the Jacobians and see how each one of these steps works.
+[12:22] So the first model that we consider is for the motion update and we consider the odometry based model.
+[12:29] So we had seen this in one of the previous lectures where we said that we can formulate the motion between two poses so here between x, y and theta and x bar y bar and theta prime by three parameters.
+[12:43] And these three parameters are basically a delta rotation one, a delta translation and a delta rotation two.
+[12:50] So what this essentially says that the robot motion between any two points can be described by one rotation, one translation and another rotation.
+[12:59] So this is how we express the odometry controls.
+[13:05] So this is the model that we'll use for this particular example.
+[13:09] And then if we write out the equations for this model it ends up as the following one here.
+[13:15] So your new, for example, x position is your old x position plus the translation command that you gave and depends on the cosine of your current yaw and the first rotation that you make.
+[13:31] So these equations can be derived basically from using simple geometry on this figure here.
+[13:37] For example, you start at x then your new position here would be this position plus this distance so delta translation times the cosine of this angle plus your initial yaw.
+[13:51] And this is the equation that we saw here.
+[13:53] And similarly we have the equations for your y position which depends on your delta translation times the sinus of the angle and the delta rotation one you do.
+[14:02] And your final yaw would be your initial yaw plus the two rotations delta rotation one and delta rotation two.
+[14:08] So these are equations that we have derived also previously.
+[14:11] And we here also assume that our motion model is affected by a normal Gaussian noise, so a zero centered Gaussian noise.
+[14:21] And the covariance matrix for this noise is given by RT which is often in literature called as also process noise.
+[14:30] So this is our motion model.
+[14:32] And as we see here, this is a non-linear model.
+[14:35] So you have some cosines, some sines, etc.
+[14:38] And this is actually non-linear not just in your state but it's also non-linear in your controls.
+[14:46] So if you look at this particular equation here, so you have your controls which is delta translation and delta rotation one.
+[14:54] For example here they are basically a non-linear function so they are both multiplied with each other and there is a cosine in there so basically they are non-linear functions.
+[15:03] And then the question becomes if we have non-linear motion models we must linearize it in order to use our extended Kalman filter framework.
+[15:12] And here we show the linearization for example with respect to our state.
+[15:18] So this GT here is the Jacobian of small g so the non-linear model with respect to your state x.
+[15:26] Similarly we will also have a Jacobian with respect to the controls u.
+[15:31] So let's see how to actually compute these Jacobians.
+[15:34] So the first thing that we compute here is a capital GT which is the derivative of your non-linear motion model G with respect to your state x.
+[15:46] So here our state consists of our position so x, y and then the pose or the orientation theta.
+[15:53] And therefore this Jacobian would then be first of all the dimensions would be 3x3 because we have three equations here.
+[16:02] So this G is a 3x1 function so to say and we have three variables in our unknowns which is x, y and theta.
+[16:11] So what will happen is that each of these columns in this GT is the derivative with respect to one of these unknowns.
+[16:18] So all the terms here are derivatives with respect to x so this is denoted here.
+[16:22] All the elements here are derivative with respect to y and all of the elements here are the derivatives with respect to theta.
+[16:32] And if we basically just do these derivatives we will end up with these equations that you see here.
+[16:39] And maybe we can do this exercise for let's say one of these rows.
+[16:43] So this is the derivative with respect to x with respect to y and with respect to theta.
+[16:48] So if we look in our equations if we take let's say this first line here and we take the derivative with respect to x.
+[16:55] This is just one because this is the only place where x comes and everything else is zero.
+[17:00] With respect to y basically there is no y term at all in this first line so the derivative with respect to y is zero.
+[17:07] And with respect to theta it would be the derivative of this term here so which would be minus delta translation times sine of theta plus delta rotation one.
+[17:18] And if we look up here this is the solution that we have one, zero and this term here.
+[17:24] We can repeat this for each one of the rows and then stack it.
+[17:28] And this is how basically we compute the Jacobian.
+[17:31] Like we did this Jacobian here for a motion model with respect to the state.
+[17:38] We should also do this linearization with respect to our control input.
+[17:43] So here we do the derivative of g with respect to our controls u.
+[17:49] And in this case again it's a three cross three matrix because our u was encoded as a three cross one vector which is a delta rotation one, a delta translation and a delta translation two.
+[18:01] So with this we have again a three cross three matrix which is our derivative of the motion model with respect to our controls.
+[18:10] Again the first column here are all the derivatives with respect to the rotation one which is the first element of our control.
+[18:17] This column here is the derivative with respect to delta translation, the second element.
+[18:23] And this one here is the derivative with respect to the delta rotation two.
+[18:27] And if we make the same exercise like we did before we would end up with this matrix here.
+[18:34] So it's exactly the same operations.
+[18:36] Take your g of t for example here and then take the derivative with respect to the unknowns.
+[18:43] In this case delta translation, delta rotation one and delta rotation two.
+[18:47] And you would end up with the matrix vt as we have seen here.
+[18:51] So now we have seen the non-linear model for the motion.
+[18:55] We have also seen the linearized versions of these models.
+[18:59] Then we move on to the measurement model or also sometimes called as the observation model.
+[19:04] And in this case we assume we have a sensor which gives us what are called as range and bearing measurements.
+[19:10] So our measurements consist of two elements.
+[19:13] The range measurements, so this in our example would be the distance to the lighthouse.
+[19:18] And the bearing measurements which would be the angle or the yaw to these features.
+[19:25] So we have a sensor which returns to us these two values.
+[19:30] And in principle in the environment there could be many such features.
+[19:35] So not just one lighthouse but many lighthouses.
+[19:37] So many features in the environment.
+[19:39] And we represent each of those features using the subscript i.
+[19:43] So if we observe five features we will basically have five of these measurements per let's say per time instant at that point.
+[19:51] And the model for this is actually quite straightforward.
+[19:55] So what we of course assume to know is that we have a map and we know where each one of these features is in that map.
+[20:02] Because this is a localization problem we assume that there is a map and we want to use the map and our current feature detections to figure out where we are.
+[20:12] And so essentially the range part of our measurement would be basically where we are.
+[20:19] So the x and the y positions are where we are.
+[20:22] And the mjx and mjy are the positions of these features in the map as we know it.
+[20:29] And therefore what this would give is the expected distance to those features.
+[20:36] For example I have a map which says I know that there is a lighthouse at this xy coordinate.
+[20:43] I know my coordinate which is x and y.
+[20:46] And the lighthouse coordinates are basically mjx and mjy.
+[20:50] I just compute the Pythagoras distance between these two points and this should be the expected measurement that I make.
+[20:57] Of course then the real measurement whatever sensor I have would have some noise.
+[21:02] And to account for that we have the normal Gaussian noise with the covariance of qt in there.
+[21:12] So this was regarding the range.
+[21:14] And similarly the bearing would be given by the tan inverse of basically the line joining your position and the position of the feature in the world.
+[21:25] So this is the model that we consider.
+[21:27] So we have some sensor which gives you a range and bearing.
+[21:31] And this is the model through which we would model our observations that we have.
+[21:37] Again as we see here both these functions are essentially non-linear.
+[21:42] So you have some square roots involved in here.
+[21:44] You have a tan inverse involved in here.
+[21:46] So basically it's a non-linear function.
+[21:48] And the same story again.
+[21:50] We need to linearize our model.
+[21:52] And you linearize your h around some mean position mu t bar here.
+[21:58] And you have this h which is the Jacobian of your observation model.
+[22:03] So this guy with respect to your unknowns of the state which is xy and theta.
+[22:09] So this is a bit slightly more involved in terms of algebra so it will take a bit more space and we will not do it in the slide here.
+[22:15] But if you follow these equations.
+[22:18] So basically the derivative of your range with respect to the x coordinate.
+[22:24] The derivative of your range with respect to y.
+[22:26] The derivative of your range measurement with respect to theta.
+[22:29] You do this.
+[22:31] You do the calculation.
+[22:32] You will end up with this particular equation as you see here.
+[22:37] And the same story with the second line where you do the derivatives of the bearing measurements with your state vector.
+[22:44] And as you see here the dimension of this vector is a two cross three matrix.
+[22:51] Because you have two measurement vectors and you have three unknowns.
+[22:55] This results in a matrix or a Jacobian which is of the size of two cross three.
+[23:01] So now what we have seen is the non-linear observation model which encodes the range and bearing measurements.
+[23:11] And we have seen how to linearize this particular model.
+[23:15] Now what we will do is we will replace all these formulas in our standard extended Kalman filter.
+[23:21] So as we saw before we had the prediction step where we do the mean propagation and the covariance propagation based on your non-linear model as well as the Jacobian of that non-linear motion model.
+[23:33] And then the second step where we did the correction using the Jacobian of your observations.
+[23:41] And of course you use your actual measurement model to figure out this innovation vector as we explained before.
+[23:51] So what we will now do is to replace these equations here with the equations for the localization problem we are involved in and see how they evolve.
+[24:00] So it looks like a lot of equations but basically it's just a substitution.
+[24:06] So what we can focus is here. So this step number six and seven is where basically the propagation step is happening.
+[24:15] So what we say is that my mean estimate at time t is nothing but the mean estimate at time t minus one plus these equations which are exactly the g, the non-linear motion model that we saw before.
+[24:29] And we also see how the covariance is being updated. This depends of course on your covariance at time t minus one modified by gts where gts are the Jacobian of your motion model with respect to your state.
+[24:45] And here we have listed out that gt. So it's exactly the one that we saw how we could derive by taking the derivatives.
+[24:52] And there's a second term here which actually is the uncertainty that you gain or uncertainty that is added due to the noise in the motion step itself or the noise in the controls space.
+[25:07] So MT here is this matrix here which kind of encodes what's the noise when you make a particular movement.
+[25:15] So if you do a delta rotation one, a delta translation and a delta translation two, what's the actual noise involved in carrying out this particular movement.
+[25:26] And of course since this particular covariance is one which gives the covariance on your state, so the covariance on x, y and theta, we need to map the noise in the control space to the one in the state space.
+[25:41] And this transfer is done using this VT which is the Jacobian of your motion model with respect to your controls.
+[25:49] And we have summarized the formula for the VT in here.
+[25:54] So this is basically the prediction step or the motion update step.
+[25:59] And what I would like to now do is to visualize the same in this graph here.
+[26:05] So it's the same formulas but a visual interpretation of the same.
+[26:09] So what you do is you start at time t minus one at this position.
+[26:14] So this guy here is representative of our 2D robot with its orientation represented by this line.
+[26:20] And you have a certain covariance given by this light grey ellipse that's sitting there.
+[26:26] Then you execute a particular command UT.
+[26:29] You end up here.
+[26:31] So now there are two or three different terms that are involved in here.
+[26:35] So when you execute this motion, like we discussed before, you add some uncertainty due to the motion.
+[26:41] And this uncertainty comes due to two things.
+[26:44] One, it comes from your previous uncertainty, so if you are uncertain where you were in the last step,
+[26:49] you would be also uncertain in the next step.
+[26:52] And this propagation is done using this GT times the previous uncertainty times the GT transpose,
+[26:58] so the Jacobians which propagate through your covariance.
+[27:04] And you add it with your new uncertainty that comes from your control commands.
+[27:11] So when you add these two uncertainties, you end up with this bigger uncertainty,
+[27:16] the dark grey that you see here, which is the equivalent of this particular equation here.
+[27:23] So this big uncertainty is the sigma T prime, which is the final uncertainty after you make your motion.
+[27:31] So this is the graphical equivalent of the equations that we saw before.
+[27:35] Then what happens?
+[27:37] Then we go to the measurement, then say we move ahead for a certain time, and then we see a lighthouse.
+[27:45] So we see different features in our environment.
+[27:47] And here as you see, in principle we could see multiple features,
+[27:51] and we make the update step for each one of these measurements.
+[27:55] So suppose we see ten new features, we would make ten updates in terms of the,
+[28:01] or we would update using all these ten measurements that we have.
+[28:04] And we'll here just show the equations, so to say, for one of these measurements.
+[28:09] So for each of these features, like I said before,
+[28:12] you compute your expected measurement using your observation model,
+[28:18] so you know where you are using your previous predicted position.
+[28:22] You know where the landmarks are in the map,
+[28:28] and using this you can get your expected measurement Z-hat here.
+[28:34] And then, like we discussed before, you have your innovation that comes here.
+[28:40] So even before going to the innovation, let's see how the expected measurement itself looks graphically.
+[28:47] So here what we show here is where you are and what's your uncertainty estimate at time T.
+[28:55] So this is after the motion estimate.
+[28:57] And, for example, you see this particular landmark here in this gray here.
+[29:02] And just for reference, we also show the ground truth robot position.
+[29:06] So in principle, we don't have this axis, because this is what we want to estimate.
+[29:10] But just to show you in this graph, we show the actual position where the robot was.
+[29:15] And as you can see, there is an error between where you think the robot is and where the actual robot is.
+[29:21] And what you will measure will actually depend on where you are,
+[29:24] and so the actual measurement can be described by this Z-T here.
+[29:28] So this is the actual measurement that you will make.
+[29:30] However, since you have a wrong estimate of where you are,
+[29:33] what you will actually measure is this particular, or what you will expect to measure is this particular distance.
+[29:39] And we see the same in a different space.
+[29:43] So here it was on the X-Y space.
+[29:45] We can observe the same on the measurement space.
+[29:50] So what you have on the X-axis here is your distance.
+[29:54] So this is the range measurement.
+[29:55] And what you have on the Y-axis is the bearing.
+[29:58] And the graph here essentially shows this difference between where you expect the feature to be and where it actually is.
+[30:06] And this is shown here, basically.
+[30:09] So you expect the feature to be somewhere here with a certain uncertainty, of course,
+[30:14] because you, to begin with, were not sure exactly where you are.
+[30:20] So you had certain uncertainty about your previous estimate itself.
+[30:23] So you would carry forward this uncertainty to the feature detection or where the feature is itself.
+[30:30] So your current belief is that this feature is here with this particular uncertainty.
+[30:37] And then the actual measurement that your sensor gives is this Z-T.
+[30:43] So now you have this difference between where you think it was and where it actually is.
+[30:48] And this is the place where we can use the Kalman Gain.
+[30:52] So we compute this Kalman Gain.
+[30:54] And then we use this innovation vector, so this difference vector that we saw here,
+[30:59] in order to update our new estimated mean and the new estimated covariance.
+[31:07] So this is what happens after you apply the correction step.
+[31:11] So you had this innovation vector.
+[31:13] So this is the same thing from the last slide.
+[31:14] So this is the difference between where you think the feature was and where the feature actually is
+[31:20] and where the feature is based on your measurement.
+[31:23] And then you use this to update.
+[31:25] And what you see here are the quantities involved after you make the update.
+[31:29] So you were basically here.
+[31:34] So this mu T bar is where you thought you were after your motion step.
+[31:40] Then you used your correction step.
+[31:42] And now you have a new estimate which says that you are somewhere here.
+[31:47] So you incorporated your information from your measurements into your filter.
+[31:51] And now you have a new estimate for where you are along with a new covariance estimate.
+[31:57] So as you can see, your initial estimate after the motion step was more uncertain
+[32:01] and it was much farther away from the ground truth.
+[32:03] So again, this white thing here is actually where the robot is.
+[32:07] And as we see, if we just had used the motion measurements, we are far away from the true robot position.
+[32:15] Whereas once we integrated our measurements, we are much closer and we are also much more surer that we are closer to the actual ground truth.
+[32:22] So this is the correction step basically.
+[32:24] So this is basically one iteration over the EKF algorithm for this particular application.
+[32:31] And you would keep repeating this as long as the robot moves in the environment.
+[32:35] So what I would like to now show is a small animation of this in a simulated environment.
+[32:40] So what we did is to generate a small dataset with these different features.
+[32:44] So you can think of each one of these as one of the lighthouses.
+[32:47] And the robot basically starts from here and in reality it follows this particular square-like path here.
+[32:55] And if we only depend on our motion estimates, if we only do dead reckoning, the solution is shown by this pink trajectory here.
+[33:04] So after some time we would just drift away.
+[33:07] And this happens because in this case, in the odometry case or the dead reckoning case, there is nothing for us to correct our information using the map information.
+[33:16] Of course with our Kalman filter, we can use this information.
+[33:19] Each time we make a measurement, we can actually improve our estimate.
+[33:24] And basically this is what the blue line here shows.
+[33:27] So let me play this again.
+[33:29] So what is happening is that in this blue line, for every few steps, so not for every movement but for every five movements, we detect these landmarks.
+[33:39] So these green things that you see around the red features are the detections of the landmarks.
+[33:44] So each time we detect these landmarks, we can make the update step in the EKF process.
+[33:51] And as you see, what is happening here is that this covariance, when you make the motion, becomes bigger, shown by this bigger blue matrix here.
+[34:00] But as soon as we observe some features, the covariance matrix shrinks again.
+[34:06] So because we are now more certain of where we are because of the new measurements that are coming in.
+[34:10] And basically you keep repeating this and you have finally the estimate is this blue trajectory shown here, plotted here.
+[34:19] It almost overlaps perfectly with the actual trajectory that the robot took, indicating that the filter did its job in this case.
+[34:28] So you were able to get your correct position based on your measurements.
+[34:31] So this was all the content that I have for this lecture.
+[34:35] Just to give a summary before I finish, what we saw basically is the application of an extended Kalman filter for a 2D localization process.
+[34:46] And we need this extended Kalman filter over the standard Kalman filter because our motion and the observation models are non-linear.
+[34:55] So in order to use them for most robotics applications, most real-world applications, we need this extended version which takes into account the linearized models.
+[35:04] And we also see basically that although we make an approximation here, so when we take the non-linear model and we linearize it, we make an approximation.
+[35:15] But what we observe is that if you are quite close to the real solution and if the noise that's involved is not too high, then the estimate that we get is quite good.
+[35:26] So it's not optimal, but it's still quite close to optimal.
+[35:29] So this way we can use our previous framework which guaranteed optimal solutions for linear models with Gaussian noise.
+[35:37] We can use this extended framework to do the tracking or state estimation for non-linear cases.
+[35:44] And if you would like to read more about what I've just talked about, chapters 3 and 7 from the Probabilistic Robotics talk about Kalman filters both in general and also in their application for localization.
+[35:58] And I would also recommend you to read this paper which talks about basically manipulating different Gaussian densities.
+[36:06] So when you derive the Kalman equations, you would need some of the steps that they describe here.
+[36:11] So if you'd like to read more, I can suggest these three literature sources to you.
+[36:16] With that, I come to the end of the lecture and I thank you for your attention.

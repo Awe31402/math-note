@@ -1,0 +1,894 @@
+[00:00] So welcome everyone. I want to talk today about occupancy grid maps which is a
+[00:05] representation of the environment that a lot of mobile robots use. So they use
+[00:09] these types of map in order to represent the space around them and in order to do
+[00:14] various of different tasks such as planning a path towards a goal location.
+[00:18] And these occupancy grid maps can be seen as kind of architectural floor
+[00:23] plans. So what they do, they basically store information about which parts of
+[00:29] the environment are occupied and which parts of the environment are free. And
+[00:32] you can see this for example in a very similar way when you want to rent an
+[00:35] apartment. The landlord typically sends you a floor plan so you have an idea how
+[00:39] the layout of the environment is and what's written in this floor plan are
+[00:42] typically the walls. So the walls are painted with black ink for example and
+[00:46] white represents free space. And occupancy grid maps can be seen as very
+[00:50] similar to that. They store in an image based representation or it looks like an
+[00:55] image to us the occupied and unoccupied areas in the environment. So wherever we
+[01:00] have white pixels we can represent we can see this as free space and where we
+[01:05] have dark black pixels this could be the occupied space. The difference may be
+[01:09] that we don't only store walls we may also store all other types of objects
+[01:13] that are standing around in our environment. And this kind of gives you
+[01:15] at least an intuitive idea on what an occupancy grid map is and in this
+[01:19] lecture today we want to dive a little bit deeper understand the mathematical
+[01:23] model which sits behind those occupancy grid maps and we'll discuss how we can
+[01:27] derive such occupancy grid maps from real-world sensor data. So first of all
+[01:33] why should we care about maps? Maps are needed for a wide range of robotics
+[01:38] applications. So whenever you have a system which should navigate through the
+[01:41] environment and it shouldn't do that in a random fashion then robots often use
+[01:46] some type of internal map representation. Those map representations are needed for
+[01:51] tasks such as localization so in order to determine where you are given a map
+[01:56] of the environment or for planning a path. So if a robot is at a current
+[02:00] location and wants to drive towards a target location then the robot needs to
+[02:05] have a map of the environment in order to plan optimal or near optimal plan. You
+[02:09] may just go tell the robot drive towards the target location maybe the system
+[02:14] will be lucky and reach this target location but if there's an obstacle in
+[02:17] between the system may get stuck. So planning approaches which rely on maps
+[02:22] are a better idea if you want to have an effective navigation system. So the
+[02:28] map represents the environment for the robot so everything that the robot
+[02:33] understand about the environment is typically stored in that map and they
+[02:36] tell us what the environment looks like. This can be occupancy information so
+[02:41] where is an obstacle where is free space this could be the location of distinct
+[02:46] points in the environment so-called features or landmarks but this could
+[02:50] also be something else this could also be semantic information just as what is
+[02:56] actually there stored in the environment but this depends on our application. For
+[03:01] today we will look into occupancy information so which part of the
+[03:04] environment is free and which part of the environment is occupied. And so the
+[03:08] task of learning those maps from sensor data is a fundamental task in most
+[03:13] robot navigation systems because even if you provide the robot beforehand with
+[03:17] the map the possibility that the environment changes or that something
+[03:22] needs to be updated in the map is actually pretty high. So systems need to
+[03:25] be able to on one side determine if the map representation that they are using
+[03:30] is still up-to-date and if not update the map of the environment and this
+[03:34] happens typically based on sensor data. So what types of sensors are we looking
+[03:39] into? I've shown here a few popular sensors that you find on a lot of mobile
+[03:43] robots this can be a monocular camera, stereo cameras or RGBD cameras or maybe
+[03:49] laser range finders in 2D or in 3D. And we were looking here today into sensors
+[03:55] which provide me proximity information so this could be laser range scanner but
+[03:59] this could also be a stereo camera or an RGBD camera maybe not
+[04:03] necessarily the monocular camera although there are approaches today
+[04:07] which try to estimate the depth information also from a monocular camera.
+[04:11] So our assumption here today will be basically we have a range sensor and we
+[04:16] do two small examples with that one with a sonar range sensor so something which
+[04:23] is more a little bit outdated technology let's say that way and at least on
+[04:28] robots that are out there today which typically use more high-quality sensors
+[04:34] unless it's a very cheap device so then the second example will be a laser
+[04:37] scanner something like this over here so we will look into the question on how to
+[04:43] build a map of the environment with such laser scanner. So in general we need to
+[04:49] distinguish two types of map representation so called feature based
+[04:52] representation and photometric map representations. So feature map
+[04:56] representations basically store the location of distinct points in the
+[05:01] environment so there's an example here of Victoria Park in Sydney where tree
+[05:06] trunks could be or are one type of landmark that the system uses in order
+[05:11] to estimate this landmark map so a map of trees and when they are you can use
+[05:17] them this map representation in order to localize in the environment. We are not
+[05:22] looking into feature based representations today we will look into
+[05:26] photometric representations this can be in 2D this type of floor plan map that
+[05:30] we see over here or we could even extend it to 3D and then store a full
+[05:34] volumetric model of the environment and again they are both different types of
+[05:39] representations we can use both for example for localizing the robot in the
+[05:43] environment given that we or we here often want to plan a path through the
+[05:48] environment I feel that this occupancy grid based representation are more
+[05:52] suited because they explicitly represent free space and we can use them in order
+[05:57] to plan a path through the free space and therefore they are preferable in
+[06:01] several applications so today we will be looking into these type of occupancy
+[06:07] grid maps. How does a robot looks like that could build such a map so this is a
+[06:13] simple example it's one of the platforms that we have in the lab a U-bot which is
+[06:17] equipped with two of these horizontally looking 2D laser range finders these
+[06:21] Hukuyu range finders and they can drive through the environment and a very
+[06:25] simple occupancy grid map could look like this so what you see here it's
+[06:29] basically an image rendered from such an occupancy grid maps we see white space
+[06:33] in the middle which represent the free space and we see those black pixels
+[06:37] which represent occupied space so basically locations in the environment
+[06:41] where there was an obstacle for example here was a box standing in the
+[06:45] environment so you see the outline of that box represented in this map
+[06:49] representation this is an example for simple occupancy grid map we can also
+[06:54] build other types of representation so this was is a platform navigating
+[06:59] through the catacombs of Rome a platform that we have built together with other
+[07:03] partners within a European project from Rome, Agrit Mika, KU Leuven and Aachen and
+[07:11] other cooperation partners that we had with the goal of exploring catacombs or
+[07:17] ancient structures and for that you'd need to build a 3D model of the
+[07:21] environment and so you can see here a part of the point cloud the system was
+[07:25] generating while navigating through these tunnel like environments this is
+[07:28] also a map of the environment a volumetric representation although you may
+[07:33] not call a point cloud really a 3D model but we could use this 3D point cloud
+[07:37] data in order to render for example also 3D occupancy grid map out of that this
+[07:42] becomes also relevant for autonomous cars so you have a vehicle like this
+[07:46] vehicle over here which is equipped with cameras and laser range scanners here on
+[07:50] top of the vehicle we can actually drive around here on campus and then build a
+[07:55] map of the environment so this is a 3D representation of our parking lot here
+[07:59] in the back and could see the vehicle which was driving around here and
+[08:02] building that map from the 3D LiDAR data while navigating through the
+[08:06] environment we can do this completely just representing the geometric
+[08:11] information as we have seen it over here or we could also store semantic
+[08:15] information so also storing what we actually see for example what's the road
+[08:20] what's a different car what are building structures here encoded in colors and we
+[08:24] can use this from the raw point cloud data and basically coloring every
+[08:28] endpoint depending on the semantic class and we can also turn this into a voxel
+[08:32] map so voxel map can you can see this as an extension of this idea of this 2D
+[08:37] floor plan into 3D where you basically have not 2D elements pixels but you have
+[08:42] voxels so 3D elements which represent a certain part of the 3D space like you
+[08:47] know like small cube and tells if this cube in the world is occupied or not
+[08:51] this is kind of an extension of this idea of occupancy grid maps from 2D into
+[08:56] 3D and we want to look today into the underlying model that sits behind this
+[09:01] occupancy grid maps or voxel maps and storing occupancy information so if we
+[09:07] think about the typical mapping tasks then we typically want to estimate the
+[09:14] map of the environment given my sensor data and my control commands so give me
+[09:21] the most likely map given the sensor data and the sensor data can be camera
+[09:24] data or my my lighter data and be interested in the map in the providing
+[09:31] the map or estimating the map that can be best explained through the sensor
+[09:35] data today we go for a slightly different variant of that we are looking
+[09:40] into systems where we assume to know the pose of the platform so we're not
+[09:45] necessarily interested in the odometry commands here anymore we are we are
+[09:50] saying we we kind of ignore that we assume to know already the poses where
+[09:54] the system was in the environment this is encoded by going from you to the
+[09:57] variable X here which is given so want to estimate the map given our sensor
+[10:02] data or sensor readings as well as the position of the platform in the
+[10:05] environment so it's a simplification of the in general simultaneous
+[10:10] localization mapping problem where we need to estimate where the platform is
+[10:13] and build a map of the environment at the same time so here we are only
+[10:18] interested in estimating the map we assume we already know where that
+[10:21] platform is okay so if you think about an outside environment you maybe have a
+[10:26] very good GPS IMU combination which directly provides you at least the
+[10:30] other with post information and then you can use this post information in order
+[10:35] to build a map of the environment that would be one example for this mapping
+[10:39] with known poses at least if everything works well and we have a good GPS signal
+[10:44] and scale wise this is still fine indoors we may use other techniques in
+[10:48] order to estimate where the platform is but for the lecture today we assume that
+[10:52] to be given so we are only interested in estimating this variable M so what does
+[10:57] the environment look like ignoring the potential post uncertainty that is
+[11:02] involved in that process so it's therefore also something is called
+[11:04] mapping with known poses so for today we are looking just into maps that can
+[11:09] be built with given this post information
+[11:13] there are different ways to represent maps I said that before one is feature
+[11:17] based representation where the map is basically just a list of points of these
+[11:21] feature locations that's something that we have seen for example in bundle
+[11:25] adjustment where we estimate a 3d model of the environment that consists of 3d
+[11:31] points this is standard approach and we division on photogrammetry where we
+[11:36] typically extract point features from images and try to estimate the location
+[11:40] of these point features in the 3d space and if you observe these features
+[11:45] multiple times we can basically reduce the uncertainty in the pose estimate of
+[11:49] those landmark locations so landmark map in the end would just be a list of
+[11:53] points typically stored their location maybe they aren't certainty that would
+[11:58] what a feature map would look like and this is something which we don't want to
+[12:01] look into today we want to look into this idea of using a grid map
+[12:04] discretization of the environment so grid maps or occupancy grid maps
+[12:09] discretized environment and represent a variable for all the discretized space
+[12:17] and in our case this is the occupancy information so either part of the
+[12:22] environment occupied by an obstacle yes or no that's basically the question that
+[12:26] we want to answer for all parts of the environment and for that grid maps
+[12:31] discretize the environment into so-called cells or occupancy grid cells
+[12:35] in our example you can see those cells as tiles on the floor so if you have a
+[12:39] floor of made of tiles and this up whatever 30 by 30 centimeter tiles you
+[12:43] can see all of those tiles as one cell and we store for every cell is this tile
+[12:49] occupied or free and of course not all the moments have those tiles you can see
+[12:53] them just as virtual tiles so just put a uniform grid over the environment and
+[12:58] store for every grid cell if it's occupied or not and these grid cells can
+[13:02] if you think about an image be seen at the pixel in an image just kind of as a
+[13:06] simplification for you for understanding that because you probably have worked
+[13:10] with images so we use this grid and this grid structure is typically rigid and
+[13:15] every grid cell it's a uniform grid represents a certain part of the
+[13:21] environment let's say a 5 by 5 centimeter area of the space and we want
+[13:24] to estimate for that area if it free or occupied we want to do that not just for
+[13:28] one cell but for all the cells in the environment and the occupancy grid maps
+[13:33] typically make the assumption that a cell is either free or it is occupied
+[13:37] there's no other state than being free or occupied either there's an obstacle
+[13:40] in there and it's occupied or there's no obstacle in there then it is free and
+[13:45] they don't use any type of parametric representation of the environment so
+[13:49] it's not like in the feature space where you may use Gaussian distribution in
+[13:54] order to represent the location of a feature we just have this non parametric
+[13:59] representation there's grid structure where we store for every cell just is it
+[14:03] free or occupied with a so-called binary random variable what is an issue of
+[14:08] those grid maps they can get very large so especially if you think about 3d
+[14:12] structures if you don't do this only in 2d but in 3d then the memory consumption
+[14:17] can grow quite substantially in 2d it's probably still okay to store them as a
+[14:22] map information so this may be seen as a disadvantage especially if a very sparse
+[14:26] space then a feature based representation may be better but they
+[14:32] have other advantages for example that they don't rely on a specific feature
+[14:35] detector and that you would need if you build a feature map so just go a little
+[14:40] bit into an example how does an occupancy grid map look like so this is
+[14:43] a map of an indoor environment that's the building where I did my I spent my
+[14:49] PhD time at the University of Freiburg and these were different offices I was
+[14:53] sitting somewhere over here for a long time and at part time somewhere over here
+[14:57] and what the map here shows is the structure of the space where everything
+[15:04] which is every black pixel represents occupied space and all the white pixels
+[15:09] represent a free space so if you kind of zoom in here into this kind of doorway
+[15:13] then we can see in the zoomed in view that they are cells which are black
+[15:18] which are here the walls and also this part of the wall which is occupied and
+[15:22] the rest of the space is free space you may see also some gray color over here
+[15:27] there's basically space we haven't seen but we don't know what the if the space
+[15:31] is occupied or free but to that we will come in a second how we can represent
+[15:35] this so we are talking about this type of representation so the pixel
+[15:39] structure basically gives me the grid structure the discretization of the
+[15:42] environment and we want to store for every pixel is this part of the
+[15:46] environment free or is it occupied by something and occupancy grid maps make
+[15:52] assumptions about the world and the next thing we want to do we want to look into
+[15:56] those assumptions and then see how we can actually model this representation
+[16:01] in a mathematical fashion so let's start with the first assumption assumption
+[16:06] number one tells me that the area which corresponds to one of those grid cells
+[16:10] it's either completely free or completely occupied so there's only two
+[16:13] states free or occupied there's no other state so it doesn't mean that my model
+[16:19] may be unable to tell me if it is occupied or free that's not what I'm
+[16:22] talking about I'm talking about the assumption that every every part in the
+[16:27] environment the physical space either occupied or it is free so if you show
+[16:32] this in a very small simple 4x4 grid structure that would look like
+[16:36] everything which is black over here is the occupied space and whatever you see
+[16:40] here white is the free space so an environment where we have here let's say
+[16:46] a wall or an object and free space everywhere else and again the assumptions
+[16:51] either fully occupied or it is fully free and it's again something which
+[16:55] doesn't really hold in reality because we can have objects which are smaller
+[16:59] than my grid size or we can have the situation that this grid structure is
+[17:03] not perfectly aligned with a wall for example if you're 45 degree rotated so
+[17:08] if you have a wall which is by 45 degree rotated with respect to the virtual grid
+[17:12] structure that you put over the environment you will have cells which
+[17:15] are only partially occupied or partially free because the wall passes through the
+[17:19] middle of that cell and that's something that can happen and so this assumption
+[17:23] is again just an assumption it's nothing that we can enforce in the
+[17:28] environment okay so it's something we assume and will create a model based on
+[17:32] this assumption that were the first one the second was on what if we have that
+[17:39] what we can do with this assumption is that we can say every cell can be
+[17:44] represented by a binary random variable so a random variable which just has two
+[17:48] states occupied or free and of course when we are estimating the the state of
+[17:53] the environment they are then we can have numbers between 0 and 1
+[17:57] representing the probability for being occupied or being free but the the state
+[18:04] itself so the two possible states can be represented with a binary random
+[18:08] variable so if we want to estimate the occupancy probability that's where the
+[18:13] name comes from occupancy probability map occupancy grid in short this is kind
+[18:18] of P of MI let's say this is a cell with index I then P of MI if it is one it
+[18:25] means this cell is occupied the probability for occupancy equals to one
+[18:29] so it means I'm sure the cell is occupied in this example that cell MJ be
+[18:35] this one and has a probability which goes towards zero that means I'm I'm
+[18:39] sure that this cell is free because I know it's not occupied so probably goes
+[18:44] to zero means not occupied and that means free in our notation over here and
+[18:50] so for all of those cells we need to store one binary random variable and you
+[18:57] know to represent the probability distribution about if of the world the
+[19:01] individual cells being occupied or being free okay so a binary random variable
+[19:08] let's just consider one cell here for the moment it means a cell is
+[19:11] definitely occupied it's P of MI equals to one if the cell is not occupied is P
+[19:17] of MI equals zero and we don't know anything about it we say oh actually we
+[19:21] don't know it's free or occupied both happens with the same probability then
+[19:24] we may represent this with 0.5 so we don't know anything about it and the
+[19:30] probability or my prior for being occupied or being free is identical then
+[19:35] I would could represent this with a probability of 0.5 and if I maybe
+[19:41] gathered some information about the information is noisy and let's say I
+[19:44] have a value of 0.8 I have an occupancy probability of 0.8 it means I'm more
+[19:48] certain that the cell is occupied rather than it is free so with 80% chance this
+[19:54] cell is being occupied this is what 0.8 would mean okay um so in terms of
+[20:03] notation just to be very clear about this I use this small MI in the way I
+[20:09] introduced it in the probability primer there's a probability that the cell is
+[20:14] occupied the cell with the index I so that this one takes the value of being
+[20:19] occupied if we write it down a different mathematical form with the random the
+[20:24] binary random variable and the random verb is written in capitalized letters
+[20:27] let's say P of MI being occupied also sometimes written as P of OX or the
+[20:32] occupancy probability of that cell but we typically use just this kind of short
+[20:36] notation but just to make sure you know what it means and of course we have the
+[20:40] also the opposite event that a cell is free so P of MI being free means P of MI
+[20:45] being not occupied also sometimes written in this form or with the
+[20:48] negation whatever form we are using just to make sure we are all on the same on
+[20:56] the plate here knowing that what means occupancy probability so cell being
+[21:00] occupied and the opposite event of it being free in terms of visualization we
+[21:06] typically visualize black pixels with cells being occupied white pixels with
+[21:12] cells being free and grayish pixels with values where we don't exactly know if
+[21:18] the cell is occupied or free and the larger the probabilities or the more the
+[21:22] value tends towards one the the darker the cell gets and the more the
+[21:29] probability goes towards zero the brighter the cell gets so we can the
+[21:33] color the shading of the color tells us something how certain we are about the
+[21:37] environment so in this example in this this gray cell it would be a occupancy
+[21:42] probability of 75% that means the probability of being free is 25% so just
+[21:48] kind of that you know the color coding of what I will be using here and what
+[21:52] that actually means and we have a second assumption that the occupancy grid map
+[21:56] does and this is a so-called static world assumption assumption that's
+[21:59] something that a large number of mapping systems still do they assume while we're
+[22:04] recording the sensor data the world doesn't change again that's clearly an
+[22:08] assumption we cannot guarantee this our world is dynamic even if you are have a
+[22:12] robot building a map of the room someone's walking through the room
+[22:15] walking through a laser scan for example then the world is not static anymore
+[22:21] while being observed although most mapping systems and also the approach we
+[22:25] are presenting here today makes the assumption that the world is static so
+[22:28] if you have something which is occupied it means it will be occupied will stay
+[22:32] occupied forever and if something is free it will stay free forever it
+[22:37] doesn't mean that we maybe have contract contradicting sensor data and due to
+[22:41] the sensor noise that we have that we say oh this cell is occupied although in
+[22:44] reality it is free this can happen but we know that in reality the state of
+[22:51] each cell is either be either occupied or being free those are second assumption
+[22:55] and the third assumption that we have is that those cells are independent of
+[23:00] each other so there is no dependency between those cells so if I know the
+[23:04] occupancy probability or the occupancy of one cell it doesn't help me to
+[23:11] estimate how the neighboring cell looks like again that's something we can argue
+[23:15] if this is assumption is valid or not the reason why we're using it because it
+[23:21] dramatically simplifies my model if you think about man-made environments if you
+[23:26] have a wall for example then if you have a cell which is occupied due to a wall
+[23:30] it's very likely that one of the neighboring cells is also occupied
+[23:33] because our walls are typically large have a certain extent same holds for
+[23:37] object that we place in the environment if you put a table into an environment
+[23:40] and we have a cell which is occupied in the middle of the table it's more likely
+[23:44] that the neighboring cells actually also occupied rather than free so the
+[23:49] neighboring information can encode something can tell me actually something
+[23:52] so this independence is not fully justified but we use it as a simplifying
+[23:57] assumption here again these are assumptions these are things which do
+[24:00] not hold in reality but I assume them to be because it makes my model an easier
+[24:06] and computationally tractable and that's the reason why I'm as a designer of this
+[24:10] algorithm make those assumptions again those assumptions are always points to
+[24:16] revisit when your system breaks so if your mapping system fails at some point
+[24:20] it's a very good idea to revisit your assumptions and see if one of the wrong
+[24:25] assumptions that you have made may have caused this the problem that you
+[24:28] experience with your system so it's always very good to know what your
+[24:32] assumptions are so in some we have this three assumptions a cell is either fully
+[24:36] occupied or fully free the world is static that means the if something is
+[24:41] free it will be free forever if something's occupied it will be occupied
+[24:44] forever no one is moving through my space no one is modifying the space and
+[24:48] the third assumptions that these individual cells are independent of each
+[24:52] other and this has a direct consequence a direct impact on how I can model my
+[24:57] environment so we said we have a map that consists of cells grid cells so P
+[25:05] of M refers to the whole map in general and P of M index refers to an individual
+[25:11] cell maybe we arrange them with an X and Y coordinate but for reasons of
+[25:16] simplicity I just use one index here which can index all the different cells
+[25:20] in my in my environment so what we have if you want to talk about the occupancy
+[25:25] map it is a probability distribution representing the whole map of the
+[25:31] environment all the different states that we have and if we represent one
+[25:36] represent this in general it would be the joint belief so the probability
+[25:40] distribution about the map is the joint belief about the values of the
+[25:45] individual cells okay so this is represented by this fact over here so
+[25:50] it's the probability of that the whole map is occupied is a property that cell
+[25:54] one is occupied cell two is occupied there's three is occupied and so on and
+[25:58] so forth so the problem is I may have a very large number of those of those
+[26:02] binary random variables in here and what we want to do we want to simplify this
+[26:08] potentially very very large joint probability distribution and we do so by
+[26:13] exploiting the assumption number three that the cells are independent of each
+[26:17] other if the cells are independent of each other I can simplify this joint
+[26:21] belief into a set of individual beliefs that's again something on this if you
+[26:27] think about the the independence that we have talked about the probability
+[26:30] primer that's the point in time where we're using it so if these variables are
+[26:34] independent of each other I can actually break them down in a product
+[26:38] of individual probability distributions just talking about one single cell and
+[26:43] this is something that you can see here we can simplify the probability
+[26:49] distribution over the map as a product of the probability distributions over
+[26:53] the individual cells and this is something as a result of this
+[26:56] independence assumption of this assumption number three so assumption
+[27:00] number three leads to this simplification over here that we can
+[27:03] write this down in this form okay so let's look into a concrete example where
+[27:08] we look maybe into four cells so what you see here on that slide is a map
+[27:14] consisting of four cells and so P of M as a product of the individual cells so
+[27:20] if you want to ask the question is them are all those four cells occupied so
+[27:24] which is kind of just for illustration purposes done in this form it means is
+[27:29] the cell representing the random variable representing cell number one
+[27:33] occupied times the probability that two is occupied times the probability that
+[27:37] three is occupied times the probability that four is occupied okay so here I
+[27:44] used kind of this M versus M in order to so capital M versus small M in order to
+[27:50] to distinguish the random variable from the value itself so here I'm asking
+[27:55] what's the probability that all those cells are actually occupied and I can
+[27:59] directly take the occupancy probability values from my map and multiply them
+[28:03] with each other maybe however I'm interested in a different map instance
+[28:08] so if I say what's the probability that two of the cells are occupied especially
+[28:12] those two ones and that those two are free then this would be the probability
+[28:18] that M1 is occupied that M2 is free that M3 is occupied that M4 is free
+[28:22] just the product of them but since I don't store the probability of a cell
+[28:26] being free in my map on the probability of the cell is being occupied I can now
+[28:32] exploit the first assumption that a cell is either occupied or free so it's a
+[28:37] binary random variable and can put M2 is free as means 1 minus PM equal is is
+[28:44] occupied so I can turn this into the occupancy probability just putting the
+[28:48] minus 1 over here and again here so this is one of those situations that
+[28:54] helps to distinguish between the random variable itself and the instance that
+[28:58] I'm actually interested in for example or a specific configuration over here
+[29:02] but the key thing is we have a map and this map can be broken up into cells
+[29:07] four cells are independent of each other and so they turn into a product of
+[29:12] individual small probability distributions and they are binary random
+[29:16] variables so they can be either occupied or they can be free so that
+[29:22] would want to do as the next thing is want to estimate this type of map
+[29:25] representation from data so we have specified how our mathematical model
+[29:29] looks like it's a joint probability distribution which can be broken up into
+[29:33] a product of individual probability distributions and they can be
+[29:36] represented with a binary random variable that's what we exploited so far
+[29:40] and now want to estimate this map from data so given we have a sent via sensor
+[29:45] data Z 1 to T so sensor data recorded at different points in time and we know
+[29:50] the position of the platform X 1 to T and we want to estimate the map so we
+[29:55] want to estimate the map of the environment given sensor data and
+[29:58] position information and I will be using here range sensors so but what we
+[30:03] actually need is a sensor which tells me something about occupancy so which tells
+[30:07] me something about is a cell I'm seeing free is a cell I'm seeing occupied you
+[30:11] could also do the stereo camera for example but we are using here range
+[30:15] sensors just to simplify things a little bit more and this joint belief given
+[30:22] sensor data and position information can be broken up into this product of the
+[30:28] probability that a certain cell is occupied or free given the sensor data
+[30:31] and given the the pose information so these things these guys here are binary
+[30:38] random variables this is not a binary random variable because it contains a
+[30:42] large number of binary random variables with the whole map there's an individual
+[30:46] cell and the individual cell is a binary random variable or represented with a
+[30:50] binary random variable and it is a binary random variables that means we
+[30:56] can use a technique to estimate the state of this variable and this would be
+[31:00] a base filter so we could use a base filter to estimate the state of this
+[31:04] binary random variable and there's a variant of the base filter the binary
+[31:09] based filter which is optimized for estimating the probability of a binary
+[31:14] random variable and we will use the second assumption in the derivation that
+[31:19] I will show in a second and that we assume the state is static that means the
+[31:23] state doesn't change over time so something which is once free will stay
+[31:27] free something which is once occupied will stay occupied this assumption that
+[31:31] it's an assumption that we will be using in here that we don't model for
+[31:36] example that the state of the system may change over time so we are looking into
+[31:40] the occupancy grid map now and will now derive starting from this term a formula
+[31:49] or an update rule how we can estimate this probability given the sensor data
+[31:55] and given the position of information and again we will use the mathematical
+[32:00] tools that we have learned in the previous one of the previous lectures in
+[32:03] order to manipulate my probability distributions and derive an update rule
+[32:10] for these type of mapper presentations and that's what we're diving in now so
+[32:17] we start deriving the static state binary base filter now and we start with
+[32:22] exactly the belief about the individual cell that I shown before and this is
+[32:26] just kind of the product over those cells give me the probability of the map
+[32:29] so it's totally fine for this derivation just look into an individual
+[32:33] cell so we're just looking into one single grid cell right now the first
+[32:36] thing that we're going to do we are applying Bayes rule so we use this
+[32:41] equation and apply Bayes rule and we are again similar to the derivation of the
+[32:47] base filter in the last lecture we are swapping the variable ZT the last
+[32:53] observation with the verb we want to estimate this time it's not X it's not
+[32:57] localization problem it is my MI so the state of a cell so I'm swapping MI and
+[33:03] ZT so I need to swap them around this is happens what here MI and ZT are
+[33:08] swapped compared to here and then we have the two additional terms the prior
+[33:14] and the evidence that is results from a direct application of Bayes rule using
+[33:19] background knowledge so we have here P of ZT the likelihood of the current
+[33:23] observation given the state of that cell the old observations the old positional
+[33:28] information times the probability that the cell is occupied or free given the
+[33:33] same data except the last observation and down here we have the probability of
+[33:38] the current observation given all the past observation and the position
+[33:43] information but no map information being over here okay so I can do the next
+[33:49] update rule and exploit the Markov assumption again the Markov assumption
+[33:53] is something which says if I know the state of the world at a given point in
+[33:57] time then what happened in the past is independent from what happened in the
+[34:00] future something we also exploited in the derivation of the general base
+[34:04] filter in the last lecture so that means all the old positional information all
+[34:09] the old poles information doesn't matter if I want to estimate what I'm going to
+[34:12] or estimate the likelihood of my observation given I know the state of
+[34:16] the world so I can drop here all the old observations and all the old pose
+[34:24] information I need to keep the current pose because I need to know where the
+[34:28] current scan is taken so there's something that I need to know about the
+[34:31] state of the world so this equation simplifies here to P of ZT given MI and
+[34:36] XT and we can do something similar in here by saying in order to estimate if
+[34:43] the state is occupied or free we can we are not interested in the future
+[34:48] position information that is similar to the independence assumption that we also
+[34:51] used in the derivation of the base filter by saying that wherever I am in
+[34:57] the future without any sensor information doesn't help me to estimate
+[35:02] if the state is occupied a cell is occupied or free the only exception
+[35:05] might be if I'm actually standing in that cell then I could say okay this
+[35:08] should be free because I'm standing here with my camera with my laser range
+[35:11] scanner with my robot but again this is kind of an independence assumption that
+[35:15] we're dropping here or assuming here so we drop this future position and just
+[35:21] ignore XT over here and then we want to further simplify this expression over
+[35:28] here by using the first term again and apply again base rule basically swapping
+[35:32] that back after having exploit this independence assumption after exploiting
+[35:36] the Markov assumption so we exploited the Markov assumption and then apply
+[35:39] base rule for the first term again and again now swapping ZT and MI so that's
+[35:45] T and MI are again swapped so you can see here this is the application of base
+[35:50] rule for this term so we take this equation over here and put it in here
+[35:54] and then we have this term consisting now of five elements so I could by using
+[36:01] the Markov assumption and the independence assumption I could turn
+[36:04] this equation over here in this equation so we have the probability of a cell
+[36:08] being occupied given the current observation the current pose times the
+[36:12] probability that of an observation given the position information but not
+[36:19] containing any map information so it's something that's probably tricky to
+[36:22] estimate so what the probability of observing something given I know where
+[36:26] I am but I have no idea what the world looks like probably tricky to estimate
+[36:29] and then we have the probability of the cell being occupied or free given all
+[36:36] the old information so it's very similar to this recursive part the
+[36:41] recursive term that we had seen before in the recursive base filter and then we
+[36:46] have down here the probability of a cell being occupied given I know where I am
+[36:50] without any sensor information also probably something which may be tricky
+[36:54] to estimate and or maybe the position information doesn't really help me at
+[36:59] least in general and then I have P of ZT the probability of an observation given
+[37:05] the past observation and the past position information and again that's
+[37:09] something which is probably tricky to estimate because we don't have a map and
+[37:12] we have no idea where we are so we have a sequence of observations taken at
+[37:17] different points in time I can start estimating map from that but then I have
+[37:20] no idea where this observation has been taken so this is a term which is
+[37:24] probably hard to estimate but what we can do is the first using an independence
+[37:30] assumption for this term over here what I just mentioned briefly we can say the
+[37:34] probability of a cell being occupied given I know where the robot is but I
+[37:37] have no idea what the robot sees or senses doesn't really help me unless the
+[37:41] robot is standing in that cell but there's something let's ignore this so
+[37:44] we can drop XT over here and just just turns into the probability of a cell
+[37:49] being occupied or free in general this basic justice statistics about if I look
+[37:53] to an environment or my assumption about the environment do I have more free cell
+[37:57] than occupied cells this is basically what this what this prior encodes what
+[38:02] the average if I just draw a random cell how likely is the cell to be
+[38:05] occupied or free it's kind of this this kind of map prior so to say that we have
+[38:11] okay so I have now my simplified equation over here but it still have a
+[38:15] few terms which is which are hard for me to estimate something which may be
+[38:20] tricky what I haven't exploited so far is the fact that it's a binary random
+[38:25] variable that's this variable justice two states so just occupied or free
+[38:29] they're just two possibilities over here and I can exploit that now by doing
+[38:34] exactly the same derivation for the opposite event so for the cell not being
+[38:39] occupied but the probability for the cell being free so we'll get exactly the
+[38:43] same derivation over here except wherever there's an MI there will be in
+[38:48] the negated event so not MI and the rest will stay exactly the same so just by
+[38:54] doing the same thing for the opposite event P of not MI given the same
+[38:59] observations I end up with exactly the same equation with the one I had here
+[39:02] except that every MI is replaced by not MI okay so it's just kind of the event
+[39:08] and the opposite event and now I'm doing a trick which I can do and this trick
+[39:12] makes sense because I'm have a binary based filter so I have two possibilities
+[39:17] in which the state can be in some computing the ratio of these two
+[39:21] probabilities so the probability of the event divided by the probability of the
+[39:27] opposite event and again this is because of two random variables I covered all
+[39:33] the possibilities I kind of encoded in this ratio so I'm computing the ratio of
+[39:37] the probability of being cell being occupied divided by the probability of
+[39:42] that cell being free estimated from sensor data and kind of can write those
+[39:46] two equations over here divide by divide them by each other and the attractive
+[39:51] thing is now that there are all the terms which are independent from MI or
+[39:55] not MI so where this doesn't pop up are identical in both terms and so they can
+[40:00] be eliminated in this ratio so for example this term P of ZT given XT pops
+[40:08] up in both situations also this P of ZT what the likelihood of the current
+[40:13] observation given all the previous observations and the pose information is
+[40:17] something which pops up in in both situations and thus can be can be
+[40:23] eliminated so this can this goes away and these two terms goes away because
+[40:28] they pop up in both equations and so they can actually be ignored so then
+[40:35] this ratio simplifies by just having these three terms which survive what I
+[40:40] can do is again just regroup those terms so I'm writing the event and the
+[40:43] opposite event for all those equations on top of each other and since it's a
+[40:47] product I can separate this into three different products so the product number
+[40:51] one a product number two and the product number three and so the first
+[40:57] term is the term that uses the current observation so these term over here are
+[41:02] all the equations which contain the the the current observation ZT so what I'm
+[41:09] over to seeing right now the second term is a recursive term so it only it's
+[41:13] related to the state estimate of that same cell but using only the old data up
+[41:19] to the time t minus one and this is kind of the recursive related to the
+[41:22] recursive term that I had it's just a ratio of these two recursive terms and
+[41:26] the last term over here is just prior information what can I say about my map
+[41:32] without having seen anything without having been there so what is my prior
+[41:35] my assumption about occupancy in this world so to say okay so what I have I
+[41:42] have the ratio of the cell being occupied divided by the cell being free
+[41:47] given all the data it can it can reduce this to a product of three terms one
+[41:51] related to the current observation one related to a recursive term and one
+[41:55] related to prior information and what I will do now I will just introduce a new
+[42:01] term a new abbreviation a new function that will allow me to simplify this
+[42:06] expression over here and in theory I can still use this term over here and do
+[42:12] recursive state estimation with it but it's I so far haven't recovered the
+[42:16] original probability that I want to have and this is something we've called
+[42:19] the odds ratio what's notational odds ratio so the odds of X means P of X
+[42:27] divided by 1 minus P of X and you know this exactly what we had before it's the
+[42:31] event divided by the opposite event and this is something which we refer to as
+[42:34] odds of X so what I can do is I can multiply this this equation with 1 minus
+[42:42] P of X and so this is multiplied on that side if I swap the sides I've
+[42:47] written here P of X is odds X minus odds X times P of X so what I think can do is
+[42:55] I can take out this can take this one add it to the other side and then what
+[43:03] remains is P of X of course it occurs in both things so I can take it out of the
+[43:09] equation 1 plus odds of X equals odds of X and then I can divide through this
+[43:15] term over here divide by 1 plus odds of X so this goes down here so P of X is
+[43:20] odds of X divided by 1 plus odds of X okay so that's interesting because what
+[43:27] it allows me to do is it allowed it allows me to given I have the odds and
+[43:32] the odds of something that I actually computed before turn the back into the
+[43:35] probability with a simple equation odds divided by 1 plus odds or I can also
+[43:40] write in the way as a 1 divided by 1 plus 1 divided by odds of X so this is
+[43:45] this is equivalent so what I have in the end I have an equation to turn those
+[43:50] odds back into probabilities and also the probability to odds so both sides of
+[43:55] this term are there so with those two equations I can turn odds into
+[43:59] probabilities and probabilities into odds that's great because what I've done
+[44:03] before actually estimated those odds right so I have a rule to estimate those
+[44:08] odds and now I can use those these equations in order to turn the odds back
+[44:13] into the original original probabilities that I had so just by using this
+[44:17] equation down here and using the rule that I had before I will end up in this
+[44:23] update rule that the probability that I wanted to estimate about the state of a
+[44:27] cell given all the observations and all the control commands can be written down
+[44:32] in this form over here which is the ratio of those probabilities that I had
+[44:38] and then everything 1 divided by 1 plus this term over here because there's a
+[44:43] minus 1 over here okay so with this rule I can use those ratios that I can
+[44:51] compute or that I need to specify or can compute depending on which term I'm
+[44:55] referring to and can turn this into the occupancy probability and can estimate
+[45:01] the current state of every grid cell given my sensor observation and given my
+[45:07] control commands so for efficiency reasons I can however take that a step
+[45:13] further and use a slightly different form of this odds notation the log odds
+[45:20] notation where I compute the logarithm of those odds because as we will see in a
+[45:24] second this can substantially simplify the mathematical operations that need to
+[45:31] do even those are kind of not too too complicated but we can make them even
+[45:35] easier so that this occupancy grid update gets super super fast this was
+[45:39] more important at the time and this algorithm was developed which was in the
+[45:43] early 1980s but you can still use this today in order to very very efficiently
+[45:48] update your maps so let's have a look how that works so if again we go to
+[45:54] these to these to this ratio and we have here the we have here an odds term here
+[45:59] an odds term here an odds term and there an inverse odds term and of course we
+[46:03] could write it now as for example this term as odds of mi given ZT and XT and
+[46:09] if we now go into into this odd space first and then can be the logarithm of
+[46:14] both terms the logarithm on that side and the logarithm of that side so just
+[46:18] take the logarithm of both sides I will refer to this as L of the variable which
+[46:24] is the log of the odds therefore also called log odds and the advantage of
+[46:29] this is first the log odds I have this ratio already encoded in here and taking
+[46:34] logarithm of this turns this product into a sum so basically I just have three
+[46:39] sums that I need to execute which makes this algorithm so fast so L of X is
+[46:44] nothing else than log of the odds and by just taking the exponential of this odds
+[46:50] I can of course revert it back to the original probabilities so I can go to
+[46:53] this log odd space and can go back to the probability space given these two
+[46:57] equations and if I do so then I can write down the the log odds of this term
+[47:04] I'm interested in it's the log odds of mi given ZT and XT plus the log odds of
+[47:10] the recursive term and the log odds of the prior and just have the plus and
+[47:15] minus over here depending if it was which part of the ratio it was it was
+[47:19] the inverse or not so in the end what I need to do I have my current estimate in
+[47:25] my in my in my grid cell that I need to store and this is the sum of three terms
+[47:31] the recursive term so the old state of that cell before the inverse sensor
+[47:37] model of the log odds of the inverse sensor model so what the current sensor
+[47:41] information provides me minus the local lock of the prior so in very short this
+[47:47] is kind of the new state of a cell at time T so cell I at time T LT I thought
+[47:56] this refers to is my inverse sensor model so something which depends on what
+[48:00] I'm seeing right now plus the old value that it had so it's just the value at
+[48:07] the previous point in time minus my prior information so what I need to do
+[48:12] if I have a new observation I just need to iterate over all cells and update
+[48:17] every cell with this single equation so just need to add a value and subtract a
+[48:21] value from the previous the current value that I have so basically have a 2d
+[48:26] array we need to store the values these these log odds values for every cell one
+[48:32] one number one floating point operation one double number and I just need to add
+[48:36] something and subtract something from that cell and there's an operation which
+[48:39] can be done very very fast can even be paralyzed in an easy fashion so if you
+[48:44] put this into an algorithmic form we can see the occupancy grid map algorithm
+[48:48] says okay I'm iterating over all cells and then I'm checking if the cell is in
+[48:53] the field of view of the sensor so does the sensor see this cell at all and if
+[48:57] it sees the cell and can tell something about the occupancy then I'm doing my
+[49:01] cell update and this is again just adding and subtracting a value if not I
+[49:07] kind of keep the value it is so if I restore do that in an area I don't need
+[49:11] to do any update over here and that's it and I return my two-dimensional area so
+[49:15] something which is very very easy to do very easy to implement very fast to be
+[49:20] done and I can even paralyze this so the for example summing over all cells I can
+[49:25] easily break down my map into small chunks and then operate this perform
+[49:31] this operation on different CPUs on different threats just updating a part
+[49:36] of the map so something which can be easily paralyzed because there is no
+[49:40] access to kind of the same data structure at least in writing fashion
+[49:44] when I perform and paralyzed this so something which can be done very very
+[49:48] fast very efficiently and a few words about the history there's an algorithm
+[49:53] which has been developed by more like an Elvis in the beginning or the mid 80s so
+[49:58] it's an algorithm which is around the robotics community since quite a while
+[50:01] and they used it for sonar sensors into auto-build occupancy grid maps with
+[50:06] sonar sensors having a robot which knows its post so was driving around
+[50:11] through the environment building a map given known poses estimating which part
+[50:15] of the environment is occupied or free and therefore it's also often referred
+[50:19] to as mapping with known poses because once one of the first algorithms this or
+[50:24] breaking up the space into occupied and free areas given known post information
+[50:30] but have a probabilistic way for integrating sensor information and so
+[50:35] this was the core algorithm per se we now if you're going to implement this on
+[50:38] our real robot we need to specify what is our inverse sensor model and that as
+[50:43] the name says depends on my sensor so depending on how the sensor looks like I
+[50:47] end up having a different inverse sensor model that I need to specify for my
+[50:51] sensor and I want to do now is provide you two examples on how such a model
+[50:56] could look like so we start with the laser scanner example so the laser
+[51:02] scanners are typically rather precise sensors especially if you talk here
+[51:05] about let's say grid resolution of five by five centimeters or maybe three by
+[51:09] three centimeters to environment in a rather fine-grained fashion which is
+[51:13] typically totally sufficient for doing indoor navigation for example then the
+[51:17] sensor is typically more accurate than this grid resolution and so if we get a
+[51:22] measurement like a laser range measurement where the noise is typically
+[51:25] smaller than the grid resolution we can say okay assuming that it's not an
+[51:29] outlier at least then we can say this cell where the beam ends is a cell that
+[51:34] there's an object in there and this cell is occupied and all the cells where this
+[51:38] where the ray passed over those cells are cells which are more likely to be
+[51:42] free than occupied and given that those sensors array those laser scanners are
+[51:47] rather precise there's not that much noise involved in this process so how
+[51:51] does now an inverse sensor model actually looks like so we are looking
+[51:54] here into a deviation from the prior so this is more likely to be occupied or
+[51:59] more likely to be free with respect to my prior information so what we have
+[52:05] here is the range reading or the sensor sees sits over here at ZT so this is
+[52:11] here in the middle so this is the sensor reading that the sensor reports and what
+[52:16] this graph shows us is how we update the occupancy based on the sensor reading so
+[52:23] and this is a distance from the from the sensor which sits over here up to the
+[52:27] cell where the beam ends up for the distance where it ends up so whatever
+[52:30] lies before the return of the of the end point so everything which is in here
+[52:39] sits in front of the sensor and caused didn't cause a reflection so this is
+[52:45] free space so whatever is in between the sensor and the obstacle is free space
+[52:52] right because the the sensor a pass through those cells and so they are
+[52:56] occupancy probably should be removed because they're more likely to be free
+[53:00] than being occupied and this is something that I'm exploiting here then
+[53:04] at that cell where the beam ends the probability that it is occupied is
+[53:11] larger because there's an object or something which reflected that laser
+[53:15] beam so the occupancy probability will be increased so it's more likely to be
+[53:19] occupied than it is free and whatever sits behind that cell is unknown I don't
+[53:27] know I don't know how thick the walls are or I don't know what's behind a wall
+[53:33] I can't look behind a wall so I kind of keep with my prior information I have no
+[53:38] update to be done in here so whatever is in front of this this is kind of the
+[53:43] free space whatever is here is the occupied space and whatever there I have
+[53:48] no idea what it is no information about it and so this is the inverse model that
+[53:53] we use for laser rangefinders for performing this occupancy grid mapping
+[53:58] if you go for a sonar sensor the situation changes a little bit for an
+[54:03] inverse sensor model of a sonar I don't have just kind of one ray like the laser
+[54:09] ray I have actually a cone of the sonar signal that is emitted and then some
+[54:15] object in this cone leads to a reflection so the inverse sensor model
+[54:19] for sonar may look like this so they are it's basically this cone structure which
+[54:24] goes up and opens up in here and then I got a reflection or return of the signal
+[54:30] at some point over here so those cells are more likely to be occupied and those
+[54:34] cells are more likely to be freed because if there wasn't been obstacle
+[54:37] somewhere in between somewhere in here I should have had a return already
+[54:41] beforehand okay so this is kind of the the sensor cone that the whole cone that
+[54:48] needs to be updated for reasons of simplicity I'm just looking here into
+[54:53] this kind of ray so in the plot that is very similar to the plot for the laser
+[54:58] scanner that you've seen before so that would be a good illustration for laser
+[55:01] scanner so this red line is the x-axis of the plot which now follows and of
+[55:07] course I can put this axis going here through those individual cells not just
+[55:11] directly through those grid cells and the the inverse sensor model for the
+[55:21] sonar sensors looks similar but not identical so we still have the same
+[55:27] idea that we have somewhere over here everything which sits in front of the
+[55:32] measured distance is free space so whatever sits here is my free space so
+[55:38] because I'm in front of the obstacle if there would be an obstacle closer to the
+[55:41] robot I should have had a measured distance which is shorter the return
+[55:44] should have happened earlier then I have my measured distance set over here where
+[55:49] I actually got the return signal from which the measured signal was so but the
+[55:55] sensor is very noisy and it may lead to reflections which are so generate
+[56:02] signals which either closer to me or further away from me so the I'm here not
+[56:06] as certain anymore close to the object where the return actually happens so
+[56:11] it's not this kind of step function for the laser scanner it's kind of a
+[56:14] smoother function going up here just represented by a set of linear functions
+[56:19] taking values from smaller to larger values until I have a certain side
+[56:25] certain peak over here if I'm kind of deep enough inside the obstacles okay
+[56:29] this is still this is now an obstacle so this area here represents basically the
+[56:33] typical noise that my sensor has which is in this case to be these larger than
+[56:38] the grid resolution that we are using and then at some point time it will drop
+[56:43] down again so this is kind of the free space over here this is again the
+[56:47] occupied space and the information down here is again no information that is
+[56:53] actually provided because I can't look behind an object and again kind of how
+[56:59] thick how many cells I'm updating here is basically a prior information
+[57:04] assumption about how thick my walls are and I need to have a certain thickness
+[57:08] over here because the sensor is so noisy though just a very very thin walls the
+[57:13] number of times I'm actually reducing occupancy probability would typically
+[57:19] override the points in time where I'm seeing occupied obstacle and therefore I
+[57:23] have to generate a certain thickness over here so how does it look in reality
+[57:28] so this is a plot of different sonar range scans taking with the b21r robot
+[57:34] this was actually work that I have done in my very very early years when I was
+[57:39] starting a PhD so you have let's say a map that you had built so far see the
+[57:44] robot over here the dark cells and the bright cells and these are different
+[57:47] sensor readings that you get from your sonar and the sonar basically has fires
+[57:52] different sonars at the same point in time and generates these updates for
+[57:56] this occupancy grid map and you're basically integrating all those updates
+[58:00] with the updates rules that have been showing in order to extend the maps you
+[58:04] can see here this was a map before then you get this set of observations and
+[58:09] then you can see how your map gets updated and if you drive through the
+[58:13] environment for an extended period of time and take your sensor data then you
+[58:18] can actually see here how a map looks like so you have this ring of sonar
+[58:22] sensors over here with 24 sonars firing at different points in time and while
+[58:26] you're traversing through the environment and then you can actually if you have
+[58:29] good pose information build a map which looks like this this occupancy grid map
+[58:33] you can see here some areas are more grayish this is a result that the robot
+[58:37] wasn't certain hasn't seen this space only for a few times also here the
+[58:42] reflection were a bit tricky also over here you can see this were actually
+[58:46] glass panes which led to reflections and they can see that some obstacles are
+[58:50] generated actually behind the real obstacle this is just caused due to the
+[58:54] problems that the sonar sensor has when observing the environment then we can
+[59:01] actually turn this map and return the maximum likelihood map so what are the
+[59:06] cells which are other cells more likely to be occupied or more likely to be free
+[59:10] which would then return this type of map representation over here where we just
+[59:15] put the values to zero on one based on what we get from this sonar reading so
+[59:20] you can use this even with very old sensing technology and even sonars which
+[59:24] don't provide very accurate results often and have some issues such as
+[59:29] reflections crosstalk and all these things but if you integrate multiple
+[59:33] observations into a map representation you actually get decent or
+[59:37] surprisingly good maps out of this sensor information today we will most of
+[59:42] the time use this with laser range scanner so with them with this kind of
+[59:45] step function model that I've presented in the beginning so that if you have
+[59:49] sensor readings looking like this so these are kind of just the endpoints
+[59:52] plot you can actually even see here that there are some sprinkles around these
+[59:57] were actually person walking through those corridors while recording the data
+[1:00:00] so violating the static world assumption but if you turn this into an occupancy
+[1:00:04] grid map you can actually see that those moving objects are often removed in this
+[1:00:09] map because the person is moving through the environment the robot gets multiple
+[1:00:13] observations so it sees a space once or twice as occupied and afterwards as free
+[1:00:17] again and if you see it more often as free as occupied you basically attribute
+[1:00:22] they attribute this fact to your sensor noise rather than this static world but
+[1:00:27] if a person would be there and what's standing for the majority of time then
+[1:00:30] just moving away once the robot sees the cell is more often to be occupied
+[1:00:35] rather than free then of course the cell would stay occupied so it's just kind of
+[1:00:40] an effect with the static world assumption is not too bad for let's say
+[1:00:43] quickly moving obstacles but in general we haven't addressed that topic of
+[1:00:50] dynamic objects at all in this representation and actually not
+[1:00:54] taking it into account in the mathematical model so if you want to
+[1:00:59] implement this yourself one thing you need to do is you need to estimate which
+[1:01:03] cells are actually covered by a range reading and this is something which you
+[1:01:10] can do if you think about drawing a line in an image so let's say you want to
+[1:01:16] draw a line from here to here an image which cells should you actually color in
+[1:01:21] order to draw that line and this is an algorithm which stems from computer
+[1:01:24] graphics which is much older than the occupancy group of algorithm which is
+[1:01:27] Bresenham's line algorithm so if you want to estimate which cells are
+[1:01:31] affected by a range reading by laser scanner for example then you typically
+[1:01:37] use Bresenham's line algorithm which they provide this coordinate and this
+[1:01:41] coordinate it would tell you the number of the grids of the coordinates of the
+[1:01:44] grid cells which are affected by this line or which is crossed by this line
+[1:01:50] then you would need to check those cells for occupancy or update those cells it's
+[1:01:54] rather straightforward algorithm which just basically estimates always which
+[1:02:00] part of this grid cell is intersected by the line and then moves to the left
+[1:02:03] right bottom and so on and you basically get a list of your cells that are being
+[1:02:08] updated so if you want to implement this look for Bresenham's line algorithm if
+[1:02:12] you want to do this on your own. This is an example of an occupancy grid map
+[1:02:17] built with a laser scanner from a larger indoor environment this is the CSAIL
+[1:02:21] building at MIT where you can driving we're driving around with the robot
+[1:02:26] recording laser range information in 2D and then building a map of the
+[1:02:30] environment you can very nicely see occupied and unoccupied space you can
+[1:02:34] clearly see the walls you can see some areas here where desks were standing
+[1:02:37] where it's a bit more cluttered but overall you can see the building
+[1:02:42] structure quite nicely and also brought you a short video how you can actually
+[1:02:46] do this online so while the robot is moving through the environment and kind
+[1:02:50] of explores the space we can update the map and integrate this information into
+[1:02:56] the mapping process online so we're performing this recursive map updates at
+[1:03:00] every time we get a new sensor observation and then we can build a map
+[1:03:06] of the environment using this information. This is kind of a standard
+[1:03:09] approach how from a robot moving through the environment assuming we know the
+[1:03:13] trajectory and taking the sensor data into account we can build a model of the
+[1:03:18] environment and this basically brings me to the end of the chapter today as an
+[1:03:23] introduction into occupancy grid mapping which is a popular technique for building
+[1:03:27] maps of the environment so we have looked here only in 2D where the basic
+[1:03:32] occupancy grid map algorithm was formulated in the 1980s by Moravec and
+[1:03:36] Alphas and the key idea was to discretize the world into independent
+[1:03:41] cells the space is discretized into the uniform grid into cells and every
+[1:03:48] cell represents a small part of the space and each cell can be either
+[1:03:53] occupied or free so we can use a binary random variable to estimate if this part
+[1:03:58] of the environment is free or occupied and we were doing this with a model that
+[1:04:02] assumes independence between cells so we assume the cells either occupied or free
+[1:04:07] there have been extensions of occupancy grid maps which try to relax this
+[1:04:10] assumption and take neighboring information into account but then the
+[1:04:13] underlying estimation algorithms become more complicated we cannot use these
+[1:04:17] simple easy update rules that we have derived over here the occupancy grid
+[1:04:23] mapping algorithm in its original form also assumes aesthetic world assumption
+[1:04:27] so it assumes the world is static doesn't change that means a cell is
+[1:04:31] either occupied or it is free and if it's occupied it will stay occupied if
+[1:04:35] it's free it will stay free again an assumption which doesn't hold in general
+[1:04:40] or most situations doesn't hold in the real world but some assumption that the
+[1:04:44] mapping algorithm does and as a result of those three assumptions that I just
+[1:04:48] said which are the three key assumptions which are involved in here we use a
+[1:04:54] static state binary based filter for every cell to update this why are all
+[1:04:58] the three assumptions in there it's a static state so we're aesthetic it's a
+[1:05:02] binary based filter so fine estimates a binary random variable and we do that
+[1:05:06] per cell individually that means the cells are independent of each other
+[1:05:10] because we just compute the product of the joint of those updates we have
+[1:05:14] computed given the formula that we have presented here and so it's mapping with
+[1:05:20] known poses mapping with non-posals is relatively easy we could easily write
+[1:05:24] that down over here and so far we assume to have known poses of course the
+[1:05:28] situation changes if your poses are unknown because then the uncertainty of
+[1:05:33] the pulse information adds an uncertainty to which cells you should
+[1:05:36] update and then the whole system becomes much more complicated and this is
+[1:05:40] something we refer to as simultaneous localization mapping so localize the
+[1:05:44] robot and at the same time build a map of the environment but for today for now
+[1:05:48] we assume we have pulse information what we then have done if we look into this
+[1:05:53] log odds notation I use the log odds representation for every grid cell just
+[1:05:58] because it's so fast to compute because then everything just turns into
+[1:06:01] computing sums over cells in a map something it is very easy and can be
+[1:06:06] done efficiently I only have this inverse sensor model but I just need to
+[1:06:09] specify it once or pre computed and then basically it's just taking values
+[1:06:13] from lookup tables and adding them up which is very very efficiently
+[1:06:17] realizable on modern computers as well as outdated computers which are 30 years
+[1:06:22] or 40 years old by now another advantage of the occupancy grid map was that we
+[1:06:27] don't need pre-defined features we don't need to have a feature detector optimize
+[1:06:31] to our sensor to estimate whatever sift points from images were tree trunks from
+[1:06:36] laser range data so we are completely agnostic to this the only thing we
+[1:06:40] assume to know is that we get range information which tell me where the next
+[1:06:44] obstacle is so what's the distance to the closest obstacle in a certain
+[1:06:47] direction and this is the assumption that I assume to get from the scanner
+[1:06:52] that I'm using over here again we have done everything in 2d we can also extend
+[1:06:57] this to 3d using voxel grids or just having a grid in the 3d world where
+[1:07:03] every pixel turns into a cube and just stack the cubes also in the
+[1:07:07] z-directions and then estimate the same random variable for the 3d world I can
+[1:07:11] directly employ that the only thing I'm suffering if I do this in 3d typically
+[1:07:15] is that the memory consumption grows substantially and maybe I don't have
+[1:07:20] enough memory to store larger maps and so things may get a bit more complicated
+[1:07:25] and you can have optimized data structures such as octrees or octree
+[1:07:29] inspired implementations and realizations in order to store your
+[1:07:33] points so you maybe don't want to avoid estimating the whole grid as a 3d array
+[1:07:37] but in theory the same what we've done in 2d can also be applied in 3d so if
+[1:07:45] you want to get further information about what I have presented here again
+[1:07:49] recommend the probabilistic robotics book the chapter 4.2 investigates the
+[1:07:54] static state binary based filter in a very similar way that I have done this
+[1:07:57] here and we've derived how we actually end up with this static state binary
+[1:08:02] based filter by using the trick of computing the ratios of both
+[1:08:05] probabilities and then the occupancy grid mapping algorithm is also in the
+[1:08:10] book and which tells you how to update this how we do this for the sonar
+[1:08:14] reading or how we do this for for the laser range scanner for example with
+[1:08:18] this I'm coming to the end of this lecture and I hope you've learned today
+[1:08:22] how you can build a map plan like map of the environment if you have a range
+[1:08:26] scanner you can treat all the cells individually and estimate for every cell
+[1:08:31] if it's more likely to be occupied or free which then turns into a probabilistic
+[1:08:35] representation if you do this in a correct way telling the probability that
+[1:08:39] the cell is occupied or that it is free in order to get probabilities out of
+[1:08:44] course you have to specify your sensor model and have to estimate what is the
+[1:08:47] probability of a cell being occupied or being free if it's in front of the
+[1:08:51] scanner this can be a bit more tricky you may need to calibrate your your
+[1:08:55] specific sensor so you get meaningful probability values out of this but the
+[1:08:59] mathematical framework for that is available and you can do this estimation
+[1:09:02] on your own and build maps of the environment which will be also one of
+[1:09:06] the homework assignments that we will give out for that course that you need
+[1:09:09] to build a map of the environment given pose information and laser range data
+[1:09:13] and come up with a model of the environment that's it from my side thank
+[1:09:17] you very much for your attention and I hope you enjoyed this lecture learning
+[1:09:20] something about occupancy grid maps thank you very much

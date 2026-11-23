@@ -1,0 +1,2783 @@
+WEBVTT
+
+00:00.000 --> 00:06.400
+Hello, I want to talk today about graph based simultaneous localization mapping or graph
+
+00:06.400 --> 00:12.040
+based SLAM and introduce a so called least squares approach to the SLAM problem using
+
+00:12.040 --> 00:16.320
+something which is often referred to as post graphs.
+
+00:16.320 --> 00:21.480
+So this is a popular technique, which you find today in most state of the art systems
+
+00:21.480 --> 00:27.160
+out there that are designed to build a map of the environment and localize a platform
+
+00:27.160 --> 00:28.160
+within that map.
+
+00:28.320 --> 00:32.400
+And we're looking here to a special form of that, which is the so called post graph based
+
+00:32.400 --> 00:38.160
+approach that is an approach which doesn't use landmarks but reduces everything to the
+
+00:38.160 --> 00:39.160
+poses.
+
+00:39.160 --> 00:43.600
+So everything is kind of reduced to the poses or landmarks are marginalized out.
+
+00:43.600 --> 00:50.120
+This leads to a graph structure, which is actually rather easy to maintain and is actually
+
+00:50.120 --> 00:54.720
+very flexible also in terms of the observations that you're including and therefore became
+
+00:54.920 --> 01:00.360
+one of the standard tools when doing lighter based SLAM for example or working with RGBD
+
+01:00.360 --> 01:02.160
+cameras or similar.
+
+01:02.160 --> 01:07.200
+So most of those systems which build maps of the environment which have a certain size
+
+01:07.200 --> 01:12.660
+which are not let's say a single room or something like this typically use a graph based or post
+
+01:12.660 --> 01:18.880
+graph based SLAM approach in the background in order to correct the poses and build a
+
+01:18.880 --> 01:20.720
+consistent map of the environment.
+
+01:20.720 --> 01:25.440
+And the goal of this lecture today is to introduce you to these graph based SLAM systems
+
+01:25.440 --> 01:30.760
+so that you are in the end able to build your own system that performs the optimizations
+
+01:30.760 --> 01:32.360
+in here.
+
+01:32.360 --> 01:37.320
+And what we're using in order to do this is the technique called least squares that we
+
+01:37.320 --> 01:40.320
+just have introduced in the previous lecture.
+
+01:40.320 --> 01:45.680
+And so I assume you know how these squares work and at least in a very basic setup.
+
+01:45.680 --> 01:52.440
+So Gauss-Newton is something that you should be able to explain or implement and with this
+
+01:52.440 --> 01:58.840
+tool at hand and with knowing how ICP works, or at least what the output of ICP is, you
+
+01:58.840 --> 02:01.040
+should be able to understand this lecture today.
+
+02:01.040 --> 02:05.520
+So within the typical SLAM paradigms we are here in the graph based SLAM approach, which
+
+02:05.520 --> 02:10.640
+is, as I said, over the last years became the most popular technique and it basically
+
+02:10.640 --> 02:13.000
+is a least squares approach to SLAM.
+
+02:13.000 --> 02:18.280
+Of course, there are extensions using different error functions, robustified kernels and things
+
+02:18.280 --> 02:22.880
+like this, but we are sticking here with the basics, which should allow you to understand
+
+02:22.880 --> 02:25.920
+how this graph based SLAM actually works.
+
+02:25.920 --> 02:30.000
+So least squares, again, was an approach for computing a solution of an overdetermined
+
+02:30.000 --> 02:31.520
+system.
+
+02:31.520 --> 02:35.740
+Overdetermined means here that we have more equations than unknowns.
+
+02:35.740 --> 02:39.800
+Unknowns in our example, our parameters, where the robot is in the environment, which will
+
+02:39.800 --> 02:46.160
+generate us this post graph and the equations stem from our constraints and constraints
+
+02:46.160 --> 02:49.440
+can result from observations or from control commands.
+
+02:49.440 --> 02:55.360
+And our goal is to find a configuration for those poses, for that post graph that minimizes
+
+02:55.360 --> 03:01.480
+the sum of the squared errors that are introduced by those equations, so by the observations.
+
+03:01.480 --> 03:09.640
+So that we have a configuration of these parameters or of these nodes in our graph that allows
+
+03:09.640 --> 03:15.120
+us to estimate where the robot is so that the current configuration is as good as possible
+
+03:15.120 --> 03:17.920
+in line with what we have seen or experienced.
+
+03:17.920 --> 03:22.720
+And again, this least squares approach we apply today to this SLAM problem.
+
+03:22.720 --> 03:25.440
+So let me very easily introduce this problem.
+
+03:25.440 --> 03:30.480
+So consider we have a mobile robot like this guy here driving around through the environment
+
+03:30.480 --> 03:35.320
+and at distinct points in time, let's say every second, for example, we are generating
+
+03:35.320 --> 03:40.160
+a pose and the pose is here explained or illustrated by those triangles.
+
+03:40.160 --> 03:44.300
+So the robot moved through the environment and while it is moving through the environment,
+
+03:44.300 --> 03:49.200
+let's say every second or whenever the robot moved more than three meters or five meters,
+
+03:49.200 --> 03:53.080
+that doesn't really matter here, we create a pose or a variable.
+
+03:53.080 --> 03:57.260
+And this variable describes the pose of a platform at that point in time.
+
+03:57.260 --> 04:02.680
+Pose refers here to the XY or XYZ location plus the heading information.
+
+04:02.680 --> 04:08.780
+So XY and the orientation theta in the 2D case or the opposite roll angles, for example,
+
+04:08.780 --> 04:10.680
+in the three-dimensional case.
+
+04:10.680 --> 04:14.560
+And while the robot is driving through the environment, it creates these poses in this
+
+04:14.560 --> 04:18.640
+so-called pose graph and between those poses, they are constraints.
+
+04:18.640 --> 04:22.240
+And these constraints result from the motion of the platform.
+
+04:22.240 --> 04:25.440
+So for example, you have a robot which counts the revolution of the wheels.
+
+04:25.440 --> 04:29.460
+Let's say it counts, often have the wheels been turned and this allows the platform to
+
+04:29.460 --> 04:31.400
+estimate its poses.
+
+04:31.400 --> 04:35.520
+So let's say I'm the robot right now here, I'm creating a node at the current point in
+
+04:35.520 --> 04:39.320
+time, so I'm driving around, I'm turning my wheels, turning my wheels for a certain amount
+
+04:39.320 --> 04:44.880
+of time, and then I'm standing here and creating a new pose, a new variable.
+
+04:44.880 --> 04:49.120
+And then there exists a constraint between the current pose where I am and the pose where
+
+04:49.120 --> 04:56.520
+I have been before, and this constraint results in how many revolutions did the wheels make.
+
+04:56.520 --> 05:00.800
+And so if there were, because the revolution of the wheels are related to the distance,
+
+05:00.800 --> 05:03.240
+for example, between those two nodes.
+
+05:03.240 --> 05:08.320
+So this allows you to say, okay, pose two is, for example, a meter away from pose one.
+
+05:08.320 --> 05:14.800
+You're typically uncertain about this information because maybe it's a meter and two centimeters
+
+05:14.800 --> 05:20.000
+or 95 centimeters or a meter 20 or a little bit more to the right or to the left.
+
+05:20.000 --> 05:23.940
+So you see there are some uncertainties because this information is not perfect.
+
+05:23.940 --> 05:29.440
+So see those constraints as kind of soft constraints which say, okay, pose two should be approximatively
+
+05:29.440 --> 05:33.820
+a meter away from pose number one, and I think you kind of get the information here.
+
+05:33.820 --> 05:39.020
+So the robot drives around, creates poses after different points in time or after things
+
+05:39.020 --> 05:43.560
+has traveled a certain distance, and then we have those constraints, and those constraints
+
+05:43.560 --> 05:48.360
+can stem from the odometry information or the robot may even use a sensor, for example,
+
+05:48.360 --> 05:53.320
+scan matching or ICP aligning consecutive scans in order to estimate its pose.
+
+05:53.320 --> 05:56.500
+So this can generate this type of structure that we see here.
+
+05:56.500 --> 05:59.820
+So now the robot continues moving through the environment at some point in time.
+
+05:59.820 --> 06:01.920
+It revisits a previously seen place.
+
+06:01.920 --> 06:05.020
+So it comes back to the same area over here.
+
+06:05.020 --> 06:08.980
+And this is one key element in the context of the SLAM problem, something we often refer
+
+06:08.980 --> 06:10.220
+to as loop closing.
+
+06:10.220 --> 06:15.640
+So the robot comes back to a previously seen place along its trajectory, and at that point
+
+06:15.640 --> 06:20.140
+in time, it can actually not create only these sequential constraints but can also generate
+
+06:20.140 --> 06:22.980
+those constraints here to previous poses.
+
+06:22.980 --> 06:24.420
+How does that work?
+
+06:24.420 --> 06:27.780
+So this can work, for example, through an ICP approach.
+
+06:27.780 --> 06:32.900
+So we have introduced ICP before where we take, for example, 3D laser scans of the platform
+
+06:32.900 --> 06:39.360
+taken at a previous point in time, so taken here or here, and align them with the scan
+
+06:39.360 --> 06:40.700
+taken from this location.
+
+06:40.700 --> 06:44.700
+And through the alignment of the scans, we can actually compute the relative transformation
+
+06:44.700 --> 06:48.740
+between those nodes, something I was in the last lecture on the ICP lecture referring
+
+06:48.740 --> 06:51.940
+to as virtual constraints or virtual observations.
+
+06:51.980 --> 06:56.900
+And this is exactly those edges over here, or those constraints, soft constraints over
+
+06:56.900 --> 06:57.900
+here.
+
+06:57.900 --> 07:04.500
+So by revisiting previously visited or places where we've been before or reobserving previously
+
+07:04.500 --> 07:09.700
+seen areas, we can generate these constraints between non-successive poses, these kind of
+
+07:09.700 --> 07:11.960
+loop closer, so to say.
+
+07:11.960 --> 07:15.060
+And so while the robot's driving through the environment, we are getting this kind of graph
+
+07:15.060 --> 07:16.060
+structure.
+
+07:16.060 --> 07:19.220
+So it's not a kind of chain of poses or a list as it was before, it's really a graph
+
+07:19.220 --> 07:22.140
+structure that we now get here.
+
+07:22.140 --> 07:28.660
+And this is what gave the name pose graph because we have a graph that consists of poses
+
+07:28.660 --> 07:30.340
+of these triangles.
+
+07:30.340 --> 07:35.060
+And so this graph is very central to the SLAM problem that we also call it the graph-based
+
+07:35.060 --> 07:39.280
+SLAM problem, and we use it to represent our problem here.
+
+07:39.280 --> 07:44.420
+So this type of graph is the representation for our SLAM system.
+
+07:44.460 --> 07:50.020
+So everything in the graph that we have in there is important for the SLAM problem.
+
+07:50.020 --> 07:54.740
+We will use this information in order to compute a solution.
+
+07:54.740 --> 07:58.340
+So the graph consists of two things, nodes and edges.
+
+07:58.340 --> 08:03.380
+Every node in this graph represents the pose of the robot at a certain point in time.
+
+08:03.380 --> 08:09.220
+Again, it's typically a three or a six dimensional vector, depending if we are modeling a robot
+
+08:09.220 --> 08:11.580
+in the 2D space or in 3D.
+
+08:11.580 --> 08:16.260
+And then we have the edges, and the edges are kind of the relations between those poses.
+
+08:16.260 --> 08:20.800
+So they tell me, oh, this pose should be related to the other pose in that certain way.
+
+08:20.800 --> 08:25.460
+And this information can come from odometry information or from my sensor observation.
+
+08:25.460 --> 08:28.540
+For example, performing scan matching.
+
+08:28.540 --> 08:36.740
+So I can say the pose number 10 is related to pose number 11 by being one meter away.
+
+08:36.740 --> 08:41.540
+And at the same point in time, you can say the pose number 10 can also be related to
+
+08:41.540 --> 08:44.820
+pose number 20 in a certain distance.
+
+08:44.820 --> 08:53.000
+And so this information is then being used in the optimization problem to formulate these
+
+08:53.000 --> 08:55.820
+equations that are used for the constraints.
+
+08:55.820 --> 09:00.460
+So every edge is connected to two poses and relates those two poses, either coming from
+
+09:00.460 --> 09:04.840
+odometry information or from my sensor observation, such as ICP.
+
+09:04.840 --> 09:07.220
+And in graph-based SLAM, we are building up that graph.
+
+09:07.220 --> 09:11.800
+So we build up this full graph of poses and constraints between poses.
+
+09:11.800 --> 09:15.520
+And then the goal is to change the location of the poses.
+
+09:15.520 --> 09:19.920
+So we're basically shifting and rotating those poses in the pose graph around so that we
+
+09:19.920 --> 09:25.400
+minimize the overall error or the squared error that is introduced by those constraints.
+
+09:25.400 --> 09:26.980
+So those constraints can be conflicting.
+
+09:26.980 --> 09:32.040
+For example, if I'm here and saying the next pose should be one meter away from that pose.
+
+09:32.040 --> 09:35.460
+And then I'm driving around, revisiting the environment, and come back to a previously
+
+09:35.460 --> 09:37.520
+seen location.
+
+09:37.520 --> 09:44.200
+And then, based on this observation, which comes from relating those poses, this pose
+
+09:44.200 --> 09:47.400
+should be shifted a little bit.
+
+09:47.400 --> 09:51.320
+And then I have one constraint which says they should be a meter away and the other
+
+09:51.320 --> 09:53.640
+one should be shifted in a certain way.
+
+09:53.640 --> 09:57.780
+And this leads to a fact that those constraints are conflicting.
+
+09:57.780 --> 10:02.260
+And I want to find the configuration of the nodes that minimizes the errors introduced
+
+10:02.260 --> 10:05.700
+by the constraints.
+
+10:05.700 --> 10:09.740
+So we just have also an example here how that looks in reality.
+
+10:09.740 --> 10:15.900
+So if we have a robot driving through the environment, so this was a map built by Patrick
+
+10:15.900 --> 10:16.900
+Pfaff.
+
+10:16.900 --> 10:22.100
+And what you see here is a map built from a laser scanner, where a 2D laser scanner
+
+10:22.100 --> 10:25.700
+moving through the environment, and this just encodes the odometry information.
+
+10:25.700 --> 10:28.940
+So just estimating how the robot moved based on the revolution of the wheels.
+
+10:28.940 --> 10:31.660
+And you can see, actually, this map is extremely messy.
+
+10:31.660 --> 10:33.020
+You can't even deal with that.
+
+10:33.020 --> 10:37.020
+So you can see these are always the same rooms mapped at different locations.
+
+10:37.020 --> 10:41.040
+So odometry itself is typically not sufficient to build a good map.
+
+10:41.040 --> 10:44.780
+But what we can do now, we can actually generate this pose graph in this map where we have
+
+10:44.780 --> 10:48.780
+been and also relate all those constraints with each other.
+
+10:48.780 --> 10:50.440
+So we get something like this.
+
+10:50.440 --> 10:55.060
+So you see those lines over here which represent the poses and also represent the constraints.
+
+10:55.060 --> 10:57.780
+So that seems, oh, this pose should actually be over here.
+
+10:57.780 --> 10:59.480
+This pose should actually be over here.
+
+10:59.480 --> 11:01.660
+This pose should actually be over there.
+
+11:01.660 --> 11:05.780
+And so these are those constraints, and we now have a graph of all these constraints.
+
+11:05.780 --> 11:10.740
+And now we want to find a new configuration of those nodes so that the error is minimized
+
+11:10.740 --> 11:15.540
+so that those constraints are actually fulfilled as good as possible.
+
+11:15.540 --> 11:19.780
+So we can, at that point in time, actually forget the map, which just was depicted in
+
+11:19.780 --> 11:20.980
+the background.
+
+11:20.980 --> 11:27.180
+And we are only interested in actually finding new configuration of those nodes because those
+
+11:27.180 --> 11:28.660
+nodes correspond to the poses.
+
+11:28.660 --> 11:34.500
+And once we have the poses, we can actually build a map just based on the corrected pose
+
+11:34.500 --> 11:35.500
+information.
+
+11:35.500 --> 11:38.980
+Again, mapping was easy once we know the poses.
+
+11:38.980 --> 11:43.380
+So what the graph-based learning approach does, it takes this thing here as an input,
+
+11:43.380 --> 11:48.880
+this graph structure, and performs a least square minimization so that it finds new configurations
+
+11:48.880 --> 11:52.420
+of the poses that minimize the errors introduced by the constraints.
+
+11:52.420 --> 11:57.600
+And this will lead then to a map that looks like this, where all the trajectories are
+
+11:57.600 --> 12:02.480
+kind of now overlaid with each other, and the quadratic error introduced by those constraints
+
+12:02.480 --> 12:08.040
+is minimized so that when I take this pose information and then render a map, just performing
+
+12:08.040 --> 12:12.140
+basically mapping with non-posals, building an occupancy grid map, I will actually get
+
+12:12.140 --> 12:14.220
+information which looks like this.
+
+12:14.220 --> 12:19.300
+And this is now a consistent map of the environment, so you can see here also this room is always
+
+12:19.300 --> 12:22.980
+at the same place and not spread all over the place.
+
+12:22.980 --> 12:29.580
+And this process of turning this graph into this graph, this is what we are talking about,
+
+12:29.580 --> 12:33.860
+performing the error minimization so to correct the trajectory of the platform that we then
+
+12:33.860 --> 12:39.140
+can use this trajectory to build a map of the environment.
+
+12:39.140 --> 12:44.860
+Okay, so I have to tell you that this is only one part of the SLAM problem.
+
+12:44.860 --> 12:48.980
+This is what we typically call the backend or the optimization part of that.
+
+12:48.980 --> 12:53.060
+In reality, of course, there is more involved in this if you want to build a real-world
+
+12:53.060 --> 12:58.100
+SLAM system, because you need to turn your observations into constraints, and this is
+
+12:58.100 --> 13:00.420
+something we typically refer to as the frontend.
+
+13:00.420 --> 13:04.060
+So taking the raw sensor data and turning the sensor data into constraints is kind of
+
+13:04.060 --> 13:08.700
+the frontend, and taking those constraints and optimizing the graph and returning the
+
+13:08.700 --> 13:12.060
+corrected poses is what's often referred to as the backend.
+
+13:12.060 --> 13:15.040
+And in reality, this is an interplay between those two.
+
+13:15.040 --> 13:20.100
+So the frontend relates both with each other, then it's being optimized, then this optimized
+
+13:20.100 --> 13:22.700
+map information is used to make new data stations.
+
+13:22.700 --> 13:28.380
+So in reality, there is actually interplay between these frontend and backend thing.
+
+13:28.380 --> 13:33.060
+But here, we are only looking into the backend parts, into the optimization part, and you
+
+13:33.060 --> 13:37.340
+can envision the frontend part basically as the ICP algorithm that we've introduced.
+
+13:37.380 --> 13:43.900
+ICP is typically used for laser-based SLAM systems as a frontend to generate those constraints,
+
+13:43.900 --> 13:46.320
+and the constraint is here actually the relative transformation.
+
+13:46.320 --> 13:53.340
+So the outcome of the ICP algorithm, this rotation matrix and this translation vector,
+
+13:53.340 --> 13:57.740
+and they are basically forming a constraint together with some uncertainty information,
+
+13:57.740 --> 14:01.800
+and there's a little bit more to that than just vanilla ICP in order to do that well.
+
+14:01.800 --> 14:07.680
+But for the moment, you can imagine we are running an ICP based on laser scanner, for
+
+14:07.680 --> 14:11.020
+example, which gives us the relative transformation between poses.
+
+14:11.020 --> 14:16.720
+This is kind of this frontend part here, and we are using this raw data or this constraint
+
+14:16.720 --> 14:24.400
+data in order to build the graph or to represent the graph and optimize that graph.
+
+14:24.400 --> 14:30.320
+So the graph consists of nodes, so the individual triangles here, these blue triangles, every
+
+14:30.360 --> 14:36.840
+of those triangles represents one node, X1, X2, X3, so there's X1, X2, X3, X4, X5, and
+
+14:36.840 --> 14:38.040
+so on.
+
+14:38.040 --> 14:45.400
+And so the overall graph represents all N nodes, represents X, and this is simply all
+
+14:45.400 --> 14:48.080
+nodes put together or stacked on top of each other.
+
+14:48.080 --> 14:53.900
+So each Xi is a pose of the robot at time Ti, so at a certain timestamp.
+
+14:53.900 --> 14:57.320
+So we assume to have unique timestamps being here.
+
+14:57.320 --> 15:04.280
+And if we have a constraint between two poses, from node Xi to node Xj, then this is a constraint
+
+15:04.280 --> 15:08.080
+that can result from odometry information or from these virtual observations, and these
+
+15:08.080 --> 15:11.240
+are those edges over here.
+
+15:11.240 --> 15:16.080
+And we will now look a little bit into that, how we actually describe those edges, and
+
+15:16.080 --> 15:22.440
+then once we have those edges and can interpret them, then we see how we can actually perform
+
+15:22.440 --> 15:27.800
+the error minimization task using the idea of least squares, or in this case Gauss-Newton.
+
+15:27.800 --> 15:35.440
+Okay, so an edge exists between two nodes if the robot moves from Xi to Xi plus one.
+
+15:35.440 --> 15:40.960
+So there's now a consecutive edge, and this is an edge which can be generated from odometry
+
+15:40.960 --> 15:47.000
+or also from incremental ICP, so matching the current skin against the next skin.
+
+15:47.000 --> 15:50.920
+But for simplicity reasons, just assume right now it's odometry, so just by counting the
+
+15:50.920 --> 15:52.560
+revolution of the wheels.
+
+15:52.560 --> 15:54.760
+So we are here, the robot is currently here.
+
+15:54.760 --> 16:00.280
+It moves forward, and then based on the odometry information, it can estimate where it should
+
+16:00.280 --> 16:06.760
+be given the motion follows the kinematic model that the robot has about itself.
+
+16:06.760 --> 16:12.160
+And this is basically the information, like a motion model that we're using.
+
+16:12.160 --> 16:18.080
+So if you think about the previous lectures, this is basically counting the translational
+
+16:18.080 --> 16:22.000
+velocity or the rotational velocity based on your steering, such as differential drive
+
+16:22.000 --> 16:26.520
+or Ackermann steering, and that tells you how much you should have moved if everything
+
+16:26.520 --> 16:27.680
+looks good.
+
+16:27.680 --> 16:31.680
+And from probabilistic point of view, that's basically a mean estimate of where you have
+
+16:31.680 --> 16:37.880
+been moving within the time difference from I to I plus one, and this typically comes
+
+16:37.880 --> 16:39.560
+from odometry information.
+
+16:39.560 --> 16:47.840
+So this is a transformation typically which tells us how Xi can be seen, or how Xi plus
+
+16:47.840 --> 16:49.600
+one can be seen from Xi.
+
+16:49.600 --> 16:53.760
+So this is a transformation, so how do you transfer one pose and the other pose?
+
+16:53.760 --> 16:56.840
+So relative pose information.
+
+16:56.840 --> 17:02.480
+An edge can also exist between two arbitrary poses, so not I and I plus one, but I and
+
+17:02.480 --> 17:09.720
+J, where J is different from I plus one, and then we typically need to relate this information
+
+17:09.720 --> 17:11.960
+with each other using the sensor data.
+
+17:11.960 --> 17:16.460
+So as an example, so consider this now as a 2D illustration, so we have our robot at
+
+17:16.460 --> 17:21.300
+Xi sitting over here, and this is the scene it is observing with the laser scanner, and
+
+17:21.300 --> 17:25.640
+then at a position XJ it's here, and it's observing this part.
+
+17:25.640 --> 17:32.100
+So by relating these black lines and this blue line, treating this as a scan, and overlaying
+
+17:32.100 --> 17:37.740
+them with each other, we can actually generate kind of a virtual observation by saying we
+
+17:37.740 --> 17:44.820
+can have an idea where XJ should be as seen from Xi, although we can't really see XJ,
+
+17:44.820 --> 17:48.380
+we can't really see where the robot is in the future.
+
+17:48.380 --> 17:53.140
+But by relating it to the environment that we are seeing from both locations, we can
+
+17:53.140 --> 17:56.940
+actually generate something which we call a virtual measurement.
+
+17:56.940 --> 18:02.580
+It's nothing else than the result of the iterative closest point algorithm in general.
+
+18:02.580 --> 18:09.120
+So again, we see this kind of a treat, this is our reference frame, and by matching the
+
+18:09.120 --> 18:15.220
+black line and the blue line, we are basically moving the blue one over here, and then if
+
+18:15.220 --> 18:20.440
+we know where the blue one is, we also know where Xi is in this reference frame of XJ.
+
+18:20.440 --> 18:27.000
+So by constructing this kind of virtual measurement through an alignment procedure such as ICP,
+
+18:27.000 --> 18:32.960
+or if you think about vision, this could be competing with relative orientation, for example
+
+18:32.960 --> 18:36.680
+you can use the five-point algorithm or the eight-point algorithm for image features,
+
+18:36.680 --> 18:41.580
+but we are restricting ourselves here for the simplicity to ICP, then we would get this
+
+18:41.580 --> 18:42.580
+type of alignment.
+
+18:42.580 --> 18:46.240
+So you see here the black and the blue lines are aligned on top of each other, and this
+
+18:46.240 --> 18:49.620
+allows us to relate the poses Xi and XJ with each other.
+
+18:49.620 --> 18:57.240
+And then this transformation from Xi to XJ can then be seen as a virtual measurement
+
+18:57.240 --> 19:01.960
+about the position XJ as it would be seen from Xi.
+
+19:01.960 --> 19:07.600
+So if Xi could see the robot at XJ, it would be the pose of the robot relative to its own
+
+19:07.600 --> 19:13.480
+pose, but as we can physically not see that, we do this through the relation of the environment.
+
+19:13.480 --> 19:16.440
+And again, this is a full transformation between those two poses.
+
+19:16.440 --> 19:22.240
+So it's not just kind of a distance vector or something like this, it's a full transformation
+
+19:22.240 --> 19:29.440
+that we can transform the pose Xi to the pose XJ or the other way around.
+
+19:29.440 --> 19:32.400
+So how do we encode those transformations?
+
+19:32.400 --> 19:38.600
+We typically use things like homogeneous coordinates for doing this, or there are other ways in
+
+19:38.600 --> 19:42.280
+which you can do this, but at least for formulating it and writing it down in here, I will be
+
+19:42.280 --> 19:46.440
+using homogeneous coordinates because this is actually very easy to do.
+
+19:46.440 --> 19:54.080
+So just as a reminder, homogeneous coordinates allow you to express or to chain transformations
+
+19:54.080 --> 19:58.400
+like translations and rotation in a very elegant way.
+
+19:58.400 --> 20:01.760
+And then everything which is here written in capitalized characters, you should see
+
+20:01.760 --> 20:02.800
+as a transformation.
+
+20:02.800 --> 20:11.380
+So this is kind of the transformation basically of the pose Xi and seen as a translation and
+
+20:11.380 --> 20:14.840
+a rotation in a global reference frame.
+
+20:14.840 --> 20:16.720
+So this is a homogeneous matrix.
+
+20:16.720 --> 20:20.360
+This is also homogeneous matrix representing this pose Xi and XJ.
+
+20:20.360 --> 20:27.160
+And if I have those matrices, I can here invert the matrix Xi and multiply the matrix Xi plus
+
+20:27.160 --> 20:30.440
+one to it, then this is the relative transformation.
+
+20:30.440 --> 20:34.880
+Where is Xi plus one as seen from Xi?
+
+20:34.880 --> 20:46.960
+And the same holds here, Xi inverse XJ means the node, how the node I sees node J, so how
+
+20:46.960 --> 20:49.920
+J would be seen from node I.
+
+20:49.920 --> 20:54.800
+So just as a very short reminder in case you have forgotten about homogeneous coordinates,
+
+20:54.800 --> 21:00.360
+just a few words how what that is, homogeneous coordinates are a different coordinate system
+
+21:00.360 --> 21:04.320
+or coordinates which are typically used in projective geometry.
+
+21:04.320 --> 21:09.480
+It has some nice advantages of being able, for example, to express points which are infinitively
+
+21:09.480 --> 21:13.600
+far away in those things, but that's not kind of the reason why we are using it here in
+
+21:13.600 --> 21:14.600
+the lecture.
+
+21:14.600 --> 21:17.880
+We're using it here in the lecture because in this homogeneous coordinates, a single
+
+21:17.880 --> 21:23.640
+matrix can represent all fine or even projective transformations.
+
+21:23.960 --> 21:30.000
+That's attractive for us because we will be using here rotations and translations, so
+
+21:30.000 --> 21:35.320
+rigid body transformations, which are a subset of those two transformations, through matrices.
+
+21:35.320 --> 21:39.720
+And so that means we have a matrix that represents a translation and we have a matrix which represents
+
+21:39.720 --> 21:44.680
+a rotation, and we can just multiply those matrices in order to change the transformation
+
+21:44.680 --> 21:45.760
+after each other.
+
+21:45.760 --> 21:49.480
+And that makes it very elegant in order to write it down, and this is one of the advantages
+
+21:49.480 --> 21:53.720
+of homogeneous coordinates, that they typically simplify the mass, at least for us, when we
+
+21:53.720 --> 21:55.680
+need to write that down.
+
+21:55.680 --> 21:56.680
+So how does it work?
+
+21:56.680 --> 21:59.960
+I just have a short example, and if you need more information about this, I recommend you
+
+21:59.960 --> 22:02.800
+to watch my lecture on homogeneous coordinates.
+
+22:02.800 --> 22:06.440
+But just as a very short reminder, if you want to represent the n-dimensional space
+
+22:06.440 --> 22:11.160
+like the three-dimensional space for us, then homogeneous coordinates use one dimension
+
+22:11.160 --> 22:13.240
+more, so n plus one-dimensional space.
+
+22:13.240 --> 22:17.280
+So for us, it would be four dimensions for modeling the three-dimensional space.
+
+22:17.280 --> 22:21.400
+And the vector in homogeneous coordinates, let's say x, y, that, is extended by a new
+
+22:21.400 --> 22:26.560
+dimension x, y, that, and the next dimension, which is one in this example.
+
+22:26.560 --> 22:31.000
+There's a mapping from the Euclidean space to homogeneous coordinates.
+
+22:31.000 --> 22:36.840
+There's also backward mapping, which we say we have the four coordinates, x, y, z, w in
+
+22:36.840 --> 22:42.320
+this example, and then we take the last dimension and divide all other dimensions by that last
+
+22:42.320 --> 22:44.000
+dimension and then drop the last one.
+
+22:44.000 --> 22:48.160
+So we go from a four-dimensional vector to a three-dimensional vector, dividing all the
+
+22:48.160 --> 22:49.760
+elements by w.
+
+22:49.760 --> 22:53.160
+And so it's kind of a form of normalization.
+
+22:53.160 --> 22:58.720
+And if we do this, this forward-backward mapping, then we can actually express translations
+
+22:58.720 --> 23:00.440
+in a rotation-elegant way.
+
+23:00.440 --> 23:06.040
+So a translation can then be expressed in a four-dimensional matrix, which has ones
+
+23:06.040 --> 23:07.040
+on the main diagonal.
+
+23:07.040 --> 23:11.400
+Here, everything is zero, and those three dimensions are the translation x, translation
+
+23:11.400 --> 23:13.440
+y, and translation z.
+
+23:13.440 --> 23:17.600
+And the rotation can be expressed by a 3D rotation matrix, the standard rotation matrix
+
+23:17.600 --> 23:21.200
+as you know them, here in this upper three-by-three block.
+
+23:21.200 --> 23:27.200
+And so this is a zero vector, and this is also a zero vector and a one.
+
+23:27.200 --> 23:33.560
+And so by having this rotation matrix in homogeneous coordinates and this translation in homogeneous
+
+23:33.560 --> 23:38.080
+coordinates, we now can multiply this translation matrix and the rotation matrix with each other
+
+23:38.080 --> 23:42.280
+and then have a translation and rotation expressed in one single matrix.
+
+23:42.280 --> 23:48.600
+That's something you cannot do in the Euclidean space, but it's very, very elegant for writing
+
+23:48.600 --> 23:50.760
+this down and chaining those transformations.
+
+23:50.760 --> 23:57.600
+So if you go back, for example, something like this to express this in Euclidean coordinates
+
+23:57.600 --> 23:59.760
+is much more difficult.
+
+23:59.760 --> 24:01.380
+And here, it's very easy to see.
+
+24:01.380 --> 24:08.200
+You take the poles of the transformation, which encodes xi, and you basically invert
+
+24:08.200 --> 24:09.200
+it.
+
+24:09.200 --> 24:13.240
+So by inverting this four-by-four matrix, you're actually inverting the transformation
+
+24:13.240 --> 24:18.440
+and multiplying to that from the right-hand side xj, so what you can see then that this
+
+24:18.440 --> 24:24.640
+is actually the node xi as it would be seen from the node xj.
+
+24:24.640 --> 24:27.060
+So that's what we are using here.
+
+24:27.060 --> 24:34.000
+In addition to this, our constraints are affected by noise because we have observations.
+
+24:34.000 --> 24:39.400
+So for example, odometry is typically less accurate than using your sensor's information
+
+24:39.400 --> 24:43.360
+if you think about a laser scanner, for example.
+
+24:43.360 --> 24:46.080
+But even your laser scanner data is affected by noise.
+
+24:46.080 --> 24:50.120
+And so the transformation that you're actually computing are not perfect.
+
+24:50.120 --> 24:56.180
+And the information matrix omega ij is the information matrix related to the constraint
+
+24:56.180 --> 25:01.040
+between the node i and the node j and encodes the uncertainty that stems from the observation.
+
+25:01.080 --> 25:04.120
+So how much do we trust that information?
+
+25:04.120 --> 25:09.880
+And we may have a sensor where this is the same for all constraints, but we may have
+
+25:09.880 --> 25:14.160
+different types of sensors or different situations in which the sensor is more accurate in a
+
+25:14.160 --> 25:18.280
+certain setup and less accurate in another setup, and we can actually use this information.
+
+25:18.280 --> 25:21.900
+So the higher the value, the larger the values in this information matrix, the more information
+
+25:21.900 --> 25:24.320
+we have, the smaller the uncertainty.
+
+25:24.320 --> 25:30.200
+And the bigger it is, this omega or the values inside omega, the more this edge matters in
+
+25:30.240 --> 25:31.240
+the optimization.
+
+25:31.240 --> 25:35.760
+So if you remember back the least squares, how it worked, then this information matrix
+
+25:35.760 --> 25:39.000
+is basically a weighting factor for your error.
+
+25:39.000 --> 25:44.640
+So if you have a constraint which has an information matrix which is larger, which has a value
+
+25:44.640 --> 25:52.840
+which is twice as large, it will count more twice as much inside the optimization.
+
+25:52.840 --> 25:59.040
+So this edge information is actually important in order to take the uncertainty into account.
+
+25:59.040 --> 26:03.440
+So then the question is how would you expect this matrix to look like if you compare scan
+
+26:03.440 --> 26:06.920
+matching done with ICP to odometry information?
+
+26:06.920 --> 26:10.240
+So which is more accurate or less accurate?
+
+26:10.240 --> 26:14.400
+That's one relevant information you should be able to figure out.
+
+26:14.400 --> 26:17.960
+The other thing which would be relevant if you think about ICP and you make this scan
+
+26:17.960 --> 26:21.960
+alignment and you have a robot which drives along a very, very long corridor, and this
+
+26:21.960 --> 26:25.020
+corridor is, let's say, very sparse of features.
+
+26:25.020 --> 26:27.680
+It's just long walls.
+
+26:27.680 --> 26:31.000
+How would this information matrix look like?
+
+26:31.000 --> 26:34.720
+And thinking about those questions allows you a little bit to understand if you can
+
+26:34.720 --> 26:39.400
+relate your observations and the information you can extract from your observations with
+
+26:39.400 --> 26:42.200
+this graph construction here.
+
+26:42.200 --> 26:48.240
+So in the first setup, related to the first question, your sensor information, at least
+
+26:48.240 --> 26:52.840
+from a laser range scanner, is typically better than the odometry information that you have.
+
+26:52.840 --> 26:57.160
+Again, it depends how much engineering you put into your odometry information or your
+
+26:57.160 --> 27:00.600
+laser scan information and what you know about the environment, but at least for a
+
+27:00.600 --> 27:04.520
+lot of, let's say, standard indoor mapping systems, you would actually trust your laser
+
+27:04.520 --> 27:09.640
+scanner quite a bit more, so you expect the covariance matrices to be smaller.
+
+27:09.640 --> 27:13.800
+That means the values in the information matrices to be bigger.
+
+27:13.800 --> 27:18.260
+This may be different if you have a less accurate scanner or you have a lot of motion or movement
+
+27:18.260 --> 27:22.440
+dynamics in the environment, but put a lot of engineering into getting your odometry
+
+27:22.440 --> 27:24.160
+information right.
+
+27:24.160 --> 27:27.840
+Similarly, having redundant systems, taking multiple vehicles into account, a very good
+
+27:27.840 --> 27:32.480
+dynamics model, for example, in case of an autonomous vehicle, autonomous car, you can
+
+27:32.480 --> 27:39.400
+invest quite some brainpower into your odometry system that you can trust odometry also more.
+
+27:39.400 --> 27:43.720
+Regarding the second question, how would this information matrix look like or the corresponding
+
+27:43.720 --> 27:47.080
+covariance matrix look like in a long featureless corridor?
+
+27:47.080 --> 27:48.080
+So what does it mean?
+
+27:48.080 --> 27:51.700
+A long featureless corridor means the robot can localize very precisely with respect to
+
+27:51.700 --> 27:55.380
+its right and left-hand side because you see the walls of the corridor.
+
+27:55.380 --> 27:58.500
+So you have a very small uncertainty with respect to your motion to the right and left-hand
+
+27:58.500 --> 27:59.500
+side.
+
+27:59.500 --> 28:03.580
+Or with respect to your orientation, given that you have very long walls, you can typically
+
+28:03.580 --> 28:06.900
+align the scan very good with respect to a corridor.
+
+28:06.900 --> 28:09.940
+So you shouldn't get much drift to the left and right-hand side.
+
+28:09.940 --> 28:13.380
+But what actually is hard to estimate is where you're moving along that corridor.
+
+28:13.380 --> 28:17.460
+So you have a very high uncertainty along the main axis of the corridor.
+
+28:17.460 --> 28:23.420
+So you would expect to get a covariance matrix, which is very narrow to your right-hand side,
+
+28:23.420 --> 28:26.940
+but very long and stretched along the main axis of your corridor.
+
+28:26.940 --> 28:34.540
+And so if you inspect your covariance matrices of your graph, you can actually see something
+
+28:34.540 --> 28:38.700
+about what information did the sensor actually tell you.
+
+28:38.700 --> 28:43.700
+And this then is an important information how the uncertainty actually propagates in
+
+28:43.700 --> 28:46.280
+the end through your graph through a least squares problem.
+
+28:46.280 --> 28:50.160
+Because if you have very large uncertainties along certain dimensions, this will also lead
+
+28:50.160 --> 28:53.560
+to a large uncertainty along this line.
+
+28:53.560 --> 28:56.920
+Okay, so let's have a look to the postgraph and look to all the information that we have.
+
+28:56.920 --> 28:59.680
+So what we see here is a very, very tiny postgraph.
+
+28:59.680 --> 29:04.000
+We just have kind of two nodes over here, xi and xj.
+
+29:04.000 --> 29:07.680
+So you can see this basically is cutting away everything else.
+
+29:07.680 --> 29:11.640
+And what we have is we have a current configuration of the nodes.
+
+29:11.640 --> 29:17.000
+And this is those two positions here, just let's say in the 2D plane, just to make it
+
+29:17.000 --> 29:18.760
+easy to illustrate that here.
+
+29:18.760 --> 29:23.400
+So this is, we think, this node sits over here and that node sits over there.
+
+29:23.400 --> 29:26.420
+And there's a current configuration of the graph.
+
+29:26.420 --> 29:31.080
+Now we have a constraint between those two because there's a common observation, for
+
+29:31.080 --> 29:33.040
+example, from ICP.
+
+29:33.040 --> 29:37.640
+And let's say this is what the observation looks like with the corresponding uncertainty
+
+29:37.640 --> 29:40.680
+here illustrated through a covariance matrix.
+
+29:40.680 --> 29:48.280
+So this is basically, this is the position where if I would sit in xi, would expect xj
+
+29:48.280 --> 29:49.280
+to be.
+
+29:49.280 --> 29:53.140
+And you can see here that there's actually a mismatch between what the observation tells
+
+29:53.140 --> 29:56.760
+me and what the current graph configuration tells me.
+
+29:56.760 --> 30:02.000
+So this is an error that we are computing, and this is the error that we actually want
+
+30:02.000 --> 30:04.100
+to minimize, okay?
+
+30:04.100 --> 30:10.860
+So this thing should be brought to zero over all constraints, of course.
+
+30:10.860 --> 30:17.160
+So and this edge here is basically represented by the kind of the mean observation here encoded
+
+30:17.160 --> 30:22.580
+as zij and an information matrix, which is here illustrated through the inverse of it,
+
+30:22.580 --> 30:25.060
+through the covariance matrix.
+
+30:25.060 --> 30:28.060
+And so this is the information we store in every graph.
+
+30:28.060 --> 30:32.960
+So every observation will lead to such an edge.
+
+30:32.960 --> 30:36.560
+And what we're actually trying to minimize, we want to shift the configuration of those
+
+30:36.560 --> 30:39.200
+nodes in order to minimize this error.
+
+30:39.200 --> 30:45.280
+So in this case, it means xj should actually move here in order to bring this error towards
+
+30:45.280 --> 30:46.280
+zero.
+
+30:46.280 --> 30:49.920
+And of course, the problem is it's not just one edge which is involved in this, otherwise
+
+30:49.920 --> 30:52.840
+it would be easy to satisfy this constraint.
+
+30:52.840 --> 30:57.160
+We have the goal of doing this for all our constraints.
+
+30:57.160 --> 31:00.920
+So this was just kind of one example, but of course, the whole graph consists of those
+
+31:00.920 --> 31:01.960
+constraints.
+
+31:01.960 --> 31:06.840
+And what we want to do is we want to minimize the overall sum of that.
+
+31:06.840 --> 31:10.760
+And this is where the least squares approach or the ideas of least squares actually kick
+
+31:10.760 --> 31:11.760
+in.
+
+31:11.760 --> 31:17.600
+So we can go back to our previous lecture and think, okay, this is now our squared error
+
+31:17.600 --> 31:18.600
+function.
+
+31:18.600 --> 31:24.880
+We have our error vector relating the constraint i and j with each other, the information matrix
+
+31:24.880 --> 31:30.560
+and again, the error term, or we can kind of rewritten this in a short version where
+
+31:30.560 --> 31:34.280
+we just put the vector x in here, the whole state vector.
+
+31:34.280 --> 31:37.520
+So this was the way we were formulating this before in the previous lecture where we say
+
+31:37.520 --> 31:42.180
+the error or the error vector here depends on the state variable x.
+
+31:42.180 --> 31:45.880
+What is important now or the difference here in the SLAM problem, we can formulate it in
+
+31:45.880 --> 31:50.960
+that way that we say not the whole vector x depends actually on this error term, but
+
+31:50.960 --> 31:53.200
+only xi and xj.
+
+31:53.200 --> 31:59.400
+That means only the node xi and node xj, so those two contribute to this individual error
+
+31:59.400 --> 32:00.400
+term.
+
+32:00.440 --> 32:04.520
+All the other state variables do not matter for that single constraint.
+
+32:04.520 --> 32:07.760
+And this is something, an information that we will later on exploit in order to solve
+
+32:07.760 --> 32:13.680
+the SLAM problem in a very efficient way or in an efficient way because we know that the
+
+32:13.680 --> 32:17.040
+individual error terms only depend on a very small number of variables.
+
+32:17.040 --> 32:20.600
+And that's something that we will exploit later on.
+
+32:20.600 --> 32:24.280
+The first question we may look like, what does the state vector actually look like?
+
+32:24.280 --> 32:27.040
+So you now want to sit down and actually implement our system.
+
+32:27.040 --> 32:30.400
+How should that actually look like?
+
+32:30.400 --> 32:39.120
+And what we need is our state vector x is simply the concatenation of the poses of the
+
+32:39.120 --> 32:40.120
+graph.
+
+32:40.120 --> 32:47.220
+So every vector, so one vector for every node of the graph, and we just kind of concatenate
+
+32:47.220 --> 32:48.220
+them with each other.
+
+32:48.220 --> 32:50.560
+So it gets a very, very, very long vector.
+
+32:50.560 --> 32:56.120
+And it's always kind of x, y, theta, x, y, theta, x, y, theta, it's always the x of the
+
+32:56.120 --> 33:00.840
+first node, the y of the first node, the orientation that the robot had when being there, and then
+
+33:00.840 --> 33:03.920
+for the second node, x, y, theta, x, y, theta.
+
+33:03.920 --> 33:08.040
+Or if you're doing a three-dimensional work, x, y, that, your pitch roll, for example,
+
+33:08.040 --> 33:13.600
+or another representation on how we could represent the six-dimension degree of freedom
+
+33:13.600 --> 33:14.600
+poses.
+
+33:14.600 --> 33:16.000
+Okay, so we have that.
+
+33:16.000 --> 33:17.360
+We know what the state vector looks like.
+
+33:17.360 --> 33:20.380
+So next thing is let's look into the error function.
+
+33:20.380 --> 33:22.720
+How do we relate those error functions with each other?
+
+33:22.720 --> 33:28.360
+We said, yes, of course, those, the individual poses x, i, and x, j should pop up, and also
+
+33:28.360 --> 33:31.200
+the observation should be taken into account.
+
+33:31.200 --> 33:36.200
+So the result of the ICP approach should play a role in here.
+
+33:36.200 --> 33:39.640
+And we can formulate a single constraint now in the following way.
+
+33:39.640 --> 33:41.220
+So what do we see here?
+
+33:41.220 --> 33:45.040
+So let's just look only first to this part over here.
+
+33:45.040 --> 33:46.200
+So the first thing.
+
+33:46.200 --> 33:48.440
+So at x, i inverse x, j.
+
+33:48.440 --> 33:56.740
+So this is kind of how x, i sees x, j, or how x, j is seen if I would, if the center
+
+33:56.740 --> 33:58.960
+of the coordinate system would be in x, i.
+
+33:58.960 --> 34:04.120
+So you can think of seeing yourself standing in x, i, and then see where x, j actually
+
+34:04.120 --> 34:05.120
+looks like.
+
+34:05.120 --> 34:09.240
+So this is what this information provides, and it's directly very easily computed through
+
+34:09.240 --> 34:11.300
+the homogeneous coordinates.
+
+34:11.300 --> 34:12.800
+And then we have an observation.
+
+34:12.800 --> 34:17.280
+This observation z tells me how x, i sees x, j.
+
+34:17.280 --> 34:19.460
+This is a result of the ICP algorithm.
+
+34:19.460 --> 34:24.160
+So the transformation that results from ICP, so the rotation matrix and translation vector.
+
+34:24.160 --> 34:25.160
+This is this z.
+
+34:25.160 --> 34:31.760
+And then I invert this z and multiply it here from the, to the configuration of the graph.
+
+34:31.760 --> 34:38.240
+So the whole block here, you can see where is, what's the difference between the poses
+
+34:38.240 --> 34:42.420
+with respect to the graph, and what's the difference of the poses with respect to the
+
+34:42.420 --> 34:43.420
+measurement.
+
+34:43.420 --> 34:48.380
+And so one is kind of, you can see this as kind of a forward transformation on what the
+
+34:48.380 --> 34:53.080
+graph tells me, and then a backward transformation on what the observation tells me.
+
+34:53.080 --> 34:56.440
+And then I need to look into the difference between where I started and where I end up,
+
+34:56.440 --> 34:59.180
+and this is basically my error function.
+
+34:59.180 --> 35:02.400
+So that's what actually happens in this part over here.
+
+35:02.400 --> 35:06.960
+So the relative transformation according to the graph in one direction, and then the inverse
+
+35:06.960 --> 35:11.860
+of the observation, so turning this around and going back in order to compute the difference
+
+35:11.860 --> 35:12.860
+between them.
+
+35:12.860 --> 35:17.500
+And then there's a function called t to v over here, a magic function.
+
+35:17.500 --> 35:22.500
+T to v means transformation to vector, and v to t means vector to transformation.
+
+35:22.500 --> 35:29.220
+So this is basically just a mapping between a vectorized representation vector, so x,
+
+35:29.220 --> 35:35.060
+y, theta for example, and the transformation expressed in homogeneous coordinates.
+
+35:35.060 --> 35:44.180
+So it's just kind of a forward-backward mapping from this three by three, or from this vector,
+
+35:44.180 --> 35:51.820
+three by three homogeneous matrix into a three-dimensional vector with x, y, theta.
+
+35:51.820 --> 35:57.580
+So that the transformation consisting of a two-dimensional translation vector and one
+
+35:57.580 --> 36:01.960
+rotation angle encoded in a three by three matrix is put into a vector.
+
+36:01.960 --> 36:07.120
+And because this here again is a transformation matrix, and we need to put it in vector form
+
+36:07.120 --> 36:11.720
+in order to put into our least squares problem, and that's what this t to v stands for.
+
+36:11.720 --> 36:16.920
+So this gives us here in this example, if we are doing this in the 2D plane, a three-dimensional
+
+36:16.920 --> 36:21.240
+vector with x, y, and one orientation constraint.
+
+36:21.240 --> 36:25.080
+Or we can express this also not just for a single constraint, but we could express the
+
+36:25.080 --> 36:29.160
+same also for the whole state vector.
+
+36:29.160 --> 36:36.520
+And then of course, only those components matter where there is actually an involvement.
+
+36:36.520 --> 36:40.760
+And to also be cleared, what happens, when is the error of zero?
+
+36:40.760 --> 36:42.840
+When does the error take a value of zero?
+
+36:42.840 --> 36:48.220
+And this is exactly the case if my observation is the same than my relative graph configuration.
+
+36:48.220 --> 36:53.120
+So if what the graph tells is exactly the same what my observation tells me, then this
+
+36:53.120 --> 36:59.200
+equation holds if I would multiply the, and then you can actually see that if I would
+
+36:59.200 --> 37:03.640
+multiply here z inverse from the left hand side, so the inverse observation, and this
+
+37:03.640 --> 37:06.560
+term is the same, then this is the identity matrix.
+
+37:06.560 --> 37:12.160
+So that means if the transformation of, going the transformation through the graph and backwards
+
+37:12.160 --> 37:16.040
+through the inverse of the observation gives me the identity matrix, means there is no
+
+37:16.040 --> 37:21.200
+transformation mismatch, and this would then give you the identity matrix would be mapped
+
+37:21.200 --> 37:23.800
+through this function to zero, zero, zero.
+
+37:23.800 --> 37:27.720
+So a zero error vector, okay?
+
+37:27.720 --> 37:33.460
+So the only thing we need to specify is how do we get z, and this is something that our
+
+37:33.460 --> 37:38.520
+ICP, that's the result of the ICP algorithm, just put into a homogeneous vector.
+
+37:38.520 --> 37:44.860
+And these are just the poses in my post graph expressed in homogeneous coordinates.
+
+37:44.860 --> 37:49.260
+And with this, we actually can look, okay, let's rebuild Gauss-Newton.
+
+37:49.260 --> 37:52.300
+How did the overall error minimization procedure look like?
+
+37:52.300 --> 37:54.900
+So the first thing we need to do, define the error function.
+
+37:54.900 --> 37:56.220
+That's something that we just did.
+
+37:56.220 --> 38:01.260
+What we then need to do, we need to linearize our error function, just because we need to
+
+38:01.260 --> 38:05.900
+perform local linearizations, and then this leads to the quadratic form where we compute
+
+38:05.900 --> 38:09.420
+the first derivative and set the first derivative to zero.
+
+38:09.420 --> 38:13.060
+This gives us a system of linear equations.
+
+38:13.060 --> 38:14.860
+We solve the system of linear equations.
+
+38:14.860 --> 38:19.940
+We get the update of our state, and then we iterate this process, restarting here the
+
+38:19.940 --> 38:25.880
+linearization until we have converged, as we discussed it in the lecture before.
+
+38:25.880 --> 38:32.240
+So just as a short reminder, this was our error function, the original error function,
+
+38:32.240 --> 38:34.660
+which we now need to linearize.
+
+38:34.660 --> 38:39.360
+And again, if you think about this homogeneous transformation matrices, you may remember
+
+38:39.360 --> 38:43.120
+in a rotation matrix, there are sine and cosine functions popping up.
+
+38:43.120 --> 38:44.460
+These are nonlinear functions.
+
+38:44.460 --> 38:47.300
+So you need to perform linearization and linearize that thing.
+
+38:47.300 --> 38:51.700
+That's where you need to sit down with a piece of paper and actually try to perform this
+
+38:51.700 --> 38:53.080
+linearization.
+
+38:53.080 --> 38:59.740
+Or if you use another error minimization framework, you may have some systems to compute this
+
+38:59.740 --> 39:04.180
+automatically or numerically for you, depending on how good your tools are, but otherwise
+
+39:04.180 --> 39:05.460
+you have to do it by hand.
+
+39:05.460 --> 39:08.220
+That means you need to compute a matrix.
+
+39:08.220 --> 39:12.420
+This is your Jacobian matrix, and every element of the Jacobian matrix consists of the partial
+
+39:12.420 --> 39:18.600
+derivatives of deriving your error function or the individual dimensions of your error
+
+39:18.600 --> 39:23.940
+functions with respect to the individual dimensions of your state vector.
+
+39:23.940 --> 39:30.660
+So you derive it in this case with respect to x1, x2, x3, and so on and so forth.
+
+39:30.660 --> 39:35.380
+And here, we have to look a little bit into the details because how that looks like actually
+
+39:35.380 --> 39:42.420
+has a very big impact on how efficiently we can actually solve the state estimation problem
+
+39:42.420 --> 39:43.420
+later on.
+
+39:43.420 --> 39:49.780
+So the first question we need to answer, does the error term depend on all state variables?
+
+39:49.780 --> 39:51.980
+So again, this is an error term eij.
+
+39:51.980 --> 39:55.660
+That means for one single observation.
+
+39:55.660 --> 40:00.720
+And does this depend on all state variables, on the whole state vector?
+
+40:00.720 --> 40:06.480
+It clearly depends on the state vector, but does it depend on all elements in there?
+
+40:06.480 --> 40:11.460
+And within the SLAM problem, this is not the case because we said that this error term
+
+40:11.460 --> 40:15.920
+only relates the two variables to which this edge is connected in our graph.
+
+40:15.920 --> 40:21.440
+So there are just two poses, namely the pose with index i and the pose with index j on
+
+40:21.440 --> 40:23.660
+which this actually depends on.
+
+40:23.660 --> 40:29.840
+So no, this depends only on xi and xj, and this will play an important role because this
+
+40:29.960 --> 40:37.360
+has an impact on the structure of the Jacobian that is involved in this.
+
+40:37.360 --> 40:43.220
+You may think about this if you have a function which depends only on a small subset of variables.
+
+40:43.220 --> 40:48.980
+If you then derive this function with respect to the variables, then it will have a lot
+
+40:48.980 --> 40:55.360
+of zero elements, namely if a function doesn't depend on one variable and you derive with
+
+40:55.360 --> 40:58.300
+respect to this variable, it will be zero.
+
+40:58.300 --> 41:04.580
+And this is the key insight because this leads to the fact that the Jacobian will actually
+
+41:04.580 --> 41:12.000
+be zero nearly everywhere except for the elements which are related to the variable xi and with
+
+41:12.000 --> 41:14.900
+respect to the variables xj.
+
+41:14.900 --> 41:22.420
+So if you think of, you have a whatever, 10,000 dimensional state vector, and you have a constraint
+
+41:22.420 --> 41:27.820
+just between two poses, then only those two poses will be related with each other.
+
+41:27.860 --> 41:32.980
+And the all other 10,000 minus six dimensions will actually be zero.
+
+41:32.980 --> 41:37.500
+So your Jacobian will be a large vector which consists only of zeros and just has a very
+
+41:37.500 --> 41:41.940
+small number of elements which are involved in here.
+
+41:41.940 --> 41:48.540
+So the partial derivative in this Jacobian of the arrow function with respect to all
+
+41:48.540 --> 41:56.300
+the parameters is basically you have here all your arrow vectors and your state variables
+
+41:56.300 --> 42:01.940
+will be zero everywhere except of those blocks which are related to xi and those which are
+
+42:01.940 --> 42:02.940
+related to xj.
+
+42:02.940 --> 42:08.460
+So in this case, for example, if xi is in 2D plane, it's x, y, and theta, there will
+
+42:08.460 --> 42:13.380
+be three elements here which are non-zero, three elements which are here that are non-zero,
+
+42:13.380 --> 42:15.640
+and the rest will be completely zero.
+
+42:15.640 --> 42:22.340
+So we just have two blocks of variables here, we call them aij, bij, which are non-zero,
+
+42:22.340 --> 42:25.020
+and all the rest is zero.
+
+42:25.060 --> 42:29.100
+So this is kind of a key insight because this leads to a sparse Jacobian which will also
+
+42:29.100 --> 42:34.220
+have a big effect on our H matrix later on.
+
+42:34.220 --> 42:38.020
+So Jacobian and sparsity.
+
+42:38.020 --> 42:43.980
+If our arrow function depends only on the variables xi and xj, that means all other
+
+42:43.980 --> 42:50.780
+elements, which are x1, x2, x3, x4, x5, and so on, which are not i and j, are zero.
+
+42:50.780 --> 42:53.480
+And these are illustrated by these blue blocks over here.
+
+42:53.480 --> 42:57.920
+So these are all the blocks which are zero, and we just have these small blocks which
+
+42:57.920 --> 43:00.120
+are non-zero.
+
+43:00.120 --> 43:06.040
+And this is kind of a key insight in here, that we have this huge Jacobian, everything
+
+43:06.040 --> 43:10.720
+is zero in this Jacobian except those two blocks, and this is the key insight.
+
+43:10.720 --> 43:15.640
+So it's one of the most important slides in this slide set, having this insight, because
+
+43:15.640 --> 43:23.200
+this allows you to solve, let's say, real-world SLAM problems in an efficient manner.
+
+43:23.200 --> 43:24.200
+Why is this the case?
+
+43:24.200 --> 43:26.120
+Why is this so important?
+
+43:26.120 --> 43:32.080
+This can be illustrated by the fact that the Jacobian has a key role for computing the
+
+43:32.080 --> 43:40.580
+elements b and h, which I need to compute in order to solve my system of linear equations.
+
+43:40.580 --> 43:46.940
+So my vector b and my matrix h consists of elements which involve the Jacobian.
+
+43:46.940 --> 43:51.680
+So for the H matrix, very clearly you can see the Jacobian popping up twice here, and
+
+43:51.680 --> 43:55.660
+also for the B matrix, you see the Jacobian being over here.
+
+43:55.660 --> 44:01.720
+So as you will see, the sparse matrix in the Jacobian will also lead to a sparse matrix
+
+44:01.720 --> 44:08.640
+H, and this is one of the key reasons why we can actually solve them in an efficient
+
+44:08.640 --> 44:09.640
+manner.
+
+44:09.640 --> 44:13.760
+And I want to illustrate that now to you through a small illustration.
+
+44:13.760 --> 44:17.000
+So what you have here is this vector b.
+
+44:17.000 --> 44:25.420
+So the vector b is a vector, and whatever thing which is shown in blue are zero elements,
+
+44:25.420 --> 44:28.180
+everything which is shown in red are non-zero elements.
+
+44:28.180 --> 44:35.280
+So I have this vector here, so the vector b is this vector, and it consists of my Jacobian
+
+44:35.280 --> 44:40.940
+transposed, so now it's a very long, so these are the dimensions of my state vector.
+
+44:40.940 --> 44:46.860
+This is my J, multiplied with an information matrix, in this case, for example, a three-by-three
+
+44:46.860 --> 44:51.700
+information matrix, and then my three-dimensional error vector.
+
+44:51.700 --> 44:57.180
+And this will lead, by multiplying this, to an error vector, which is zero everywhere
+
+44:57.180 --> 45:03.040
+and has only non-zero elements at the blocks referring to xi and the blocks xj.
+
+45:03.040 --> 45:10.520
+So for one constraint, this vector b is actually sparse.
+
+45:10.520 --> 45:12.720
+And there are similar holds for my H matrix.
+
+45:12.720 --> 45:18.200
+So in my H matrix, I see my Jacobian transposed here, my other Jacobian here, my information
+
+45:18.200 --> 45:23.440
+matrix, and I can see, by multiplying those with each other, I will get a big matrix which
+
+45:23.440 --> 45:26.320
+is basically zero everywhere, except of four blocks.
+
+45:26.320 --> 45:30.780
+And these are the blocks ii, jj, ij, ji.
+
+45:30.780 --> 45:38.240
+So these are the elements, so those are identical, and those three are different, so just those
+
+45:38.240 --> 45:40.280
+two are identical.
+
+45:40.280 --> 45:42.680
+And these are all the non-zero blocks.
+
+45:42.680 --> 45:43.680
+Okay?
+
+45:43.680 --> 45:44.680
+And this is for one constraint.
+
+45:44.680 --> 45:50.160
+So one constraint filled with H matrix at four different blocks, and the b vector at
+
+45:50.160 --> 45:52.640
+two different blocks.
+
+45:52.640 --> 46:00.120
+So only at ii, jj, ij, ji, this matrix will be filled.
+
+46:00.120 --> 46:02.720
+But this is for one single constraint.
+
+46:02.720 --> 46:07.760
+And now we need to see what happens if we actually sum those elements up, so sum H up
+
+46:07.760 --> 46:11.360
+and sum b up over all constraints that we have.
+
+46:11.360 --> 46:18.800
+So if you take multiple of those vectors together, we will actually see that we get a fully dense
+
+46:18.800 --> 46:19.800
+vector b.
+
+46:19.800 --> 46:24.120
+So all elements of b will be filled, because all the nodes will have some constraints,
+
+46:24.120 --> 46:26.740
+and so the whole vector will actually fill up.
+
+46:26.740 --> 46:28.780
+It's however different for my H matrix.
+
+46:28.780 --> 46:33.120
+So again, I have n squared elements in here, and always four for every constraint will
+
+46:33.120 --> 46:34.180
+be filled.
+
+46:34.180 --> 46:37.720
+So by adding all of them up, I will typically get a matrix which looks like this.
+
+46:37.720 --> 46:43.340
+So I have direct constraints here on the diagonal, which are the constraints, and also the direct
+
+46:43.340 --> 46:47.820
+off-diagonal blocks, because it relates how the current pose and next pose are connected
+
+46:47.820 --> 46:49.780
+with each other.
+
+46:49.780 --> 46:54.380
+And I have a couple of elements in the off-diagonal elements, which are basically my loop-closer
+
+46:54.380 --> 46:55.380
+constraints.
+
+46:55.380 --> 47:01.540
+So where a node xi is connected to a node xj, which are not sequential.
+
+47:01.860 --> 47:06.560
+So this matrix can be seen as kind of an adjacency matrix of that graph, which tells you what
+
+47:06.560 --> 47:09.140
+the connections in your graph actually are.
+
+47:09.140 --> 47:12.420
+And the key thing is, this matrix is typically not dense.
+
+47:12.420 --> 47:16.540
+It's typically a very sparse matrix, typically the larger the environment even the sparse
+
+47:16.540 --> 47:18.020
+of this matrix gets.
+
+47:18.020 --> 47:22.860
+It's quite clear from the intuition point of view, if you have for example a robot navigating
+
+47:22.860 --> 47:27.400
+around, inspecting a big environment with hundreds of different rooms, inside the room
+
+47:27.400 --> 47:30.820
+you only see the room, you never see another room from inside that room.
+
+47:30.820 --> 47:33.880
+Only from the corridor you can see into a few rooms.
+
+47:33.880 --> 47:38.900
+And so all the blocks, the places in the environment are very decoupled and can only be seen from
+
+47:38.900 --> 47:43.380
+the same places and not from all places, can't see all other places.
+
+47:43.380 --> 47:47.840
+And therefore, this leads to a very sparse matrix.
+
+47:47.840 --> 47:53.260
+And this is one of the reasons that this matrix is sparse, why we can actually solve an even
+
+47:53.260 --> 47:59.140
+potentially very, very large linear system in the end in an efficient way.
+
+47:59.140 --> 48:07.980
+So the key thing in here is that each edge corresponds to this linear system and for
+
+48:07.980 --> 48:14.860
+the vector b it looks like this, that we have two blocks which are non-zero, but by adding
+
+48:14.860 --> 48:21.100
+all of them up in the end this will lead to a dense vector, but we need to build it up
+
+48:21.100 --> 48:27.540
+by for every constraint adding in two places on two blocks of this vector new elements.
+
+48:27.580 --> 48:33.180
+And for the H matrix, it's the same thing, I have this H matrix, everything is zero,
+
+48:33.180 --> 48:40.620
+they are just four blocks which I need to fill in this matrix xi, in this matrix at
+
+48:40.620 --> 48:46.160
+the positions i, i, jj, ij and ji.
+
+48:46.160 --> 48:50.380
+And so this matrix H will be a sparse matrix.
+
+48:50.380 --> 48:55.220
+So it makes sense to also represent it as a sparse matrix and depending how you do this
+
+48:55.220 --> 48:59.700
+you can either use a mathematical toolbox which already provides you with sparse matrices
+
+48:59.700 --> 49:03.300
+and then you don't really need to care about it or you have to implement it yourself and
+
+49:03.300 --> 49:07.540
+then you need to make sure that you fill the corresponding elements in this block.
+
+49:07.540 --> 49:14.420
+So again the key thing is an edge ij contributes only to the i-th and the j-th block of b and
+
+49:14.420 --> 49:20.620
+the blocks ii, jj, ij, ji of H which leads to an overall sparse system and we can then
+
+49:20.620 --> 49:23.100
+use actually sparse solvers to do this.
+
+49:23.100 --> 49:27.440
+So there's a variant of Cholesky decomposition called sparse Cholesky decomposition which
+
+49:27.440 --> 49:32.400
+is explicitly designed for sparse matrices and is much, much faster than the standard
+
+49:32.400 --> 49:35.100
+Cholesky decomposition and also holds for other techniques.
+
+49:35.100 --> 49:40.340
+There are optimizations of most of the algorithms for sparse matrices because a number of operations
+
+49:40.340 --> 49:45.380
+which need to be done is much smaller and can be done in a much more efficient way and
+
+49:45.380 --> 49:49.700
+this is kind of the reason why we are all able to solve this system in a reasonable
+
+49:49.700 --> 49:51.780
+amount of time.
+
+49:51.780 --> 49:58.340
+So you can also, if you want to build up these matrices on your own, again you have your
+
+49:58.340 --> 50:02.260
+state vectors of your increments, you have your coefficient vectors of your b's and
+
+50:02.260 --> 50:07.400
+then your normal equation matrix will consist of these small blocks and now we have kind
+
+50:07.400 --> 50:13.540
+of this ha bar over here to represent the individual blocks of that system which is
+
+50:13.540 --> 50:18.860
+built up and then you just need to make sure you fill for every constraint the right blocks
+
+50:18.860 --> 50:20.420
+of your linear system.
+
+50:20.420 --> 50:26.200
+So what you will do if you build your linear system manually by hand, for each constraint
+
+50:26.200 --> 50:31.060
+you compute this error vector, for each constraint you compute the Jacobian but of course you
+
+50:31.060 --> 50:34.620
+don't compute the Jacobian everywhere, only in the blocks where you know it is non-zero
+
+50:34.620 --> 50:38.980
+so you only need to compute this aij and bij, the rest you don't have to touch because you
+
+50:38.980 --> 50:48.100
+know it is zero anyhow and then you compute your vector b, the increments and add them
+
+50:48.100 --> 50:52.760
+up at the corresponding correct locations bi and bj, so these are the corresponding
+
+50:52.760 --> 50:59.940
+blocks in bi and bj where you need to add these small blocks on top of it and the same
+
+50:59.940 --> 51:02.140
+holds for your normal equations.
+
+51:02.140 --> 51:07.780
+So only compute those small blocks, so these are all low dimensional blocks, these small
+
+51:07.780 --> 51:16.000
+ii, jj, ijji blocks and you just need to add those small blocks to your matrix.
+
+51:16.000 --> 51:21.200
+So that means this is not an addition of a whole large matrix, it's just these small
+
+51:21.200 --> 51:24.220
+blocks that you need to add at the correct locations.
+
+51:24.220 --> 51:28.080
+So if you do this, if you build up the system on your own, you need to make sure you add
+
+51:28.080 --> 51:31.440
+the constraints at the correct positions in your matrix.
+
+51:31.440 --> 51:35.560
+But once you have that, you have your matrix actually built up and then you can run your
+
+51:35.560 --> 51:39.560
+optimize function which then turns out to be very easy to say.
+
+51:39.560 --> 51:44.820
+While you're not converged and the convergence can be whatever the size of your update, you
+
+51:44.820 --> 51:49.540
+build your linear system, your matrix a and your matrix b exactly with what we have written
+
+51:49.540 --> 51:56.340
+on the previous slide and then you run your sparse solver which should solve h times delta
+
+51:56.340 --> 52:01.720
+x equals minus b and this you can use Cholesky decomposition as we have briefly sketched
+
+52:01.720 --> 52:06.340
+last time but now you would use sparse variant of Cholesky decomposition but that's something
+
+52:06.340 --> 52:10.560
+that happens to be very transparent to you if you use the corresponding sparse matrix
+
+52:10.560 --> 52:16.300
+classes in your mathematical toolbox and then you can say my new configuration is my
+
+52:16.300 --> 52:22.160
+old configuration plus my delta x so my update from the previous initial guess and then I'm
+
+52:22.160 --> 52:29.120
+repeating this process while I'm converged just building the linear system, solving it,
+
+52:29.120 --> 52:34.200
+updating the state vector, iterating until I'm done and then I come up with a new configuration
+
+52:34.200 --> 52:41.640
+x which is now the new configuration of my graph which minimize the sum of the squared
+
+52:41.640 --> 52:46.920
+errors of all constraints and this is then the result that you can use in order to build
+
+52:46.920 --> 52:51.840
+the map of your environment. Just take the poses as they are, what is the best estimate you have
+
+52:51.840 --> 52:56.400
+and then basically you run a mapping procedure based on those poses and build a map of the
+
+52:56.400 --> 53:02.080
+environment. That's what's typically done so you correct the poses first and then use the poses for
+
+53:02.120 --> 53:10.320
+your mapping algorithm which is not a SLAM algorithm anymore and then you're done. Okay,
+
+53:10.320 --> 53:13.960
+at that point in time I want to show you a very trivial example. Typically I do that on the white
+
+53:13.960 --> 53:20.080
+board but given that I don't have a white board here it is I just want to go through it anyhow
+
+53:20.080 --> 53:25.040
+because you see a few things you may have not taken to account before. So this is a very very
+
+53:25.040 --> 53:30.840
+trivial example that just consists of two nodes in a one-dimensional world so there's nothing that
+
+53:30.840 --> 53:37.640
+can go wrong you would think of. So you see it we have a node xi and xj and we assume that there's
+
+53:37.640 --> 53:45.280
+one observation about them saying x2 is a meter away from xi. Okay, so we have our state vector
+
+53:45.280 --> 53:52.280
+consisting of x1 and x2 just have two constraints. We initialize them both with 0, 0. Let's say this
+
+53:52.280 --> 53:56.760
+is our initial guess we assume we don't know anything about them we both put them into 0.
+
+53:56.760 --> 54:06.120
+Okay, z1,2 is exactly our observation and the observation says the node 2 should be one meter
+
+54:06.120 --> 54:15.960
+away from the node 1. So this is this z1 to our actual observation how far 2 is away from 1. Then
+
+54:15.960 --> 54:21.440
+we have an information matrix over here which tells us how certain we are about that and then
+
+54:21.440 --> 54:27.840
+we can use this to compute our error. So our error function is our actual observation in this case
+
+54:27.840 --> 54:34.560
+minus our predicted observation. So our predicted observation is simply the distance between the
+
+54:34.560 --> 54:42.680
+two nodes x2 minus x1. In this case initially this is 0 so we have our observation is 1 minus
+
+54:42.680 --> 54:48.840
+0 minus 0 because we initialize them in exactly the same way which gives me an error of 1. So my
+
+54:48.840 --> 54:56.400
+error e12 is 1. Then I need to compute my Jacobian so I need to derive the corresponding error
+
+54:56.400 --> 55:01.840
+function with respect to both variables and then of this error function and of course I get a
+
+55:01.840 --> 55:07.840
+linear term with respect to x1 and x2 because if I need to I need to derive this equation here with
+
+55:07.840 --> 55:14.280
+respect to x1 and x2 this will give me the values for x1 which is positive of course I have two
+
+55:14.280 --> 55:20.360
+negative signs over here which get turned out to be positive and will be minus 1 with the
+
+55:20.360 --> 55:26.680
+derivative with respect to x2 because this is a negative x2 term derived with respect to x2
+
+55:26.680 --> 55:34.920
+leaves minus 1. Okay then I have my Jacobian and then I can compute my b vector so my b vector is
+
+55:34.920 --> 55:41.640
+my error vector times my information matrix times my Jacobian so it will be a vector 2 and minus 2.
+
+55:42.520 --> 55:50.040
+And I can build up my H matrix which is J transpose times omega times J which will give
+
+55:50.040 --> 55:57.000
+me a matrix which looks like this and contains of minus 1s and 1s. Okay now I have my H and I have
+
+55:57.000 --> 56:03.240
+my b now I can solve my system of linear equations so it means I need to in this simple example let's
+
+56:03.320 --> 56:12.120
+say invert the matrix H and then add and multiply it with x and then I should get my update.
+
+56:13.080 --> 56:18.600
+But now it turns out that I have a problem you know to invert the matrix it only works if the
+
+56:18.600 --> 56:24.920
+matrix has a determinant which is non-zero right so but if I look to the determinant
+
+56:25.800 --> 56:32.520
+its determinant here can be easily computed 2 by 2 is 4 minus minus 2 by minus 2 this is also 4 so
+
+56:32.520 --> 56:44.200
+it's 4 minus 4 is 0 so as a result of this this matrix has a rank deficiency and actually can't
+
+56:44.200 --> 56:49.640
+invert it so what went wrong what's the problem that we have here why isn't it working even for
+
+56:49.640 --> 56:58.680
+this super trivial example and what turns out to be is that the constraint that we have here
+
+56:58.680 --> 57:04.040
+is a relative constraint between the two nodes tells you how far is x2 away from x1
+
+57:06.040 --> 57:10.920
+and so it only tells us something about the relative configuration between the two
+
+57:10.920 --> 57:16.040
+it doesn't actually say us where one is actually and where two is in a global reference frame
+
+57:16.840 --> 57:22.040
+so we basically miss the reference frames or something was called a god freedom that we have
+
+57:22.600 --> 57:26.840
+and what we need to do is we need to fix one of those nodes so we need to say okay
+
+57:26.840 --> 57:31.880
+let's take node number one and fix node number one to be zero for example or to be one or to be
+
+57:31.880 --> 57:41.640
+two whatever and then we can we need to update our system to reflect to reflect that and then
+
+57:41.640 --> 57:47.320
+we can actually solve that okay we can do this in a very easy way by saying enforcing a constraint
+
+57:47.320 --> 57:52.360
+that the update on the first node should be zero so there should be no update in the first node
+
+57:52.360 --> 57:57.640
+basically looks like a Gaussian distribution or constraint of a Gaussian distribution which
+
+57:57.640 --> 58:01.960
+fixes the first node as the reference frame with a certain uncertainty it's like a prior node that
+
+58:01.960 --> 58:06.760
+we had and we can add this prior node as a different as an additional constraint to our
+
+58:06.760 --> 58:12.120
+h matrix which just imagine there's a one here and is zero everyone else but basically puts this
+
+58:12.120 --> 58:19.160
+delta x to zero so no shift of the first node and if we do this then we can actually invert this
+
+58:19.160 --> 58:23.960
+matrix because then it's not a rank deficiency anymore then this element is three we have
+
+58:25.240 --> 58:31.160
+three times two is six minus four two so at the rank it has a determinant of two so that
+
+58:31.160 --> 58:35.080
+looks actually good we can invert this matrix and then actually get an update which says
+
+58:35.960 --> 58:44.200
+the node one should not be updated and then node two should be updated by one and then we have our
+
+58:44.200 --> 58:51.880
+configuration zero and one which is the one that actually corresponds to the observation because
+
+58:51.880 --> 58:57.800
+observation said we are one step away so this was again a very very simple example in order to do
+
+58:57.800 --> 59:04.920
+this but the insight that we need to fix add a prior or fix a coordinate saying something that
+
+59:04.920 --> 59:11.240
+we should not forget so we saw that this matrix is not full rank after we have added all the
+
+59:11.240 --> 59:17.080
+constraints and even if you had more constraints we will suffer from the same problem always
+
+59:17.080 --> 59:21.160
+because we basically haven't fixed the global reference frame this only changes if you have
+
+59:21.160 --> 59:25.480
+an additional sensor like gps receiver for example which fixes a global reference frame
+
+59:26.040 --> 59:31.640
+then this problem is automatically be solved and otherwise we need to set one of those nodes
+
+59:31.640 --> 59:39.080
+as our reference frame for example so we may use the first or node number zero and add a prior
+
+59:39.080 --> 59:43.880
+as a prior information say okay this should be zero zero zero or this should define my coordinate
+
+59:43.880 --> 59:51.640
+system and we can do this by adding a constraint to pose number zero which could something like
+
+59:51.640 --> 59:58.360
+this that post number zero should be the transformation means i have a prior node and
+
+59:58.360 --> 01:00:04.840
+this prior node should be fixed at x zero so basically don't move x zero and do everything
+
+01:00:04.840 --> 01:00:10.120
+else with respect to x zero that's one way we can actually do this and if you add this prior
+
+01:00:10.120 --> 01:00:14.760
+information to it then we can actually run our least squares approach get a solution and build
+
+01:00:14.760 --> 01:00:20.440
+a graph based on system and one example how this system is actually running in action you see over
+
+01:00:20.440 --> 01:00:25.160
+here so this was also a video i've showed in one of the initial lectures you see a robot moving
+
+01:00:25.160 --> 01:00:30.120
+around let me stop the video for a second what you see here in the zoomed in view is a small robot
+
+01:00:30.120 --> 01:00:35.320
+the map it built so far in a local view in the current laser scan and here you see also the map
+
+01:00:35.320 --> 01:00:39.400
+built so far so black obstacles white is free space and it's actually moving around through
+
+01:00:39.400 --> 01:00:45.960
+the environment and just adding one after the other and what you will see in a in a few seconds
+
+01:00:45.960 --> 01:00:54.040
+is that before okay let me check that here so the robot here comes back to a previously seen place
+
+01:00:54.920 --> 01:00:59.000
+and what you can also see it's maybe a little bit hard to see in the video but if you would zoom in
+
+01:00:59.000 --> 01:01:05.640
+you can see that there's a certain mismatch a small offset between the map built when the
+
+01:01:05.640 --> 01:01:10.600
+robot was starting and the map built when the robot was actually driving back it's driving back
+
+01:01:10.600 --> 01:01:15.320
+and you will see this map shaking in a second and this shaking is a result of this optimization
+
+01:01:15.320 --> 01:01:21.960
+process because we get new observations and the the least squares abroad shifts the notes so that
+
+01:01:21.960 --> 01:01:27.480
+it minimizes the error introduced by those observations and if i kind of restart and rerun
+
+01:01:27.480 --> 01:01:32.520
+the video you will soon it you saw it shaking a little bit will happen now again when the robot
+
+01:01:33.160 --> 01:01:37.880
+re-enters a map you see kind of the map shaking a little bit the more loop closes the half the
+
+01:01:37.880 --> 01:01:43.000
+smaller this effect is because the corrections have already been taken out but whenever this
+
+01:01:43.000 --> 01:01:47.800
+happens you actually see small corrections and the map is realigned and this is the result of
+
+01:01:47.800 --> 01:01:55.320
+the visible result of the least squares approach that is actually running behind that so this is a
+
+01:01:55.320 --> 01:02:00.520
+result of a full SLAM system which runs ICP registers one scans against the next scan
+
+01:02:00.520 --> 01:02:05.640
+and builds up graph and also looks for loop closure so whenever the robot is kind of close
+
+01:02:05.640 --> 01:02:11.560
+to a map it has been before there's basically an ICP trying running and see do we find actually
+
+01:02:11.560 --> 01:02:15.960
+a good match and if so we add loop closer constraints to this and then you can actually
+
+01:02:15.960 --> 01:02:24.040
+build a simple laser-based SLAM system like that this because kind of the basics of this approach
+
+01:02:24.040 --> 01:02:28.840
+and now I want to go also a little bit into talking about a few things which may
+
+01:02:29.640 --> 01:02:34.840
+are important for you which also are related to for example estimating the uncertainty and so on
+
+01:02:34.840 --> 01:02:43.720
+so we assume that the values of certain variables may be known a priori so there may be some
+
+01:02:43.720 --> 01:02:49.400
+information that we either want to impose to such a system or that we get additional information
+
+01:02:49.400 --> 01:02:54.840
+where something should be fixed and should not move anymore so how do we actually do that that
+
+01:02:54.840 --> 01:02:59.000
+we kind of fix a certain number of variables this is similar to the prior that we had we can add one
+
+01:02:59.000 --> 01:03:04.040
+of those prior nodes for example saying hey you guy should actually be fixed here but the problem
+
+01:03:04.040 --> 01:03:09.080
+is it's just a soft constraint it's not really a fix and what can happen is if you have other
+
+01:03:09.080 --> 01:03:13.960
+constraints that they actually pull away this node and we cannot ensure that a certain variable has
+
+01:03:13.960 --> 01:03:19.480
+to have a certain value but we want to be able to do this so we want to fix one variable as a result
+
+01:03:19.480 --> 01:03:24.520
+of this this variable actually should not be optimized so it should actually disappear from
+
+01:03:24.520 --> 01:03:29.240
+our linear system because if it's not in the linear system anymore there will be no update
+
+01:03:29.240 --> 01:03:38.120
+on this variable and all the other variable actually should be constrained on that so we
+
+01:03:38.840 --> 01:03:44.440
+kind of want to have it as a condition it's like a condition that given this node take this value
+
+01:03:44.440 --> 01:03:49.880
+how does the rest actually look like and we can do this by actually constructing the full system
+
+01:03:49.880 --> 01:03:54.120
+and then simply suppressing the rows in the column that correspond to this variable not to fix this
+
+01:03:54.120 --> 01:03:59.480
+variable and then solve it in your system you can if you think about that okay why can we actually
+
+01:03:59.480 --> 01:04:04.440
+do this why can we just kind of suppress the row in the column just take it out of this matrix
+
+01:04:05.080 --> 01:04:08.120
+and solve and of course also from the x variable and the b
+
+01:04:08.120 --> 01:04:11.800
+vector and then solve our system and then we actually fix the variables
+
+01:04:12.840 --> 01:04:19.800
+this is a result why we can do this results from the conditioning of Gaussian distributions and
+
+01:04:19.800 --> 01:04:26.760
+if you think about the information space you're in so when we studied the information filter
+
+01:04:26.760 --> 01:04:33.640
+you may have seen that in the conditioning in information space means i can just take out
+
+01:04:35.160 --> 01:04:41.880
+just cut out a part of my information matrix and just ignore the others this corresponds to
+
+01:04:41.880 --> 01:04:50.920
+conditioning operation of the Gaussian distribution and our h matrix is an information matrix of our
+
+01:04:50.920 --> 01:04:58.040
+overall problem of all the constraints taken together so by taking out cutting away let's say
+
+01:04:58.040 --> 01:05:04.840
+a few rows and a few columns i'm basically conditioning the system on these that these
+
+01:05:04.840 --> 01:05:10.040
+variables are fixed and cannot be moved and all others has to be constrained based on the current
+
+01:05:10.040 --> 01:05:15.240
+variable that those system has and therefore i can actually do this i just can cut away
+
+01:05:15.240 --> 01:05:22.200
+cut out the corresponding rows and columns from my h matrix solve it and this means i'm actually
+
+01:05:22.200 --> 01:05:27.400
+fixing those variables that i've cut it out and this is something that you can actually use if
+
+01:05:27.400 --> 01:05:32.600
+you want to constrain something the next thing i want to look into is actually the uncertainty
+
+01:05:32.600 --> 01:05:41.000
+related to this so i told you right now that this h matrix is an information matrix for my overall
+
+01:05:41.000 --> 01:05:46.680
+system so it provides me with information about the uncertainty of the overall estimate
+
+01:05:47.240 --> 01:05:51.240
+up to the linearization point so given the linearization point given we are converged and
+
+01:05:51.240 --> 01:05:57.320
+we are under the approximation of this linearized function this is an information matrix so
+
+01:05:57.400 --> 01:06:04.280
+in order to obtain the uncertainty my covariance matrix i actually need to invert h and invert this
+
+01:06:04.280 --> 01:06:10.120
+matrix and then i have a covariance matrix and this covariance matrix tells me something about
+
+01:06:10.120 --> 01:06:15.320
+the uncertainty of those variables the only problem that we may need to take into account
+
+01:06:15.320 --> 01:06:19.400
+that if we are inverting our matrix h we typically get a dense covariance matrix
+
+01:06:19.400 --> 01:06:25.240
+so and inverting this matrix so we get a dense covariance matrix is a computationally costly
+
+01:06:25.240 --> 01:06:30.520
+operation and as a result of this we may want to also do some tricks here only compute
+
+01:06:30.520 --> 01:06:34.600
+parts of this uncertainty if we need it but if you need the uncertainty of the overall system
+
+01:06:34.600 --> 01:06:40.440
+then that's typically the way to go again there are some approximations you can do because you're
+
+01:06:40.440 --> 01:06:44.680
+typically only interested in the main diagonal blocks if you want to estimate the uncertainty
+
+01:06:44.680 --> 01:06:51.400
+of all the other variables with respect to one and this this is there are special ways to do this
+
+01:06:51.400 --> 01:06:56.600
+which are computationally more effective what you also need to take into account is relative
+
+01:06:56.600 --> 01:07:01.400
+uncertainty so quite often especially if you look for loop closures you want to actually say what
+
+01:07:01.400 --> 01:07:06.200
+is actually my relative uncertainty of my current pose with respect to a certain previous pose
+
+01:07:07.240 --> 01:07:11.000
+so not you're not necessarily interested in a global reference frame but what is my
+
+01:07:11.000 --> 01:07:15.960
+pose uncertainty relative to another pose in order to determine is this a possible loop closure yes
+
+01:07:15.960 --> 01:07:21.160
+or no and the question is how can we do this how can we compute the relative uncertainty
+
+01:07:21.240 --> 01:07:28.200
+between xi and xj and what we can solve this is that we actually compute the full matrix h
+
+01:07:29.640 --> 01:07:35.720
+and then let's say we want to compute the uncertainty of xj given xi that means we can fix
+
+01:07:35.720 --> 01:07:41.480
+xi and make xi kind of our reference frame and then say given that xi is the reference frame
+
+01:07:41.480 --> 01:07:49.400
+what's the uncertainty of this xj with respect to this reference frame so we fix xi so we don't
+
+01:07:49.400 --> 01:07:53.160
+optimize anymore we fix the variable by suppressing the rows and the columns corresponding
+
+01:07:53.160 --> 01:08:00.840
+to xi and then we need to compute the theory the inverse of the whole matrix and then take out the
+
+01:08:00.840 --> 01:08:05.400
+jj block from that matrix but again there are techniques we can do this more efficiently if
+
+01:08:05.400 --> 01:08:10.840
+you're only interested in a subpart of this inverse you can there are ways for computing
+
+01:08:10.840 --> 01:08:18.120
+only this block jj of your of this of the inverse of the matrix and then this block this inverse the
+
+01:08:18.600 --> 01:08:25.640
+block jj of the inverse actually gives you the covariance matrix of xj with respect to xi being
+
+01:08:25.640 --> 01:08:31.480
+fixed and this tells you your relative offset this is for example being used um when you build maps
+
+01:08:31.480 --> 01:08:35.720
+so this is one of the examples the robot is currently here and computes the relative
+
+01:08:35.720 --> 01:08:40.760
+uncertainty of all the nodes with respect to its current pose in order to check which other nodes
+
+01:08:40.760 --> 01:08:45.240
+could be close to me so i may inspect them for loop closures and you see kind of the robot sits
+
+01:08:45.240 --> 01:08:50.040
+over here and there's just a very small number of nodes which it actually needs to inspect because
+
+01:08:50.040 --> 01:08:56.600
+for all the others the uncertainty is too small because it has already built a high quality map
+
+01:08:57.320 --> 01:09:03.400
+so that it knows it doesn't need to look for loop closures to other places and that's one way where
+
+01:09:03.400 --> 01:09:08.360
+this uncertainty information is important if you want to decide at which other positions you want
+
+01:09:08.360 --> 01:09:14.280
+to check for loop closures and this actually brings me to the end of today so what we have
+
+01:09:14.280 --> 01:09:20.120
+introduced here is kind of the back end part of the slam problem using least squares approach
+
+01:09:20.120 --> 01:09:24.440
+of this graph based slam or even a special variant this post graph based slam problem
+
+01:09:25.320 --> 01:09:30.520
+a post graph is again a graph which only contains the poses of the robot and doesn't take into
+
+01:09:30.520 --> 01:09:35.640
+account landmark features as a general slam graph should actually do and we have discussed how we do
+
+01:09:35.640 --> 01:09:40.840
+this how we can use the ideas of these squares in order to formulate that problem how we can actually
+
+01:09:40.840 --> 01:09:46.600
+build up this matrix h and the vector b that are needed for solving the system and the key insight
+
+01:09:46.600 --> 01:09:52.840
+in here was that h is a sparse matrix and if h is sparse we can actually solve that in an efficient
+
+01:09:52.840 --> 01:09:59.720
+manner and so this is one of the key practical important insights in order to solve this even
+
+01:09:59.720 --> 01:10:05.240
+for large systems having thousands ten thousands or millions of variables otherwise that would be
+
+01:10:05.240 --> 01:10:10.440
+computationally not feasible at least not for building online systems and this idea of post
+
+01:10:10.440 --> 01:10:14.920
+graphs is something that you find today in a large number of different slam systems also
+
+01:10:14.920 --> 01:10:22.440
+partially localization systems today where the informations are used to build up this graph this
+
+01:10:22.440 --> 01:10:27.560
+post graph online and then the graph is optimized sometimes only parts of the graph only the recent
+
+01:10:27.560 --> 01:10:34.440
+history some in an approximated fashion some using hierarchical setups to save computational resources
+
+01:10:34.440 --> 01:10:40.040
+in order to tackle online computations some approaches use smart outlier rejection techniques
+
+01:10:40.040 --> 01:10:44.280
+to deal with unknown data association so there's a large number of variants that you may need to
+
+01:10:44.280 --> 01:10:50.360
+take into account but the overall core part of this is actually very similar of those algorithms
+
+01:10:50.360 --> 01:10:56.600
+to what i have presented here and there are also libraries out there such as g2o gtsem or seras are
+
+01:10:56.600 --> 01:11:02.520
+the most popular three ones which can help you to perform those optimizations in an efficient way
+
+01:11:02.520 --> 01:11:06.600
+but here in the course in the practicals we're actually trying to build that system completely
+
+01:11:06.600 --> 01:11:11.080
+on our own so that you're actually able to get hands-on experience how to build such a system
+
+01:11:11.080 --> 01:11:14.600
+and do the homework assignments and you can actually play around with your own
+
+01:11:15.560 --> 01:11:21.800
+2d slam system and build for example post graph based slam system so that you can put hands-on to
+
+01:11:21.800 --> 01:11:28.040
+every part of the problem and are able to derive all the jacobians from by hand and at least for
+
+01:11:28.040 --> 01:11:33.880
+the 2d case do this and in a very easy fashion so you can build your own slam system and understand
+
+01:11:33.880 --> 01:11:38.760
+it from the core that's one of the things that will happen in the upcoming homework assignments
+
+01:11:38.760 --> 01:11:44.040
+so thank you very much for your attention and i hope you got an idea on how graph based slam or
+
+01:11:44.040 --> 01:11:50.600
+post graph based slam works and we will extend that in the future to more general post graphs
+
+01:11:50.600 --> 01:11:54.360
+robust optimizations and other things thank you very much
+

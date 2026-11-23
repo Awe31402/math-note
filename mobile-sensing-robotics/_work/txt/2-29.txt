@@ -1,0 +1,481 @@
+[00:00] Welcome to the course today. I want to introduce today a technique for camera calibration.
+[00:07] That means we want to estimate the intrinsic parameters, so the calibration matrix of our camera,
+[00:13] not taking into account where the camera is.
+[00:15] So in contrast to DLT, where we were estimating the intrinsics and the extrinsics at the same point in time,
+[00:22] we are here trying to estimate only the intrinsics.
+[00:26] Furthermore, we want to simplify our life a bit in the sense that we assume to know the 3D locations of control points in the environment
+[00:33] that we needed for the DLT.
+[00:35] And we will basically use here a checkerboard pattern, so a known printed 2D structure for performing the localization.
+[00:43] And this approach, a method proposed by Zhang a bit more than 20 years ago,
+[00:47] is today one of the standard methods for performing camera calibration
+[00:51] and a lot of toolboxes that you use for performing camera calibration.
+[00:55] Actually, he uses the ideas presented here.
+[00:59] So if we look at the overall concept, we have that mapping that maps up from the world coordinate to the pixel coordinates
+[01:06] and involve this projection matrix P.
+[01:08] The projection matrix P contains the intrinsic parameters and the extrinsic parameters.
+[01:13] That means the calibration parameters, which are the intrinsics,
+[01:16] and the extrinsic parameters, which is the pose consisting of the position and orientation of a camera.
+[01:24] And we are today only interested in the intrinsics, so we don't care where the camera is.
+[01:28] We only want to find the intrinsic parameters of our camera.
+[01:32] Again, the DLT mapping tells me how to project the point from the 3D world to 2D.
+[01:40] And we have the image plane. We have our projection center here of our camera.
+[01:44] We have the 3D point in the world that's projected onto the image plane and then goes into the camera.
+[01:50] And for fully describing these mappings, we need to have P, which has 11 degrees of freedom.
+[01:56] And DLT estimated all these 11 degrees of freedom, so calibration parameters here, the 5,
+[02:02] and 3 translation, 3 rotational parameters.
+[02:05] And today in Sanck's method, we don't care about R and X0 and we are only interested in getting the calibration matrix.
+[02:13] So what I assume you need to know how that works, how to understand the lecture is,
+[02:18] I assume you know how DLT works and how we compute the DLT.
+[02:22] So if you don't know that, please go back and watch the lecture first on the direct linear transform
+[02:28] and how to estimate the direct linear transform because we will basically reuse the solution for the DLT
+[02:34] and then need to slightly modify it so that only the last step of the DLT is actually different for Sanck's method
+[02:40] and the first part stays the same.
+[02:42] So if you don't know the DLT, please watch the DLT lecture first. Thank you.
+[02:49] So assuming you know how DLT works, we can now look into Sanck's method, which is a camera calibration approach,
+[02:56] but this time it doesn't use known 3D points, 3D locations of at least 6 points in the environment.
+[03:03] It uses a checkerboard pattern.
+[03:05] So what you see here is an image of a checkerboard pattern.
+[03:07] This is basically a printout of a black-white pattern, which we assume to know, that you can glue on a flat surface
+[03:15] and then, let's say, a piece of wood or cardboard or whatever it is, it only should be flat,
+[03:20] and then you can show this checkerboard in front of your camera.
+[03:22] So you basically dance around with a checkerboard in front of your camera and generate images of this checkerboard pattern.
+[03:29] And under the assumption that you know the checkerboard and you also know that it's a flat surface,
+[03:36] that's something that we can actually exploit because we're now observing a known structure
+[03:41] without actually measuring 3D points in the environment as it was the case for the DLT.
+[03:48] So we assume to know this checkerboard.
+[03:50] Let's say we have observation of this checkerboard from different sizes.
+[03:53] This is one example over here.
+[03:55] And we assume to know the size and the structure of the checkerboard,
+[03:59] and one of the important things to exploit in here is that the checkerboard is a flat surface.
+[04:04] It is one plane and this is a key property that we are actually going to exploit.
+[04:10] So what we can do is we typically simply run, let's say, a corner detector on that checkerboard
+[04:16] so you know how that works, finding interest points or key points so that you actually find the corner points of this checkerboard.
+[04:21] So you get a large number of point observations and you at least know where those points are on the checkerboard.
+[04:28] So what you do not know is where the 3D location of those checkerpoints are in the 3D world,
+[04:33] but what you know is where those points are on the checkerboard.
+[04:38] So this is something that we can assume to know.
+[04:41] And then we actually use a trick.
+[04:43] And we say for every image we define an own coordinate system.
+[04:47] And the coordinate system is defined in a way that the xy-plane forms as the checkerboard.
+[04:53] So every time the checkerboard defines the xy-plane.
+[05:00] And we can exploit this fact for defining the xyz locations of all those points here in this coordinate frame.
+[05:10] Of course it is important to know that coordinate frame changes from frame to frame,
+[05:14] but within a frame we have the same coordinate system.
+[05:17] And often this is sufficient, not often, in this approach this is sufficient in order to actually estimate the calibration parameters of our camera.
+[05:25] So the trick is that all points lie on the checkerboard and lie which defines the xy-plane of our coordinate system.
+[05:31] That means that all the coordinates in the 3D world have a z-coordinate of zero.
+[05:37] So all those points here have a z-coordinate of zero.
+[05:40] All those points here have a z-coordinate of zero.
+[05:42] And all those points here have a z-coordinate of zero.
+[05:45] Just because for every frame we define an own coordinate system, well this is actually the case.
+[05:51] So this exploits that the checkerboard is a flat, is a plane, so it's glued on a flat surface.
+[05:59] And this is kind of a key thing we exploit.
+[06:01] And then we know the xy locations as well because we know the size of the printout that we use for generating this checkerboard.
+[06:09] Okay, so let's see how this assumption that z equals to zero for all 3D points changes the mass of the overall system.
+[06:17] And it does it substantially.
+[06:19] So this was the mapping that we used to describe.
+[06:23] So this is our homogeneous 3D coordinate vector.
+[06:27] This is the matrix containing the rotational part and the translational part.
+[06:32] And here we then have the calibration matrix and this maps it to our 2D pixel coordinate.
+[06:38] So now we know that the z-coordinate of all points are zero.
+[06:44] So each point has a z-coordinate of zero.
+[06:46] So this red-circled variable is zero all the time.
+[06:51] Okay?
+[06:52] So now if we multiply this matrix by this point, knowing that this point is zero,
+[06:57] it actually turns out that this column over here has a zero effect on our system because it will be always taken down to zero.
+[07:04] So it's something that I don't need to estimate.
+[07:07] That means the last column of my rotation matrix is something I don't need here.
+[07:12] So this is not needed, so we can actually eliminate those variables from our equation system
+[07:24] because this is the equation system relating our observation with our knowledge about our model.
+[07:30] So by eliminating this column and eliminating the third row of this vector over here, we turn into an equation which looks like this.
+[07:38] Okay?
+[07:40] So a point on the checkerboard, the x, y-coordinate, is mapped to the image coordinate
+[07:46] and I don't need to know the z-coordinate of that point in the 3D world
+[07:51] because I know it's zero for that own reference system.
+[07:55] So every point on my checkerboard will generate me one of those equations, right?
+[08:04] So every point in the 3D world on that checkerboard generates me this equation
+[08:08] and the parameters in here and here, so these parameters are the same for all images and all checkerboard observations
+[08:16] and this matrix over here is the same for every frame, so all the points which have been extracted from the same checkerboard image.
+[08:24] Okay? So that's important to differentiate. We'll need that later on.
+[08:28] Okay, so we have a matrix H which is now a 3x3 matrix, so the multiplication of those two matrices over here,
+[08:37] which I can write as three column vectors H1, H2, H3, so this is something that I can split up into my calibration matrix K
+[08:49] and my matrix which now consists of two vectors R1 and R2 which are the first two columns of my rotation matrix
+[08:56] and then my translation vector T over here, so that one point generates me this equation over here.
+[09:04] So I have multiple points, for now we're just considering one single image,
+[09:08] so all the points from the checkerboard that are generated for one single image,
+[09:12] so for now just one single image is taken into account.
+[09:15] So we get a number of those equations. If we have i points on our checkerboard, we actually obtain those, this equation over here
+[09:23] and again these are knowns, these are knowns and my unknowns actually sit in here
+[09:31] and now it's important to know about DLT.
+[09:34] So if you haven't watched the video on DLT, I suggest to do that before you continue here
+[09:39] because knowing how to solve this requires you to have seen the DLT lecture.
+[09:46] So we can perform this step exactly as the first steps of the DLT,
+[09:52] actually every step except the last step of the DLT we can apply in exactly the same way.
+[09:57] So if you remember that we said we have our knowns here and our unknowns in here, what do we do?
+[10:03] We vectorize this matrix H so that it contains our nine parameters, H11 to H33,
+[10:11] we stack them into a vector and then we compute the corresponding coefficients from lowercase x and uppercase x,
+[10:21] one's the image coordinates and the other one the 3D world coordinates.
+[10:25] So that instead of having the 3x4 projection matrix P as in the DLT, we now have a 3x3 homography,
+[10:34] this is our matrix H, so that we then have exactly these coefficients for my H,
+[10:41] so this H are kind of the nine stacked values, so it's nine dimensional here, not twelve dimensional as for the DLT,
+[10:49] but the rest stays the same.
+[10:51] Just to show you the correspondency between the problem that we have here and the DLT problem,
+[10:55] I wrote here the coefficient vectors down for the DLT and crossed out all those which go away
+[11:03] because the z-coordinate of all points are zero, so they are eliminated and I just don't need to build up these twelve elements here,
+[11:11] I just need to go down to the nine elements that I need because the others I eliminated already from my equation system.
+[11:19] So it's the same as in the DLT except that we can cross out those three columns or rows from the coefficient vector.
+[11:29] And as a result of this we get a kind of slightly simplified form where it just kind of now crossed out
+[11:35] or eliminated all the variables that were crossed out in the previous slide.
+[11:39] So then we have my unknowns, my coefficient vectors, I get those coefficient vectors
+[11:47] and then I need to solve the resulting system of linear equations in order to estimate H.
+[11:53] And we can do this using the singular value decomposition as in the same way as we did that for the DLT estimation that we have done.
+[12:02] So we may need to think about how many points do we actually need in order to estimate this H.
+[12:09] So for the DLT, remember, we required overall six different points, but now here the situation is slightly different.
+[12:18] So we need to have at least four points to determine H. Why is this the case?
+[12:24] Because H has eight degrees of freedom, it's a three by three matrix, so it's nine elements, but again it's a homogeneous matrix,
+[12:30] so it only has eight degrees of freedom because it's only defined up to a scaling factor.
+[12:35] Every point on the checkerboard gives us two equations, two observations, an X observation and a Y observation on my sensor,
+[12:44] so on pixel location X in X and the pixel location in Y.
+[12:48] And so that means we need to have at least four points in the checkerboard in order to do this in order to provide an estimate for H.
+[12:57] And again, this is now image dependent, so it is dependent per image because we defined the coordinate system independent for every image based on the location of the checkerboard.
+[13:08] And this provides me an estimate for H, and after we have computed using the singular value decomposition exactly as we did it for the DLT,
+[13:18] we actually come up with an estimate for H. So we have H now, and now the question is how do I get K from H?
+[13:27] And this is the point in time where things change between Tsang's method and the original DLT estimation that we discussed.
+[13:35] So just as a reminder, what have we done in the DLT? In the DLT we also had this matrix P that we need to decompose into matrices.
+[13:45] It was actually not fully the matrix P, but the first 3x3 block out of my matrix that I cut out of my matrix P that I needed to decompose into a rotation matrix and a calibration matrix.
+[13:57] And for that I used the QR decomposition because the QR decomposition was exactly what I wanted to do.
+[14:03] It generates for me a rotation matrix and upper triangular matrix or lower triangular matrix that I can actually generate out of that.
+[14:11] And this was exactly what I needed in order to obtain my K and my rotation matrix.
+[14:18] Now unfortunately the story is different because this thing here is not a rotation matrix anymore.
+[14:24] Because we have the translation vector key sitting in here which basically replaced the third column of my rotation matrix.
+[14:31] And this is the problem why we can't apply the QR decomposition.
+[14:36] So this is now the point in time where the DLT and Sankt's method basically deviate and need to generate two different solutions.
+[14:43] And it actually gets a little bit more complicated here for Sankt's method because we cannot simply apply QR decomposition in such an elegant way as we did this for the DLT.
+[14:52] And this is what makes it more tricky.
+[14:55] So the question is how do we now obtain our matrix decomposition?
+[14:59] So even if I don't care about this part here, I can ignore this part but actually get K.
+[15:04] So I'm not interested in this part but I want to get K.
+[15:07] And so if I have my matrix H, I need to go from H to K.
+[15:13] So this is the goal, estimating K from H.
+[15:17] So again the problem, we computed H via SVD and now we need to extract K.
+[15:24] We need to break up this matrix H into two matrices.
+[15:27] One is this calibration matrix, this upper triangular matrix and this second matrix where I only know that the first two columns are actually columns from a rotation matrix.
+[15:37] Now to do this there is kind of not a standard decomposition that I can use in order to exploit those properties so that's something that I now need to do by hand.
+[15:45] By hand means manually exploiting the constraints of things that I know for example about R1 and R2.
+[15:51] And so I need to now derive an own solution to do this.
+[15:55] And this is actually a procedure consisting of four steps.
+[15:58] So for the first thing we need to do, we need to write down certain constraints that we know.
+[16:03] So for example what do I know about K, what do I know about R1, what do I know about R2, how can I actually exploit this?
+[16:09] And I will exploit properties that I knew that R1 and R2 are column vectors from a rotation matrix.
+[16:15] You know the columns of a rotation matrix have certain constraints and I can exploit those constraints, write them down in order to form a system of equations that I then need to solve and then be hopefully able to decompose the matrices.
+[16:31] So first I will write down the constraints and exploit constraints.
+[16:35] Then I will define a matrix B which is K inverse transposed times K inverse.
+[16:44] We'll see that this term K inverse transposed K inverse is a term that pops up in a couple of the equations that I actually write down.
+[16:53] And so I define this matrix B so that my math gets slightly more similar.
+[16:59] And then I will, I can find, I have to define a system of equations and this system of equations will actually lead me to B.
+[17:09] So by solving a matrix, by solving the system that I derived from the constraints I formulated here in number 1, I will be able to estimate the elements of B.
+[17:22] And once I have the elements of D, I need to decompose B so that I can break down B and obtain K.
+[17:31] So these are kind of multiple steps I'm doing.
+[17:34] I'm defining constraints, I'm defining a matrix B, I'm then solving my constraints so that I can determine the elements of B and then I do a matrix decomposition, actually a Cholesky decomposition of B so that I then obtain my matrix K.
+[17:49] So there are a couple of steps in between and a number of coefficients that I actually need to compute in this process but this then allows me to decompose this matrix B.
+[18:00] But the key thing to start with is to understand are those constraints.
+[18:04] What are the constraints? Which constraints can I actually exploit from K, R1 and R2?
+[18:10] So again, this was the equation that I have, my calibration matrix here and this remaining matrix R.
+[18:17] So what do I know about that?
+[18:20] The first thing I know, what I can actually do is I know that my matrix K is actually an invertible matrix.
+[18:27] So it's this upper triangular matrix and all the elements on the main diagonal are unequal to zero so I know that K is invertible and I can invert my matrix K.
+[18:40] This is a property that I'm exploiting now.
+[18:43] What I can do is I can invert my matrix K and multiply it from the left hand side of this equation.
+[18:47] So if I multiply to the left hand side of this equation I have K inverse times H and this gives me my matrix R1, R2, T.
+[18:56] So this is basically what I've written down here, R1, R2, T is K inverse times the three column vectors of H that I have.
+[19:08] So H, remember H is known, so this H I do know.
+[19:11] What I don't know is K and what I don't know are those parameters here.
+[19:16] But what I also know is from this equation that R1 is nothing else than K inverse times this vector because this gives me exactly the first element of this equation.
+[19:28] The same for the second one.
+[19:30] So R2 is K inverse R2 and for T I could do the same but I don't need that for the moment.
+[19:35] I only need this for R1 and R2.
+[19:37] So I can express R1 as K inverse times H1 and K inverse H2.
+[19:43] And if I would know K, I could compute R but if I would know K I wouldn't have a problem in here, I wouldn't need to continue.
+[19:50] So the problem is I can't actually compute this right now.
+[19:53] But I know that these equality exist so they must be equal to R1 and R2.
+[19:59] But what I then can do is I can exploit the fact that R1 and R2 stem from a rotation matrix.
+[20:05] So I know certain things about this rotation matrix.
+[20:08] So actually R1, R2, R3, although R3 is not relevant here, form an orthonormal basis.
+[20:13] That means two things.
+[20:15] First, R1 transposed times R2 must be zero because those two vectors are orthogonal to each other.
+[20:22] So if I compute the dot product, they should be zero.
+[20:25] And the second thing that I know is that R1 and R2 are of unit length, so have length one.
+[20:31] So these are two constraints that I can actually derive, extract from this.
+[20:36] By knowing that R1 and R2 stem from a rotation matrix, so that R1 transposed R2 must be zero
+[20:43] and the norm of R1 and the norm of R2 is equal and they equal to one.
+[20:47] And this is now something that I can exploit.
+[20:50] So I use this one over here, this equation, these two equations actually,
+[20:55] and these two equations over here to relate K and H using those constraints down here.
+[21:05] So what I do is I just take the constraint over here, take R1 from here,
+[21:11] and put this K inverse H in for A1 and K inverse H2 for R2 and note that this is zero.
+[21:20] This is basically what happened over here.
+[21:22] So this were two equations I had before.
+[21:25] I use R1 transposed R2 equals zero, so I just put that in.
+[21:30] So this is H1 transposed, K inverse transposed.
+[21:33] So K minus to the power of minus T means the inverse of K being transposed
+[21:39] and this is K inverse H2 must be zero.
+[21:43] So it's something that follows directly from the fact that I know that R was a rotation matrix.
+[21:50] And so the second thing I can do now, I exploit the second constraint
+[21:55] naming that R1 and R2 are vectors of length one.
+[21:59] And so I know they must be equal and they must have length one.
+[22:04] So I can actually write down R1 is nothing or R1, the norm of R1 is R1 transposed times R1.
+[22:17] So it turns into H1 transposed, K inverse transposed, K inverse H1.
+[22:24] So not two in here, here was a two that would be zero but it's one.
+[22:28] So this must give me length one and I know that this must be equal to the same thing done for R2.
+[22:35] So this is the second constraint that I have.
+[22:38] What I can now do is I can just move that to the other side
+[22:41] so I again get an equation where this is equal to zero.
+[22:44] So again here I just move these parts to the other side, it's equal to zero.
+[22:49] So this equation, these two equations are now constraints that I formulated
+[22:54] which relate me elements that I know which are my H vectors, their unknowns
+[23:02] with my unknowns which are here my Ks in an equation that equals to zero.
+[23:08] And this is something that I will exploit in a second.
+[23:13] So the next thing is what I can do now if I kind of write down the equations under each other
+[23:18] I see that this K inverse transposed times K inverse appears in all of my equations.
+[23:25] So just kind of, what I can do is I can just define the symmetric and positive matrix B
+[23:31] which has the form K inverse transposed, K inverse.
+[23:36] So it basically can replace this thing by these, just a variable replacement for now.
+[23:42] And then I have here the form that I have my known vectors over here
+[23:46] and my unknown matrix sitting there in the middle.
+[23:51] And by knowing that B consists of a matrix transposed times a matrix
+[23:59] I can actually see that there exists a standard matrix decomposition
+[24:04] that actually breaks me a matrix up, that is symmetric and positive definite
+[24:09] into a matrix times the matrix of its transposed.
+[24:13] So this is the Cholesky decomposition.
+[24:15] So the Cholesky decomposition of an arbitrary matrix breaks it up into two matrices
+[24:21] of two triangular matrices and the one if the other one transpose.
+[24:28] So if I have B I can compute the Cholesky decomposition from B
+[24:33] and it gives me the matrix A so that A times A transposed gives me my matrix B.
+[24:40] So this is a decomposition that we typically use for solving our linear systems in an efficient way.
+[24:45] But I can also use it here, so if I say A is K inverse transposed
+[24:52] and I put it in here, then the product will give me B
+[24:57] and if I can turn B into A A transpose into A using the Cholesky decomposition
+[25:02] I can directly derive the calibration matrix out of it.
+[25:06] The only thing I need to know is I need to compute the inverse and invert it
+[25:09] but that's something which is easy with a three by three matrix.
+[25:13] So the key insight in here, if we know B then we can directly compute K.
+[25:19] So exploiting the Cholesky decomposition we can turn B into K.
+[25:25] The problem is we don't have B yet but for the next step we'll focus on how to actually get B.
+[25:31] And for that we will exploit these equations over here.
+[25:36] So what we have is, if we inspect the equations we have B as a matrix which consists of our unknowns
+[25:45] and given that the symmetric matrix we only have six unknowns not nine unknowns
+[25:51] and H are our knowns and we have two equations that relate B and H with each other
+[25:56] and actually sets them equal to zero.
+[25:59] And this is something that we actually have seen in the past quite often.
+[26:03] So also in the DLT lecture you have seen that we got an equation of a similar form
+[26:08] that we exploited to compute, to reformulate it so that we have a coefficient vector
+[26:14] times an unknown vector equals to zero and we can actually do this if we have this form of equation over here.
+[26:21] And so we'll use basically now the same trick again of using this, exploiting the SVD
+[26:26] setting up a system of linear equations that we are going to solve in a very similar way as we used it for the DLT
+[26:33] and can use this to compute the matrix B.
+[26:37] So again we have our matrix B which consists of six unknowns
+[26:42] given that the symmetric matrix only need to care about those six unknowns
+[26:45] so B can be described by my vector lowercase B contains the six unknowns of my matrix uppercase.
+[26:56] And again this is also something which is only defined up to a scale factor.
+[27:00] And then I have the constraints that I have written down before
+[27:05] so the two constraints that you've seen before
+[27:07] I can actually reformulate it with a coefficient which is now a vector v
+[27:14] so that v transpose times B equals to zero
+[27:17] and a second one where v transpose times B minus different v times B equals zero
+[27:25] so these are basically the coefficients which result from this equation
+[27:29] and the coefficients which result from this equation over here.
+[27:32] And so again similar as I did it for the DLT
+[27:37] can set up one constraint which looks like this
+[27:40] and a second constraint which looks like this
+[27:43] and now you can see that this thing actually comes much much closer to the thing how we used the DLT
+[27:50] for solving this homogeneous system in order to derive our unknowns.
+[27:55] We can do now the same thing so we can actually set up a matrix capital V which is defined in this form
+[28:01] so putting the coefficients, stacking the coefficients together
+[28:05] and also you can actually write that down vij as of this form
+[28:10] and these are all the elements of my matrix H
+[28:12] so if you actually want to write that down and implement it you need to know this matrix here
+[28:16] but they can be directly derived from the constraint that we had before.
+[28:20] So that for every image we obtain this matrix here
+[28:24] so this is a matrix and this is B
+[28:28] so this is a two times six matrix over here
+[28:31] and this is a six dimensional vector, this equals to zero.
+[28:35] So for every image I can generate these constraints in here
+[28:40] which must hold for my matrix K
+[28:44] or for my matrix B which I then use to compute K to be precise.
+[28:48] So for one image I can compute my H
+[28:54] and then from this H compute this coefficient vector exactly using this equation over here.
+[29:01] And then the problem is this is just a two by six matrix
+[29:08] so I need to stack multiple images together at least three so that I would get a six by six matrix
+[29:13] but we can take more images so if I take n images I get a 2n by six matrix
+[29:19] where the first two dimensions relate to image one, dimension three and four to image two and so on and so forth
+[29:26] so that in the end image 2n minus one and 2n give me the information from image number n
+[29:32] multiplied with my six dimensional vector and this must be equal to zero
+[29:36] and this is something that I need to solve.
+[29:39] Solving a linear system of homogeneous form to obtain my unknown vector B
+[29:47] which then will fill me the elements of my matrix B
+[29:51] so that I can then using the Cholesky decomposition turn that into K.
+[29:56] So how do I solve such a system?
+[29:58] V times B equals zero which is not the trivial solution
+[30:03] so we impose this additional constraint that B equals to one
+[30:06] and then we need to minimize the equation with the norm
+[30:11] exactly in the same way as we have done it for the DLT in the DLT lecture using the SVD.
+[30:15] So what we are doing, we are computing the singular value decomposition
+[30:19] and then taking out the singular vector that corresponds to the minimum singular value
+[30:25] which should be zero but is not zero in reality as real measurements are typically noisy
+[30:30] so we take the singular value which has the smallest value
+[30:35] so the last one in this diagonal matrix that is generated from the singular value decomposition
+[30:41] take out the corresponding singular vector which then is the solution to B
+[30:48] so then I obtain my B star which is the singular vector that minimizes this equation
+[30:55] because this is the one which minimizes the term over here.
+[30:59] Okay, then I have B and then I just compute my Cholesky decomposition and obtain out my matrix K.
+[31:07] So just to sum up again, what's needed in here?
+[31:09] We need our checkerboard images and we need to have at least three of those images.
+[31:13] We will extract points out of all those checkerboards
+[31:18] and we were exploiting that we know the size of the checkerboard and we know it's a flat surface
+[31:23] and from four points we can compute our matrix H
+[31:27] and the matrix H is the individual matrix H for every image
+[31:31] so we have an own H for this image, an own H for that image and an own H for that image over here.
+[31:38] Okay, so H is computed for every image and then each of the plane
+[31:45] so basically each image gives us two equations for computing B.
+[31:51] So for this B we got two equations out of every image.
+[31:57] Since B has five or six degrees of freedom we need three different views of that plane.
+[32:04] Okay, so this is because B was a symmetric matrix but it's only known up to a scaling coefficient
+[32:13] so therefore we have in the end five degrees of freedom
+[32:15] but that means we need three different views for three different images in order to compute the matrix B
+[32:24] and then I need to solve V times B equals to zero with singular value decomposition
+[32:30] and then compute my K out of the Cholesky decomposition.
+[32:35] So you've seen here that there were a couple of steps actually needed in order to make this decomposition
+[32:40] so we basically proceeded S for estimating the DLT
+[32:43] but then we had to do some extra work because the matrix we wanted to decompose
+[32:48] had not this nice form of being upper triangular matrix and rotation matrix
+[32:53] the properties of the rotation matrix didn't hold
+[32:56] we only knew that for two of the columns that they stem from a rotation matrix
+[33:02] and thus we needed to do this extra work here
+[33:04] and then also needed more images because requiring more than one image
+[33:08] was something that came from the constraint that we have derived in here
+[33:13] so therefore we needed three images not only one image
+[33:17] because this constraint didn't hold that the second matrix that I need to decompose is a rotation matrix
+[33:29] this is extra work that needed to be done
+[33:31] but with this extra work we are actually able to do this decomposition in a manual form
+[33:37] and this allows me now to compute my camera calibration matrix
+[33:41] at least the five parameters that are typically in there
+[33:45] or which describe the linear parameters that are involved
+[33:48] and which allows me the kind of the first step of my camera calibration
+[33:52] so you may ask yourself now what's with the nonlinear parameters
+[33:56] so if you think about the lecture on describing the mapping X equals PX
+[34:00] we also talked briefly about the nonlinear parameters
+[34:04] so what we typically have in this setup is we have an additional or we have a calibration matrix
+[34:10] which is multiplied with an additional term here from left hand side
+[34:14] which is this kind of shift in the X and Y which is location dependent
+[34:20] so this correction which takes into account the nonlinear errors
+[34:24] we haven't taken into account on it in the past there
+[34:27] takes the pixel location in the image plane into account
+[34:32] in order to compute basically a shift depending on the pixel location
+[34:36] and based on some unknown parameters
+[34:38] and this is multiplied to the calibration matrix K to take into account the nonlinear errors
+[34:43] things I could do with it is to take into account lens distortion
+[34:46] like the barrel distortion over here or kind of the inverse one or combinations of both
+[34:52] and I need to have those additional corrections in order to take lens distortion like those
+[34:58] or even more complex ones into account
+[35:00] and how we did this just as a short example
+[35:03] this could be an equation which has two additional terms over here or two additional coefficients
+[35:10] one is multiplied with the variable R squared and R to the power of four
+[35:17] this R was the radius or the distance of the pixel from the optical axis to the pixel in the image
+[35:23] and so that basically the further away a point is from the optical axis
+[35:27] the stronger this distortion correction actually gets
+[35:31] and this was one way for performing these corrections
+[35:36] so this barrel distortion is the standard thing that you need to do
+[35:39] especially if you work with wide angle lenses for your corrections
+[35:42] and leads to additional nonlinear parameters that get involved into your equation
+[35:47] so these are actually those parameters which sit in here
+[35:51] and so this shift would be described by actually this part of the function
+[35:55] so this is where the pixel was originally
+[35:57] and then this would be the shift parameter that gets involved in here
+[36:02] and you can have additional correction parameters that need to be taken into account
+[36:06] and if you do this and want to perform the camera calibration
+[36:09] you then typically revert to a least squares estimation approach
+[36:13] where you estimate the distance between where the pixel of a point is actually projected to into your image
+[36:22] and where you expect it to be
+[36:24] so you can see this as where do I actually get my observation
+[36:29] this is this point over here
+[36:31] so the n is simply the sum of all images
+[36:34] because now you take multiple images into account
+[36:36] sum also over the images
+[36:37] and then over each point in an image
+[36:39] where is this point being measured and where should that point be given my parameters
+[36:43] and given that I know where that point is
+[36:45] so you're basically minimizing the reprojection error
+[36:49] so you're projecting the point back into the image
+[36:53] and subtract from the point where you're seeing it
+[36:55] so you're minimizing the square distances between where that point should be and where you actually see that point
+[37:00] and then you perform a least square error minimization
+[37:04] and start taking into account also your non-linear parameters
+[37:09] what you typically need for that is you need to have an initial guess
+[37:13] and the initial guess is typically setting the non-linear parameters to zero
+[37:17] and run Sanck's method as I described it here before as my initial guess
+[37:21] so because again it's a direct solution
+[37:23] something that doesn't need to iterate
+[37:24] and provides me the camera calibration matrix without non-linear errors
+[37:29] and then starting from this we actually run this least square error minimization approach
+[37:34] in order to find the updated calibration matrix
+[37:38] the non-linear parameters and estimating the overall process
+[37:42] and that's something that we then need to do
+[37:45] so if you do this just as an example you get your calibration parameters
+[37:50] for the checkerboard if this is your input images
+[37:54] and if you apply the correction parameters these are your output images
+[37:57] and what you can see here that this kind of barrel distortion that you can see here
+[38:01] for example that this is not a straight line anymore
+[38:04] leads to perfectly straight lines here after your calibration
+[38:10] so you can correct your images and actually see that those parameters are actually gone
+[38:15] the non-linearities that you want to estimate
+[38:18] so that's it basically so far from my side
+[38:22] so what we have done is we have provided a camera calibration approach
+[38:27] using a checkerboard pattern
+[38:29] and what we were assuming here that's a pinhole camera
+[38:31] so we assume to have this model x equals px
+[38:35] so that with our standard transformation we can transform a point from the 3D world
+[38:39] with this DLT transformation into my image plane
+[38:43] so this is kind of the first step and we are basically calibrating for this pinhole camera model
+[38:48] estimating these five parameters of my calibration matrix
+[38:54] and then as a second step we can take into account non-linear parameters
+[38:59] in order to do further correction then running a least squares approach
+[39:03] and this is a standard approach to camera calibration that we are doing here
+[39:07] that allows us to accurately determine the parameters
+[39:10] and the checkerboard makes actually calibration rather easy
+[39:13] it's not that you need to have a special calibration room of known 3D points
+[39:17] so you can just take a standard sized paper, do this printout on the printer
+[39:22] glue it on a flat rigid surface like a piece of wood for example
+[39:26] and then show it in front of your camera
+[39:28] make sure every part of the camera actually sees the checkerboard
+[39:31] then you can calibrate your camera and get your calibration matrix out
+[39:37] and then work with a calibrated camera
+[39:39] so calibration in general means that we are estimating our intrinsic parameters
+[39:45] consisting of non-linear and linear errors
+[39:47] the linear ones are five errors
+[39:49] and we used Tung's method to actually estimate those five linear parameters using a checkerboard
+[39:54] and then the non-linear errors are then estimated
+[39:57] additionally using this non-linear least squares approach
+[40:01] with this I actually come to an end
+[40:04] and this is actually the original work by Tung
+[40:07] which describes the camera calibration approach
+[40:09] although he uses slightly different notation than I used here
+[40:12] and if you also want to dive into details I also recommend
+[40:17] first-known Robles book on Photogrammetric Computer Vision
+[40:20] which describes all the things about the DLTU that we have discussed in detail in here
+[40:25] and provides a very rigid, rigorous description on how we can actually estimate those parameters
+[40:34] how uncertainty looks like
+[40:35] actually going into much more details than I have covered here in the lecture
+[40:39] with this, thank you very much
+[40:41] I hope you have learned today how to calibrate your camera
+[40:44] with using a checkerboard pattern
+[40:47] a lot of standard toolboxes actually use this checkerboard pattern for calibrating your cameras
+[40:53] but I hope you have an idea of what's going on internally
+[40:56] so that you understand the process better
+[40:58] and also know why you need to have a certain number of images
+[41:01] in order to perform the computations
+[41:03] and what are the assumptions that we used
+[41:05] and how these decompositions actually look like
+[41:07] and that solving homogeneous linear systems is something that pops up very often
+[41:12] and is important to know with a lot of relevant real-world applications
+[41:16] so with this, thank you very much for your attention
+[41:18] and see you soon, thank you

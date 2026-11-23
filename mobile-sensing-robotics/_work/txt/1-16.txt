@@ -1,0 +1,380 @@
+[00:00] Welcome everyone. My name is Lasse Peters and in today's lecture I'm going to give a brief
+[00:05] introduction to model predictive control. Now before we get started I want to motivate this
+[00:10] problem with this autonomous driving scenario. So imagine that we're controlling a car here at an
+[00:15] intersection in Bonn and we were to, yeah, we are tasked to sort of safely navigate this car over
+[00:21] this intersection. Now if we were to solve this task there are several steps involved. So typically
+[00:27] we would first run some kind of perception pipeline that we will use to detect other cars
+[00:34] and then also detect the drivable area of the road here marked in green. And then in the
+[00:42] pre-processing step we would have some high-level planner that gives us a rough plan. So imagine
+[00:47] that here we want to take a right turn at this intersection. And in today's lecture we are
+[00:54] looking at the scene in an abstract perspective. So we are assuming that we are given a reference
+[01:00] plan that we want to follow and we are given a state estimate which includes the position
+[01:05] and velocity of our own car and then also of other cars that we may treat as obstacles.
+[01:13] And we are asking the question how can we find control inputs. So in this example the
+[01:18] steering commands and the acceleration and brake pedal commands in order to achieve this plan.
+[01:24] Now in previous lectures on this channel we've already discussed ideas for control,
+[01:30] in particular reactive control. And so here's just a quick reminder of how that worked.
+[01:35] And so in that setting we would typically decompose the problem
+[01:39] into along different dimensions. So for example for this bicycle model of the vehicle
+[01:46] we would decompose it into a longitudinal problem where we propose a controller to control the
+[01:52] velocity of that vehicle. And one choice that we may take is a PID controller. And then on the
+[01:59] lateral dimension, so for the steering commands, we would use for example a Stanley controller.
+[02:05] And for example the Stanley controller is just this law where we plug in the cross track error,
+[02:11] so the lateral deviation from the reference trajectory. And then using this law and
+[02:17] multiplying this error with the gain we can map that to the steering command delta.
+[02:23] Now while this these kinds of controllers are very appealing to that due to their simplicity,
+[02:29] there are several limitations which motivate the use of the control techniques that we discussed
+[02:33] today. So yeah here's the list of the limitations or at least an abstract view of that. And so
+[02:44] the first kind of limitation that is very important is that
+[02:47] it's not trivial to extend these controllers or these ideas that for example we have from
+[02:54] Stanley to more complex systems. So these kinds of controllers are kind of rules that we can
+[03:00] write down for a very specific system. But if for example we were to control a legged robot,
+[03:09] then we obviously can't use the Stanley controller and we have to sort of re-derive the whole
+[03:13] controller from scratch. And it's not immediately clear how to come up with such a rule for an
+[03:18] arbitrary system. Then furthermore there are these control gains for example in Stanley
+[03:23] that we have to tune and we kind of have to make a choice. And this tuning can be a very
+[03:30] tedious heuristic and manual process. Then furthermore we had to decompose the problem
+[03:37] into sort of smaller problems for which we can write down these rule-based controllers.
+[03:42] And so here we decompose it into a longitudinal and a lateral controller.
+[03:46] And this kind of decoupling ignores the coupling between the two dimensions. So imagine
+[03:52] that you're controlling a car and you want to safely steer around the corner. In that setting
+[03:59] you would want to reduce the velocity in order to make steering around the corner simpler.
+[04:06] But here when you decouple this, the PID controller doesn't know about the fact that
+[04:15] the Stanley controller has a hard time making its turn around the corner.
+[04:21] Then another important limitation is that for example the Stanley controller is a rule that
+[04:27] we can only use to track a given reference. But if there's a more complicated task or we may want to
+[04:33] avoid something like constraints or maybe other obstacles then this is not immediately captured
+[04:39] by this kind of controller. And finally these controllers always only take in a snapshot of
+[04:46] the current time so they evaluate the current cross track error or maybe a filtered version
+[04:51] of that. But they don't look how their decisions affect future decisions. And so they always sort
+[04:58] of reactively map the current state or the current setting to a control command. So these
+[05:09] kind of limitations bring us to the topic that we're discussing today. And so model predictive
+[05:15] control makes use of optimal control technique and optimal control is asking the question how
+[05:22] can we best control the system. Now in order to formulate a given problem as an optimal control
+[05:30] problem there are several ingredients involved. And this first ingredient that we need in order
+[05:34] to model a given problem as optimal control is a model of the system dynamics. And this model
+[05:42] we will use to predict the evolution of the state for the given inputs. So the dynamics model f
+[05:51] maps the state which may be for example the position and velocity of our vehicle
+[05:57] and the input which will be the steering and brake pedal commands
+[06:01] to the next state. So through the state at the next time step. Right and so given a sequence
+[06:09] of inputs if we have a model we can predict the evolution of the trajectory. So the evolution of
+[06:15] this state into the future. Now for our example of a bicycle for our self-driving car we could
+[06:25] use the model of a 2D kinematic bicycle that you can you can see here. So there the state would be
+[06:32] given by the position in x and y then the heading psi so the heading of the vehicle then the
+[06:41] velocity of the vehicle in the longitudinal direction and the steering angle delta. And
+[06:46] we can write down for this sort of kinematic abstraction of the car we can write down the
+[06:51] state evolution using this equation where our inputs are the acceleration and the steering rate.
+[07:02] And so in any case this model or the model that we will use will always be an abstraction of the
+[07:09] real dynamics. So of course this neglects many details maybe drag or other effects but yeah we
+[07:19] just need a model which with which we can sufficiently well predict the state trajectory
+[07:26] of the system. And we will go into some of the details of the trade-offs involved later.
+[07:31] Now once we have dynamics we also need an objective and this objective
+[07:40] is used to assign a cost to a given trajectory. So it's rating how good is a given trajectory
+[07:47] for the task that we try to accomplish. And so this objective is written down as a cost function
+[07:54] which depends upon the sequence of states x and inputs u and maps it to a scalar. And so here we
+[08:04] would typically write it down as a time separable cost where g only takes the current state and
+[08:10] input at time t. And then the cost the total cost j is the sum of these individual time costs or
+[08:18] stage costs. And so for example for the problem of reference tracking that you can see below
+[08:25] we can write down this cost as this squared sum of terms where for the state
+[08:33] if we so if this dashed line is the reference that we may wish to track and this red line is
+[08:39] the prediction that we would get for a given sequence of inputs then we can compute this
+[08:45] checking cost as the sum of weighted sum of these errors e where the errors are the difference
+[08:53] between the trajectory in red and the reference trajectory so the state where we are at according
+[09:00] to our prediction and the state that we would want to be at at that time step. And then we
+[09:06] weigh these errors with this weighting matrix q to sort of say which part of this error which is
+[09:13] a vector is more important than others. And then also we will have some cost for applying steering
+[09:21] commands so in order to encourage or to prefer trajectories that have a low have a low for
+[09:29] example low acceleration or low steering input so we sort of prefer smooth trajectories that are not
+[09:37] very jerky. And so the task of the objective is to encode which trajectories are preferred
+[09:49] over others so the objective encodes the task that we try to accomplish in this case
+[09:56] tracking the reference. And then the third and final ingredient of this kind of formulation
+[10:03] of an optimal control problem are constraints and constraints encode domains of allowed states
+[10:10] and inputs and so we would write these constraints with these calligraphic x for the state constraints
+[10:19] and calligraphic u for the input constraints and to give to make this a bit more concrete
+[10:25] here's an example of a of a state constraint so we can use this constraint for example to encode
+[10:32] areas that we don't want to enter with our system for example if there was an obstacle here
+[10:38] centered at the origin marked in red then we could express this as the following constraint we want
+[10:44] that if you use this bicycle model that we've seen earlier we want that the squared position px plus
+[10:50] py so the squared x coordinate plus y coordinate must be greater or equal to r which is the radius
+[10:57] radius of this obstacle and that essentially just encodes that our trajectory must lie outside of
+[11:02] this circle if the circle is centered at the origin and so yeah these are the state constraints
+[11:09] so they will only depend on the state variables and then we can also have input constraints that
+[11:14] you can see on the right so for example we may wish to never exceed a certain acceleration due
+[11:20] to some friction limits of our tires and then we could sort of have a box constraint so an upper
+[11:26] and lower threshold that our acceleration cannot exceed or must not exceed and so here this profile
+[11:34] sort of bounded below by a min and above by a max and we would write that as the following
+[11:40] inequality so a must be greater than a min and smaller than a max and using these kind of
+[11:47] inequalities or description of sets where our states can be in yeah we can sort of encode
+[11:55] these state and inputs constraint constraints now to summarize using all of these three ingredients
+[12:03] we can write a given problem as an optimal control problem by using this mathematical formulation so
+[12:10] we can write it down as a constraint optimization problem in which we attempt to minimize the
+[12:15] objective j by choosing the states x and inputs u so a sequence of states x and inputs u
+[12:24] uh over the into the future but we are not allowed to choose arbitrary
+[12:31] states and inputs but rather they must be consistent with the dynamics that we've chosen
+[12:35] that is we have constraints that each of the next states must correspond to our dynamics model so
+[12:45] the trajectory must be dynamically feasible it must be achievable by the uh by the system model
+[12:52] that we took and then also we have these uh state and input constraints that i've just talked about
+[12:59] so we can't arbitrarily choose x and u because x must always be in the set of feasible states
+[13:05] so calligraphic x and u must be in the set of feasible inputs calligraphic u and then the
+[13:11] final other constraint that we also add is that at the first time step our trajectory must agree
+[13:18] with the initial condition that we have from our state estimation pipeline so all our plans that
+[13:23] we make from here into the future they must start at our current position okay and so when we have
+[13:31] this sort of mathematical description of the control problem then we can attempt to solve it
+[13:37] now the bad news is that in general there is no closed form solution to these problems and instead
+[13:42] we have to use numerical numerical methods in order to do that yeah the the details of how that
+[13:49] is done are beyond the scope of this lecture but in practice you can often get away with encoding
+[13:55] your problem in one of the existing modeling languages for constraint optimization and so
+[14:00] there are tools with very high level interfaces such as casati which has an interface in c++
+[14:06] python and matlab or jump which is a constraint optimization library in julia
+[14:11] and the beauty of these libraries is that you can take this mathematical description of the problem
+[14:16] so here a very simple problem over two decision variables x and y with this very simple objective
+[14:25] and only two constraints and if we were to encode this problem for example in casati and python
+[14:32] we can just declare what are the variables that we so the decision variables that we can
+[14:38] use to minimize the cost then we symbolically symbolically describe
+[14:42] the objective and the constraints and then we can just call a low-level solver
+[14:49] now yeah and so if you know how to write a given problem or how to encode a given control problem
+[14:57] as this in this constraint optimization form you can already use these libraries to accomplish the
+[15:04] task now are we done unfortunately we're not so this just using this um an optimal control
+[15:14] technique that i've just mentioned um will not be immediately successful and uh yeah there are
+[15:22] several reasons for this so if you imagine that we just sort of solve this optimal control problem
+[15:26] and then we take the sequence of controls that we had and play them out to achieve our task
+[15:32] we would get to the problem that we use the prediction model that will always be wrong to
+[15:38] some extent so the prediction model was an abstraction of the real system and so it will
+[15:44] have errors and because we would take sort of multiple steps after another often these errors
+[15:51] will accumulate over time and they will result in a diverging trajectory of the system so if you
+[15:56] imagine for the same set of inputs so the same set of or sequence of inputs so the same sequence
+[16:04] of steering commands and acceleration and brake pedal commands if we apply them to the real system
+[16:09] we may follow this blue trajectory but then if we apply these the sequence of states and
+[16:16] sorry control the sequence of controls to our prediction model then we would follow this other
+[16:23] trajectory and therefore if we just sort of play out our sequence of controls and inputs and open
+[16:30] loop we will not accomplish our task very accurately and the second reason um why why
+[16:38] just applying this technique is uh intractable or or it's not a good idea is that even if we
+[16:45] have the perfect model so maybe we perfectly knew how our system behaves to the inputs that we apply
+[16:54] then we may have a very long task horizon so imagine that we have this car that is tasked
+[17:00] to drive around this loop so it's tasked to follow this dashed reference line and if we
+[17:07] write were to write this down as an optimal control problem for this entire sequence
+[17:15] on this entire lap then we have the problem that we have a lot of time steps that we have to
+[17:20] consider in our optimization and this is typically intractable so we have we have to we get a very
+[17:26] large problem that is hard to solve in in a limited amount of time and therefore model predictive
+[17:35] control adds one further idea to this framework of optimization which is the idea of receding
+[17:42] horizon control and so the idea that is added there is that rather than optimizing for the full
+[17:49] trajectory into the future we start at the current time step and we consider only the current state
+[17:54] and then from there we only look uh we take a look ahead so we uh we only consider a limited preview
+[18:01] into the future maybe the next 50 steps and so we measure the state we and then we task our
+[18:08] optimizer to optimize the next 50 time steps into the future and from these 50 time steps so we have
+[18:17] the optimal solution for the next 50 time steps from our optimizer we'll then only take the very
+[18:25] first input so we only apply the first input to the system and then measure again the new state
+[18:33] so we would then re-plan from there and so the idea is rather than playing out these inputs
+[18:39] and open loop we always only apply the first one and then measure again where that brought us
+[18:46] now schematically that would look as follows so for this example of driving in a lab with an
+[18:51] autonomous vehicle imagine that we are here at t0 and then rather than planning for the full
+[19:00] lap we only plan for the next say 50 time steps then this may be the optimal trajectory that we
+[19:05] get from our optimizer at this current time step then we apply only the first bit of that
+[19:11] input sequence so maybe just the first input and then we'll end up somewhere
+[19:19] here and the point is that we may not exactly end up where we plan to be but we will hopefully
+[19:24] be closer if we have a reasonable model but because we measure again and we now re-plan
+[19:31] from here again for the next 50 time steps we are able to to sort of capture these errors because we
+[19:40] always crave the system for the true state and so we re-plan from here and then we get the next
+[19:45] trajectory so the advantages are that we are able to account for errors because by re-planning we
+[19:50] introduce feedback and then also reduce the problem we reduce the problem size because we
+[19:55] only need to have a plan for the next say 50 time steps here rather than for this whole loop
+[20:03] now from an algorithmic perspective this looks this is sort of the summary and it's really just
+[20:09] what i said so as an input we take the objective the dynamics model a planning horizon and for a
+[20:15] local solver we typically also need an initial guess to speed up the solve and right and so
+[20:25] we will initialize our controls with this initial guess and then we loop over this following
+[20:32] sequence we measure the state so we get the sort of the current state from the state estimation
+[20:38] pipeline and then we plug in our current initial guess into the solver together with the objectives
+[20:45] and the dynamics then we get the sequence of controls we get only the first control input
+[20:52] and apply that to the system and then we start again and one important point here is that
+[20:58] because the controls between different different time steps typically only vary by a small margin
+[21:05] it is a good idea to reuse the controls from the previous time step and use them to warm start the
+[21:13] next solution to to make this solution process faster because we have to do it online so we
+[21:19] have to be able to do it at a high rate okay and if you do all of this then here's a small toy
+[21:27] example of of a this small blue car steering around this track which is given by this blue
+[21:36] rather jerky reference but because we run a model predictive control and we we only allow for
+[21:44] dynamically feasible trajectories the closed-loop trajectory that we get
+[21:51] is this very smooth orange line which we get from these green predictions at every time step
+[22:01] now that we've discussed the high level idea of model predictive control i want to briefly discuss
+[22:07] the different design parameters that are involved in order to successfully design an
+[22:11] mpc controller for a given system and so these design parameters range from the prediction model
+[22:18] that we use in our optimization over the cost function that we use to encode the task to the
+[22:28] prediction horizon which is the number of time steps that we include in our optimization at
+[22:34] every time step and so at every at every optimization step and then finally i will also
+[22:40] discuss terminal constraints which are additional constraints that we can add in order to improve
+[22:45] the safety of our system okay so let's start with the prediction model and so the general trade-off
+[22:55] that we have to solve when choosing a prediction model is between accuracy that is we want to be
+[23:01] able to very accurately predict how our inputs affect the future states of the system and
+[23:07] complexity that is we want to have a very simple model that allows us to solve this optimization
+[23:14] problem quickly so we want to have a very small model with only a few number of states and so
+[23:21] these two things are typically competing so often a very accurate model has a lot of states in order
+[23:28] to capture the high fidelity details and finding a good trade-off here is the main task when
+[23:35] choosing for model family for for example for this car a bicycle model a kinematic bicycle model
+[23:44] may be good if we had low velocities but then if we had higher velocities we will also have to
+[23:49] include dynamic effects such as friction and aerodynamic drag but once we've committed to a
+[23:57] model family so we kind of know the model class that we are in then if we only have some parameters
+[24:02] that we want to estimate so for example we want to estimate the drag coefficient or some friction
+[24:10] parameters then we can get these in a very principled way through a data driven approach
+[24:16] and the way that we would do that is that we can collect a data set of the real system behavior
+[24:21] here denoted with calligraphic d and each of the data points in that data set is comprised of
+[24:30] these tuples of x prime d which is the next time step that is obtained when you apply ud so the
+[24:38] input ud at the time at the state xd and the way that you would typically get this data set is for
+[24:47] example if you imagine for your car you can just drive that car on the loop that we've just shown
+[24:52] earlier so you can just drive the car and record the sequence of inputs and the resulting states
+[24:59] and then you can chop up so you record that from your true system and then you can chop up this
+[25:06] trajectory into these tuples to get the to compose this data set and our task will then be to
+[25:18] yeah if we have this data set we can optimize the unknown parameters such as drag and friction
+[25:24] we can collect them into this parameter vector theta and then we can again cast this as an
+[25:29] optimization problem so we can say that we want to minimize a loss function over this data set
+[25:36] by choosing a good candidate or making a good choice of these parameters and this loss function
+[25:45] is the squared sum of prediction errors between or the squared sum of errors between the predictions
+[25:51] that we would make from xd in our data set when applying input ud and the true next state so
+[26:02] this is what our model would give us for a given parameter theta so that this is the state
+[26:07] transition that the model would give us and this is the true next state and we want to minimize
+[26:13] the squared sum of these errors right so the second kind of parameter that i just want to
+[26:22] touch on very briefly is the cost function so the cost function is the is used to encode the task
+[26:30] and when you design a cost function you have to be careful or you have to make sure you have to
+[26:37] understand that you induce a certain optimal behavior so for example if you look at this
+[26:41] task of following this road one way in order in which you can design a cost for this problem is by
+[26:48] placing a reference at the center of this road and then you can just use a squared penalty
+[26:53] such as the the squared cost function that i showed earlier where we penalize the
+[26:58] cross track error but the behavior that we get from that is this very sort of conservative line
+[27:06] that is trying to stay near the center line because that's exactly the the objective that
+[27:10] we encoded for an autonomous driving scenario so a non-competitive setting this may be the right way
+[27:19] of encoding this this task but if we want to have more competitive behavior so for example we may
+[27:25] wish to drive along this track as fast as possible then this is not a very suitable
+[27:31] formulation because driving fast along this lane along this road is not
+[27:42] is not easily achieved if we are constrained or if we sort of encourage to stay along the center
+[27:47] in that case if we want to drive fast a better formulation of the task is that we just include
+[27:55] the track bounds as constraints so we have to we say that all the positions so all the states that
+[28:00] we consider must be within the track bounds and then we only use the cost function to encourage
+[28:07] progress along the tracks along the track so for example we have a penalty for for low velocities
+[28:16] and then the third kind of parameter is the prediction horizon so the number of time steps
+[28:21] that we consider in our optimization at every round and so there again we have a trade-off
+[28:30] so we want to have ideally want to have a short prediction horizon so that we have a very simple
+[28:38] optimization problem with only a few number of time steps that we have to consider
+[28:43] but if we only consider a few time steps into the future then we get very myopic so very
+[28:48] short-sighted behavior and this kind of myopic behavior can either be inefficient so imagine
+[28:55] in this scenario where this car is placed down here on the left and we only consider the next
+[29:00] five time steps and maybe inefficient because here we decide to accelerate and then we have to break
+[29:07] a lot in order to make the turn and so we're sort of wasting we're wasting our control authority to
+[29:15] correct the mistakes that we made earlier due to due to this short-sightedness but it may even be
+[29:23] unsafe so imagine that here we decided because here we only see this straight segment we decided
+[29:28] to accelerate so much that we're not even able to keep the car within the track bounds once we
+[29:35] see that the car that this road is making this turn here and so yeah one way in order to avoid
+[29:44] this sort of unsafe and inefficient behavior is by making this by making this trajectory
+[29:51] longer so taking more time steps into account so using a longer prediction horizon but another way
+[29:59] that you can achieve that is by including terminal constraints and these constraints
+[30:04] are additional constraints that ensure recursive feasibility so with feasibility i mean that
+[30:12] at this previous setting here where we are not able to make the turn the problem became infeasible
+[30:17] in that there's no states there's no control inputs that we could apply here that are in the
+[30:23] allowed set of controls so in calligraphic queue that would keep our car within the track bounds
+[30:30] because we were already so fast so this problem became infeasible and recursive feasibility means
+[30:37] that if we have the correct if the truth model of the system agrees with the prediction model that
+[30:43] we have then this problem will always be solvable even if we only consider a limited number of time
+[30:51] steps so even though we don't see this corner coming and one way that we can achieve it in this
+[30:55] very problem where we have a static environment is that we can constrain the velocity at the end
+[31:02] here to be zero and that means that we are only considering plans
+[31:07] for which at the end we can bring the system to a stop so we can bring the system to a stop
+[31:12] over our prediction horizon and that will implicitly prevent us from ever going so fast
+[31:19] that we could not bring the car to a safe hold when maybe some here comes a very short
+[31:27] or a very sharp corner or maybe even a wall or something appearing okay so now to summarize
+[31:35] the pros and cons of a model predictive control in particular in contrast to reactive control
+[31:42] we have seen that we can explicitly handle constraints that we can use to encode obstacles
+[31:47] so positions of obstacles or the track bounds as in the previous example
+[31:54] um due to this receding horizon control scheme we explicitly and also account for future decisions
+[32:02] so our optimization procedure explicitly accounts for how does and the controls at this current
+[32:11] time step affect the controls at the at the later time step and we are also doing that
+[32:16] are coupled so we controlling steering and acceleration simultaneously for example for
+[32:21] this car and finally we got a very uh systematic procedure in order to construct a controller
+[32:28] so all we need to do is write down the dynamics for the system and the costs and then potentially
+[32:36] additional constraints and once we have that we can hand this description of the problem over to
+[32:41] an optimizer to to get this the control law and we don't have to derive this sort of
+[32:49] rule-based controller by hand for the given system a downside of that is that we have to
+[32:54] solve this optimization problem online and so these kinds of methods they will have
+[33:01] higher computational and complexity and more memory requirements than a simple rule-based
+[33:07] controller where all you need to do is quickly evaluate for example the cross-tech error and
+[33:11] plug it into the simple rule to finish this section on model predictive control i want to
+[33:18] hide a few applications of these techniques in the wild and the first kind of example i want to
+[33:23] show you is a learning-based model predictive controller from Ugo Rosilio from UC Berkeley
+[33:30] and in this work they have extended the idea of vanilla model predictive control with learning
+[33:37] of a cost term at the end of the horizon which is used to account for decisions beyond
+[33:42] the prediction horizon and you can see that when they apply this idea to a full-size car here on a
+[33:51] racetrack in the beginning this car is driving very slowly and conservatively because it doesn't
+[33:57] have a good idea of the cost to go so the cost beyond the prediction horizon
+[34:05] but after driving a couple of laps on this track it has sort of gathered experience
+[34:11] and is able to compress that into this cost to go term
+[34:14] and they are able to even reach the friction limits of the tires here in this example
+[34:26] and the second example i want to show you is a whole body model predictive controller
+[34:31] from Marco Hutter's lab at ETH Zurich or the robotic systems lab and this is a great example
+[34:39] that model predictive control is applicable beyond these car-like models like a that we
+[34:45] can typically capture well with bicycle models so here they are controlling this wheeled laggard
+[34:50] robot to perform all sorts of tasks different gates moving over obstacles and so you can see
+[34:58] that model predictive control is a very expressive technique that can be applied to a wide variety
+[35:06] of different systems now now that you've seen the sort of expressiveness of MPC i also want
+[35:14] to briefly highlight one of the main limitations of model predictive control which arises when
+[35:20] interacting with other agents so if there are other thus far we've always considered scenes
+[35:26] where there's only a single agent so there were only there was only this autonomous car that we
+[35:31] maybe want to control over the track but if there are other agents in the scene then we kind of have
+[35:38] to account for them and one very traditional way that we could do that we can could use to do this
+[35:46] is that we can treat other players as dynamic obstacles so we can predict where they will be
+[35:51] in the future with some motion model for example a constant velocity model or with some more
+[35:57] elaborate model that we're getting from some prediction pipeline externally however the
+[36:04] problem is that we typically can't statically predict where other players will be in the future
+[36:09] because these players plan as well and thus their position in the future will depend on our
+[36:15] own actions because if i sort of drive close to the scar for example it may sweep to the side
+[36:23] and so this decision making process of multiple players is highly coupled and that is something
+[36:27] that is not captured by model predictive control at least not by the vanilla formulation
+[36:33] and so one extension that i just want to briefly provide is an extension to dynamic games
+[36:41] and so yeah here i just want to highlight the main difference to an optimal control problem
+[36:48] you will see that the on the high level this problem looks very similar so in order to cast
+[36:52] a given problem as a dynamic game we need the following ingredients we need first some joint
+[36:56] dynamics which describe the evolution of this state x but now x involves the state not only
+[37:02] of a single agent but of n agents and then this these dynamics f they have they don't only take
+[37:10] a single input u but they take an input for every player so u1 to un and they take this dynamics
+[37:16] take the same role they are used to predict the state at the next time step from the previous time
+[37:23] and then additionally because now we have n players making a decision in this system
+[37:27] each of the players has their own objective and this objective can again be written as this cost
+[37:33] function but here now with index i so player i has objective ji and this depends on the states
+[37:41] in the future then on the states of player i itself so ui and then also sorry the inputs of
+[37:49] player i which are ui and then also the inputs of everyone else which is uh u not i so we didn't
+[37:56] note it like this and now because we have n different uh objectives we cannot simply solve
+[38:03] this as a single uh optimal control problem because uh yeah there's not one objective that
+[38:09] we want to uh that we want to uh one cost function that we want to minimize instead the solution
+[38:16] will be an equilibrium and a very popular solution concept is the one of the nash equilibrium which
+[38:21] means that every player is sort of competitively competitively doing this optimization for their
+[38:27] own objective until they reach uh this equilibrium state in which no player can unilaterally
+[38:35] improve their respective cost so mathematically that would be improved uh would be written as we
+[38:41] want the cost of player i at the optimal input sequence to be smaller than all other costs that
+[38:50] they could achieve with the um when they change their inputs if everyone else stayed at their
+[38:57] optimal inputs so you can sort of think of this as multiple players pulling at the joint state
+[39:03] trajectory with their inputs in order to favor their own objective now uh solving these kinds
+[39:11] of problems is beyond the scope of this lecture however i do want to show a few applications
+[39:17] of this kind of idea and so the first example is this toy example uh from forest lane that
+[39:25] he has used to encode a tag game so two players trying playing tag where the objective of player
+[39:32] one is to minimize the distance to the blue player and the objective of two so player two is
+[39:38] to maximize the distance so red is the chaser and blue is the evader and the dynamics of these each
+[39:44] of these players is modeled as a 2d point mass and you can see that by solving this game
+[39:54] over these two players we get this very competitive and highly interactive
+[39:59] strategy where red is able to sort of chase blue into a corner and tag them the second example that
+[40:07] i would like to show is this work from alexander liniger from eth syriq who has developed a game
+[40:13] theoretic controller for our racing of these model cars and there the objective is for each player is
+[40:19] to not collide with other players but stay in the track bounds and stay ahead of other players as
+[40:25] well as maximizing track progress and you can see that by solving this dynamic game over these two
+[40:31] players you get this very competitive wheel to wheel racing behavior on this model track for
+[40:38] these toy cars to conclude today's lecture i'd like to summarize what we've discussed today so
+[40:45] we've started with a discussion of limitations of reactive control which motivate the use of
+[40:51] optimization based techniques that we've looked at today then we've discussed how we can cast a
+[40:58] given control problem as an optimization problem and how we can wrap this optimization in receding
+[41:05] horizon scheme to obtain a model predictive controller then we've discussed different design
+[41:10] parameters in order to make a model predictive controller performant for a given system in
+[41:16] practice and finally we've also reviewed some of the limitations of npc in the presence of other
+[41:21] agents and potential extensions to games now if you're interested in this topic of model predictive
+[41:28] control there are several resources that i can recommend if you're interested in model predictive
+[41:33] control in general there's this book by francesco parelli on predictive control and there's also
+[41:38] the lecture material from uc berkeley available online if you're interested in how you can solve
+[41:44] the optimization problem that we had at the inner loop of model predictive control and how you can
+[41:50] solve that without something like ip like jump or casadi you can consult this book on numerical
+[41:59] optimization by notre dal and right and finally if you're interested in control in general and also
+[42:04] like to consume this material in terms of videos there's this very good youtube channel by stephen
+[42:10] brunton on this topic okay with that we've reached the end of today's lecture thank you for your
+[42:16] attention

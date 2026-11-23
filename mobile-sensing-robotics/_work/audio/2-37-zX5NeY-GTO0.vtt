@@ -1,0 +1,1649 @@
+WEBVTT
+
+00:00.000 --> 00:09.000
+So welcome everyone to today's lecture and I want to talk today about the fundamental matrix and the essential matrix.
+
+00:09.000 --> 00:25.000
+And we are especially interested here in actually computing both matrices, but now not taking into account the projection matrices or the exterior and interior information, but we want to estimate this from data.
+
+00:25.000 --> 00:34.000
+So we assume just to have images taken from the same scene, a pair of images, and we want to estimate the fundamental matrix or the essential matrix.
+
+00:34.000 --> 00:41.000
+That means we want to estimate where those cameras have been located relative to each other when they took two images.
+
+00:41.000 --> 00:43.000
+So just let me illustrate how that could look like.
+
+00:43.000 --> 00:56.000
+So consider we have those two images here from Paris and we want to know where has the photographer been when taking one image with respect to the other image.
+
+00:56.000 --> 01:05.000
+And this is exactly a task that we aim at doing without knowing how large the object is or how the object exactly looked like.
+
+01:05.000 --> 01:09.000
+The only thing we assume to know is that we have corresponding points in those images.
+
+01:09.000 --> 01:17.000
+So you see those red dots over here in image number one and image number two and we assume that we know the correspondences between those points.
+
+01:17.000 --> 01:25.000
+So for example that this point over here corresponds to this point and that this point over here corresponds to that point and so on and so forth.
+
+01:25.000 --> 01:35.000
+So the only thing we assume to know is to have point features extracted from those images and that we know the correspondences between those point features.
+
+01:35.000 --> 01:53.000
+And that's all we assume to know and then we want to be able to compute either the fundamental matrix if we work with uncalibrated cameras or the essential matrix so that we are then able to obtain the rotation matrix and the baseline vector between the two camera locations.
+
+01:53.000 --> 02:06.000
+In most cases we will use calibrated cameras so we are interested in estimating the essential matrix but the solution that we are going to provide is actually very similar for the fundamental matrix and the essential matrix.
+
+02:06.000 --> 02:15.000
+So we will start with the fundamental matrix then move over to essential matrix and then in the end extract R and B out of the essential matrix.
+
+02:15.000 --> 02:23.000
+So the topics today are computing the fundamental matrix only given corresponding points and in the second part computing the essential matrix.
+
+02:23.000 --> 02:38.000
+So the same thing for the calibrated camera just having a set of corresponding points in those images and at the last step we will explain how we extract the rotation matrix and the basis or the baseline vector out of the essential matrix.
+
+02:39.000 --> 02:42.000
+Of course only the direction not the length of that vector.
+
+02:42.000 --> 02:49.000
+That's something that we cannot extract from the essential matrix which only has these five degrees of freedom.
+
+02:49.000 --> 02:57.000
+So three degrees of freedom encoding the rotation and two degrees of freedom for the translation so we don't know how far the cameras are apart.
+
+02:57.000 --> 03:00.000
+We only know the direction vector.
+
+03:00.000 --> 03:02.000
+But let's start with the fundamental matrix.
+
+03:02.000 --> 03:07.000
+So our goal now is computing the fundamental matrix giving a set of corresponding points.
+
+03:07.000 --> 03:12.000
+Before we start let's have a quick look what the fundamental matrix was.
+
+03:12.000 --> 03:15.000
+The fundamental matrix was defined the following way.
+
+03:15.000 --> 03:31.000
+So it consists of the calibration matrix of the first camera, the rotation matrix of the first camera, the same thing for the second camera as well as the skew symmetric matrix which encodes the basis vector or baseline vector between the two projection centers of my camera.
+
+03:32.000 --> 03:38.000
+And it's defined for the uncalibrated camera so we do not assume our camera to be calibrated.
+
+03:38.000 --> 03:41.000
+We don't have any information about the intrinsics.
+
+03:41.000 --> 03:49.000
+But what the fundamental matrix allows us to do, it allows us to in a very elegant way formulate the coplanarity constraint.
+
+03:49.000 --> 03:55.000
+That means if we have two corresponding points, m prime and n double prime, so this one in image one and this one from image two,
+
+03:56.000 --> 04:03.000
+with x prime transposed f x double prime equals to zero we can encode the coplanarity constraint.
+
+04:03.000 --> 04:17.000
+So whenever we have two points which are the same point in reality and just created two images, so one in image one and the other one in image two, then this product must be zero.
+
+04:17.000 --> 04:23.000
+If the product is zero I cannot necessarily infer that this is a corresponding point.
+
+04:23.000 --> 04:25.000
+It only works in the other direction.
+
+04:25.000 --> 04:31.000
+If these are corresponding points and they actually correspond then this equation must hold.
+
+04:31.000 --> 04:34.000
+So it's an implication only in one direction.
+
+04:35.000 --> 04:40.000
+Okay, so let's have a look how we can compute the fundamental matrix.
+
+04:40.000 --> 04:43.000
+So we can compute the fundamental matrix as we discussed so far.
+
+04:43.000 --> 04:52.000
+If we know the calibration matrices, if we know the rotation matrices of both cameras and if we know the skew symmetric matrix or the baseline, then we know how to do that.
+
+04:52.000 --> 04:56.000
+We also have seen that we can do this if we know the projection matrices.
+
+04:56.000 --> 05:06.000
+So if we know the projection matrix of the first camera and the second camera which encodes all this information, then we can also directly provide the fundamental matrix.
+
+05:06.000 --> 05:18.000
+But we want to go a different path today and see how can we do this if we don't have this information and the only information we have are the images and corresponding points in these images.
+
+05:19.000 --> 05:23.000
+And our goal is to estimate f just based on those correspondences.
+
+05:24.000 --> 05:26.000
+Okay, so let's look into our problem.
+
+05:26.000 --> 05:45.000
+Our problem says we have a set of n corresponding points given, so x'y', x''y'' these are the pixel coordinates, x coordinate of the pixel, y coordinate of the pixel in image 1 and x coordinate and y coordinate of the pixel in image number 2.
+
+05:45.000 --> 05:55.000
+And this is the index small n and this tells us the first corresponding point, second corresponding point, third corresponding point so that we have the correspondences between them.
+
+05:55.000 --> 05:59.000
+And what we want to get out is the fundamental matrix f.
+
+05:59.000 --> 06:07.000
+And we can do this by exploiting this coplanarity constraint that we can formulate using the fundamental matrix.
+
+06:07.000 --> 06:17.000
+So for every pair of points, so every point in image number 1 and its corresponding partner in image number 2, we can formulate our coplanarity constraint.
+
+06:17.000 --> 06:23.000
+So the coplanarity constraint was x' transposed f x'' must be equal to 0.
+
+06:23.000 --> 06:29.000
+So we know that this equation holds for all the pairs of points that we actually have.
+
+06:29.000 --> 06:34.000
+So if I expand this expression, so what does this actually mean?
+
+06:34.000 --> 06:49.000
+This means nothing else than a three-dimensional homogeneous vector, so x, y and 1, x, y, 1 on the other side as well and our fundamental matrix which is a 3x3 matrix.
+
+06:49.000 --> 07:02.000
+So we have nine elements that we need to fill, although we know it's only defined up to a scale factor because it's a homogeneous matrix and there's another constraint that we need to take into account.
+
+07:02.000 --> 07:08.000
+So these elements here are our unknowns, right?
+
+07:08.000 --> 07:21.000
+So the unknowns that we want to estimate because this coordinate and this coordinate are my observations for what this is given and these are my unknown parameters.
+
+07:21.000 --> 07:31.000
+So I have a regular function which relates my unknowns with my knowns and should be equal to 0.
+
+07:31.000 --> 07:40.000
+So again, as we have seen it already for the DLT for example, in standard least squares we have a vector of unknowns, now we have a matrix of unknown elements.
+
+07:40.000 --> 07:54.000
+So what we need to do, we need to basically turn this matrix of unknowns into a vector of unknowns which we can do in a very straightforward way by just basically taking all those nine elements and arranging them in a vector.
+
+07:55.000 --> 08:00.000
+And this makes sense and we can do this and this leads actually to a linear function of our unknowns.
+
+08:00.000 --> 08:06.000
+We can actually visualize if we compute the product of the vector matrix vector.
+
+08:06.000 --> 08:19.000
+So if I compute the result of this, so the first element that comes out of this will be x1 prime f11 x double prime n, so this is kind of the first element here.
+
+08:19.000 --> 08:25.000
+And then the second element here will be multiplied with this element and with the first element over here, which gives me this element.
+
+08:25.000 --> 08:31.000
+And then I can continue this one multiplied with this one multiplied with this one and so on and so forth.
+
+08:31.000 --> 08:33.000
+So I can basically expand that equation.
+
+08:33.000 --> 08:45.000
+The important thing that I can see in here is that this f, so my unknowns, just appear as a linear term in all those parts of the sum.
+
+08:45.000 --> 08:51.000
+And all the other elements, x double prime and x prime, these are all known elements.
+
+08:51.000 --> 08:58.000
+So they are basically a coefficient towards the unknowns and these are all linear terms, just all added up.
+
+08:58.000 --> 09:05.000
+So what I can do, and this was basically the same way as we have done it for when we were computing the DLT,
+
+09:05.000 --> 09:20.000
+we can put all the coefficients into one coefficient vector over here and then multiply that with our fundamental matrix so that this also turns into vector.
+
+09:20.000 --> 09:26.000
+So we have our coefficient vector over here and then our unknown vector over here.
+
+09:26.000 --> 09:33.000
+So we can simply put that together in a vector times a second vector.
+
+09:33.000 --> 09:37.000
+So our coefficients and our unknowns.
+
+09:37.000 --> 09:44.000
+And I'm basically getting those coefficients for every corresponding pair.
+
+09:44.000 --> 09:51.000
+So every pair of points will generate me one of those equations.
+
+09:51.000 --> 10:05.000
+So just in terms of the notation, there is actually a standard notation for stacking this unknowns from the matrix into a vector and for actually computing this coefficient vector, which is the Kronecker product.
+
+10:05.000 --> 10:27.000
+So if you use any mathematical toolbox or Matlab or some other Python framework, you can just use the Kronecker product in order to build this coefficient vector out and of the individual vectors that you had, the kind of small vectors for the coordinate in image number two.
+
+10:27.000 --> 10:32.000
+And this is x double prime Kronecker product x prime transposing this vector.
+
+10:32.000 --> 10:34.000
+So this will actually give me the coefficient vector.
+
+10:34.000 --> 10:42.000
+And the second part over here is something which is called vectorized so that you can vectorize your matrix and it turns the matrix into a vector.
+
+10:42.000 --> 10:50.000
+And then you can just execute the Kronecker product, multiplying this vectorized form of f, which is exactly the product that we have been computing.
+
+10:50.000 --> 10:53.000
+So you don't need to build that up by hand, these coefficients.
+
+10:53.000 --> 10:56.000
+You can use a standard operator in order to do this.
+
+10:57.000 --> 11:10.000
+And this holds actually in general whenever you have, it doesn't only hold for the fundamental matrix, it holds for all products of this form that you can express this through the Kronecker product and the vectorization of your matrix.
+
+11:10.000 --> 11:18.000
+And this is sometimes handy if you need to do these computations and you want to estimate those quantities.
+
+11:18.000 --> 11:23.000
+So again, all corresponding points generate one of those equations.
+
+11:23.000 --> 11:27.000
+So for every corresponding point, we get one of these equations.
+
+11:27.000 --> 11:36.000
+So if we have n corresponding points, we get actually n of those equations and n of those coefficient vectors so we can actually stack them together in a matrix.
+
+11:36.000 --> 11:43.000
+So these are again all my coefficient vectors A, just stacked together in a matrix for corresponding point one,
+
+11:43.000 --> 11:48.000
+for the correspondences point one, point two, point three, until point n.
+
+11:48.000 --> 11:55.000
+So that I then get a matrix A and that I have the resulting equation A times f equals zero,
+
+11:55.000 --> 12:01.000
+where f is my vector of unknowns and A is my coefficient matrix and this should be able to zero.
+
+12:01.000 --> 12:05.000
+And that's kind of the system that we need to solve.
+
+12:05.000 --> 12:08.000
+And we have seen already a few times how that works.
+
+12:08.000 --> 12:15.000
+It's kind of the standard tool that we can take out of our pocket in order to solve this is the singular value decomposition.
+
+12:15.000 --> 12:22.000
+So we perform a singular value decomposition of A in order to solve this homogeneous system.
+
+12:22.000 --> 12:34.000
+And the singular value decomposition directly provides us a solution for my f, which I then can use to reconstruct my matrix that brings this equation to zero.
+
+12:34.000 --> 12:42.000
+And this is done by what the SVD does. It decomposes the matrix A into three matrices.
+
+12:42.000 --> 12:50.000
+The matrix in the middle is a diagonal matrix which contains the singular values of this matrix A.
+
+12:50.000 --> 12:59.000
+And if we actually have a solution, so if there's a null space of A, then one of those singular values will be zero.
+
+12:59.000 --> 13:05.000
+And we take the corresponding singular vector, corresponds to the singular value of zero,
+
+13:05.000 --> 13:10.000
+which is in this case then the last one in the third matrix that we get out.
+
+13:10.000 --> 13:16.000
+And this is our solution. This is the singular vector corresponding to the singular value of zero.
+
+13:16.000 --> 13:18.000
+And this is my solution for f.
+
+13:18.000 --> 13:26.000
+So I can just take this column or row, depending how you did your SVD, out of the third matrix which contains the singular vectors.
+
+13:26.000 --> 13:29.000
+And then this is my solution to that system.
+
+13:31.000 --> 13:34.000
+So a few words. How many points do we actually need in order to perform this?
+
+13:34.000 --> 13:38.000
+So the vector f has nine dimensions, so we have nine unknowns.
+
+13:38.000 --> 13:41.000
+And we need to solve the system Af equals to zero.
+
+13:41.000 --> 13:49.000
+But we know already that A must have a rank deficiency.
+
+13:49.000 --> 13:53.000
+And A can have at most rank eight.
+
+13:53.000 --> 13:58.000
+We have our nine elements in here and then the number of points that we have.
+
+13:58.000 --> 14:03.000
+So if we have a solution here, then the matrix A has at most rank eight.
+
+14:03.000 --> 14:12.000
+So we need eight corresponding points because we need to generate here eight rows in order to get that rank eight.
+
+14:14.000 --> 14:17.000
+In reality, however, the world is slightly different.
+
+14:17.000 --> 14:20.000
+In reality, all measurements are noisy.
+
+14:20.000 --> 14:28.000
+So with more than eight points, the matrix A will become a regular matrix and not singular anymore.
+
+14:28.000 --> 14:29.000
+And that's something that we want.
+
+14:29.000 --> 14:36.000
+So we want to have the matrix which rank eight, otherwise we couldn't solve Af equals to zero.
+
+14:36.000 --> 14:45.000
+Again, also as we have done that in the past when we had this type of estimation problems, we were simply then performing that as a minimization problem.
+
+14:45.000 --> 14:48.000
+But we are not bringing A times F equals to zero.
+
+14:48.000 --> 14:54.000
+We are minimizing this expression under the constraint that, for example, F is norm one.
+
+14:54.000 --> 15:05.000
+And then we can use exactly the same approach of the SVD and simply now take the smallest singular value.
+
+15:05.000 --> 15:08.000
+So it's not zero anymore, but it's a small value.
+
+15:08.000 --> 15:14.000
+And take the corresponding singular vector because this is one which now minimizes my equation.
+
+15:14.000 --> 15:25.000
+So instead of using the F which brings Af equals to zero, we select the F hat, an estimate of F, which minimizes Af.
+
+15:25.000 --> 15:37.000
+And then we can compute an approximation of F of my fundamental matrix using the singular vector corresponding to the smallest singular value.
+
+15:37.000 --> 15:43.000
+Okay, so just again as an illustration, if I do my SVD, A is U times D times V transpose.
+
+15:43.000 --> 15:48.000
+So this is my diagonal matrix and these are my rotation matrix and matrices.
+
+15:48.000 --> 15:54.000
+And V contains the singular vectors of the matrix A.
+
+15:54.000 --> 15:56.000
+So this is kind of my original matrix A.
+
+15:56.000 --> 15:58.000
+It's an n by nine matrix.
+
+15:58.000 --> 16:00.000
+So nine here and down here.
+
+16:00.000 --> 16:02.000
+Use an n by n matrix.
+
+16:02.000 --> 16:04.000
+D is an n by nine matrix.
+
+16:04.000 --> 16:10.000
+We have here the diagonal elements containing the singular values and there are nine of them.
+
+16:10.000 --> 16:20.000
+And then we have a nine by nine matrix which is matrix V transposed where I take out the corresponding singular vector.
+
+16:20.000 --> 16:25.000
+So the singular values here on this diagonal, they are actually sorted.
+
+16:25.000 --> 16:26.000
+So it's what we illustrated here.
+
+16:26.000 --> 16:29.000
+And so I take the last one because this is the smallest one.
+
+16:29.000 --> 16:33.000
+And then this is in this case the ninth element, so D99.
+
+16:33.000 --> 16:42.000
+And then the last row here of V transposed gives me the singular vector.
+
+16:42.000 --> 16:50.000
+And depending if your mathematical toolbox returns you V transposed, then it is here the last row.
+
+16:50.000 --> 16:54.000
+Or if it is V, then it is of course the last column.
+
+16:54.000 --> 16:59.000
+And this is your estimate of the entrance of your fundamental matrix.
+
+16:59.000 --> 17:02.000
+But it's not the one which brings it actually to zero.
+
+17:02.000 --> 17:06.000
+But it is the one which is close to zero.
+
+17:06.000 --> 17:11.000
+So let's see, only in approximation, what happens if we try to bring this into an algorithm.
+
+17:11.000 --> 17:13.000
+And just kind of sketch this here in Matlab.
+
+17:13.000 --> 17:17.000
+So we have our function where I want to compute f from my point pairs.
+
+17:17.000 --> 17:21.000
+So I have an x prime, x double prime is here stored in these variables.
+
+17:21.000 --> 17:24.000
+And the first thing we need to do, we need to build up our matrix A.
+
+17:24.000 --> 17:30.000
+And we can very easily do this by just iterating over all points that I have.
+
+17:30.000 --> 17:32.000
+So I'm iterating over all corresponding points.
+
+17:32.000 --> 17:36.000
+And simply build up this matrix A.
+
+17:36.000 --> 17:40.000
+And I just do this because the matrix A contains the coefficient vectors,
+
+17:40.000 --> 17:45.000
+which I can easily generate using the Kronecker product here with the function cron,
+
+17:45.000 --> 17:50.000
+which builds the Kronecker product of x double prime and x prime and so builds up my matrix A.
+
+17:50.000 --> 17:55.000
+So just with this tiny small for loop I've already built up my matrix A.
+
+17:55.000 --> 17:57.000
+Then I need to perform my singular value decomposition.
+
+17:57.000 --> 18:02.000
+So I do u d v equals s v d of A.
+
+18:02.000 --> 18:11.000
+And then I simply take the matrix v and take out the last column of v, which I do here, the ninth column of v.
+
+18:11.000 --> 18:15.000
+And I kind of reshape it back into a matrix, into the fundamental matrix.
+
+18:15.000 --> 18:19.000
+And then f is my fundamental matrix and I'm done.
+
+18:19.000 --> 18:27.000
+So this is kind of the singular vector which corresponds to the smallest singular value.
+
+18:27.000 --> 18:32.000
+The problem that I will have, however, here, it's only an approximation of my fundamental matrix.
+
+18:32.000 --> 18:36.000
+Because it was not solving A f equals to zero.
+
+18:36.000 --> 18:43.000
+So as a result of this, this matrix f that I have generated is not necessarily a rank two matrix,
+
+18:43.000 --> 18:46.000
+which I expect the fundamental matrix to be.
+
+18:46.000 --> 18:53.000
+So maybe this matrix f that I actually computed here doesn't have rank deficiency.
+
+18:53.000 --> 18:55.000
+And thus it has no null space.
+
+18:55.000 --> 19:03.000
+And again, as you have learned, null space of this matrix f is something important with respect to the epipolar geometry, for example.
+
+19:03.000 --> 19:10.000
+So what we now want to do is we want to actually change this matrix f a little bit, as little as possible,
+
+19:10.000 --> 19:13.000
+but make sure it has a rank deficiency.
+
+19:13.000 --> 19:18.000
+So we want to enforce the rank two constraint in this matrix f.
+
+19:18.000 --> 19:26.000
+So I want to manipulate this matrix f so that after this manipulation, it is as close as possible to the matrix f that we have computed,
+
+19:26.000 --> 19:30.000
+but that this has a rank two constraint.
+
+19:30.000 --> 19:34.000
+And I can do this, again, by using the singular value decomposition.
+
+19:34.000 --> 19:37.000
+So remember, the singular value decomposition generates this decomposition,
+
+19:37.000 --> 19:45.000
+where on the diagonal of this matrix D in the middle, I have the singular values.
+
+19:45.000 --> 19:52.000
+And they are sorted in descending order, so the largest one, second largest one, and the smallest one over here.
+
+19:52.000 --> 20:02.000
+And so what I then can do is I can take the smallest singular value and actually set it to zero.
+
+20:02.000 --> 20:10.000
+And this is an approximation of f, which enforces that we have the rank deficiency,
+
+20:10.000 --> 20:13.000
+that we have a rank of two of this three by three matrix.
+
+20:13.000 --> 20:18.000
+Of course, I'm just setting the smallest singular value to zero,
+
+20:18.000 --> 20:29.000
+and thus kind of generate the rank deficiency in the area where this actually has the smallest extent, so to say.
+
+20:29.000 --> 20:34.000
+So what we do is we compute a second singular value decomposition, but now not of my matrix A,
+
+20:34.000 --> 20:38.000
+but I compute the singular value decomposition of my matrix F.
+
+20:38.000 --> 20:48.000
+So it again leads me to U D V transpose, and what I'm doing now, I'm building up a new matrix F,
+
+20:48.000 --> 20:57.000
+where I take the diagonal matrix here and put this last D three three, so the third singular value, the smallest one,
+
+20:57.000 --> 21:02.000
+and I put it explicitly to zero. Typically, it's a very small value, but I'm making it explicitly zero,
+
+21:02.000 --> 21:07.000
+so that this matrix will be of rank two, right, because those two values are larger than zero,
+
+21:07.000 --> 21:12.000
+this one is zero, so this will lead me to rank two matrix.
+
+21:12.000 --> 21:19.000
+And then I just build up my matrix F again from taking U and V that I got through the singular value decomposition,
+
+21:19.000 --> 21:26.000
+but just change the diagonal matrix in the middle by setting the last and smallest eigenvalue to zero.
+
+21:26.000 --> 21:35.000
+So now I can continue with my algorithm, so F A is my kind of approximation of A, this was where we stopped actually before,
+
+21:35.000 --> 21:40.000
+and then I'm doing another singular value decomposition of this approximation of F.
+
+21:40.000 --> 21:48.000
+So I'm now decomposing this approximation of F that I have computed in U A D A and V A,
+
+21:48.000 --> 21:53.000
+so there's a decomposition of this matrix F that I've computed.
+
+21:53.000 --> 22:01.000
+And then I'm generating my new fundamental matrix, basically restacking it together from these three vectors,
+
+22:01.000 --> 22:09.000
+but what I'm doing here, I'm setting the smallest eigenvalue, singular value, sorry, to zero, which is here, this last element.
+
+22:09.000 --> 22:15.000
+So by this zero, I'm generating a matrix which is of rank two.
+
+22:15.000 --> 22:23.000
+So as a result of this, this is my best approximation of the previously computed fundamental matrix,
+
+22:23.000 --> 22:33.000
+which makes sure that the result has the rank two constraint that the fundamental matrix must have in order to be a proper fundamental matrix.
+
+22:33.000 --> 22:42.000
+So with this algorithm, I can compute the fundamental matrix based on eight corresponding points.
+
+22:42.000 --> 22:50.000
+So this gave this algorithm the popular name eight point algorithm, and it's still today very easy to implement,
+
+22:50.000 --> 22:57.000
+a very popular algorithm for estimating the fundamental matrix from eight corresponding points.
+
+22:57.000 --> 23:05.000
+In practice, however, I have to take care of a few small details if I actually do this and use this in real world system,
+
+23:05.000 --> 23:10.000
+and that is the fact that my system may not be well conditioned.
+
+23:10.000 --> 23:14.000
+It depends on how the points actually spread and how my coordinate system looks like.
+
+23:14.000 --> 23:23.000
+So if I'm working in a pixel coordinate system, let's say I have a 12 megapixel camera, so 4000 pixels by 3000 pixels over here,
+
+23:23.000 --> 23:29.000
+and then I have my coordinate system, which sits somewhere over here,
+
+23:29.000 --> 23:36.000
+and I have some points which have high pixel values like 1800, 1400, which will be sitting somewhere over here.
+
+23:36.000 --> 23:43.000
+And then I have the third dimension here, which comes from the normalization of the homogeneous coordinates,
+
+23:43.000 --> 23:48.000
+which takes a very small value, so I have very big differences in the individual dimensions.
+
+23:48.000 --> 23:53.000
+And this can lead to numerical problems or numerical instabilities if we solve this system.
+
+23:53.000 --> 24:02.000
+Therefore, it is better to actually change the coordinate system that I'm using, where I represent my points in,
+
+24:02.000 --> 24:06.000
+in a system so that all the dimensions roughly take the same values.
+
+24:06.000 --> 24:15.000
+So what I can simply do, I can basically simply scale this image to a new coordinate system so that this coordinate would be 111.
+
+24:15.000 --> 24:21.000
+So basically scaling the x and y coordinate so that I get values appropriately over here.
+
+24:21.000 --> 24:29.000
+So this would be, in this case, it's actually the same scaling for x and y so that 2000 pixels correspond to a value of 1.
+
+24:30.000 --> 24:34.000
+So I would get the coordinate points here, 0.9, 0.7 and 1.
+
+24:34.000 --> 24:42.000
+And if I just move to this new coordinate system where I'm just kind of scaling the x and y coordinates,
+
+24:42.000 --> 24:49.000
+I get a system which would be better conditioned and then I will have less numerical issues over here.
+
+24:49.000 --> 24:55.000
+So this normalization of these point coordinates substantially improves the stability of the system.
+
+24:55.000 --> 25:02.000
+And we basically make the transformation that the center of mass of all the points I'm looking into sits in 00
+
+25:02.000 --> 25:08.000
+and then scales the x, y values so that the coordinates are within minus one and one.
+
+25:08.000 --> 25:14.000
+And as a result of this, because I'm adding this additional dimension from the homogeneous coordinates,
+
+25:14.000 --> 25:19.000
+which is one, the normalization constant, also the other values should be in that order.
+
+25:19.000 --> 25:26.000
+So if I do this, I can very simply express this with a geometric transformation, which there's t times x,
+
+25:26.000 --> 25:30.000
+so there's my original coordinate, leads me to a new coordinate, which is the headed one,
+
+25:30.000 --> 25:36.000
+so that the coordinates are zero centered and in the size of minus one and one.
+
+25:36.000 --> 25:45.000
+So depending on all the points I spread in my image, I'm doing this normalization that they are all appropriately normalized between minus one and one.
+
+25:45.000 --> 25:51.000
+And then I can do exactly the same step as I have done before, so determining the fundamental matrix.
+
+25:51.000 --> 25:58.000
+But what I then need, after I computed the fundamental matrix, this fundamental matrix is in this different coordinate system and actually need to transfer it back.
+
+25:58.000 --> 26:06.000
+What we can see is that if we have our original points, x prime transposed f x double prime, and we transform our points,
+
+26:07.000 --> 26:16.000
+I basically have this transformation inverse sitting over here, so that if I'm kind of executing this with my new coordinates,
+
+26:16.000 --> 26:23.000
+I can expand the transposition operator here, I basically have my transformed coordinates sitting here and here,
+
+26:23.000 --> 26:30.000
+and then a combination where I have this transformation matrix, the fundamental matrix, and the transformation matrix again.
+
+26:30.000 --> 26:43.000
+So this means I can transfer forth and back from this normalized fundamental matrix by exploiting my transformation, can do it forth and back.
+
+26:43.000 --> 26:50.000
+So just kind of here to show, if you do this transformation, you need to make sure you afterwards transform your fundamental matrix,
+
+26:50.000 --> 26:58.000
+so that you kind of undo that scaling that you did before in here and kind of the shift of the pixel coordinates.
+
+26:58.000 --> 27:07.000
+So it's nothing very special, but something that's highly recommended if you do this to avoid numerical instabilities when solving your system.
+
+27:07.000 --> 27:15.000
+There are a few more things we need to take care of if we use the eight-point algorithm in order to compute the solution.
+
+27:15.000 --> 27:23.000
+The reason why we need to take care is that there are certain configurations which we cannot handle with our algorithm.
+
+27:23.000 --> 27:32.000
+So there are singularities that we obtain, for example, similar to the computation of the DLT, if all points lie on a plane.
+
+27:32.000 --> 27:42.000
+So if all points lie on a plane, it's very similar to computing the DLT, we get the result that the rank of this matrix A may be smaller than 8.
+
+27:42.000 --> 27:48.000
+And if the rank of A is smaller than 8, we don't get an appropriate solution over here.
+
+27:48.000 --> 27:58.000
+So we get, you can see this example, so these are images from this famous fundamental matrix song where you have corresponding points on the Harper Bridge in Sydney.
+
+27:58.000 --> 28:05.000
+And if you look on top of this, you can see they perfectly lie on a plane and will actually generate to a degenerated solution.
+
+28:05.000 --> 28:15.000
+So even if your points are not perfectly on a plane, but even close to a plane, you get numerically instable solutions and this doesn't give you the result that you want to have.
+
+28:16.000 --> 28:24.000
+There's a second thing we need to take care if we want to compute the relative orientation or the fundamental matrix using this algorithm.
+
+28:24.000 --> 28:28.000
+And this is if we have no translation-only rotation.
+
+28:28.000 --> 28:35.000
+So if we only rotate our camera on the spot and we do not translate the camera, then we may also run into issues.
+
+28:35.000 --> 28:41.000
+So if we only rotate our camera, this means the projection centers are both the same.
+
+28:41.000 --> 28:44.000
+So let's see what happens.
+
+28:44.000 --> 28:55.000
+So I have, let's say these are my scene points and this is the camera image of the image or the field of view that camera one generates.
+
+28:55.000 --> 29:00.000
+And this is the field of view that the camera two generates.
+
+29:00.000 --> 29:04.000
+Then the translation between both of the images is zero.
+
+29:04.000 --> 29:18.000
+And as a result of this, I also will have a singularity that the fundamental matrix cannot be reconstructed in this case of zero translation.
+
+29:18.000 --> 29:22.000
+So it's also something that can be something tricky and we may need to take care of.
+
+29:22.000 --> 29:30.000
+If you want to track the motion of the camera and the camera is moving still or is only rotating on the spot, then the eight-point algorithm will not be your friend.
+
+29:30.000 --> 29:40.000
+And you need to make sure that you capture those situations explicitly and estimate then the rotation, for example, separately, not using the eight-point algorithm.
+
+29:40.000 --> 29:47.000
+So to sum up this half an hour that we have talked about the computing a direct solution for the fundamental matrix.
+
+29:47.000 --> 30:00.000
+What we have done, we have provided a solution which uses the coplanarity constraint and that allows us to estimate the fundamental matrix if we have at least eight corresponding points.
+
+30:00.000 --> 30:02.000
+It is a direct solution.
+
+30:02.000 --> 30:05.000
+That means we don't need to iterate and we don't need any initial guess.
+
+30:05.000 --> 30:14.000
+We can just put our corresponding points in and the eight-point algorithm will obtain us the fundamental matrix.
+
+30:14.000 --> 30:23.000
+And we have basically done this by setting up a system of linear equations or a homogeneous system of linear equations, solving this through SVD.
+
+30:23.000 --> 30:32.000
+And we additionally need to ensure that the resulting matrix that we get is of rank two, which we again did by exploiting the fundamental matrix.
+
+30:32.000 --> 30:41.000
+And again, if we apply this to practical situations, we need to make sure the coordinates that we have are roughly in the same area, the same size or something.
+
+30:41.000 --> 30:51.000
+Therefore, we rescale them from minus one to one so that all coordinates of a homogeneous vector are approximatively of the same size so we get numerically better solutions.
+
+30:51.000 --> 30:59.000
+In addition to that, there are singularities like no translation, only rotations or if all points lie on a plane.
+
+30:59.000 --> 31:05.000
+So these are situations where we don't obtain a solution for the fundamental matrix.
+
+31:05.000 --> 31:13.000
+But with this approach and this algorithm that we have generated, you are able to implement your own estimation of the fundamental matrix.
+
+31:13.000 --> 31:20.000
+The next thing I want to do is look how does this change if we go to the essential matrix.
+
+31:20.000 --> 31:26.000
+So again, the essential matrix is basically the fundamental matrix for calibrated cameras.
+
+31:26.000 --> 31:33.000
+So far we assume we don't know anything about our cameras in terms of the calibration matrix, but that's not true in reality.
+
+31:33.000 --> 31:41.000
+In most situations when we do geometric reconstructions, we actually calibrate our cameras beforehand because it simplifies our problems.
+
+31:41.000 --> 31:45.000
+So we now assume we work with calibrated cameras from now on.
+
+31:45.000 --> 31:49.000
+And so the essential matrix is then the fundamental matrix for the calibrated camera.
+
+31:49.000 --> 31:53.000
+It's more easily written down because the calibration matrices are gone.
+
+31:53.000 --> 31:58.000
+They're not part of this matrix anymore because we assume our cameras to be calibrated.
+
+31:58.000 --> 32:10.000
+That means in the general form, the essential matrix is R for the rotation matrix of the first camera, the screw symmetric matrix encoding the baseline vector and the rotation matrix of the second camera transposed.
+
+32:10.000 --> 32:16.000
+And in the general parameterization of dependent images, and this is a parameterization that we are typically using,
+
+32:16.000 --> 32:26.000
+it even simplifies further because then the rotation matrix of the first camera is the identity matrix because the coordinate system is defined based on the first camera.
+
+32:26.000 --> 32:35.000
+And then we only have the rotation matrix of the second camera, which is the only rotation matrix, which is then in here describing how the second camera looks.
+
+32:35.000 --> 32:40.000
+And we can use the essential matrix to formulate our coplanarity constraint.
+
+32:40.000 --> 32:44.000
+It has exactly the same form as for the fundamental matrix.
+
+32:44.000 --> 32:48.000
+The only difference is that those points here are now in the camera coordinate system.
+
+32:48.000 --> 32:58.000
+So all the calibration parameters or the calibration matrix has already been applied to those coordinates when they're coming from a chip from the sensor itself.
+
+32:58.000 --> 33:01.000
+So we assume to work here in the camera coordinate system.
+
+33:01.000 --> 33:07.000
+Therefore, we don't need to take the calibration matrices into account.
+
+33:07.000 --> 33:13.000
+And you can see already that the form here is more or less the same as for the fundamental matrix.
+
+33:13.000 --> 33:23.000
+So you can basically apply the same algorithm or very, very similar algorithm that we used for estimating the fundamental matrix to also estimate the essential matrix.
+
+33:23.000 --> 33:28.000
+So we try to compute the essential matrix from eight or more corresponding points.
+
+33:28.000 --> 33:37.000
+So the same as before, we can use our coplanarity constraint in order to get exactly the same coordinates, the same equations.
+
+33:37.000 --> 33:43.000
+And the only thing we need to take care of now that these coordinates here are in the camera coordinate system.
+
+33:43.000 --> 33:54.000
+So we assume the camera calibration matrix already being applied and we obtain this by just taking the inverse of the calibration matrix and multiplying it to the pixel coordinates that we get in our image.
+
+33:54.000 --> 34:04.000
+This gives us our pixel coordinate in the camera coordinate system and then we only work in this camera coordinate system.
+
+34:05.000 --> 34:12.000
+So everything what happens from now on is in the camera coordinate system and then we don't have to care about our calibration matrix anymore.
+
+34:12.000 --> 34:24.000
+So also when we then estimate the elements of E, the degrees of freedom are reduced to five degrees of freedom because we only have the rotation matrix and the direction of the basis vector in there.
+
+34:24.000 --> 34:28.000
+The calibration parameters are not available anymore.
+
+34:29.000 --> 34:32.000
+And then exactly the same happens as for the fundamental matrix.
+
+34:32.000 --> 34:36.000
+We again have exactly the same form that sits over here.
+
+34:36.000 --> 34:37.000
+The only difference is here.
+
+34:37.000 --> 34:38.000
+We don't have the one in here.
+
+34:38.000 --> 34:42.000
+We have even the camera constant sitting in here.
+
+34:42.000 --> 35:01.000
+And then we are setting this equation to zero and we compute our algorithm, our 8-point algorithm exactly in the same way as we did that for the fundamental matrix.
+
+35:01.000 --> 35:07.000
+And we only do the first part over here until we compute the first approximation of E.
+
+35:07.000 --> 35:10.000
+And this consists of again building the matrix A.
+
+35:10.000 --> 35:12.000
+It's perfectly identical.
+
+35:12.000 --> 35:23.000
+Doing the singular value decomposition, the only difference is now it's not the variable F, it's the variable E because it's the essential matrix but it's obviously exactly the same except of renaming the variable.
+
+35:23.000 --> 35:26.000
+And then we built our matrix E.
+
+35:26.000 --> 35:33.000
+Only the last lines will change now because of course the essential matrix has different constraints compared to the fundamental matrix.
+
+35:33.000 --> 35:37.000
+So the key question is which constraints to consider here.
+
+35:37.000 --> 35:46.000
+So for the fundamental matrix we set the smallest eigenvalue, singular value to zero.
+
+35:46.000 --> 35:55.000
+And we do something, this is something we also need to do for the essential matrix because also it's a rank 2 matrix but we have to do more.
+
+35:55.000 --> 36:03.000
+So for the fundamental matrix we created the setup where it says F is U times D times E transposed with the two diagonal elements in here.
+
+36:03.000 --> 36:11.000
+And for the essential matrix we have exactly the same setup only that we have here the same singular values.
+
+36:11.000 --> 36:16.000
+And given that it's a homogeneous system we can actually set them to one because it's only defined up to scale factor.
+
+36:16.000 --> 36:31.000
+So this is the constraint that we exploit in here in order to put the essential matrix in the form that it takes the constraints that need to be taken into account for an essential matrix.
+
+36:31.000 --> 36:36.000
+And this then allows us to put this constraint into our 8-point algorithm.
+
+36:37.000 --> 36:48.000
+So the 8-point algorithm for computing the essential matrix looks until here, until here actually, exactly the same as for the fundamental matrix.
+
+36:48.000 --> 36:51.000
+So we build our matrix A, our coefficient matrix.
+
+36:51.000 --> 36:55.000
+We solve AE equals to zero using the SVD.
+
+36:55.000 --> 37:01.000
+And by building our approximation of the essential matrix the same way as we did for the fundamental matrix.
+
+37:01.000 --> 37:07.000
+We then compute again a singular value decomposition of this approximated essential matrix.
+
+37:07.000 --> 37:13.000
+And then build it up again by exploiting the constraints that must hold for the essential matrix.
+
+37:13.000 --> 37:24.000
+That means that the first two eigenvalues, singular values are one and the last one is zero to enforce the rank deficiency.
+
+37:24.000 --> 37:31.000
+And these are built from the constraints that must hold for the essential matrix.
+
+37:31.000 --> 37:44.000
+So this is the only difference, this last line, actually only these two blocks over here, which changes the 8-point algorithm of the fundamental matrix into the 8-point algorithm for the essential matrix.
+
+37:44.000 --> 37:46.000
+So it's very, very similar.
+
+37:46.000 --> 37:53.000
+And also the conditioning we have to do in exactly the same way as we did that for the fundamental matrix.
+
+37:53.000 --> 38:01.000
+So we also need to change our coordinates, the point coordinates, so that the points align, for example, between minus one and one.
+
+38:01.000 --> 38:04.000
+And that the points are centered in zero-zero.
+
+38:04.000 --> 38:08.000
+So it's basically a shift and a translation.
+
+38:08.000 --> 38:13.000
+So it's a shift and a scaling of the pixel coordinates, nothing else.
+
+38:13.000 --> 38:21.000
+And then exactly in the same way as we have done this for the fundamental matrix, we have to apply this transformation to the essential matrix.
+
+38:21.000 --> 38:24.000
+So that we can map forth and back from these things.
+
+38:24.000 --> 38:38.000
+So we're basically estimating this essential matrix e-hat and then have to apply the transformation to turn the estimated essential matrix into the essential matrix that actually works with the real image coordinates that we have.
+
+38:38.000 --> 38:44.000
+So this is just kind of a step that we need to transform the points before and need to transform the resulting essential matrix back.
+
+38:44.000 --> 38:47.000
+And that's basically it. There's nothing more to that.
+
+38:48.000 --> 38:50.000
+So a few words about the properties of the essential matrix.
+
+38:50.000 --> 38:52.000
+So what we've seen is a homogeneous matrix.
+
+38:52.000 --> 38:56.000
+It's a matrix which has a determinant of zero.
+
+38:56.000 --> 39:00.000
+It's rank two, similar there to the fundamental matrix.
+
+39:00.000 --> 39:04.000
+And it has two identical non-zero singular values.
+
+39:04.000 --> 39:06.000
+These were the ones we have set to one.
+
+39:06.000 --> 39:11.000
+We can even set them to one because it's only defined up to a scaling constraint.
+
+39:12.000 --> 39:23.000
+And then there exists other constraints as a result of the schistometric matrix that is involved that the essential matrix must fulfill this equation.
+
+39:23.000 --> 39:34.000
+And so this has not been explicitly explained in here, but this is related to this constraint here that we used when setting up the fundamental matrix.
+
+39:34.000 --> 39:40.000
+Not going into the details, you'll find in Wolfgang Ferschner's book the derivation for that if you're interested in how that is related.
+
+39:40.000 --> 39:48.000
+But I decided it's fine with us that we know that we have this constraint over here and enforce it when computing the essential matrix.
+
+39:50.000 --> 39:55.000
+So we now have also used eight points for computing the essential matrix.
+
+39:55.000 --> 40:00.000
+But the essential matrix has smaller degrees of freedom.
+
+40:00.000 --> 40:02.000
+So the fundamental ratio is seven.
+
+40:05.000 --> 40:09.000
+The essential matrix has five parameters that we need to fulfill.
+
+40:09.000 --> 40:12.000
+So in theory, there should be an algorithm which requires less points.
+
+40:12.000 --> 40:17.000
+So for the fundamental matrix, there should be an algorithm which requires only seven points.
+
+40:17.000 --> 40:19.000
+And actually that is the case.
+
+40:19.000 --> 40:24.000
+There's a seven-point algorithm, but it's slightly more complicated than the eight-point algorithm.
+
+40:24.000 --> 40:35.000
+And for the essential matrix, even more extreme because we only have five parameters for encoding the parameters of the relative orientation.
+
+40:35.000 --> 40:37.000
+So there is actually a five-point algorithm.
+
+40:37.000 --> 40:47.000
+And going down from eight to five points can have substantial advantages, especially if you compare this approach with RANSAC if you need to reject outliers.
+
+40:47.000 --> 40:50.000
+Because then the number of points you need to sample gets much smaller.
+
+40:50.000 --> 41:03.000
+So there is an algorithm, the so-called five-point algorithm or NISTAS five-point algorithm, that requires only the minimum amount of five points in order to compute the relative orientation.
+
+41:04.000 --> 41:09.000
+So it's an algorithm that has been proposed in 2003, 2004 by NISTAR.
+
+41:09.000 --> 41:16.000
+And it became the standard solution today for computing the relative orientation for the calibrated camera.
+
+41:16.000 --> 41:30.000
+So basically all approaches that estimate the translation and rotation of from single camera images will internally use NISTAR's five-point algorithm in order to compute the relative orientation.
+
+41:31.000 --> 41:35.000
+It boils down to basically solving a polynomial of degree 10.
+
+41:35.000 --> 41:38.000
+So you end up with having 10 possible solutions.
+
+41:38.000 --> 41:41.000
+And it's somewhat more complicated to do.
+
+41:41.000 --> 41:55.000
+Again, I recommend you the Photogrammetry 2 script from Wolfgang Furstner or the book or also NISTAR's work on the five-point algorithm if you want to dive more into the details.
+
+41:55.000 --> 42:02.000
+But it's kind of one or two pages of derivations how you come up with your polynomial of degree 10 and how you are actually solving or using that.
+
+42:04.000 --> 42:09.000
+Why is it so important again to have five points instead of eight points?
+
+42:09.000 --> 42:20.000
+The reason is if you have outliers in your data and if you just compute your correspondences without any further information, maybe just based on your feature descriptors, you will make errors in your data association.
+
+42:20.000 --> 42:24.000
+And having errors in your data association would actually lead to wrong estimates of E.
+
+42:24.000 --> 42:37.000
+So what you're doing, you're using RANSAC and you're sampling five correspondences, assume them to be correct, compute the essential matrix out of it, and then take all the other points and see if they agree with the transformation you have computed.
+
+42:37.000 --> 42:46.000
+For example, using the coplanarity constraint and see if they actually bring all the other correspondences to zero or you count those which you bring to zero or close to zero.
+
+42:46.000 --> 42:48.000
+And then you basically repeat this process.
+
+42:49.000 --> 42:53.000
+But the problem is you need to sample those five points in the beginning which are inliers.
+
+42:53.000 --> 43:01.000
+And it's much harder to sample eight points and all of them are inliers than sampling five data points and all of them are inliers.
+
+43:01.000 --> 43:09.000
+So as a result of them, the smaller the number of points that you need to sample as outlier free in RANSAC, the more efficient that approach is.
+
+43:09.000 --> 43:15.000
+And therefore, it is important to have this five-point algorithm because it is used inside RANSAC a lot.
+
+43:15.000 --> 43:25.000
+And so you can reduce the number of trials you need for RANSAC substantially if you have only five points that you need to sample rather than eight points that you need to sample.
+
+43:25.000 --> 43:30.000
+And again, here are further references if you want to dive more into the details of the five-point algorithm.
+
+43:31.000 --> 43:44.000
+Standard implementations for the five-point algorithms are, for example, available in the OpenCV library where you can just use the five-point algorithm by NISTIR and get your relative orientation out of five corresponding points.
+
+43:45.000 --> 43:59.000
+So now that we have computed the fundamental matrix in the beginning or now the essential matrix, assume we stay with our calibrated camera, what we want to do is we want to actually get out the rotation matrix and the basis vector of my essential matrix.
+
+43:59.000 --> 44:06.000
+Because typically we want to estimate the trajectory that the camera takes, so we actually want to know how did the camera actually move.
+
+44:06.000 --> 44:11.000
+So what we need to do, we need to compute the actual orientation parameters out of this matrix.
+
+44:11.000 --> 44:16.000
+So we need to take E and turn it into a rotation matrix and into our baseline vector.
+
+44:16.000 --> 44:23.000
+Of course, baseline vector can only be determined up to a scale, so typically in unit length one.
+
+44:23.000 --> 44:25.000
+But that's what we want to do now.
+
+44:25.000 --> 44:29.000
+So computing the orientation parameters out of a given essential matrix.
+
+44:29.000 --> 44:38.000
+So in short, we have E and we want to obtain the scusometric matrix of the baseline or the baseline directly and the rotation matrix.
+
+44:38.000 --> 44:42.000
+And the first question we need to ask ourselves, is this actually possible?
+
+44:42.000 --> 44:47.000
+And if there are actually unique solutions or are there more than one solution?
+
+44:47.000 --> 44:57.000
+And if I pose the question like this, if there are unique solution, then it's rather obvious that there is some other solutions.
+
+44:57.000 --> 45:11.000
+But these are solutions, as we will see, which are physically implausible, but which can be explained geometrically, but which are not physically plausible given the cameras that we typically use.
+
+45:11.000 --> 45:18.000
+And therefore, we can actually reduce them to one solution, but we have to put a bit of brain power into that in order to do that.
+
+45:18.000 --> 45:27.000
+So what we have is we have our camera number one, we have our camera number two, we have our direction vectors, and we know our points intersect.
+
+45:27.000 --> 45:31.000
+The rays must intersect somewhere because here is one of those corresponding points.
+
+45:31.000 --> 45:36.000
+So there's an example for one corresponding points generated from the two camera images.
+
+45:36.000 --> 45:38.000
+And that's the solution that we want, right?
+
+45:38.000 --> 45:45.000
+So the point lies nicely in front of our camera and that's where the camera is observing the point.
+
+45:45.000 --> 45:47.000
+So that's the solution that we actually want to have.
+
+45:47.000 --> 45:53.000
+So this baseline vector B and the rotation how camera two is rotated with respect to camera one.
+
+45:53.000 --> 45:55.000
+That's the result that we want to get.
+
+45:55.000 --> 46:01.000
+From a mathematical point of view, however, there are more than this physically plausible solution.
+
+46:01.000 --> 46:06.000
+And the reason for this is we know B only up to a scalar, right?
+
+46:06.000 --> 46:09.000
+So only up to a scale factor, the socio-homogeneous property.
+
+46:09.000 --> 46:11.000
+So let's multiply it with minus one.
+
+46:11.000 --> 46:17.000
+If we multiply that with minus one, it basically flips the vector into the other direction.
+
+46:17.000 --> 46:31.000
+That's fine, but this simply leads to direction vectors, to the vectors, to the pixel coordinates which are different because then I need to swap the two cameras.
+
+46:31.000 --> 46:35.000
+So as a result of this, the rays point in this direction.
+
+46:35.000 --> 46:42.000
+And if I extend those rays, I will actually see that the intersection of those two rays happens behind the camera.
+
+46:42.000 --> 46:51.000
+So it's basically if I'm looking forward like towards you with two cameras, it would be that the intersection of the corresponding point is behind me.
+
+46:51.000 --> 46:55.000
+Which is something which physically doesn't make sense because the camera is looking forward.
+
+46:55.000 --> 47:01.000
+But from a mathematical point of view, how we have modeled our camera, this is a possible solution.
+
+47:01.000 --> 47:10.000
+The other solution that we can do is we can actually take this setup that we have here and we can actually simply rotate the second camera by pi.
+
+47:10.000 --> 47:15.000
+Or letting this vector actually point to the opposite direction, which is equivalent.
+
+47:15.000 --> 47:19.000
+Or so it's basically can be expressed as a rotation around here.
+
+47:19.000 --> 47:29.000
+So if I do this then, or flip the second one down here, I get an intersection which is here further far away and the one camera is basically looking backwards.
+
+47:29.000 --> 47:36.000
+Or I can actually do both and then I again have the intersection of the points behind me.
+
+47:36.000 --> 47:46.000
+So in the end, there's only one solution that I have, the one solution from physics that I get out here, that both cameras are looking into the forward direction.
+
+47:46.000 --> 47:51.000
+And the intersecting point, intersection is in front of both cameras.
+
+47:51.000 --> 47:53.000
+And that's actually what I want to have.
+
+47:53.000 --> 48:02.000
+It's not that one point is in front of one camera and behind the other camera or that the point is even behind both cameras, which is something which doesn't make sense from the physics point of view.
+
+48:02.000 --> 48:08.000
+The question is, we want to have that solution, how do we obtain that?
+
+48:08.000 --> 48:18.000
+How do we identify that the four, from the four solution that I get out from the math point of view, which one is actually the physically plausible solution?
+
+48:18.000 --> 48:19.000
+That's something that I need to do.
+
+48:19.000 --> 48:30.000
+So we can actually come up with an algebraic solution for actually generating those four setups that we have just described here.
+
+48:30.000 --> 48:34.000
+And then these are basically four essential matrices that I can compute.
+
+48:34.000 --> 48:40.000
+And then I need to check for which essential matrix the point actually lies in front of the camera and where it lies in the back of the camera.
+
+48:40.000 --> 48:42.000
+Okay, so let's start.
+
+48:42.000 --> 48:45.000
+There's the solution where Hartley and Scissor describe the Hartley and Scissorman.
+
+48:46.000 --> 48:51.000
+So we have our essential matrix, which is U, which is a rotation matrix.
+
+48:51.000 --> 48:58.000
+We have our diagonal matrix, which has 1, 1, 0 on the main diagonal and my second rotation matrix, V transposed.
+
+48:58.000 --> 49:04.000
+And from the SVD, I know that these two are rotation matrices.
+
+49:04.000 --> 49:07.000
+So what I can now do, I just define two matrices.
+
+49:07.000 --> 49:10.000
+Again, these are kind of God-given matrices.
+
+49:10.000 --> 49:14.000
+This is a matrix Z and a matrix W, which I just write down.
+
+49:14.000 --> 49:16.000
+It's not that you derive them.
+
+49:16.000 --> 49:20.000
+It's just kind of, if you know those matrices, you will see that we actually get our solutions.
+
+49:20.000 --> 49:29.000
+So the one matrix, the matrix Z is a screw symmetric matrix, which has just here this element 1 and minus 1.
+
+49:29.000 --> 49:31.000
+Everything else is 0.
+
+49:31.000 --> 49:39.000
+And I have a rotation matrix, which has 1 here, minus 1 here and the 1 over here.
+
+49:39.000 --> 49:44.000
+So it's a rotation around the Z axis that I have here.
+
+49:45.000 --> 49:55.000
+Okay, so if I multiply this matrix Z with this matrix W, I get a matrix out which has 1, 1, 0 on the main diagonal and 0 everywhere else.
+
+49:56.000 --> 50:06.000
+Okay, so the product of ZW gives me this result, which is exactly the D matrix that I had in here in the decomposition of my essential matrix.
+
+50:06.000 --> 50:16.000
+Okay, so what I can do is I can put Z times W in here and write the essential matrix as U times Z times W times V transposed.
+
+50:16.000 --> 50:18.000
+Alright, that's an equality.
+
+50:18.000 --> 50:27.000
+So I can write E as U times Z times W times V transposed. I haven't changed anything.
+
+50:27.000 --> 50:37.000
+Given that I know that U is a rotation matrix and I know that the rotation matrix transposed by a rotation matrix itself gives the identity,
+
+50:37.000 --> 50:41.000
+I can add U transposed U and actually put it in here.
+
+50:41.000 --> 50:50.000
+So between those two matrices, I can actually write the identity, which I then can expand to U transposed U, knowing that U is a rotation matrix.
+
+50:50.000 --> 50:57.000
+So I can write this as U times Z times U transposed times U times W times V transposed.
+
+50:57.000 --> 51:07.000
+So I'm basically just adding matrices in here so that they sum up being identity matrices if I multiply them.
+
+51:07.000 --> 51:10.000
+Right, so I haven't changed the system at all.
+
+51:11.000 --> 51:17.000
+But now we can recognize that there's actually a trick has happened.
+
+51:17.000 --> 51:23.000
+So what I have here and here, I have a rotation matrix times a squisometric matrix times the rotation matrix transposed.
+
+51:23.000 --> 51:25.000
+So again, the inverse of the rotation matrix.
+
+51:25.000 --> 51:33.000
+So this element, U Z U transposed, will actually stay a squisometric matrix.
+
+51:33.000 --> 51:38.000
+And this part over here is a rotation matrix times a rotation matrix times a rotation matrix.
+
+51:38.000 --> 51:43.000
+So there's also a product of three rotation matrices will stay a rotation matrix.
+
+51:43.000 --> 51:55.000
+So this is a squisometric matrix and rotation matrix, which is exactly the form of the essential matrix in the general parameterization of dependent images.
+
+51:56.000 --> 52:03.000
+So by performing U times Z times U transposed, I get my squisometric matrix.
+
+52:03.000 --> 52:10.000
+And by multiplying U times W times V transposed, I actually obtain my rotation matrix.
+
+52:10.000 --> 52:17.000
+And so the good thing is I know U, I know Z, I know U transposed, I know U, I know W, I know V transposed.
+
+52:17.000 --> 52:25.000
+U and V I got from my singular value decomposition, and Z and W I just defined myself.
+
+52:25.000 --> 52:32.000
+So with this setup, I actually get a decomposition into the squisometric matrix and the rotation matrix.
+
+52:32.000 --> 52:38.000
+And thus, I can decompose my essential matrix into the rotation matrix and into the basis.
+
+52:38.000 --> 52:40.000
+And that's exactly what I wanted, right?
+
+52:40.000 --> 52:43.000
+So this is the first solution that I got.
+
+52:44.000 --> 52:55.000
+And now what I can do is I can again look to this trick that I have done here of writing this 110 matrix by the squisometric matrix and the rotation matrix.
+
+52:55.000 --> 53:06.000
+And what I now can do is I can actually come up with four different ways for writing this down by basically computing the...
+
+53:06.000 --> 53:13.000
+So instead of Z, the squisometric matrix, I can transpose it and put the minus sign in front of it.
+
+53:13.000 --> 53:19.000
+So the negative transposed of the squisometric matrix is the squisometric matrix itself.
+
+53:19.000 --> 53:22.000
+So nothing changes in here.
+
+53:23.000 --> 53:42.000
+Or what I can do is I can transpose the overall matrix so I can compute the negative of the squisometric matrix
+
+53:42.000 --> 53:47.000
+and transpose my rotation matrix performing the rotation into the other direction
+
+53:47.000 --> 53:53.000
+and the transposition of this squisometric matrix and the matrix W.
+
+53:53.000 --> 54:01.000
+And when I execute those operations here, if you sit down and do it yourself by hand, you will see that you always end up with a matrix 110.
+
+54:01.000 --> 54:13.000
+And so these are four different ways how I can generate the same matrix which gives 110 in a product,
+
+54:13.000 --> 54:22.000
+but I get four different results for the rotation matrix and the squisometric matrix if I do the decomposition.
+
+54:23.000 --> 54:30.000
+So again, this is what we have done so far and I can do the same for this solution, for this solution and for this solution.
+
+54:30.000 --> 54:39.000
+So as a result of this, I will simply get multiple variants or two variants for the squisometric matrix and two variants for the rotation matrix.
+
+54:39.000 --> 54:41.000
+And they actually specify it down here.
+
+54:41.000 --> 54:46.000
+So one is U Z U transposed or U Z transposed U transposed.
+
+54:46.000 --> 54:51.000
+So in this example, the squisometric matrix here is transposed.
+
+54:51.000 --> 54:58.000
+And for the rotation matrix, I get U W V transposed as I had before or U times W transposed times V transposed.
+
+54:58.000 --> 55:03.000
+And by now taking all those combinations that I can get, I actually get my four solutions out.
+
+55:03.000 --> 55:13.000
+E1 was a solution I was describing before and then I have E2, E3 and E4, both where parts of the U or Z matrix are actually transposed.
+
+55:13.000 --> 55:15.000
+And this is my four solutions.
+
+55:15.000 --> 55:18.000
+So I get my four solutions for the essential matrix.
+
+55:18.000 --> 55:23.000
+I can actually compute them, then I compute my rotation matrix and my squisometric matrix.
+
+55:23.000 --> 55:27.000
+And then I need to check if the point in front of the camera or behind the camera.
+
+55:27.000 --> 55:37.000
+And so in the solution of Harley-Sizemann says, yes, we can actually do this, compute the single value decomposition of E so that I get U D and V.
+
+55:37.000 --> 55:42.000
+What you then need to do, you need actually to normalize them to make sure they point to the right direction.
+
+55:42.000 --> 55:48.000
+So depending on how your SVD is implemented, you're basically normalizing V and U.
+
+55:49.000 --> 56:00.000
+And then you can construct your four solutions, U, Z, U transposed, U, Z transposed, U transposed, as we had it before.
+
+56:00.000 --> 56:17.000
+Then you build up, you try all four combinations or all four solutions that you get out and basically extract the rotation matrix, extract the squisometric matrix and see in which configuration are the points in front of the camera and in which situations are the point behind the camera.
+
+56:17.000 --> 56:22.000
+And then only one solution should survive, which is the only physically plausible solution.
+
+56:24.000 --> 56:36.000
+So with this, what you have to do is you have to resolve the ambiguities that resulted from the homogeneous setup that we have coming up with this four solution that the baseline vector can be flipped.
+
+56:36.000 --> 56:47.000
+You can do this rotation of one of the cameras and then looking backwards, this is just because we can scale our vectors with minus one and then they're actually pointing into the other direction.
+
+56:49.000 --> 56:57.000
+But with this setup that I've shown over here, I'm actually able to determine in which configuration I am in and then come up with my solution.
+
+56:58.000 --> 57:06.000
+So to sum this whole lecture up, what we have done is we have provided algorithms to compute the relative orientation just purely from image data.
+
+57:06.000 --> 57:21.000
+So we do not need to know knowledge about the scene in the sense that we know the 3D locations of points in the scene, as we may need to know that for spatial resectioning or for computing the DLT where we need to know 3D points in the world.
+
+57:21.000 --> 57:22.000
+This is not the case here.
+
+57:22.000 --> 57:24.000
+Here we are only working on correspondence.
+
+57:24.000 --> 57:30.000
+These mean the information that one pixel in image number two has a corresponding pixel in the other image.
+
+57:31.000 --> 57:36.000
+And this allows us to estimate the camera motion except of the scale.
+
+57:36.000 --> 57:50.000
+So if I have a calibrated camera just through the sequence of correspondences that compute from image one to two, two to three, three to four and so on, I can actually estimate the movement of my camera, but only up to a scale factor.
+
+57:50.000 --> 57:55.000
+So I'm not sure how long the baseline vector is, only know the direction of the baseline vector and the rotation of the camera.
+
+57:55.000 --> 58:02.000
+But this is the basis for something that we call visual odometry where we want to estimate the movement of the camera in the 3D world.
+
+58:02.000 --> 58:11.000
+And either I have some scene knowledge or I have some other sensor like an IMU or maybe a GPS sensor or some other sensors which provides me with this scale information.
+
+58:11.000 --> 58:20.000
+And then I'm actually able to estimate the movement of the camera actually in our physical world with all six degrees of freedom at the rigid body transformation.
+
+58:21.000 --> 58:25.000
+The solution that we presented here have been direct solutions.
+
+58:25.000 --> 58:31.000
+So for the fundamental matrix, we require eight or more points, the so-called eight-point algorithm for the fundamental matrix.
+
+58:31.000 --> 58:36.000
+For the essential matrix, we used exactly the same algorithm, the so-called eight-point algorithm.
+
+58:36.000 --> 58:47.000
+We just have to define a different constraint that holds for the essential matrix for the two larger or identical singular values.
+
+58:47.000 --> 59:04.000
+And then we have very briefly sketched, I basically told you about the existence of the so-called NISTUS five-point algorithm where you can do that with five points and which is kind of the gold standard approach today for coming up with the relative orientation of the calibrated camera.
+
+59:04.000 --> 59:07.000
+So again, all the solutions we presented here were direct solutions.
+
+59:07.000 --> 59:16.000
+So that means they don't require initial guess, but they are statistically not optimal in the sense that they, for example, do not take the uncertainty ellipses into account.
+
+59:16.000 --> 59:19.000
+So how certain you are in localizing a point, for example.
+
+59:19.000 --> 59:30.000
+But what we can do is we can actually extract the baseline vector and the rotation matrix out of the essential matrix using the solution by Hartley and Sizemann that we have just presented.
+
+59:31.000 --> 59:38.000
+And what happens, these direct solutions are often used in combination with the RANSAC algorithm for handling outliers.
+
+59:38.000 --> 59:44.000
+So for splitting up our correspondence set into an inlier set and into an outlier set.
+
+59:44.000 --> 59:48.000
+And then we forget about the outliers and only work with our inliers.
+
+59:49.000 --> 01:00:01.000
+And those inliers are then used in the result of the direct solution which serves as an initial guess for further computations.
+
+01:00:01.000 --> 01:00:17.000
+And the further computations could, for example, be a least squares approach which only uses the inliers, then may take uncertainty information into account in order to come up with an even better estimate of the rotation matrix and the trutration matrix and maybe even uncertainties which are associated to that.
+
+01:00:17.000 --> 01:00:21.000
+So that I know how precisely I know my individual parameters.
+
+01:00:21.000 --> 01:00:27.000
+And I can, for example, weigh certain points more if I'm more certain about the measurement process of obtaining those points.
+
+01:00:27.000 --> 01:00:32.000
+These are all things that I can add in a subsequently squares approach.
+
+01:00:32.000 --> 01:00:36.000
+But the direct approach that I've presented here has two key strengths.
+
+01:00:36.000 --> 01:00:41.000
+First, it provides the initial guess that the least squares approach requires so badly.
+
+01:00:41.000 --> 01:00:48.000
+The second one is that it allows me, in combination with RANSEC, to separate the points into inliers and outliers.
+
+01:00:48.000 --> 01:00:59.000
+And this is the key basis for also making the least squares approach converge to the right solution that we have an outlier free point set in here that we're using.
+
+01:00:59.000 --> 01:01:09.000
+And therefore, these direct solutions are the basis for computing the so-called visual odometry which is kind of the chained up orientations of my camera.
+
+01:01:09.000 --> 01:01:14.000
+And this way describing the motion of the camera in our world.
+
+01:01:14.000 --> 01:01:25.000
+Again, if you want to dive further, the photogrammetry computer vision book, chapters 12.3, would here be the starting point for diving into the fundamental matrix and essential matrix.
+
+01:01:25.000 --> 01:01:37.000
+And I also would recommend the reading by Hartley in defense of the eight-point algorithm where he points out that the eight-point algorithm has certain strengths and advantages over other algorithms requiring less points.
+
+01:01:37.000 --> 01:01:54.000
+Although we need to have eight corresponding points, or if you look into the five-point algorithm, this is here at the work by Mr. Skrup, where you are actually able to estimate the relative orientation of the camera just from five corresponding points.
+
+01:01:54.000 --> 01:01:59.000
+Which is today kind of the gold standard approach for doing these computations.
+
+01:01:59.000 --> 01:02:10.000
+And with this, I hope I gave you an idea how we can use camera data to estimate the motion of the camera just by taking pairs of images that have been recorded.
+
+01:02:10.000 --> 01:02:22.000
+Basically assuming a free-floating camera through the environment which allows us to estimate where is, for example, a mobile robot or an autonomous car equipped with cameras in the next point in time.
+
+01:02:22.000 --> 01:02:33.000
+And we can figure this out up to a scale. We may need to add the scale information from GPS, IMU, or whatever we have, which then allows us to actually put the scale into place.
+
+01:02:33.000 --> 01:02:44.000
+And with this, I say thank you very much for your attention and I hope you learned now how you can also use cameras to actually estimate information about the 3D world and the motion of your platform.
+
+01:02:44.000 --> 01:02:46.000
+Thank you very much.
+

@@ -1,0 +1,2090 @@
+WEBVTT
+
+00:00.000 --> 00:06.240
+Hello everyone, I want to talk today about localization and a special form of localization,
+
+00:06.240 --> 00:11.920
+the so-called Monte Carlo localization, which is an approach using a particle filter in order to
+
+00:11.920 --> 00:18.400
+estimate the location and orientation of a mobile platform in the environment. So again, localization
+
+00:18.400 --> 00:23.840
+is a task of estimating where we are in the world, so where is the system where it is looking to,
+
+00:24.400 --> 00:29.760
+and we again are looking into a special variant of this localization problem where we are not
+
+00:29.760 --> 00:36.400
+restricting ourselves to parametric probability distributions. So if you look into localization
+
+00:36.400 --> 00:41.120
+using a Kalman filter, an extended Kalman filter for example, you will be restricted to Gaussian
+
+00:41.120 --> 00:46.080
+distributions and that's an assumption that we want to relax today and talk about an alternative
+
+00:46.080 --> 00:52.800
+way for representing the probability distributions and realizing a base filter in order to estimate
+
+00:52.800 --> 00:58.240
+the position of the mobile platform. So we want to answer the question where am I or where is the
+
+00:58.240 --> 01:03.600
+robot and we typically assume that we have a map of the environment. Again, we have this underlying
+
+01:03.600 --> 01:09.680
+map here like an occupancy grid map and want to estimate where we are. If you would use a Kalman
+
+01:09.680 --> 01:16.320
+filter, extended Kalman filter, this would result in a Gaussian distribution describing where the
+
+01:16.320 --> 01:22.720
+system is. What we want to do today, we want to use particles or so-called samples or pose hypothesis
+
+01:22.720 --> 01:28.160
+here indicated by those red dots which describe me where the system could be.
+
+01:29.440 --> 01:33.760
+So instead of having one parametric form, we use non-parametric samples
+
+01:33.760 --> 01:39.680
+as hypotheses where the system might be located and that's already the key idea of the particle
+
+01:39.680 --> 01:45.520
+filter. So getting rid of the parametric distribution, turning it into sample base
+
+01:45.520 --> 01:52.320
+representation, realizing a base filter where the particle filter is a form of a base filter
+
+01:52.400 --> 01:58.320
+and then realize a localization system with that. So answering this question is the task of today.
+
+01:58.320 --> 02:02.720
+How do we do this? What do we need to take into account and what are the principles behind it?
+
+02:04.240 --> 02:10.480
+So the Gaussian filter such as the extended Kalman filter or the Kalman filter will use a
+
+02:10.480 --> 02:16.800
+Gaussian distribution, so a function of that form, in order to estimate the states under
+
+02:16.800 --> 02:23.600
+consideration. So in our case that would be in 2D the xy location and the orientation and in 6D
+
+02:23.600 --> 02:30.480
+xy that yaw patrol for example and we would or the extended Kalman filter would use a Gaussian
+
+02:30.480 --> 02:35.600
+to describe this three or six dimensional vector. We want to kind of leave the Gaussian goal behind
+
+02:35.600 --> 02:40.320
+today and look for an alternative way for representing this property distribution and
+
+02:40.320 --> 02:46.480
+we want to be as flexible as possible. So we want to estimate or represent arbitrary distribution.
+
+02:46.480 --> 02:51.120
+So consider we have a function which looks like this that means we have a kind of high peak over
+
+02:51.120 --> 02:57.040
+here but also some kind of plateau of a probability distribution over here and that may be a
+
+02:57.040 --> 03:02.240
+distribution that could occur in the real world and the question is how can we represent it? How
+
+03:02.240 --> 03:08.480
+can we describe a function of that form and at the same point in time do efficient state estimation
+
+03:08.480 --> 03:14.240
+with this? And that's what we want to talk about here today. The key idea is that an arbitrary
+
+03:14.240 --> 03:20.480
+function like this function over here can be approximated with samples so it means dots which
+
+03:20.480 --> 03:26.400
+are sitting here at the x coordinates. Let's say samples that look like this so these dots every
+
+03:26.400 --> 03:32.640
+dot here is a sample and we can see that in some areas the samples are more densely located in
+
+03:32.640 --> 03:38.560
+other areas they are less densely located and that's already the idea. The amount of particles
+
+03:38.560 --> 03:46.960
+per area per unit area describes me how likely it is that the system is there. So every particle
+
+03:46.960 --> 03:52.880
+is accumulating a little bit of probability mass and then I'm basically counting how many samples
+
+03:52.880 --> 04:00.560
+fall into a certain area so that the particle can be seen as an approximation of a probability
+
+04:00.560 --> 04:05.120
+density function. So again as a reminder in the probability density function you would need to
+
+04:05.120 --> 04:09.840
+integrate over a certain area in order to obtain the probability math that the system
+
+04:09.840 --> 04:15.120
+is within that area. It's exactly the same thing here we do with samples we have samples
+
+04:15.120 --> 04:19.440
+distributed over the state space every sample contains a little bit of or represents a little
+
+04:19.440 --> 04:25.200
+bit of probability mass and we simply need to count how many samples fall into a certain region
+
+04:25.200 --> 04:31.680
+in order to assess the probability that the system is in that region. So that means in areas we have
+
+04:31.680 --> 04:37.120
+the function density function is high we have more samples in an area where the values are low
+
+04:37.120 --> 04:42.320
+we have a smaller number of samples represented. So that's already the idea of representing a
+
+04:42.320 --> 04:49.680
+function or a pdf using samples. We can go a step further and say maybe we can reduce the number of
+
+04:49.680 --> 04:55.120
+samples that we need if we weight our samples. So if every sample has a weight associated to that
+
+04:55.120 --> 05:01.120
+and the larger the weight the more probability mass is located in that region. So we have to of
+
+05:01.120 --> 05:06.080
+course have to take here that the weight will sum up to one but then in this case it would be
+
+05:06.080 --> 05:11.600
+uniform weight one divided by j if j is the number of samples for example so every sample here would
+
+05:11.600 --> 05:17.360
+have the same uniform weight j. If we however make these samples which are located here larger so we
+
+05:17.360 --> 05:24.320
+extend them and give them a higher weight we may require less samples to represent that function
+
+05:24.320 --> 05:29.360
+in an appropriate way. So that could look like this in this case we have weighted samples the size of
+
+05:29.360 --> 05:35.680
+the of the circle here should indicate the weight of the sample so in areas with high probability
+
+05:35.680 --> 05:41.200
+we have larger samples in an area with low probabilities we have lower samples. So we can see
+
+05:41.200 --> 05:49.600
+this as representing areas of high probability with either larger samples instead of a larger
+
+05:49.600 --> 05:56.160
+number of samples. So it's basically the frequency versus weights so this is a weight representation
+
+05:56.160 --> 06:01.600
+where high areas of high probability are represented with weight and this is a frequency
+
+06:01.600 --> 06:06.640
+representation so to say where we say the frequency actually matters how many samples we have there
+
+06:06.640 --> 06:10.800
+but there's a it's a very similar thing with it will come back later on the so-called resampling
+
+06:10.800 --> 06:16.640
+step of the particle filter but we are mainly using here into weighted samples so the idea is
+
+06:16.640 --> 06:21.360
+to use a set of weighted samples to represent a probability distribution. So if you want to
+
+06:21.360 --> 06:27.280
+represent this pdf about let's say the x location of a one-dimensional robot then we could represent
+
+06:27.280 --> 06:33.280
+it with this set of samples. Of course this is only an approximation because you can see
+
+06:33.840 --> 06:39.440
+if you would see this as kind of small Dirac functions sitting here over those weighted
+
+06:40.000 --> 06:45.200
+samples and the the size of the or the the size of the Dirac function is given by the
+
+06:45.200 --> 06:50.560
+by the weight of that sample or the integral over the Dirac function to be precise then this is not
+
+06:50.560 --> 06:54.320
+a very good approximation of this function because it will be zero in this region
+
+06:54.320 --> 07:00.160
+high values over here then zero high values zero high values and so on so we it's clear that we
+
+07:00.160 --> 07:04.240
+need to have a sufficient number of samples in order to represent functions well and should
+
+07:04.240 --> 07:10.560
+be also become directly clear that this is only an approximation of a function so the samples
+
+07:10.560 --> 07:15.440
+are way for representing function as an approximation and that's what we're going to
+
+07:15.440 --> 07:21.440
+use we will use those weighted samples and to estimate the belief about the location
+
+07:21.440 --> 07:26.960
+position and orientation of the robot in an environment. Okay let's look how that sample
+
+07:26.960 --> 07:32.240
+set looks like or a particle set looks like we use a set of weighted samples of our particle set
+
+07:32.240 --> 07:39.520
+and every sample has two variables first is the state hypothesis so where does this sample think
+
+07:39.520 --> 07:45.360
+it is located and this can be a vector one dimensional and the example before or if we
+
+07:45.360 --> 07:50.080
+are in the two-dimensional world we may represent x y and the orientation so then this would be a
+
+07:50.080 --> 07:54.480
+three-dimensional vector so this guy can be a vector over here whereas the second variable
+
+07:54.480 --> 07:59.760
+the weight is just a real number and the all the weights need to sum up to one in order to have
+
+07:59.760 --> 08:04.880
+a proper probability distribution as the integral over a probability distribution must be one
+
+08:05.200 --> 08:12.880
+so and we have j of those samples so we have j hypotheses where the system is and every hypothesis
+
+08:12.880 --> 08:17.920
+can have a weight and the larger the weight the higher the probability that the system is actually
+
+08:17.920 --> 08:26.160
+located there and then this sample set represents a belief or a posterior given by the sum of all
+
+08:26.160 --> 08:31.680
+samples the weight of that samples multiplied with the Dirac function centered in the location of the
+
+08:31.680 --> 08:38.960
+sample that means this is a weighted sum of Dirac impulses and at every sample location there's one
+
+08:38.960 --> 08:44.640
+Dirac impulse so if i integrate over this over this function so integrate over the variable x
+
+08:45.440 --> 08:50.800
+the integral over Dirac function is one if our weights are normalized to one this will actually
+
+08:50.800 --> 08:56.000
+give me a probability distribution with an integral of one so pro proper probability
+
+08:56.000 --> 09:01.600
+distribution and this is the distribution actually represents and so it should be clear again
+
+09:01.600 --> 09:07.120
+this is an approximation we have those Dirac impulses here and in order to cover or represent
+
+09:07.120 --> 09:11.760
+a smooth probability function well we may need a large number of samples and that's already one of
+
+09:11.760 --> 09:16.880
+the drawbacks of the particle filter that we may need to maintain a large number of those samples
+
+09:16.880 --> 09:22.000
+depending how complex the function is that i want to represent but the goal is to restrict
+
+09:22.000 --> 09:27.120
+ourselves to this parametric representation of samples and not restricting the belief for
+
+09:27.120 --> 09:32.720
+example to a Gaussian distribution or a different parametric form and that's kind of the key idea
+
+09:32.720 --> 09:40.880
+of the particle filter that we will use for pose estimation in this lecture okay so first have a
+
+09:40.880 --> 09:46.400
+look how particle approximations of functions may look like so in this case we have a Gaussian
+
+09:46.400 --> 09:51.280
+distribution for example this red function over here then this is a set of i think 200 or 300
+
+09:51.280 --> 09:58.240
+samples drawn from that distribution that means an area where the probability mass is lower or the
+
+09:58.240 --> 10:02.160
+density is lower we have a smaller number of samples and around the mean there's a larger
+
+10:02.160 --> 10:08.480
+number of samples but we can also use this in for functions which are non-Gaussian so this example
+
+10:08.480 --> 10:14.480
+over here it's clearly not a Gaussian distribution we have more higher density values here and over
+
+10:14.480 --> 10:20.640
+there to represent the fact that it's more likely to be in a state around that area and it's less
+
+10:20.640 --> 10:28.880
+likely to be outside so this is a sample-based representation of this function for the red and
+
+10:28.880 --> 10:34.640
+the blue function so the question that we obviously have if we start with initial belief how do we
+
+10:34.640 --> 10:41.360
+actually generate samples how do we obtain those guys over here how does it work so the key question
+
+10:41.360 --> 10:48.640
+is how do we obtain samples given a function and the problematic thing in here is that this can be
+
+10:48.640 --> 10:54.560
+quite tricky so we cannot easily on closed form sample from arbitrary functions there's only a
+
+10:54.560 --> 11:00.960
+small number of functions from which we can sample in closed form or sample efficiently lists let's
+
+11:00.960 --> 11:06.640
+restrict this to that so if we have a uniform distribution that means every state has the same
+
+11:06.640 --> 11:12.400
+probability then it's just our uniform random number generator that we have in our computer
+
+11:12.400 --> 11:17.440
+if we have a Gaussian distribution not every number occurs at the same probability so it
+
+11:17.440 --> 11:21.200
+must be closer to the mean to increase the probability that this sample is actually
+
+11:21.200 --> 11:29.520
+being generated there are rather simple ways for sampling random number from a Gaussian distribution
+
+11:29.520 --> 11:35.360
+again this is an approximation and what you can do is you can just take 12 random numbers and draw
+
+11:35.360 --> 11:39.920
+values between minus the standard deviation and plus the standard deviation that you want to
+
+11:39.920 --> 11:46.960
+achieve so a uniformly drawn number between minus sigma and plus sigma and you do this 12 times you
+
+11:46.960 --> 11:53.200
+add those numbers up and divide the value the resulting value by two then you will get samples
+
+11:53.200 --> 11:58.480
+which are actually drawn approximatively from a Gaussian distribution so you can see from this
+
+11:58.480 --> 12:04.480
+example the maximum value that you could draw is sigma so if you draw a sigma 12 times you would
+
+12:04.480 --> 12:10.000
+have 12 sigma divided by 2 is 6 sigma so all the random numbers we can generate lie between plus
+
+12:10.000 --> 12:16.560
+and minus 6 sigma in this example which is covers already a large area of the probability
+
+12:16.560 --> 12:21.360
+mass of the Gaussian distribution but it's not exact so this isn't probably the most simplest
+
+12:21.360 --> 12:31.120
+way to draw numbers from a Gaussian distribution but the question is how can we do this
+
+12:31.120 --> 12:36.720
+from other distributions and there are ways for doing this also for arbitrary distribution
+
+12:36.720 --> 12:41.760
+so-called rejection sampling is one of those techniques we don't want to really dive into
+
+12:41.760 --> 12:45.920
+the reject rejection sampling approach here because this is something that we typically
+
+12:45.920 --> 12:49.920
+can't use in the particle filter setup because it's a very inefficient sampling technique
+
+12:50.480 --> 12:54.880
+so but what we want to look instead of this is a so-called importance sampling principle
+
+12:54.880 --> 12:59.280
+so what the importance sampling principle actually tells us is that we can use a different
+
+12:59.280 --> 13:04.400
+distribution to generate the samples compared to the function form which i actually want to
+
+13:04.400 --> 13:08.560
+generate the samples the only thing i need to compensate for the mistakes that i have done
+
+13:09.200 --> 13:13.040
+so let's go to this example over here let's assume we want to generate samples from this
+
+13:13.040 --> 13:17.840
+blue curve over here this is what we call our target distribution we want to estimate our
+
+13:17.840 --> 13:24.000
+samples from our target f but the only thing i can do i can generate samples from the red
+
+13:24.000 --> 13:30.160
+curve which is my proposal function often called pi so i assume i can generate samples from pi
+
+13:30.160 --> 13:35.200
+but i cannot generate samples from my target f but what the importance sampling principle tells
+
+13:35.200 --> 13:40.880
+me is that hey you can use your red curve your proposal and draw samples from that red curve
+
+13:42.320 --> 13:49.120
+and get samples that represent the blue curve if you compensate for the mistakes that you have done
+
+13:49.120 --> 13:54.720
+and mistake means here the difference in function value between the red curve and the blue curve at
+
+13:54.720 --> 13:59.840
+a particular function value so what i need to be able to do for this i need to be able to draw
+
+13:59.840 --> 14:06.080
+samples from my proposal distribution so from the red curve and i need to be able to pointwise
+
+14:06.080 --> 14:12.640
+evaluate my target and my proposal distribution so evaluate the function value at for f and pi but
+
+14:12.640 --> 14:17.040
+what i don't need to be able to do i don't need to be able to to actually be able to generate
+
+14:17.040 --> 14:21.520
+functions from f from my blue curve and what the importance sampling principle tells me is that i
+
+14:21.520 --> 14:27.520
+need to compute a weight w for every sample that i've generated from the red curve and give it a
+
+14:27.520 --> 14:32.000
+weight which is the target divided by the proposal so the function value so the value of the blue
+
+14:32.000 --> 14:39.120
+curve divided by the value of the red curve evaluated at the position x the only thing i
+
+14:39.120 --> 14:45.280
+need to take care of is then where for all locations where the the target is larger than
+
+14:45.280 --> 14:50.480
+zero so the blue curve is larger than zero also the proposal the red curve must be larger than
+
+14:50.480 --> 14:56.480
+zero why is this the case if there would be a place where the the target is larger than zero
+
+14:56.480 --> 15:01.520
+but the proposal would be zero there's a zero probability of generating a sample so i could
+
+15:01.520 --> 15:07.120
+never ever generate a sample for that so will not be able to approximate f well you can also see for
+
+15:07.120 --> 15:12.080
+the weight computation if my target would be zero at a location where f would be larger than zero
+
+15:12.640 --> 15:18.160
+i would have a number larger than zero divided by number of zero which is gives me an undefined
+
+15:18.160 --> 15:23.360
+weight on weight approaching infinity that's not something that we want to have but with this
+
+15:23.360 --> 15:30.240
+approach so of drawing samples from the blue curve that means getting locations on the x-axis here
+
+15:30.880 --> 15:35.360
+where the location is determined by the red curve and then then compensate for the error that i
+
+15:35.360 --> 15:40.800
+haven't drawn from the blue curve by giving them a weight and the larger this bar over here is the
+
+15:40.800 --> 15:46.000
+higher the weight so in areas where i've drawn little samples but where the function value of
+
+15:46.000 --> 15:52.320
+the target is high i will have higher weighted samples and in other areas where this is not the
+
+15:52.320 --> 15:58.160
+case the weights will be smaller and so the the the important thing of the importance sampling
+
+15:58.160 --> 16:03.360
+principle is we can use a function that we can draw samples from for example the gaussian in
+
+16:03.360 --> 16:07.840
+order to generate samples from a distribution which is not a gaussian where i cannot sample from
+
+16:07.840 --> 16:12.560
+in closed form and this principle is something that is used inside the particle filter
+
+16:13.440 --> 16:20.560
+in order to perform state estimation so the particle filter is a state estimation system for
+
+16:20.560 --> 16:26.240
+dynamic systems so systems that change their state over time and the particle filter actually
+
+16:26.240 --> 16:30.160
+implements a recursive base filter so the base filter that we have derived in one of the previous
+
+16:30.160 --> 16:35.360
+lectures this principle of having a prediction step and a correction step and performing proper
+
+16:35.360 --> 16:42.160
+state estimation compared to the Kalman filter for example it is a non-parametric approach that means
+
+16:42.160 --> 16:47.440
+it can deal with non-gaussian distributions for example because we don't commit to specific
+
+16:47.440 --> 16:52.640
+distributions as we are using samples as illustrated before in order to represent our
+
+16:52.640 --> 17:00.480
+probability functions what we another advantage is which is not really written down here is that we
+
+17:00.480 --> 17:07.040
+are have better chances for dealing with non-linear models so if you remember the standard Kalman
+
+17:07.040 --> 17:12.000
+filter required linear models for the motion and for the observation so for the prediction
+
+17:12.000 --> 17:16.880
+and for the correction step and that's something that we do not need here for the particle filter
+
+17:16.880 --> 17:23.120
+we can better deal with non-linear functions and the only thing we need to be able to do is
+
+17:23.120 --> 17:28.160
+actually generate samples from that come up with proposal distributions in order to provide a
+
+17:28.160 --> 17:33.840
+proper samples and it also has a prediction step and a correction step the prediction step takes
+
+17:33.840 --> 17:39.440
+the motion into account the correction step takes the observation typically into account and this
+
+17:39.440 --> 17:44.880
+allows us to realize a base filter or under this assumption that we're using the motion model for
+
+17:44.880 --> 17:52.960
+the prediction and the um the observation model for our correction step this the particle filter
+
+17:52.960 --> 17:59.920
+actually realizes a base filter as we have defined it before one note of course the number of samples
+
+17:59.920 --> 18:04.080
+that you're using determines how good your approximation quality is so the larger the
+
+18:04.080 --> 18:09.440
+number of samples the better you can approximate or represent your probability distributions
+
+18:09.440 --> 18:15.760
+so the better your performance in terms of estimation will be and this brings us to the
+
+18:15.760 --> 18:20.720
+particle filter algorithm at least in an informal form shown over here which basically has three
+
+18:20.720 --> 18:25.760
+steps the first step is a prediction step and the second step is the correction step and we forget
+
+18:25.760 --> 18:32.240
+for the about the third step for a moment and what the first step does it actually draws sample from
+
+18:32.240 --> 18:39.440
+my proposal distribution so it generates a new sample set drawing samples from the proposal so
+
+18:39.440 --> 18:46.640
+where could the system be in i'm taking my red curve to draw samples from the red curve although
+
+18:46.640 --> 18:52.320
+i want to generate samples from the blue curve and then in the second step we compensate for this
+
+18:52.320 --> 18:56.160
+mistake through the application of the importance sampling principle saying we're taking the target
+
+18:56.160 --> 19:01.120
+distribution so the blue curve and divide it by the proposal from which we have actually generated
+
+19:01.120 --> 19:05.760
+the samples in order to compensate for the mismatch between the target and the proposal
+
+19:05.760 --> 19:13.360
+distribution speaking in terms of a base filter we can say if the proposal step is my prediction step
+
+19:13.360 --> 19:19.840
+for example the motion of my platform then this sampling step corresponds to the prediction step
+
+19:19.840 --> 19:25.600
+of the base filter and in this case the weight which is computed as a target divided by the
+
+19:25.600 --> 19:33.040
+proposal and if i write down the target write down the proposal and do some math it will end
+
+19:33.040 --> 19:39.040
+up that this will be our observation model that gives me the weight and this is the correction
+
+19:39.040 --> 19:46.320
+step taking into account the observation in order to compensate for the differences so the the
+
+19:46.320 --> 19:51.680
+analogy between the particle filter and the base filter comes from using the prediction step and
+
+19:51.680 --> 19:58.080
+the the prediction or the the motion model and the observation model for the sampling step for
+
+19:58.080 --> 20:03.120
+the proposal and then for the weight computation but it's all based on the importance sampling
+
+20:03.120 --> 20:08.880
+principle and automatically comes out of this if we put in the right proposal it should be noted
+
+20:08.880 --> 20:14.480
+over here that we as a user can define this proposal distribution so it's up to us as long
+
+20:14.480 --> 20:19.680
+as we are in line with the importance sampling principle to choose this so we are allowed to
+
+20:19.680 --> 20:25.520
+choose the motion model for example of of a mobile robot performing localization and describing the
+
+20:25.520 --> 20:30.800
+motion of the platform we are allowed to do that because this is a user-defined choice but this is
+
+20:30.800 --> 20:35.600
+a user-defined choice and then the weight is not a user-defined choice anymore it results from how
+
+20:35.600 --> 20:42.720
+we select the proposal the third step is a little bit of a tricky step which as maybe it's not
+
+20:42.720 --> 20:47.840
+intuitive in the beginning it's a so-called re-sampling step what this step does it basically
+
+20:47.840 --> 20:53.920
+draws samples from our sample set from our weighted sample set with replacement and it
+
+20:53.920 --> 21:02.480
+does it in a way that we draw a sample i with probability w of i so the probability that we
+
+21:02.480 --> 21:08.560
+draw the sample i is the weight of that sample and we repeat this process j times so that means
+
+21:08.560 --> 21:13.520
+we have our sample set we draw a sample randomly from that set and the probability of drawing that
+
+21:13.520 --> 21:17.680
+sample is proportional to its weight so the higher the weight the higher the probability
+
+21:17.680 --> 21:23.200
+that we draw it then we look at sample we make a copy of that sample let's say put it another bucket
+
+21:23.200 --> 21:28.480
+and put the original sample back to the original set and we repeat this process j times so we get
+
+21:28.480 --> 21:35.760
+j new samples in our re-sampled bucket and the weights in this re-sampled bucket we all set to
+
+21:35.760 --> 21:41.760
+one divided by j so they have all uniform weights so what we are doing here is we are basically
+
+21:41.760 --> 21:48.640
+replacing weights by frequencies so we're taking the weighted samples and turning them into
+
+21:48.640 --> 21:54.480
+uniformly weighted samples by having a higher probability of drawing samples with a higher
+
+21:54.480 --> 22:01.440
+weight and this form replicating them duplicating them and this generates me new samples that would
+
+22:01.440 --> 22:09.440
+represent still the same distribution but replaces the weights by frequencies and i do that because
+
+22:09.440 --> 22:13.600
+i typically have only a finite number of samples if i'm implementing a particle filter
+
+22:14.240 --> 22:18.800
+if i have a finite number of samples for representing particles that means at some point
+
+22:18.800 --> 22:25.280
+in time there will be samples which let's say go into areas of my state space which have a very
+
+22:25.280 --> 22:31.440
+very low probability maybe even a probability of zero so these particles with a very low weight
+
+22:31.440 --> 22:37.840
+do not contribute a lot to approximating the prob the probability distribution well so they
+
+22:37.840 --> 22:43.440
+have a very very small contribution to representing the overall probability mass so it's better
+
+22:44.560 --> 22:51.360
+to take that sample out eliminate it and replace it with a sample that is in an area of high
+
+22:51.360 --> 22:58.000
+probability in this way we are taking our memory in a more smart in a smarter way by saying we are
+
+22:58.000 --> 23:04.400
+using our memory for areas of high probability and that's basically what the resampling step does
+
+23:04.400 --> 23:08.960
+so if you would have an infinite amount of memory we could completely ignore that step
+
+23:08.960 --> 23:13.920
+but in most cases or in all real computers we only have a finite amount of memory for representing
+
+23:13.920 --> 23:18.960
+our samples and therefore this resampling step makes sense because it kind of shifts the
+
+23:18.960 --> 23:24.400
+particles into areas of high probability without changing the distribution itself
+
+23:25.760 --> 23:32.560
+so that was kind of the informal particle filter algorithm we did three steps we can only look to
+
+23:32.560 --> 23:37.600
+the more formal description of an algorithm which would look like this so we have particle filter
+
+23:37.600 --> 23:43.760
+which has the sample set representing the belief of my system at time t minus one my current motion
+
+23:43.760 --> 23:53.520
+command or in my current observation and then what i'm doing is i have my sample set so my predicted
+
+23:53.520 --> 23:59.200
+sample set is my in my new sample set are equal to the empty set so i start with kind of two empty
+
+23:59.200 --> 24:04.240
+buckets one i will use for the prediction and one i will use for the correction and then i'm sampling
+
+24:04.240 --> 24:11.040
+samples from my proposal distribution and again this pi is usually find choice so what's a
+
+24:11.040 --> 24:17.600
+hypothesis whether state can be in and this of course depends on my previous belief so this
+
+24:18.400 --> 24:24.160
+previous belief will be sitting somewhere in this proposal distribution and in most cases also the
+
+24:24.880 --> 24:29.280
+the motion or the the motion command will be sitting here because it will tell us how the
+
+24:29.280 --> 24:34.800
+system will evolve from the previous point in time to the next point in time and then the next step
+
+24:34.800 --> 24:39.840
+for that sample is the waiting step taking my target distribution divided by my proposal
+
+24:39.840 --> 24:44.720
+distribution and here typically you have to sit down and do some math and compute write down how
+
+24:44.720 --> 24:51.280
+that actually looks like and in most of the cases this will lead at least if you follow the using
+
+24:51.280 --> 24:55.440
+the motion model over here for my proposal will lead to an observation model a weight that is
+
+24:55.440 --> 24:59.680
+proportional to an observation model in order to write that down so i can compute my weight
+
+25:00.240 --> 25:08.960
+and then i add my weighted sample set as my new temporary sample set um x bar over here and i'm
+
+25:08.960 --> 25:13.680
+just repeating this and adding this so after the step here if i went one through went through the
+
+25:13.680 --> 25:19.440
+whole loop i basically do my um my prediction step and my correction step at the same point in time
+
+25:19.440 --> 25:24.880
+so we'll have a sample set x bar which is my temporary sample set so it's my it's not really
+
+25:24.880 --> 25:28.960
+the predicted sample set that i set before it's my temporary sample set let's better call it like
+
+25:28.960 --> 25:36.960
+this which contains all the samples drawn and re-weighted and then the last part over here is my
+
+25:37.520 --> 25:44.640
+re-sampling step so i'm repeating a process j times i'm drawing j samples with the probability
+
+25:44.640 --> 25:50.160
+proportional to the weight that i've just computed and add that drawn sample without a
+
+25:50.160 --> 25:55.680
+weight to my new sample set or with uniform weight to my new sample set so as a result of this i have
+
+25:55.680 --> 26:01.920
+at that point in time a sample set xt which represents my belief at time t you're having
+
+26:01.920 --> 26:07.680
+uniform weight and having replaced the weights by frequencies and then i'm repeating this process
+
+26:07.680 --> 26:12.560
+for the next observation next control command coming in and this is the general particle filter
+
+26:12.560 --> 26:19.360
+algorithm where we have the user have to define the proposal distribution and then derive how
+
+26:19.360 --> 26:23.600
+target divided by proposal looks like in order to compute the weight in an appropriate way
+
+26:24.240 --> 26:29.760
+if you would be able to draw from the target distribution itself that would be trivial we
+
+26:29.760 --> 26:34.960
+would just need to draw those samples there would be no weight and then also i can skip the
+
+26:34.960 --> 26:40.800
+re-sampling step because then all samples would have the same weight so if we could draw directly
+
+26:40.800 --> 26:45.040
+from our target the whole steps wouldn't be needed we could just represent our target distribution
+
+26:45.040 --> 26:50.320
+with samples and practice however that is often the case we cannot sample from our target we can
+
+26:50.320 --> 26:55.520
+only sample from a proposal which covers typically parts of the target distribution and then need to
+
+26:55.520 --> 27:01.360
+be able to compute a weight in order to account for the discrepancy the key thing is that the
+
+27:01.360 --> 27:06.720
+target i only need to be able to evaluate point wise so add a sample location and i don't need to
+
+27:06.720 --> 27:12.800
+be able to draw samples from this and evaluating a function so computing f of x is easier than
+
+27:12.800 --> 27:18.880
+sampling from a function and therefore this is a promising from a prominent and effective algorithm
+
+27:18.880 --> 27:24.560
+for performing state estimation so far i mainly look into the general particle filter algorithm
+
+27:24.560 --> 27:31.120
+and introduce it in an informal way using the important sampling principles and relating this
+
+27:31.120 --> 27:36.160
+to relating them to the idea of the recursive base filter the next thing we want to do is we want to
+
+27:36.160 --> 27:42.240
+look into Monte Carlo localization with Monte Carlo localization we refer to as estimating the
+
+27:42.240 --> 27:47.360
+position and orientation of a platform using a particle filter so it's robot localization using
+
+27:47.360 --> 27:52.960
+a particle filter and this is something that we typically call Monte Carlo localization so in our
+
+27:52.960 --> 27:57.680
+1d examples you have seen this plot a few times if we have a robot which sits over here and it has
+
+27:57.680 --> 28:02.000
+the sensor which only tells them um can only take doors and tells the robot you're in front of a
+
+28:02.000 --> 28:05.920
+door when you're in front of a door the robot drives around so i've seen this plot a few times
+
+28:06.400 --> 28:11.120
+then you will end up with the belief hopefully that concentrates a large number of samples over
+
+28:11.120 --> 28:16.160
+here where the system actually is there are some remaining samples over here and over here which
+
+28:16.160 --> 28:21.600
+could be explained by um having a door observation over here and then the second door observation was
+
+28:21.600 --> 28:26.720
+a false observation so some of the samples survived here but the majority of probability
+
+28:26.720 --> 28:32.000
+mass actually sits over here also in this example that i've shown before where am i
+
+28:32.000 --> 28:36.560
+generating those samples that's the question i want to answer is Monte Carlo localization
+
+28:36.560 --> 28:40.560
+generating those sample sets but also then maintaining them and updating them
+
+28:40.560 --> 28:46.720
+based on motion and based on observations that we are obtaining just an example how that could
+
+28:46.720 --> 28:52.080
+look like so what you see here is a belief where all the particles are spread all over the place
+
+28:52.080 --> 28:56.160
+and this is kind of a uniform distribution randomly sampled over the space where the system
+
+28:56.160 --> 29:01.520
+can be in and then if the robot drives around obtains observations generates motion commands
+
+29:01.600 --> 29:06.640
+we can start to focus our beliefs so the particle cloud will evolve some particles will die out when
+
+29:07.520 --> 29:12.720
+they can't be well explained by the observation and the probability mass concentrates in several
+
+29:12.720 --> 29:18.720
+places and this is because environment is at least to some degree symmetric and so you will have
+
+29:18.720 --> 29:23.200
+multiple hypotheses that may remain again something that you cannot do well with the
+
+29:23.200 --> 29:27.440
+Gaussian distribution also this cannot be represented well with the Gaussian at some
+
+29:27.440 --> 29:31.760
+point in time your system will believe will converge and you will actually end up with a
+
+29:31.760 --> 29:38.480
+belief that is similar to a Gaussian distribution so just to come back and make this point very
+
+29:38.480 --> 29:44.640
+clear what the particle filter does it takes a sample as a post hypothesis and every hypothesis
+
+29:44.640 --> 29:52.160
+says that's where the platform is and then it has weight kind of a term of fitness or how much
+
+29:52.160 --> 29:57.680
+we can trust that particle which tells us how likely that is and by repeat by not having one
+
+29:57.680 --> 30:02.400
+hypothesis where i am but a large number one thousand ten thousand hundred thousand samples
+
+30:03.040 --> 30:09.360
+we actually obtain a belief a set of possibilities where we are and this set of possibilities
+
+30:09.360 --> 30:14.640
+describes my probability distribution but every particle itself says i did the right job i know
+
+30:14.640 --> 30:19.760
+where i am i have my status domain x and i have a certain weight associated to myself so in the
+
+30:19.760 --> 30:25.680
+view of article it did the right job and everyone else was wrong and only through using a lot of
+
+30:25.680 --> 30:31.920
+those hypotheses we actually get our belief that's kind of an important thing that is worth considering
+
+30:31.920 --> 30:37.680
+when you think about that particle filter so what we do want to call localization is we say every
+
+30:37.680 --> 30:42.000
+particle represents the post hypotheses so if you're living in a 2d world this would be an x
+
+30:42.000 --> 30:47.680
+coordinate a y coordinate and an orientation angle theta representing the yaw of that platform
+
+30:48.560 --> 30:55.440
+or if it would be in the 3d world this could be x y and that your pitch role or maybe i have a car
+
+30:55.440 --> 31:00.800
+driving an environment that maybe just x y z location and maybe be your orientation because
+
+31:00.800 --> 31:05.040
+the rolling pitch angles may be always very small and may not be one estimate that in a particle
+
+31:05.040 --> 31:12.080
+filter so the dimension that i need to estimate defines the state vector of every particle so the
+
+31:12.160 --> 31:18.160
+dimensionality of that sample and then in Monte Carlo localization we use our motion model
+
+31:18.160 --> 31:23.600
+as our prediction step so we say where have we have been at the previous point in time so this
+
+31:23.600 --> 31:29.040
+is information which comes from the recursive belief we use our odometry command or motion
+
+31:29.040 --> 31:35.280
+command and estimate where we are and this is what i use to generate new samples so if i'm a
+
+31:35.280 --> 31:40.720
+sample for example within a particle filter or in a sample set of ties t minus one and the motion
+
+31:40.720 --> 31:46.320
+commands and you've driven a meter forward what i would do here i would take my position and move
+
+31:46.320 --> 31:52.720
+it a meter forward or at least approximatively a meter forward why approximatively because i'm
+
+31:52.720 --> 31:57.680
+sampling from this distribution and if my motion has noise associated to that which is always the
+
+31:57.680 --> 32:03.680
+case in reality i will not maybe move the particle one meter forward but maybe 99 centimeters or
+
+32:03.680 --> 32:10.000
+meter two or a meter three so for every sample we draw from this distribution we don't take the
+
+32:10.000 --> 32:14.960
+maximum value we draw from this distribution so that some samples move forward one meter
+
+32:15.600 --> 32:22.240
+some sample moves forward 80 centimeters some temple moves forward one meter 20 and so on and
+
+32:22.240 --> 32:27.280
+so forth so we're generating a new set where we are increasing the uncertainty we are spreading
+
+32:27.280 --> 32:33.280
+out the particles in the world about the predicted belief because we add uncertainty to the world
+
+32:33.280 --> 32:39.120
+if we only move through the environment without observing it and the second step and this is the
+
+32:39.120 --> 32:44.160
+result from this choice so this is a user-defined choice that we do want to call a localization
+
+32:44.160 --> 32:47.840
+and as a result from this if you sit down with the mass write down the target distribution
+
+32:47.840 --> 32:52.640
+write down the proposal do some math you will get a term which is proportional to my observation
+
+32:52.640 --> 32:56.800
+model so what's the likelihood of obtaining an observation given we know where we are and given
+
+32:56.800 --> 33:01.840
+we have the map of the environment and we only need that proportionally because later on we
+
+33:01.840 --> 33:06.720
+anyway will normalize our weights to one and therefore this i only need to know it up to a
+
+33:06.720 --> 33:14.240
+normalization constant and this results from this design choice if you were to choose a different
+
+33:14.240 --> 33:18.560
+model over here then we would end up with a different weighted term over here but if we
+
+33:18.560 --> 33:25.520
+choose the motion model as a proposal we will end up with the observation model as our as our weight
+
+33:25.520 --> 33:30.400
+for every sample and again so what we are doing for every sample we generate this pose we generate
+
+33:30.400 --> 33:35.840
+a new hypothesis by moving it forward and then in the second step in the waiting step we are
+
+33:35.840 --> 33:42.240
+evaluating how likely it is to obtain the observation that we actually got assuming we have been in
+
+33:42.240 --> 33:48.240
+that place of that particle and here some beauty comes into the game a particle is a single pose
+
+33:48.240 --> 33:53.840
+hypothesis without uncertainty so i can really evaluate my model saying given i'm exactly here
+
+33:54.480 --> 34:00.640
+how likely is to obtain my observation and if you think back this was exactly how we computed our
+
+34:00.640 --> 34:06.800
+observation model in one of the previous lectures and so by having these given states
+
+34:06.800 --> 34:11.840
+this given xt we can just use the particle position itself because the particle believes it did the
+
+34:11.840 --> 34:17.840
+right job so it is given we can very easily compute this observation model because we assume
+
+34:17.840 --> 34:24.080
+we know where we are we know what the world looks like and then we get exactly the likelihood of
+
+34:24.080 --> 34:28.960
+obtaining the observation that we had before so it's the evaluation of my observation model and
+
+34:28.960 --> 34:34.720
+as we have explained it in the previous lectures so turning the particle filter the particle
+
+34:34.720 --> 34:39.200
+filter algorithm into a particle filter for localization so mcl the only thing we need to
+
+34:39.200 --> 34:46.880
+change is are those two lines so we are defining our proposal distribution as the motion model
+
+34:46.880 --> 34:54.640
+and this then results in being the observation model in our waiting step and what we also need
+
+34:54.640 --> 35:00.160
+to take into account it's not really written in here that the dimensionality of this xt so the
+
+35:00.160 --> 35:08.960
+this of the sample itself is the xy your or xy that your pitch roll position of my platform
+
+35:08.960 --> 35:14.560
+in the environment okay and that's it the rest stays exactly the same standard out of the box
+
+35:14.560 --> 35:20.160
+particle filter algorithm i only plugged in my motion model and my observation model in here
+
+35:20.960 --> 35:26.080
+so as an illustration how does it look like so consider we we start with our mcl example over
+
+35:26.080 --> 35:31.440
+here so consider we have a robot somewhere in the world standing currently in front of the door
+
+35:31.440 --> 35:37.840
+and this is our uniform distribution our random sample set that we have initialized in order to
+
+35:37.840 --> 35:43.600
+represent our state it's kind of one-dimensional world so if you then perform the correction step
+
+35:43.600 --> 35:48.080
+so this is our observation model so we get a return a peak in front of every door because the
+
+35:48.080 --> 35:53.120
+sensor said robot you're in front of a door again there's a certain probability that this may be
+
+35:53.120 --> 35:57.680
+wrong therefore we have non-zero probabilities here but it's a higher probability that we're
+
+35:57.680 --> 36:04.080
+in front of that door so the waiting step will then increase the the weight of those samples
+
+36:04.080 --> 36:10.800
+which are at that locations so these samples would get very very high weights and the other
+
+36:10.800 --> 36:16.720
+samples will get low weights so this is my new weighted sample set representation okay so i'm
+
+36:16.720 --> 36:21.840
+just taking this over here copy it up and do the next step so this is just copy paste from the
+
+36:21.840 --> 36:27.200
+previous slide the next thing i do i do my resampling step that means i'm replacing weights
+
+36:27.200 --> 36:35.520
+by frequencies so samples which have been located over here i duplicate them put them down here
+
+36:36.160 --> 36:41.440
+and those are less likely to be chosen because if you would you just copy the samples and increase
+
+36:41.440 --> 36:46.560
+the frequency at the same location you actually won't see it in the plot so what this plot shows
+
+36:46.560 --> 36:51.920
+is the resampling step and the motion prediction step and by moving the particles forward and
+
+36:51.920 --> 36:56.880
+spreading them due to the sampling process you see this density increasing here in this illustration
+
+36:56.880 --> 37:00.560
+so of course these are kind of two step steps done in one but there's something that is you
+
+37:00.560 --> 37:04.960
+often see in particle filter applications because otherwise you don't really see that effect in the
+
+37:04.960 --> 37:11.920
+resampling step where the samples get condensed in certain locations and then again we repeat
+
+37:11.920 --> 37:19.440
+the process so copy this part over here and then integrate the next observation so copy this over
+
+37:19.440 --> 37:24.080
+here the robot is again in front of a door sees a door so we have this observation function and now
+
+37:24.080 --> 37:28.480
+we can see there's a smaller number of samples over here because this was just a few samples
+
+37:28.480 --> 37:33.200
+which kind of those those guys which survived over here which get a weight over here but the
+
+37:33.200 --> 37:39.360
+majority of samples sits actually in here and so they get very very high weight and those samples
+
+37:39.360 --> 37:44.560
+get really high weight and we have again a few of them sitting over here so in the next resampling
+
+37:44.560 --> 37:50.080
+step those will be replicated dramatically more often than all the other samples a few of those
+
+37:50.080 --> 37:54.960
+as well a few of those as well but most of the others are likely to die out and then integrating
+
+37:54.960 --> 38:00.160
+the prediction prediction step of the next motion I will see that the majority of samples will be
+
+38:01.040 --> 38:08.640
+distributed over here representing the position of the platform so again have a small animation
+
+38:08.640 --> 38:15.600
+this animation done by adida fox of a mobile robot navigating in an environment and this is
+
+38:15.600 --> 38:21.600
+actually a technique that has been developed a bit more than 20 years ago with substantial
+
+38:21.600 --> 38:27.280
+contributions here from the university of bonn so what you see here is actually a floor plan of
+
+38:27.280 --> 38:31.680
+an old building in bonn the building which has probably been taken down or will be taken down
+
+38:31.680 --> 38:38.400
+soon the old computer science building before they moved here on campus and this was a corridor
+
+38:38.400 --> 38:42.800
+environment and you can see this was the actual trajectory that the robot will take and you will
+
+38:42.800 --> 38:47.600
+see the animation a few seconds how the robot moves through the environment the important thing
+
+38:47.600 --> 38:52.880
+in here is that this is a symmetric environment so except of kind of a few things which are in the
+
+38:52.880 --> 38:57.920
+rooms located in the rooms you can flip it the other way around and the corridor would look
+
+38:57.920 --> 39:01.920
+exactly the same so as the robot moved through the corridor you will actually see that multiple
+
+39:01.920 --> 39:07.360
+hypotheses and then two hypotheses survive and only by moving into a room the robot is able to
+
+39:07.360 --> 39:13.680
+identify where it actually is so let's see how it looks like so what you see is this dot here
+
+39:13.680 --> 39:17.680
+shows the current best estimate where the system is in these are the observations which are in this
+
+39:17.680 --> 39:22.240
+case sonar observations and you will see this position jumping around a little bit in the
+
+39:22.240 --> 39:27.440
+beginning because the system doesn't know where the robot actually is it has the model belief
+
+39:27.440 --> 39:34.720
+and it's jumping around until it actually converges so oops sorry let me just start that video okay
+
+39:35.600 --> 39:41.120
+so what you see here the system is moving a lot of probability mass concentrates in the corridor
+
+39:41.120 --> 39:46.240
+and if i kind of pause that video over here you can see that a lot of the probability mass
+
+39:46.240 --> 39:53.120
+is accumulated within the corridors through this repeated sampling waiting and resampling step
+
+39:53.120 --> 39:57.520
+a few samples have survived over here but there's nearly no samples in the other rooms and you can
+
+39:57.520 --> 40:01.520
+also see that there are two clouds those clothes are very prominent these are kind of two
+
+40:01.680 --> 40:06.880
+two explanations where the system could be because they represent the symmetry of the environment
+
+40:06.880 --> 40:11.760
+so if i then continue and let the system the animation continue you see some samples will
+
+40:11.760 --> 40:16.240
+survive over here which is the most likely pose but also a significant number sorry this one
+
+40:16.240 --> 40:21.360
+survives over here and only by moving into the room because those two rooms look different
+
+40:21.360 --> 40:26.320
+the system is able to identify that is actually here and is not located over here so this cloud
+
+40:26.320 --> 40:32.880
+will die out and this is a cloud which actually survives so i can actually show that video again
+
+40:32.880 --> 40:38.480
+now also in full screen mode we can see how the system estimates the position of the platform
+
+40:38.480 --> 40:43.760
+recursively taking into account motion observation and resampling moving through the corridor then
+
+40:43.760 --> 40:50.320
+turning around we see that the two hypotheses survive before the system enters one of the rooms
+
+40:50.320 --> 40:57.200
+and then is able to identify where the system is located and which hypothesis is probably wrong
+
+40:57.200 --> 41:01.360
+and that has converged to a unimodal belief but in order to
+
+41:01.360 --> 41:05.120
+end up there we need to have the ability to represent multimodal distributions
+
+41:07.440 --> 41:12.960
+okay last but not least i want to have a look into the resampling step so again resampling
+
+41:12.960 --> 41:18.480
+was this kind of third step which says replace unlikely samples with more likely ones because
+
+41:18.480 --> 41:24.720
+we don't want to spend too much memory on areas that don't matter and this was this resampling
+
+41:24.720 --> 41:30.480
+step it's basically drawing samples proportional to their weight with replacement and doing this
+
+41:30.480 --> 41:35.600
+j times and you can see this as kind of a mathematically motivated survival of the fittest
+
+41:35.600 --> 41:40.960
+approach where the bad samples die out and the good samples get replaced and again this is just
+
+41:40.960 --> 41:49.200
+a trick to get this the samples move into the more likely areas of the state space without
+
+41:49.200 --> 41:56.640
+changing the belief or only doing minor changes to the belief and this is needed because we only
+
+41:56.640 --> 42:01.520
+have a finite number of samples and cannot represent an arbitrary number of samples so how
+
+42:01.520 --> 42:06.000
+does this resampling work from the way it is described here draw samples by replacement that
+
+42:06.000 --> 42:10.400
+sounds very easy and it's something which is often called roulette wheel sampling why is
+
+42:10.400 --> 42:15.360
+this the case because you can vision a roulette wheel where the buckets of that roulette wheel
+
+42:16.240 --> 42:22.080
+represent the weight of the particles so a lot the larger bucket is the more likely that this
+
+42:22.080 --> 42:26.400
+sample is actually going to be so if you want to draw a sample you just take your your ball put
+
+42:26.400 --> 42:32.320
+into your roulette wheel and see where the ball ends up in which bucket and if you have a larger
+
+42:32.320 --> 42:38.480
+bucket it's the ball is more likely to end up there and so what how you can do this you basically
+
+42:39.840 --> 42:43.280
+have your have your weights you know they're normalized to one you draw a random number
+
+42:43.280 --> 42:50.160
+between zero and one and then determine the the bucket where you end up so you would draw a sample
+
+42:51.520 --> 42:57.520
+in this case you end up being here so you draw a number let's say this would be approximatively
+
+42:57.520 --> 43:03.440
+0.22 and you will end up in the weight of particle number three and you repeat the process
+
+43:03.440 --> 43:09.280
+you have a number drawn close to one so you end up having drawing particle wj or the j's particle
+
+43:09.280 --> 43:15.200
+for example and you repeat this process over and over again drawing those samples and in this way
+
+43:15.200 --> 43:20.640
+you can generate the new sample set drawing by replacement and all the samples that you've drawn
+
+43:20.640 --> 43:26.160
+you copy so the state of particle number three the path state of particle number j and the state
+
+43:26.160 --> 43:30.880
+of this particle for example and this is what we call roulette field sampling it's the simplest
+
+43:30.880 --> 43:37.840
+form of sampling and you can actually do this in an efficient manner by you have to do j times
+
+43:37.840 --> 43:42.800
+because you're sampling j times and you need to find which bucket the ball ends up with and that's
+
+43:42.800 --> 43:48.960
+something that you can realize with binary search because you know that the sum of the weights is
+
+43:50.080 --> 43:54.800
+is one and you are basically looking in which bucket you're ending up with if you would
+
+43:54.800 --> 43:59.200
+accumulate those buckets or cumulative weights so you just need to do a binary search in an array
+
+43:59.200 --> 44:03.760
+which you can do in log j times because your array has j entries so that we end up with the
+
+44:03.760 --> 44:10.240
+computational complexity of of j log j and this is a standard roulette wheel sampling they also
+
+44:10.240 --> 44:15.040
+have an alternative way to do this and it as we'll see in a second a better way for doing this
+
+44:15.040 --> 44:20.720
+and this is the so-called low variance re-sampling also called stochastic universal re-sampling
+
+44:21.280 --> 44:27.680
+here the idea is we have a modified roulette wheel so we still have our roulette wheel and
+
+44:27.680 --> 44:32.800
+instead of a ball we kind of see this as an as an error which is new basically turning and depending
+
+44:32.800 --> 44:38.000
+where the error points to in the end that's the bucket that is chosen except of one arrow that
+
+44:38.000 --> 44:42.640
+we have been arrow that we have been using over here we are using now n arrows and they are
+
+44:42.640 --> 44:48.320
+distributed with equal with an equal spacing in the angular space so if i have eight arrows
+
+44:48.320 --> 44:54.480
+between all errors there is a difference of 45 degrees for example and then this these are my
+
+44:54.480 --> 45:01.600
+errors and just turning those arrows once and then where all the arrows end up these are the samplers
+
+45:01.600 --> 45:06.960
+that i'm choosing so if i i basically just draw one random number and not j random numbers and
+
+45:06.960 --> 45:12.960
+then all the other samples are deterministically determined and so if you draw this is basically
+
+45:12.960 --> 45:17.120
+how a draw of a full sample set looks like and that's something which is called stochastic
+
+45:17.120 --> 45:22.320
+universal resampling also low variance resampling and has a few advantage actually two advantages
+
+45:22.320 --> 45:28.560
+the first advantage is that it is faster to do you can do it in linear time because you only draw
+
+45:28.560 --> 45:35.360
+one random number basically determines where the first arrow pointing to and then you just while
+
+45:35.360 --> 45:39.920
+walking through your array you determine where do the other arrows end up because you know those
+
+45:39.920 --> 45:45.040
+arrows have an equal spacing and you don't need to realize the binary search it's just one pass
+
+45:45.040 --> 45:49.680
+through an array which is then can do in linear time because you're basically doing the drawing
+
+45:49.680 --> 45:53.360
+not one after the other you're doing the drawing at the same point in time while you're moving
+
+45:53.360 --> 45:57.280
+through the array so the move through the area is a bit more expensive but you only do it once and
+
+45:57.280 --> 46:03.440
+not j times so this is a lower computational complexity this is nice but this is typically
+
+46:03.440 --> 46:10.800
+not the factor why stochastic universal resampling is superior to standard resampling that's a
+
+46:10.800 --> 46:19.280
+different reason in order to do that why standard regular resampling can be suboptimal is the
+
+46:19.280 --> 46:25.600
+following so consider you're doing a sampling with replacement so your sample and you put your sample
+
+46:25.600 --> 46:35.200
+back and then you do that again and this can lead to results where the output is suboptimal and the
+
+46:35.200 --> 46:40.880
+output of the the idea let's say that way behind a resampling was to eliminate samples which are
+
+46:40.880 --> 46:45.760
+in low areas of the state space and represented by samples which have a high weight which are more
+
+46:45.760 --> 46:50.560
+likely to happen and if i ask yourself the question what actually happens if all samples
+
+46:50.560 --> 46:56.560
+have exactly the same weight what's going to happen let's say our sensor is really really bad
+
+46:56.560 --> 47:00.880
+it doesn't provide us any information so all samples will have the same weight what happens
+
+47:00.880 --> 47:05.440
+i'm actually generating samples the observation doesn't tell me anything so all samples will have
+
+47:05.440 --> 47:10.720
+the same weight and then i'm the resampling step kicks in and it draws random samples
+
+47:10.720 --> 47:16.640
+and duplicates them if they've drawn them multiple times or two times and other samples will not be
+
+47:16.640 --> 47:22.000
+drawn and will die so state hypothesis will basically die out and others will be duplicated
+
+47:22.000 --> 47:27.440
+or even exist multiple times so in the next time step all the samples have been replicated others
+
+47:27.440 --> 47:32.720
+have died although no sample was better than the other and if you now repeat this process
+
+47:32.720 --> 47:37.200
+over and over again because our sensor has been blinded for example our camera is dirty
+
+47:37.200 --> 47:41.920
+someone is standing in front of our laser scanner whatever it is we don't get good observations in
+
+47:41.920 --> 47:48.720
+then this resampling step would even enhance this process so before i had one sample for example
+
+47:48.720 --> 47:53.680
+just duplicated now drawing the sample is again increased in probability so it will be drawn more
+
+47:53.680 --> 47:58.000
+often and then we have four or eight times this sample and other samples will die out
+
+47:58.640 --> 48:03.920
+so if all particles have the same weight there's actually no way that we should choose one order
+
+48:03.920 --> 48:09.280
+it doesn't make sense to choose one particle over another so in this situation the stochastic
+
+48:09.280 --> 48:14.880
+universal resampling or low variance resampling will actually reproduce the same sample set over
+
+48:14.880 --> 48:20.960
+and over again so if our sample set or our weight is not very good to determine which samples should
+
+48:20.960 --> 48:27.440
+be replicated with which samples should be eliminated the standard red wheel resampling
+
+48:27.440 --> 48:32.960
+will hurt our belief while stochastic universal resampling will not and therefore we will always
+
+48:32.960 --> 48:40.640
+choose stochastic universal resampling because it's faster and it is better for us so how would
+
+48:40.640 --> 48:47.120
+we implement that we can actually implement this quite efficiently so consider that we have our
+
+48:48.080 --> 48:54.000
+our particle set and this the size of these are kind of basically the unfolded
+
+48:54.000 --> 48:59.360
+red wheel in this example i draw the first random number and then i want to advance
+
+48:59.360 --> 49:05.760
+to the next sample in a distance of one divided by n so i'm basically have basically a space
+
+49:05.760 --> 49:12.000
+one divided by j spacing of one divided by j and i'm basically picking the buckets where the
+
+49:12.000 --> 49:16.480
+error is pointing to this is basically the the unwrapped roulette wheel turning the wheel into
+
+49:16.480 --> 49:22.400
+a straight line the first thing i do i pick a random number between j between zero and one
+
+49:22.400 --> 49:30.320
+divided by j and then i pick j minus one times the particle in one divided by j steps walking through
+
+49:30.320 --> 49:36.000
+my array so how do i implement this efficiently i can implement this efficiently by building an
+
+49:36.000 --> 49:43.120
+array which always which has j elements and always stores the the sum of the weights so
+
+49:43.120 --> 49:47.120
+the first bucket has the weight of particle number one the second bucket has a sum of the weight of
+
+49:47.120 --> 49:53.200
+particle one and the particle two the third bucket has a sum of particle one two three and so on
+
+49:53.200 --> 49:58.800
+the last bucket gives me one because my sample set is normalized to one what i then do i draw
+
+49:58.800 --> 50:04.480
+a random number between zero and one which tells me which bucket do i start with now basically
+
+50:04.480 --> 50:10.800
+comparing is this random number smaller than w1 if it is smaller i know the arrow sits in bucket
+
+50:10.800 --> 50:16.320
+number one and i say okay perfect take bucket number one if it is not the case if it is larger
+
+50:16.320 --> 50:21.120
+than w1 that means i'm actually sending over here so the first particle at a very small weight and
+
+50:21.120 --> 50:25.840
+so i should choose particle number two as a first weight and then i'm repeating this process
+
+50:25.840 --> 50:32.480
+advancing this way one divided by j steps further and further and in order to estimate where i end
+
+50:32.480 --> 50:37.200
+up with so basically i have two loops of for loop because i'm doing this j times the whole thing j
+
+50:37.200 --> 50:43.440
+times and i'm having an indicator tell me where this arrow points to which is my u which is my
+
+50:43.440 --> 50:50.960
+initial random number plus the index of my sample that i've chosen times one divided by j so this is
+
+50:50.960 --> 50:58.400
+a spacing and i'm basically moving this moving further checking which bucket i'm in while my u
+
+50:59.280 --> 51:04.880
+is larger than the cumulative sum of this array so this is a cumulative sum and once this is
+
+51:04.880 --> 51:10.560
+smaller i pick the particle and i'm repeating this step and exactly j particles will be picked
+
+51:10.560 --> 51:16.240
+so i can do sampling with replacement in a very efficient way using this idea we can also write
+
+51:16.240 --> 51:22.000
+this down as a more formal algorithm so we start with the random number between zero and one
+
+51:22.240 --> 51:28.640
+divided by j i have my um my cumulative array which i also kind of actually build up i don't
+
+51:28.640 --> 51:33.280
+even need to compute it explicitly i kind of just need to maintain the variable of the current
+
+51:33.280 --> 51:38.880
+bucket where i'm in i'm iterating j steps and this is basically copied from the previous slide so
+
+51:38.880 --> 51:44.320
+u is the indicator which sample i'm choosing and then while u is larger than the current position
+
+51:44.320 --> 51:50.000
+my cumulative array i'm jumping to the next bucket compute the next value of the accumulative array
+
+51:50.000 --> 51:56.640
+and repeat this until this is not the case anymore i pick my sample and i continue and in this way
+
+51:56.640 --> 52:03.280
+i'm drawing j samples in a stochastic universal resampling way so low variance resampling or
+
+52:03.280 --> 52:11.280
+stochastic universal resampling is an alternative way that keeps the sample set the same in case of
+
+52:11.280 --> 52:15.600
+identical weights of the particles and of course we typically don't have identical weights but we
+
+52:15.680 --> 52:20.160
+may have weights which don't differ much and even if they don't differ much the variation that this
+
+52:20.160 --> 52:25.040
+low variance resampling brings in is actually minimized in addition to that it's fast to compute
+
+52:25.040 --> 52:30.800
+so there's really no way for using red wheel sampling always use stochastic universal resampling
+
+52:30.800 --> 52:36.240
+that's the take-home message over here and now we actually have explained all the parts of the
+
+52:36.240 --> 52:41.840
+particle filter you know how the particle filter looks like you know how resampling looks like you
+
+52:41.840 --> 52:46.160
+know how to draw samples from simple distributions such as a gaussian the only thing you need to put
+
+52:46.160 --> 52:51.680
+in at the user is actually your motion model and your observation model and we have defined a few
+
+52:51.680 --> 52:56.720
+in the previous lectures so that you can use them for example for a wheeled mobile robot equipped
+
+52:56.720 --> 53:02.720
+with a laser scanner and i want to show a few examples of mcl in action over here and i want
+
+53:02.720 --> 53:07.120
+to start with a slide showing the first robots that actually used Monte Carlo localization
+
+53:07.120 --> 53:14.720
+this was the robot Rhino actually here developed in Bonn Minerva which was kind of a very similar
+
+53:14.720 --> 53:19.920
+platform let's say it way also used as a museum tour guide and then later on the robot Albert in
+
+53:19.920 --> 53:25.760
+Freiburg which we have been kind of three robots which have made Monte Carlo localization popular
+
+53:25.760 --> 53:30.480
+which again initial developments have happened here in Bonn and that in Carnegie Mellon University
+
+53:30.480 --> 53:36.800
+and later on in Freiburg building the particle filter based localization into kind of the gold
+
+53:36.800 --> 53:42.560
+standard of localization at least for indoor localization of mobile robots today especially
+
+53:42.560 --> 53:47.600
+if you need to maintain multimodal beliefs this is really the standard approach and i want to show
+
+53:47.600 --> 53:53.760
+some kind of old slides which show how the robot Minerva which was this one over here drove for
+
+53:53.760 --> 54:01.120
+a period of i think six weeks in the late 90s through the Smithsonian Museum of American History
+
+54:01.120 --> 54:07.440
+given tour guides tours acting as a tour guide giving tours to visitors and driving around and
+
+54:07.440 --> 54:12.000
+there was also an event where the same thing happened here in parallel in the Deutscher Museum
+
+54:12.000 --> 54:20.640
+in Munich as well as in here in Bonn at that time Rhino was here in Bonn and while driving
+
+54:20.640 --> 54:25.520
+around performing localization tasks interacting with visitors so this is a floor plan here of the
+
+54:25.520 --> 54:31.680
+Smithsonian Museum of American History or this one section where the robot Minerva was installed
+
+54:31.680 --> 54:37.120
+and you can see here our sample set distributed over the space the robot was equipped with two
+
+54:37.120 --> 54:41.040
+laser range finders so one looking to the front one looking to the back which is here illustrated
+
+54:41.040 --> 54:47.360
+by those blue dashed lines so this was a sample set a first observation was actually obtained
+
+54:48.400 --> 54:53.200
+and this always shows you kind of where the system things right now it is it's not the right place
+
+54:53.200 --> 54:58.560
+in reality the system is over here we integrate from a re-sampling staff integrate a motion
+
+54:58.560 --> 55:03.040
+command and then in the next step the particle set looks like this so we have a few positions
+
+55:03.040 --> 55:08.160
+over here where the system could be we can see denser particle clouds also down here and down here
+
+55:08.160 --> 55:12.960
+are two areas which share some similarities and could also explain the observation better than
+
+55:12.960 --> 55:18.560
+other approaches then we can again put in our observation and what is probably a bit hard to
+
+55:18.560 --> 55:23.280
+see here in the video but if you look to the slides you will see it better you see
+
+55:23.280 --> 55:27.840
+some of those samples being in dark red and the other one bright red and so the darker the color
+
+55:27.840 --> 55:34.160
+the higher the the weight of that sample we can already already see here that probability mass
+
+55:34.160 --> 55:40.080
+has converged really well to the right location we integrate the observation our re-rating our
+
+55:40.080 --> 55:45.520
+samples and then performing the re-sampling steps you can see between this step and this
+
+55:45.520 --> 55:49.840
+step weight update and re-sampling you see that some of the samples are actually dying out
+
+55:49.840 --> 55:54.080
+here in this unlikely regions of the state space for example and then the next motion is
+
+55:54.080 --> 55:58.160
+incorporated here the motion was very noisy of the platform you can see the particle cloud
+
+55:58.160 --> 56:03.280
+spreads out quite a lot so we get the new observation in you can see again that the
+
+56:03.280 --> 56:08.800
+measurement is obtained and it's compared to the sample set you can see that here in dark red
+
+56:08.800 --> 56:13.120
+the weight update is performed so the samples here in the center get a higher weight than outside
+
+56:13.120 --> 56:18.080
+the re-sampling is performed you can see here unlikely state space in the outer regions as
+
+56:18.080 --> 56:26.080
+well as in other areas will die out and then the motion update is performed we get a new observation
+
+56:26.080 --> 56:30.880
+we perform the weight update with the re-sampling and this way the system can move through the
+
+56:30.880 --> 56:37.200
+environment and estimate and track its pose over time and this is was kind of one of the first
+
+56:37.200 --> 56:42.400
+animations of this Monte Carlo localization which has been successfully used for extended periods
+
+56:42.400 --> 56:48.640
+of time in populated scenes there are two other examples I want to show where the system has been
+
+56:48.640 --> 56:54.400
+used so one is in a production hall at KUKA which is a German robot manufacturer of a robot driving
+
+56:54.400 --> 56:59.280
+around performing logistics tasks equipped with laser scanners localizing itself in a map while
+
+56:59.280 --> 57:04.240
+doing construction tasks you can't do this only indoors you can also do it outdoors so this is an
+
+57:04.240 --> 57:11.840
+outdoor traversal of a robot navigating here in a graph-like or combined graph grid-based
+
+57:13.040 --> 57:17.360
+map driving here around we can see those red dots over here not the samples this is kind of the
+
+57:17.360 --> 57:21.600
+overlay of the current laser scan with the position of the best particle the cloud is
+
+57:21.600 --> 57:26.560
+actually here so small that it's actually hard to see that because the system when you optimize
+
+57:26.560 --> 57:31.520
+your models you get really precise motion estimates and can track your position really
+
+57:31.520 --> 57:38.080
+accurately over time and come up with good estimates and use this to steer your robot even
+
+57:38.080 --> 57:44.400
+in outside environments dynamic environments and it's a very versatile technique for performing
+
+57:44.960 --> 57:50.800
+robot localization the particle filter however has also some disadvantages not everything is great
+
+57:51.360 --> 57:56.240
+so one of the problematic things in here is if we have high dimensional state spaces
+
+57:56.240 --> 58:01.440
+why is this the case because we need to cover our state spaces sufficiently well with samples
+
+58:01.440 --> 58:06.160
+in order to represent the probability distribution so especially if we have whatever
+
+58:07.200 --> 58:11.520
+10-dimensional state spaces or 20-dimensional state spaces the particle filters typically
+
+58:11.520 --> 58:17.600
+will not work well so the particle that works well in low-dimensional spaces or if the uncertainty
+
+58:17.600 --> 58:23.920
+is not too huge so that we can actually represent the the space of possibilities in an efficient
+
+58:23.920 --> 58:28.640
+manner and actually the number of samples that you need grows exponentially with the dimensionality
+
+58:28.640 --> 58:33.360
+of your state space so in two dimensions no problem at all three-dimensional state spaces
+
+58:33.360 --> 58:38.320
+get already more tricky but they're still fine four may still be okay but higher than four you
+
+58:38.320 --> 58:43.440
+need to have sufficient computational resources in order to estimate the position of the particle well
+
+58:43.440 --> 58:48.480
+or you need to apply tricks to kind of restrict the size of your particle cloud to for not being
+
+58:48.480 --> 58:54.720
+required to use millions or hundreds of thousands of particles so it depends always how many
+
+58:54.720 --> 58:59.600
+assumptions you can make about your environment how many things can you simplify but in areas
+
+58:59.600 --> 59:04.880
+where you have high dimensional state spaces or regions of very high uncertainty then the
+
+59:04.880 --> 59:10.160
+particle filter may be problematic and so that's something you need to take into account if you
+
+59:10.160 --> 59:15.680
+have a too small number of samples you may suffer from the so-called particle depletion problem
+
+59:15.680 --> 59:21.840
+that particles die out and leave the likely areas of the state space because your model is for
+
+59:21.840 --> 59:26.720
+example too focused in comparison to the number of samples that you're using and so your filter
+
+59:26.720 --> 59:30.960
+will diverge at some point in time so these are some of the problems of the particle filter
+
+59:30.960 --> 59:36.560
+it also has advantages is one of the few approaches which can handle non-Gaussian distributions very
+
+59:36.560 --> 59:41.680
+well other non-parametric approaches can of course handle also non-Gaussian distributions but they
+
+59:41.680 --> 59:47.680
+also suffer from certain problems like an exponentially growing memory requirement for
+
+59:47.680 --> 59:53.040
+depending on the on your state space which can be tricky so the good things is it really works
+
+59:53.040 --> 59:58.720
+well in high dimensional low dimensional spaces it can be also used to very elegantly handle data
+
+59:58.720 --> 01:00:03.840
+association ambiguities because you can make own data associations for every particle so every
+
+01:00:03.840 --> 01:00:08.640
+particle can because it has no uncertainty associated to this you can very easily do
+
+01:00:08.640 --> 01:00:13.120
+particle dependent decisions and see which particle survives which does the best estimation
+
+01:00:13.120 --> 01:00:17.520
+job and this way incorporate additional knowledge knowledge very easily into those particles
+
+01:00:18.160 --> 01:00:23.680
+you can also easily integrate multiple sensing modalities by just multiplying the weight with
+
+01:00:23.680 --> 01:00:29.440
+the weight computed from another sensor so that can be very easily done it's also comparably
+
+01:00:29.440 --> 01:00:34.960
+robust so even if you do some mistakes your models are not the perfect models your particle filter
+
+01:00:34.960 --> 01:00:42.080
+will actually compute quite good beliefs and even in suboptimal setups perform quite robustly and
+
+01:00:42.080 --> 01:00:46.160
+it's furthermore very easy to implement so you suffer from a very small number of problems that
+
+01:00:46.160 --> 01:00:52.400
+you may have especially numerical issues if you look into a Kalman filter for example that can be
+
+01:00:52.400 --> 01:00:57.680
+more tricky the particle filter has less issues that you typically need to deal with we also
+
+01:00:57.680 --> 01:01:02.400
+should say that there are several variants of the particle filters to eliminate some of the drawbacks
+
+01:01:02.400 --> 01:01:06.400
+that are out there for example there are variants of the particle filter for real-time estimation
+
+01:01:06.400 --> 01:01:11.680
+like real-time particle filters that can also handle situations where the sensor data comes
+
+01:01:11.680 --> 01:01:15.760
+in at different frame rates which need to appropriately take into account delayed state
+
+01:01:15.760 --> 01:01:21.600
+space filters when some of the streams come in very late and need to be re-synchronized or
+
+01:01:21.600 --> 01:01:25.520
+raw blackballized particle filters if you're working in high dimensional state spaces and
+
+01:01:25.520 --> 01:01:30.320
+you can split up the state space in a part of the state that you can estimate with samples and part
+
+01:01:30.320 --> 01:01:35.040
+which you can then compute it conditioned on those sample beliefs you can do things in a more
+
+01:01:35.040 --> 01:01:39.760
+efficient way so the raw blackballized particle filters have for example been used for addressing
+
+01:01:39.760 --> 01:01:44.720
+the simultaneous localization mapping problem and you need to localize the robot and build a map at
+
+01:01:44.720 --> 01:01:48.880
+the same point in time and have led to very successful mapping algorithm there although
+
+01:01:48.880 --> 01:01:53.840
+the dimensionality of the overall problem goes into the millions but there's only a small number
+
+01:01:53.840 --> 01:01:59.520
+of them that you need to represent with samples and then can compute the rest analytically so in
+
+01:01:59.520 --> 01:02:06.720
+some particle filters are a recursive implementation or in a recursive based filter a variant or an
+
+01:02:06.800 --> 01:02:11.440
+implementation of a recursive based filter that can deal with non-parametric distributions
+
+01:02:12.400 --> 01:02:16.000
+as you also have seen we haven't made any assumptions about linearity of models
+
+01:02:16.000 --> 01:02:20.480
+so motion models can be non-linear as long as i can sample from them which can also be an
+
+01:02:20.480 --> 01:02:26.240
+advantage that i can represent for example my banana shape distributions very well what
+
+01:02:26.240 --> 01:02:31.360
+we're doing we are representing our belief by a set of samples and every sample says i did the
+
+01:02:31.360 --> 01:02:36.320
+right job everyone else was wrong and that's how where i am or that's what the state looks like
+
+01:02:36.320 --> 01:02:41.280
+and through a collection of those samples we are representing probability density functions and
+
+01:02:41.280 --> 01:02:48.240
+this way can represent beliefs for example about the position of the robot we typically draw
+
+01:02:48.240 --> 01:02:53.520
+samples from a proposal distribution that takes the the belief at the current point in time and
+
+01:02:53.520 --> 01:02:59.440
+advance it to the belief at the next point in time and in order to to account for the fact that the
+
+01:02:59.440 --> 01:03:03.440
+proposal distribution is not the target that i want to estimate i need to take the difference
+
+01:03:03.440 --> 01:03:07.440
+into account through a weight which is given by the target divided by the proposal distribution
+
+01:03:08.000 --> 01:03:13.600
+so if you implement your own particle filter and use it for real world system you need to make sure
+
+01:03:13.600 --> 01:03:17.120
+you have appropriate motion and sensor models of course if you screw up your motion in your sensor
+
+01:03:17.120 --> 01:03:22.320
+model which are the user-defined choices in here then your system will not estimate will not do a
+
+01:03:22.320 --> 01:03:27.440
+good job in estimating your state but if you do that well the particle filter is a very robust
+
+01:03:27.440 --> 01:03:32.400
+technique and we have used this here to illustrate Monte Carlo localization which is applying the
+
+01:03:32.400 --> 01:03:38.800
+particle filter for localizing a robot that means the every particle represents a possible location
+
+01:03:38.800 --> 01:03:46.640
+orientation of a platform for example x y and y and then we use our motion model to as a proposal
+
+01:03:46.640 --> 01:03:52.320
+distribution for advancing the particles and as a result of this using the observation model for
+
+01:03:52.320 --> 01:03:56.960
+computing the weights and this is something which is called Monte Carlo localization and is today
+
+01:03:56.960 --> 01:04:01.600
+one of the standard choices for performing mobile robot localization especially if you're indoors
+
+01:04:01.600 --> 01:04:06.320
+if you have to deal with multimodal beliefs and cannot rely on external sources which kind of
+
+01:04:06.320 --> 01:04:11.520
+restrict your estimate to a small number of hypotheses or even a single hypotheses
+
+01:04:12.560 --> 01:04:18.880
+those that you can use a Kalman filter for example for the estimation technique so mcl is
+
+01:04:18.880 --> 01:04:24.560
+one of the standard algorithms and a choice to the standard choice and also have kind of
+
+01:04:25.520 --> 01:04:31.840
+the test of time has proven that within the last 20 years that mcl is a very robust and efficient
+
+01:04:31.840 --> 01:04:36.640
+localization technique for mobile robots if you want to dive a little bit deeper or look into
+
+01:04:36.640 --> 01:04:41.520
+literature i recommend the probabilistic robotics book three tackles the particle filter and chapter
+
+01:04:41.520 --> 01:04:46.800
+8.3 addresses Monte Carlo localization as the realization of the base filter using a particle
+
+01:04:46.800 --> 01:04:52.320
+filter and for that what you need to know is your motion and your observation model so you need to
+
+01:04:52.560 --> 01:04:58.320
+rehearse chapter 4 and 5 if you forgot about that because you will need to a way to describe the
+
+01:04:58.320 --> 01:05:03.440
+motion in probabilistic sense and sample from that model and you will need to be able to evaluate
+
+01:05:03.440 --> 01:05:08.080
+your observation model point wise so estimate for a certain location what is the likelihood of
+
+01:05:08.080 --> 01:05:12.880
+obtaining the observation that i got given that i'm at that place which is what the observation
+
+01:05:12.880 --> 01:05:18.160
+model does if you put all that together and apply the standard Monte Carlo localization algorithm
+
+01:05:18.160 --> 01:05:23.520
+then you can estimate and track the position of your platform over time that's it from my side
+
+01:05:23.520 --> 01:05:27.200
+thank you very much for your attention and i hope you learned something about how to estimate where
+
+01:05:27.200 --> 01:05:33.920
+your system is in the world even under multimodal beliefs thank you very much for your attention
+

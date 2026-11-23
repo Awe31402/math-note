@@ -1,0 +1,325 @@
+[00:00] Welcome today. I want to talk about visual features as they are playing a very important role in photogrammetry and computer vision and in robotics
+[00:09] because those features allow us to describe the image or parts of the image in a very compact way and are therefore used in a large number of applications.
+[00:19] So we have, for example, investigated the simultaneous localization mapping problem using landmarks
+[00:25] and features are one way for detecting point in the environment that I may want to use as landmarks from my sensor data
+[00:33] or they allow me to make correspondences between images, for example.
+[00:37] So if you have two images taken from the same scene, those visual features allow us to make point correspondences
+[00:44] and therefore are very important for a large number of especially geometric estimation tasks
+[00:49] but can also be used for image recognition tasks, for example, where feature descriptors play an important role.
+[00:56] So this lecture here today is split into two parts.
+[00:59] One, the first one looks on the key points part. This is basically the location of distinct points in the image.
+[01:06] And the second part of the lecture looks then into descriptors.
+[01:09] So how do we describe those key points that we can use them for matching purposes, for example.
+[01:16] So consider you have an image like this image over here and you want to find distinct points in the environment.
+[01:22] And what you see here are a lot of red points which are drawn on top of this image.
+[01:27] And these are points which are kind of locally distinct.
+[01:30] And these are certain points that stick out, let's say, compared to their local neighborhood.
+[01:35] We are interested in those points which are locally distinct because we hope that these are points which stand out.
+[01:42] And even if you take an image, for example, from a slightly different location, those points will kind of still be locally distinct, will stick out,
+[01:49] and then we can use them for making correspondences, for example, between two images taken from the same scene.
+[01:56] And the task today is how to actually find those distinct points.
+[02:01] That's the first part.
+[02:02] And in the second part of the lecture, we will look into the question how do we describe those points that we can actually distinguish them in a good way.
+[02:10] So, again, while this is possible, maybe we want to do a 3D reconstruction.
+[02:14] And these are exactly those points which I want to use as a, let's say, sparser representation of the original image.
+[02:21] And I want to estimate the 3D location of those points in the scene.
+[02:25] This is one example.
+[02:26] Another example is that I have two images of the same scene taken from different viewpoints, as you can see here,
+[02:32] even taken at different points in time because here is no Christmas tree and here is a Christmas tree being set up.
+[02:37] So you can see that they have been, the images have been taken at a different point in time.
+[02:42] And then we want to make correspondences between those images.
+[02:45] So which point in image number one corresponds to which point in image number two.
+[02:49] We will not be able to do that for all points, or often we're not able to do that for all points,
+[02:53] but at least for a subset of distinct points because this is a very important information for us if you want to estimate the camera motion, for example.
+[03:02] And so what you see here are two images of the same scene.
+[03:06] And you can see a certain number of feature points or key points being illustrated over here.
+[03:13] And these are key points where most of them are actually found in both images.
+[03:18] And just by searching for every of those key points, a partner in the other image,
+[03:22] I can actually establish correspondences or at least an estimate on how image correspondences will look like.
+[03:29] So there are two things we need to distinguish here.
+[03:31] The first one are the so-called key points, which are the locally distinct parts in the image.
+[03:36] And we are interested in actually localizing those points in the image.
+[03:39] So for the key point, the important element is where is a key point?
+[03:44] Where is a locally distinct area in an image?
+[03:47] And we're going to pinpoint this with a pixel location or maybe even sub-pixel accuracy.
+[03:52] And the second part, this is not covered by this lecture, but by the second part of this lecture is a feature descriptor.
+[03:58] So how can we describe these key points so that if we have a large set of key points,
+[04:04] we can actually distinguish those key points from each other?
+[04:07] And this is typically done by inspecting the local neighborhood of that key point.
+[04:11] So typically a small image patch around this key point and then summarizing the information that is stored in this image patch is condensed into,
+[04:19] for example, a vector representation so that we have descriptor vector for every image.
+[04:25] So that in the end we get a key point over here and to every key point we have descriptor vector which looks like this.
+[04:32] In some situations you may have descriptors which try to describe the whole image with one single descriptor.
+[04:38] We are here in this course looking into descriptors which just describe a single key point.
+[04:43] So we have the key point, let's say being at that pixel location, and with this key point is associated a vector that describes the local neighborhood.
+[04:51] Often gradient information is used in order to achieve this, but there are also other means for describing a key point.
+[04:58] So the first part of the lecture will focus on the key point and the second part will focus on the descriptor.
+[05:05] So we are starting with the key points and so the task can be summarized as finding distinct points in the environment.
+[05:11] And we will look into a set of approaches for doing this.
+[05:14] We start with Harris corners, one of the early techniques used to do this, especially corner detector.
+[05:20] An improvement of this, C2MASSI, and then the first operator which was actually, the first operator was actually the first one doing this trying to find locally distinct points in the environment.
+[05:34] But the Harris and C2MASSI actually gained higher popularity over the years and today C2MASSI is one of the standard approaches.
+[05:43] And then we look into another part of approaches which is called difference of Gaussians where we basically take images which are differently blurred and compute the differences between those blurred images.
+[05:56] And this is one way for finding key points that is used in the SIFT feature descriptor which is one of the popular descriptors which are out there today.
+[06:05] And again in the second part of the lecture we then look into feature descriptors such as SIFT, BRIEF or ORP but that's not part of this video.
+[06:13] So we start now with finding key points or locally distinct points in the image and the first part of that looks actually on corners or corner-like structures.
+[06:24] The key insight here is that corners are actually locally distinct points or locally distinct structures and this is typically a result of the gradients that they have in the image.
+[06:35] So image gradients means gradients in intensity values so for example dark pixels next to bright pixels.
+[06:43] And what makes corners distinct here is that they have gradients into different directions for example in the X direction and in the Y direction which allows them to be localized quite precisely.
+[06:56] So besides corners there are also edges and edges is typically a sudden change from a bright to a dark or from a dark to a bright pixel this is what an edge is.
+[07:08] But the problem with edges is that they're actually only well localized orthogonal to the edge so in the direction of the brightness change and not along whatever an edge created by a physical object.
+[07:21] Corners however can be seen as two edges which are intersecting with each other and which are approximatively orthogonal and this allowed them to be localized really well.
+[07:30] And even if you change your illumination let's say if your image is a little bit brighter or a little bit darker you typically have the effect that the gradients are still there and still visible.
+[07:40] Maybe the intensity of the gradient changes but the overall gradient and direction of the gradients are still there and therefore they are very good for localizing those points even if you have two images of the same scene taken under different conditions.
+[07:59] And that's the reason why people have been focusing on corners explicitly for finding good key points and it's still one of the standard techniques which can be realized very quickly and just kind of one of the standard choices that you would do today.
+[08:13] So we said corners are basically two edges which are roughly orthogonal to each other and an edge is a sudden change in brightness that means we need to change in intensity values in our image.
+[08:26] And we can actually do this by for every point in the image for every xy location in an image we just look to the change in intensity values in a local neighborhood and we can express this as a function.
+[08:38] So my function f which is a two dimensional input x and y what it basically does it computes in a local patch.
+[08:46] This local patch is described by w or wxy is a local patch around the xy position.
+[08:54] So by iterating over the points in the neighborhood and by computing the difference in intensity values between the location uv and uv plus some small offset.
+[09:08] Let's say one pixel to the right just as an example.
+[09:11] I can actually compute the difference between the intensity values I square those differences and sum them up.
+[09:19] So if they were in areas where the function has a maximum I can actually see that these are locations where there is are a lot of gradients in the image so things that probably stick out.
+[09:33] So looking into the squared differences in intensity values is something that tells us about tells us something about gradient information and seems to be both suitable information in order to compute kind of locally distinct points in our environment.
+[09:56] So what we are doing we are computing the sum of the squared differences of image intensity values and doing this under a shift delta u delta v.
+[10:04] That's basically what the equation is saying here.
+[10:08] So what we then can do is we can say okay I can take this image function over here and I can actually do that by using gradient information by using a Taylor expansion computing the first derivatives of this function.
+[10:24] I can approximate the second term here by saying this is the intensity value in u and v plus the Jacobian in x and y multiplied by du dv.
+[10:36] And again these Jacobians are the chain the first derivative of the image function here in this case in the x and y decision.
+[10:44] So if the whole thing is Jacobian these are the individual partial derivatives in the image with respect to the x direction and with respect to the y direction.
+[10:55] So if I now put this equation into this equation over here we can see that the intensity of the actual pixel value here will disappear.
+[11:06] So I don't need the actual intensity value of the image what maintains is actually just this Jacobian information.
+[11:13] So that means through the Taylor expansion this expression simplifies just being the Jacobian times the change and this value is actually squared.
+[11:25] Or we can put this in matrix form and then we have our shift vector transposed times a matrix which consists of the partial derivatives of the image intensity values multiplied by the shift vector again.
+[11:42] And here as before we are summing this over a local area.
+[11:47] What we now can do as a second step we can take the sum and actually move that sum inside this matrix.
+[11:54] Because here we only have delta u delta v delta u delta v and here we just summing over u's and v's so the location where the gradients are actually computed.
+[12:05] So I can actually move the sum into this inner matrix and then have a sum for all those elements over here so that this expression can be written in the following form.
+[12:17] And so kind of this element in here is kind of an important element now because it contains all the information about the local patch and contains the gradient information and the shift vectors are just here outside.
+[12:31] And so this element, this matrix sitting here is something which is called the structure matrix.
+[12:36] And it summarizes the first derivatives of the image in a local patch and accumulates basically the gradients in x, in y direction and x, y.
+[12:52] So we have the structure matrix over here which tells us something about where the gradients actually pointing to and what the magnitude of this gradient is averaged over a local region.
+[13:04] And we can see that this matrix now will actually provide us with valuable information how gradients look like in an image and we can use this in order to decide if a point is a locally distinct point or not.
+[13:18] So the structure matrix is key in finding edges and corners and you can already see this.
+[13:26] If you look to this type of matrices, if you compute the eigenvalues and eigenvectors of such a matrix and you can see that you have one large eigenvalue and a very small one with a small edge-like structure because it means that the gradients are actually pointing all more or less in the same direction.
+[13:46] And if you have two eigenvalues which are large and similar size that means we have actually a good distribution of gradients in different directions which tells you something more or the first one is more like an edge and the second one is more like a corner.
+[14:02] So the structure matrix encodes the intensity changes in a local patch. Therefore it's useful information for us in order to locally find distinct points and it's just built from image gradients.
+[14:16] So how do we obtain those image gradients? How do we compute the first derivative of an image function?
+[14:22] And here again we look to the standard approach to do this, something kind of basics of image processing where we have something called the Sobel operator or alternatively the Schar operator which are basically small kernels that we use in order to perform a convolution on our image.
+[14:41] So we basically have a derivative operator in X which is convolved with an image and squared in order to get the elements over here.
+[14:51] For the off-diagonal elements we have the differentiation operator in X and in Y always convolved once with the image and this is the thing for Y down here.
+[15:04] And again these are Sobel or Schar operators that you can use in order to compute the first derivatives of your image function.
+[15:15] And again here an example how Schar operator in X and Y or Sobel operator in X and Y location look like.
+[15:23] We have operators computing the derivatives together with a smoothing in the other dimension and what we typically have that the Schar operator has somewhat better properties in terms of maintaining the orientations with a higher accuracy compared to the Sobel operator.
+[15:39] You can basically take Sobel or Schar for our application here, that doesn't really matter.
+[15:44] And so by just taking these operators and moving those operators over the image and performing the convolution we can actually compute all the gradient elements in here.
+[15:56] We basically then just need to sum over the elements that result from the convolution of the Schar operator or the Sobel operator with our image itself.
+[16:07] So it's something that we can do in an efficient way with a standard procedure. It's not complicated to compute this first derivative of an image function as it may sound like if you hear that for the first point in time.
+[16:21] So what we then can do, look into the structure matrix, say the structure matrix and kind of the numbers that will sit in the structure matrix actually summarizes the dominant directions of the gradients around the point that are used around which this structure matrix is computed about.
+[16:40] So just as an example, so if you have a local region where you have let's say bright pixels over here and darker pixels over here and you have gradients pointing in both directions, this is clearly a situation where we have a corner.
+[16:53] And then we will see gradients in x as well as in y direction popping up here.
+[17:01] So if the gradients are only pointing upwards and downwards, those two elements would be large and those two elements here would be rather small.
+[17:08] So and they should have approximately the same size because the gradients in this image have more or less the same size.
+[17:14] So we would have the setup that we more or less have a diagonal matrix with similar values in the first, in 11 and 22.
+[17:21] So this means we would have two eigenvalues which are similar.
+[17:26] So this is something which is actually a very good point in order for being localized.
+[17:31] In this example over here where we only have gradients in one direction, then only one of those values would be large and the other one would be small.
+[17:38] And you can see here we can localize actually very well in this direction.
+[17:42] So if you shift the image on top of each other, in this direction we can localize very well, but in this direction we can't localize very well because there are no gradients pointing in this direction.
+[17:51] And I could actually slide a template over this image and it would always get the same value.
+[17:56] So something which only allows me to localize a point well in one direction but not in the other one.
+[18:01] So something which is not that great for finding locally distinct points.
+[18:05] And here even the areas where I don't have any change in intensity values for actually localizing this point here, just giving this local patch is actually something which is very bad.
+[18:16] So in this case we would have very small values and actually eigenvalues which are kind of close to zero or very small.
+[18:23] So something where you say this doesn't have a lot of texture, a lot of local structure, so this is something which is not very good for matching procedures.
+[18:33] Okay, so in this example we can see both values over here of the structure matrix which take large values and they are roughly zero.
+[18:44] In this example over here I have only gradients in this direction so we will have values different from zero only in this dimension and here in this dimension.
+[18:54] It wouldn't be the case and in this case all the values are actually pretty small.
+[18:59] So what we're interested in is only the first case.
+[19:01] So this is the case we're interested in, that's actually good for us.
+[19:04] This is a locally distinct point and those two elements here are not locally distinct.
+[19:09] So we're actually looking for situations like this one in order to find locally distinct points in our images.
+[19:16] Okay, so as a result of this we need to look for matrices which not have large values here and small values here because if you would rotate your image by 45 degrees for example you would have a slightly different setup.
+[19:33] But what we're interested in is actually finding a matrix which has two large eigenvalues.
+[19:39] Of course this means we have two dominant directions and we are a two-dimensional image so that means all the directions of the image have dominant gradients and that's something that we are interested in.
+[19:51] That means we need to make decisions based on eigenvalues of this structure matrix M in order to say yes, this is a good point, this has a lot of local texture which allows me to locally distinct those areas from other areas.
+[20:09] Again, there are different approaches that have been proposed in order to do this.
+[20:13] This holds for Harris, C. Tomasi as well as for the first operator which had been proposed in the late 80s.
+[20:19] So first of them first one and the others were following shortly after that and they all rely on the structure matrix but they use different criterions in order to say yes, this is a locally distinct point or no, I'm going to ignore this point.
+[20:37] So the overall core idea underlying them is similar.
+[20:41] The actual decision which is made is, sorry, the overall idea is the same of using the structure matrix.
+[20:48] What is different is the decision on when the point is considered to be a good or a corner-like object or not.
+[20:57] What maybe has been said about a firstness approach, this is an approach which also offers you sub-pixel estimation for that which the others don't do in their standard setup.
+[21:09] So let's look to the Harris corner criterion.
+[21:12] Harris corner is at least initially was the most popular approach and has been used in a lot of approaches.
+[21:19] So extracting Harris corners is a standard procedure in a lot of computer vision tasks.
+[21:25] So there's actually a criterion which tries to separate good and bad points and this basically uses the determinant and the trace of this structure matrix which can be computed based on the eigenvalues.
+[21:41] So basically looking into the product of the eigenvalues and the squared sum of the eigenvalues and then there is here some weighting factor K which sits typically something between 4% and 6%.
+[21:55] And then we can compute this criterion R and if R is approximatively zero that means we have roughly a flat region so that's something which I'm not actually interested in.
+[22:08] If R takes values which are smaller than zero that means one of the eigenvalues is substantially larger than another one so this is kind of this edge-like structure also something we are not necessarily interested in.
+[22:20] We are interested in values for R which are substantially larger than zero and that means that we have two eigenvalues which are similar and they both are substantially different from zero.
+[22:32] This is exactly the corner that we actually want to have.
+[22:36] So we can also visualize this plot over here.
+[22:41] So if this is kind of the 2D space then we have these areas down here where we have various small regions.
+[22:49] So the two eigenvalues, so this is the first eigenvalue, this is the second eigenvalue take a small value so these are kind of the flat points I'm not interested in.
+[22:57] And everything which sits here and down here are regions where one eigenvalue is substantially larger than the other eigenvalue and I may want to ignore them.
+[23:06] And this area here is the area where I want to be where both eigenvalues are large and substantially different from zero.
+[23:14] So that's how Paris makes its decision based on this value R.
+[23:20] Cittamazzi does it in a different way so it computes the smallest eigenvalue.
+[23:26] So it just looks to compute the eigenvalues and just considers the smallest eigenvalue which I can actually compute in this way again using trace and the determinant of my structure matrix.
+[23:38] And then basically saying if the smallest eigenvalue is larger than the threshold then I say yes I'm happy I can distinguish those points.
+[23:46] If the smallest eigenvalue is smaller than the threshold T I'm actually ignoring it.
+[23:51] Again we can put this into this two-dimensional drawing of seeing the difference between Paris corners and the Cittamazzi corner detector and then we would see a plot which actually looks like this.
+[24:01] So I have my threshold T sitting over here that's a flat region that's something which is more like an edge that's also more like an edge and I want to be here in that area.
+[24:10] So the one is basically rectangle and the other one had kind of this shape that you can see that the overall idea between Cittamazzi and Harris corners is actually quite similar.
+[24:23] And also the first operator actually does it similarly to the Harris corner detector.
+[24:31] The only difference is that it operates on the inverse of the structure matrix M which can be seen as the covariance matrix of the possible shifts.
+[24:41] So how certain I am about shifts that I can do.
+[24:44] And then the first operator explicitly optimizes for finding point that I can localize as well as possible.
+[24:53] And again take some criterion into account which takes into account the size or the roundness of the error ellipses that are computed from this covariance matrix.
+[25:05] So the covariance of the shift.
+[25:07] So what first basically tries to do is actually minimizes the uncertainty in the shift.
+[25:14] So selecting points which minimize my uncertainty.
+[25:17] So point that I can localize as precise as possible and does this in a very mathematically sound way.
+[25:24] In addition to this, this approach can also allow us for doing sub-pixel estimation.
+[25:29] So if you're especially interested in points you can localize as precise as possible for let's say stereo reconstruction.
+[25:36] First operators are a way that we can do.
+[25:39] And then what first one does it basically looks for a maximum suppression.
+[25:45] So taking points which actually stick out.
+[25:49] That's actually something that not only first is doing also Harris and Cittamazzi either using this R-criterion or the minimum eigenvalue.
+[25:58] And basically look in every region which point which kind of survived the criterion actually still sticks out.
+[26:05] So has a higher minimum eigenvalue or a larger R-value so that you kind of have a point which locally pops out.
+[26:16] We can illustrate that quite nicely with the first operator.
+[26:19] So again this were our images and we are now looking into this local neighborhood.
+[26:24] And we can see here if here the corner is in the image, here the corner is in the image and here the corner is also in the image.
+[26:31] And the question kind of which at the point which locally stands out which gives me the highest localizability or the highest R-value for example in this region.
+[26:40] And a lot of people intuitively would say actually that's here the case because the corner sits in the middle of that region.
+[26:46] But that's actually not the case.
+[26:48] So this point over here is actually the better point.
+[26:52] So the point which just sits a little bit inside the corner.
+[26:55] Why is this the case?
+[26:56] If you look to the gradients that are accumulated within those regions you can see that the number of gradients is small here.
+[27:03] It's only in this small local area down here.
+[27:06] Here you have the gradients in this area basically in a quarter of this region.
+[27:11] And here you have the gradients along those two lines which is kind of the largest or longest lines in the image where those gradients pop up.
+[27:20] So what you would go for, you would actually select this point as your future point because that's the point that you can actually localize in the best possible way.
+[27:28] A few remarks if you want to implement that in reality for real images.
+[27:34] If you have RGB images which most of you I guess will have, what one typically does, one converts it to grayscale image and does all the operations on the grayscale image.
+[27:43] And what's also needed, given that real world images are typically affected by noise, you often want to do some smoothing on the input image before you actually apply the corner detector here.
+[27:56] So there's typically a smoothing of the image that happens before.
+[27:59] But that kind of depends a bit on the noise level that you have in your image.
+[28:03] So to kind of summarize this, how we can actually do this from an operational point of view, and this is here the example for the first operator.
+[28:11] So you start with your original image and then you perform a smoothing of the image.
+[28:15] And this can be again done by taking your image and convolve the image with it or you convolve directly the smoothing operator with the SHA or SOPL operator.
+[28:31] So with computing the first derivative, because you can also first convolve those two kernels with each other and then apply it to the image.
+[28:39] So you're basically doing a smoothing and computing the first derivatives of your image.
+[28:43] So that gives you the gradients in X and the gradients in Y for every pixel location.
+[28:50] So this basically turns a single image into two images where one image stores all the gradients in X direction and the other one stores all the gradients in Y direction.
+[28:59] And then you can square those gradients or multiply those with each other and square those.
+[29:04] So you basically get the three values for JX, JX, JX, JY, JY, JY.
+[29:13] And then you basically sum them up and you can do this summing up if you use, for example, a box filter and just run a box filter without the normalization over your image.
+[29:25] Or you just accumulate your values by summing up those values, which is mathematically the same, but can be efficiently done at the convolution.
+[29:34] And then you need to take those values and compute from those values the minimum eigenvalue for first null as well as for Shi Tomasi.
+[29:44] And then you have your criterion like your minimum threshold, for example, and then some non-maximum suppression of approaches sitting behind this.
+[29:53] And so with this pipeline basically just running a few convolutions, multiplications, again, convolutions or summing things up, a few multiplications and summing and then you need to compute a square root here.
+[30:06] Just maybe a bit special operation and then doing something of thresholding or thresholding in a local area or non-maximum suppression.
+[30:15] So all operations that are actually quite easy to execute.
+[30:19] And just as a kind of small example, if you see here those brighter rectangles on a darker surface, you can see how the approach always finds and localizes the corners very well and precisely nail downs the point that can be very well localized in an image.
+[30:38] Again, if you would have a point sitting here on that line, that means you could slide that point in that line, there's no local distinction between them.
+[30:46] At the corners, however, it doesn't matter in which direction you move, you would actually see that the points are locally distinct and if you slide a local area, a local patch around, you would see that there would be actually a mismatch generated with the original image, which would not be the case if you slide along one edge, if you take a pixel on the edge, which is not a corner pixel.
+[31:10] And so with the original example that I started with, the image and the Harris corners I can detect, we can now run this of course on multiple images and then see how we, that we can extract the corners in both images and then the next step would be to actually making correspondence between those images.
+[31:32] Of course, based on the different viewpoints, different corner points will actually pop up, they won't be identical, but a lot of them are actually similar and have a corresponding partner, but clearly not all of them and there is also noise in the process because the images have been taken from different viewpoints under different lighting conditions, especially the different viewpoints lead to a different projection of the 3D object into the 2D image space, so they are naturally not identical.
+[32:01] But all the three corner detection techniques, so Harris, Cittamassi, as well as the first operator, all perform very similar, the idea behind them is actually quite similar.
+[32:13] So they all use the structure matrix, which contains information about local gradients in the neighborhood of a point and then where they differ is basically the way the decision is made if a point is locally distinct.
+[32:30] So either by using this R-criterion or by looking to the minimum eigenvalue in how to do this.
+[32:37] And Harris-Corner was a very famous corner detector and has been used in the past very, very often.
+[32:44] Furstner was actually the first one putting this in a very nice mathematical framework of minimizing the uncertainty in the shift and also allowing for sub-pixel optimization.
+[32:56] And today Cittamassi seems to be slightly outperforming Harris-Corner detector and is kind of the standard choice that most libraries are using today.
+[33:04] So if you look into OpenCV, the standard or default corner detector is Cittamassi, but again, all of them are not that substantially different because they all build upon the same idea of using this structure matrix.
+[33:19] So the second part I want to look into today is still in the area of key points is the second part, which is kind of the idea of using the difference of Gaussians.
+[33:31] So by looking into images and kind of differently blurred images and subtracting them, so images that have been run under different convolutions with Gaussian filters in order to find locally distinct points.
+[33:45] You can also see that similar to corners, but also blobs can be identified with this approach.
+[33:51] And this is a technique which is used inside the SIFT feature descriptor, which is one of the gold standards today or very popular descriptors, at least of the kind of manually designed ones, which are not learned.
+[34:04] And so this is a technique which sits behind the key points of the SIFT descriptor and therefore should be explicitly mentioned over here.
+[34:12] So we can see this as a variant of corner detection, which provides responses at corners, certain types of edges, and also blobs, which are distinct.
+[34:24] So regions which are of constant intensity value, but which are again distinct from their surroundings, like a big whatever black dot on or area on a white surface.
+[34:36] Then you could pinpoint the center of this black region, also something which locally sticks out.
+[34:44] And that's something that the difference of Gaussian approach could actually find.
+[34:48] So what's the key idea, why it's called difference of Gaussians or difference of Gaussians over the scale space pyramid?
+[35:00] So the key idea behind it, it first performed the Gaussian smoothing.
+[35:03] So we run a Gaussian kernel over the image and smooth the image.
+[35:09] And we do this with different kernels, so from very small smoothing to extreme smoothing.
+[35:16] And this is similar if you use whatever your standard image processing software like GIMP or Photoshop or whatever, and you basically add Gaussian blur.
+[35:25] That's exactly what's going to happen.
+[35:27] It's basically a kernel which is applied and this kernel performs a Gaussian smoothing.
+[35:34] And what we then do is we compare those differently smoothed images.
+[35:39] So we compute the difference of the smoothing.
+[35:42] So a strongly smoothed image with a slightly less strongly smoothed image.
+[35:45] And we compare that one again to one which is even a little bit less smooth.
+[35:48] So we can always compare images, just computing the differences in the intensity values of these differently smoothed images.
+[35:57] And then we select those regions which locally stand out, so where the differences stand out locally in the direction of the smoothing.
+[36:07] And in addition to this, we can do this over differently scaled images.
+[36:10] So for the original image, for an image that's a half of the size, a quarter of the size, so that we are actually able to find points on different scales in the image.
+[36:21] Okay, let's have an illustration how that looks like.
+[36:24] So what we see here is my input image just applied with different Gaussian kernels.
+[36:32] So let's say this is one which has just a very small smoothing.
+[36:36] This is even more smooth, and this is again more smooth, more smooth, and it's very extremely smooth.
+[36:43] And then, so these are kind of all the images just having a different blur.
+[36:49] And then I can always take the pairs of them and subtract them from each other.
+[36:55] So just subtract the blurred intensity values.
+[36:58] And this gives me new images which show up the difference of Gaussians.
+[37:02] And then I can see this basically as a three-dimensional structure, so x, y, and my third dimension.
+[37:10] And then I'm looking for points which locally stand out, so where the point which is either differs in x, y direction or is the same coordinate but differs in the smoothing direction stands out.
+[37:27] So let's say this is a point over here which is an extrema, so larger or smaller than all its neighbors in the same difference image or from the difference from the less smoothed image or from the larger smoothed image.
+[37:43] And those points which stick out are points I'm actually interested in.
+[37:46] And then I'm not performing this only for the original image.
+[37:48] Let's say I reduce the size of the image and perform the same operation on the images of a different size.
+[37:58] So again, perform different variants of smoothing, compute the difference of Gaussians, and then again can find the points which locally stand out.
+[38:09] And I can do this, can perform this operation to see where I get the strongest responses in terms of points that locally stand out so that I get some invariance with respect to scale.
+[38:21] So I would get, if I picture an object and then move a few meters away and picture the object again and I would run this descriptor, then being closer to the object can be seen by working on a larger scale and being further away on a smaller scale.
+[38:40] And if I take all that into account, I find points, the same kind of points for the image taken further away and the image taken further to the object.
+[38:51] So that the same interest point is actually found or the same blob is found.
+[38:57] Okay, here is an example. This is an original input image. If I blur this input image and subtract the two input images with each other, you can actually see that here the local structure, so the local gradients actually stick out.
+[39:11] So I hope you can see that in the video, but you can see here basically the boundaries of the objects of the leaf, for example, stands out here.
+[39:19] And then by taking those points and comparing them with respect to the neighbors in X and Y, but also with their neighbors in respect of the blurring pyramid, we actually take maxima or minima of that point.
+[39:34] So in this sketch-based representation, so let's say this is the original image which is not smoothed, which is the image which is slightly smoothed, a bit more and even more and more and more.
+[39:43] So we can see, so we would compute the difference between those two images, the difference between those two images, the difference between those two images, those two images and so on and so forth in order to get the differently smoothed images and compare the differences between them.
+[40:00] And you can see for the more strongly smoothed images, you can see that kind of blobs stand out even more.
+[40:07] And we basically look for extreme values in this representation.
+[40:11] So what the blurring does, it takes basically out the high frequency noise or noise in the kind of the high frequency and we look to kind of the larger changes and therefore we'll also be able to find blobs with this approach.
+[40:24] And you can actually see that the subtracting of the differently blurred images can be seen at bandpass filter where certain frequencies stay and certain frequencies are actually filtered out.
+[40:38] And so you're basically performing this bandpass filter in between different frequencies and then select those where you get the strongest response compared to all the neighbors and the different bandpass filters.
+[40:52] So the key points are extracted from this difference of Gaussians over the different function scales.
+[41:03] And so basically taking multiple variants of this, stacking on top of each other and then looking in this kind of three dimensional space now sticking here out of my image plane and looking for those also over the whole pyramid.
+[41:16] So that again, we look into those points which stick out.
+[41:20] So those crosses over here point which are extremas compared to their neighbors.
+[41:25] And what we also need to do is performing some extrema suppression in order to find the certain structures like edges I actually want to get rid of.
+[41:37] So I'm looking again for tests similar to what Harris Corners was doing, trying to find those where I have strong responses based on an eigenvalue test so they actually don't generate the responses at edges.
+[41:51] But I want to have eigenvalues in both directions either to find corners or to find larger blobs which are again surrounded by structure.
+[42:00] Then of course you would also get gradients pointing in multiple directions.
+[42:03] So similar extrema suppression as we used for the corner detectors can also be found in the difference of Gaussian approach.
+[42:11] So regarding those key points, what I've done, I've introduced kind of two groups of approaches for finding locally distinct points.
+[42:19] The first one were those related clearly to corners and operating on the structure matrix.
+[42:24] Let's call them the structure matrix-based approaches and presented the three most commonly used techniques for this.
+[42:31] Harris Corners, Shitu Masi, the first operator.
+[42:33] As a second approach, going over this difference of Gaussian, so taking differently blurred images and comparing those differently blurred images and looking for strong responses in those differently blurred images.
+[42:48] And then also making certain tests similar to the corner approaches based on eigenvalues that we also do here and this allows us to find corners but in addition to that also blobs which the first approach would not find.
+[43:04] And these are two ways for localizing features and again depending on the choice of your setup, you may want to run with some corner detector or you want to go for the different Gaussians.
+[43:16] So a lot of SLAM systems use some kind of corner detectors and then add some other descriptors or some descriptors to it.
+[43:26] Or you go with the difference of Gaussian if you use standard out-of-the-box sift features, you would use the difference of Gaussian approach internally and then use a bit more expensive to compute but quite expressive feature descriptor with those sift features that you then can use in your SLAM algorithm for finding correspondences.
+[43:44] So kind of these two approaches are central building blocks for most of the let's I would call hand-designed or manually designed features that we have today.
+[43:53] So until 10 years ago maybe all the features were kind of hand-designed features or most of the features were really hand-designed.
+[44:00] Over the last years we see more and more features being completely learned from data using deep learning techniques for example.
+[44:08] Then you don't have these building blocks explicitly in there but some of the approaches that you find for learning those descriptors actually embed those corners as kind of background information into the networks or the network actually finds structures which look very similar to corners.
+[44:27] And corner convolutions that you would actually generate.
+[44:31] But they're key ingredients from all the manually designed features that we find today.
+[44:35] Which actually brings me to the end here on this lecture on key points.
+[44:42] And just to summarize key points, tell me something about the position of locally distinct points.
+[44:47] And descriptors, tell me something how they look like, how I can describe that.
+[44:50] We only talked about key points here and we'll talk about descriptors in a few minutes.
+[44:56] And the key points define the location, the descriptor tells something about the local appearance.
+[45:03] Most of the key points use some form of gradient information in form of the structure matrix or even by computing differently smoothed images that also get kind of the edges of an image which is very similar or generate responses similar to what we see in terms of gradients.
+[45:21] And corners are very good for that and also blobs at least if the surroundings of the blob is visible are good key points which can be localized and for which we will compute feature descriptors in the part two of that course.
+[45:36] So in the part two of the course we'll take those points that one of those feature descriptors let's say the difference of Gaussian generated for us and then we'll say how can we actually locally describe that.
+[45:46] So thank you very much for your attention and I hope you're interested also in the second part where we look into the question how we can actually describe the local neighborhood of a key point in order to be able to distinguish key points if we find them in multiple images.
+[46:01] Thank you very much for your attention.

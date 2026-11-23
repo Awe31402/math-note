@@ -1,0 +1,2690 @@
+WEBVTT
+
+00:00.000 --> 00:06.420
+Good morning. Today we would like to dive into the Kalman filter and the extended Kalman filter as a concrete
+
+00:06.700 --> 00:12.680
+realization of a recursive based filter and we will do so in rather hopefully at least intuitive way
+
+00:13.140 --> 00:15.500
+So we are not going through the whole derivations
+
+00:15.500 --> 00:21.580
+But I want to give you an idea what is behind the Kalman filter and what are key steps to reach it
+
+00:21.640 --> 00:25.500
+Why it has its for the form that it has so that you get an idea
+
+00:26.220 --> 00:31.120
+What the properties of the Kalman filter are and how you can perform state estimation with it
+
+00:31.380 --> 00:35.860
+So the Kalman filter is a recursive based filter
+
+00:35.860 --> 00:41.220
+And it's a special filter in because it requires the world to be Gaussian
+
+00:41.220 --> 00:48.120
+That means every involved probability distribution is supposed to be a Gaussian distribution and it assumes linear models
+
+00:48.120 --> 00:53.760
+And in this case for the Gaussian linear case, it is actually the optimal filter
+
+00:53.760 --> 00:55.880
+So the optimal approach that you can do
+
+00:56.040 --> 00:57.000
+so in this case
+
+00:57.000 --> 01:03.440
+it is also equivalent to a least squares approach as long as everything is Gaussian and all the models are linear and
+
+01:03.760 --> 01:09.080
+The least squares approach as well as the Kalman filter will provide the same result
+
+01:10.680 --> 01:15.600
+The way the result is computed however is done in a different way. So the
+
+01:16.200 --> 01:19.480
+Kalman filter follows the idea of a recursive based filter and
+
+01:20.320 --> 01:22.520
+Performs this type of recursive state estimation
+
+01:22.520 --> 01:25.040
+That means we're taking our current belief
+
+01:25.040 --> 01:31.620
+we're taking the current information that we have from our control commands and from our observations and turn the
+
+01:31.840 --> 01:38.160
+Previous belief into the new belief so that we turn the belief from time t minus 1 to time t
+
+01:38.160 --> 01:40.840
+And so we are up always updating the belief
+
+01:41.400 --> 01:48.000
+taking the most recent observation control command into account and don't do everything kind of as a batch operation and
+
+01:48.360 --> 01:55.880
+And for taking into account the control commands we perform the so-called prediction step, so we predict what's going to happen
+
+01:56.960 --> 02:04.560
+given the control information that we have and the second step according to the base filter is the correction step which takes into account the
+
+02:04.760 --> 02:11.480
+Observation in order to correct for potential mistakes that we have done in the prediction step
+
+02:11.480 --> 02:16.680
+So we perform a prediction then you correct it then we perform a prediction and then we correct it again
+
+02:16.760 --> 02:19.860
+That's kind of the key idea behind the Kalman filter
+
+02:21.400 --> 02:29.000
+So let's start with a small Kalman filter example just as an illustration how that looks like so consider you're on a boat and
+
+02:29.480 --> 02:34.160
+You're driving near the coast and you have they have a rough idea where you are
+
+02:34.160 --> 02:42.200
+which is indicated here by this black circle and so you're navigating and let's say you put your
+
+02:42.960 --> 02:49.120
+You try to keep the ship in a certain direction and try to follow for a certain amount of time that direction
+
+02:49.120 --> 02:56.720
+so you are actually moving forward and let's say you get a new estimate and you say I am probably here where that
+
+02:56.840 --> 03:01.920
+crosses and this is kind of what is in the Kalman filter the prediction step
+
+03:01.920 --> 03:09.100
+So you're performing your action and you predict what's going to happen where you are with your boat and then
+
+03:09.900 --> 03:16.420
+You look to the coastline and see if you find any lighthouse and let's say you're in the lucky situation that you see a lighthouse
+
+03:17.060 --> 03:24.340
+Like get your lighthouse observation over here and this allows you to determine where you are at least to some degree
+
+03:24.340 --> 03:30.600
+So just one lighthouse observation may not be sufficient, but at least it allows you to estimate your orientation
+
+03:30.940 --> 03:34.500
+Well and multiple lighthouse observation will tell you more about your pose
+
+03:34.500 --> 03:41.220
+But assume we have some observation right now, which tells me something about my position and then
+
+03:42.700 --> 03:47.680
+We can perform the correction based on the prediction. So this is where we predict where we are
+
+03:47.900 --> 03:54.020
+Then we have our lighthouse observation, which is here illustrated by this dashed line. So based on our observation
+
+03:54.020 --> 04:00.140
+We know that we are let's say somewhere here on that dashed line and then we are we can
+
+04:00.860 --> 04:02.740
+perform the
+
+04:02.740 --> 04:04.420
+new
+
+04:04.660 --> 04:10.380
+state estimate as a combination of where we are predicting where we are here shown in green and
+
+04:10.660 --> 04:16.800
+The predicted one which is a black one, which gives me the joint estimate here shown in red
+
+04:16.960 --> 04:22.860
+So this is kind of the belief combining the prediction and the correction. So to sum up we were somewhere over here
+
+04:23.540 --> 04:28.920
+We are making a prediction estimating where ship is without any observation any prior information
+
+04:29.080 --> 04:30.680
+Then we get an observation
+
+04:30.680 --> 04:37.880
+which tells me which I'm seeing the lighthouse over here and the the observation tells me I'm here at that green green cross and
+
+04:38.440 --> 04:42.240
+then what the Kalman filter basically does it computes a weighted sum of
+
+04:42.880 --> 04:46.200
+the prediction where you think you went to
+
+04:46.680 --> 04:51.880
+what your observation tells you and that's kind of the belief here shown in red and
+
+04:52.540 --> 04:55.120
+The Kalman filter basically computes a weighted sum
+
+04:55.400 --> 05:02.040
+Taking into account how certain you are about your prediction and how certain you are about your observation and basically trades off
+
+05:02.760 --> 05:10.400
+these uncertainties and then can trust the observation more or can trust the prediction more depending on the current estimates and this kind of
+
+05:10.520 --> 05:13.640
+very simple illustration about the Kalman filter
+
+05:14.160 --> 05:18.040
+Okay, so let's have a quick look to the base filter and see
+
+05:18.760 --> 05:20.760
+how the Kalman filter and the
+
+05:21.540 --> 05:24.200
+Base filter relate. So also the base filter
+
+05:24.200 --> 05:28.760
+It was the tool that we derived for recursive state estimation at the prediction step in a correction step
+
+05:28.760 --> 05:30.560
+And the prediction step is shown over here
+
+05:30.560 --> 05:35.920
+So we are starting with our previous belief and we are integrating about all states or in this case
+
+05:36.240 --> 05:42.000
+Positions or poses where the system had is possibly is at the previous point in time
+
+05:42.000 --> 05:47.080
+So this is shown by this integral and we're degrading about the position at the previous point in time
+
+05:47.720 --> 05:49.960
+and then I'm multiplying this belief with
+
+05:50.480 --> 05:53.960
+The so-called motion model or control model
+
+05:53.960 --> 05:56.040
+So where am I at time T?
+
+05:56.440 --> 06:02.160
+Given I know where I was at time T minus 1 and which motion has been executed and I'm integrating over all those states
+
+06:02.160 --> 06:04.160
+so what happens there mathematically is
+
+06:05.120 --> 06:07.600
+convolution of two probability distributions and
+
+06:08.560 --> 06:15.200
+then in the correction step, I have my predicted belief my prediction and I have my
+
+06:15.880 --> 06:18.800
+Observation information my observation model, which is shown over here
+
+06:18.800 --> 06:26.440
+And this was just a normalization constant and then I'm basically multiplying those two probability distributions. So the one from their prediction
+
+06:27.080 --> 06:29.080
+and the one
+
+06:29.120 --> 06:35.800
+The observation model so that I'm actually correcting the prediction and that's kind of the general
+
+06:36.720 --> 06:42.380
+Framework of the recursive base filter and also the Kalman filter exactly follows those steps
+
+06:43.220 --> 06:46.980
+So the Kalman filter as I said is a realization of the base filter
+
+06:46.980 --> 06:52.180
+It assumes that everything is Gaussian and that we only have linear models and in this example
+
+06:52.180 --> 06:59.140
+It is the optimal estimator optimal means here statistically optimal so you can't do better than the Kalman filter
+
+06:59.260 --> 07:03.940
+So as long as all your models are linear and your probability distributions are Gaussian
+
+07:03.980 --> 07:07.920
+There's no need to investigate anything else than the Kalman filter
+
+07:08.480 --> 07:11.800
+Maybe least squares approach which is equivalent in this case
+
+07:12.400 --> 07:13.400
+but
+
+07:13.400 --> 07:20.560
+There's you don't have to look for other state estimation techniques because you basically can't do better in terms of your estimation result
+
+07:20.760 --> 07:24.120
+and again, the key thing is everything is Gaussian and
+
+07:25.560 --> 07:28.460
+Everything all the involved models are actually linear
+
+07:29.400 --> 07:34.780
+And now what we want to do is we want to dive a bit more into the details on how the Kalman filter
+
+07:35.320 --> 07:37.320
+is set up and
+
+07:37.320 --> 07:43.340
+How it looks like and what do we need to do in order to derive the basic Kalman filter equations again?
+
+07:43.340 --> 07:47.960
+We are not going to do the derivations here. This is something that you can do on your own
+
+07:48.600 --> 07:55.800
+I'm not I'm trying to give you an idea what happens or what tools you may need and we'll show maybe some properties of the Kalman filter here
+
+07:55.800 --> 07:58.820
+But then more one discuss what we can do with the Kalman filter
+
+07:58.820 --> 08:02.460
+What are important things to consider and give you kind of a kind of visual?
+
+08:04.200 --> 08:06.800
+Intuitive explanation for what happens in the Kalman filter
+
+08:07.760 --> 08:12.380
+Okay. So the question is if everything is Gaussian we start with a Gaussian
+
+08:12.920 --> 08:19.160
+belief the question is how do we update this Gaussian belief based on my motions and my
+
+08:19.280 --> 08:23.620
+Observations and that's kind of one step that the Kalman filter is executing
+
+08:23.880 --> 08:30.000
+So what we need in order to derive those equations so you can see this can do this derivations from a probabilistic point of view
+
+08:30.920 --> 08:34.080
+but you can also do the same way from a linear algebra point of view and
+
+08:34.600 --> 08:39.000
+The two key operations that are typically needed most of the derivations is
+
+08:39.880 --> 08:43.860
+marginalization conditioning of Gaussian distributions and just as a short reminder
+
+08:44.600 --> 08:47.800
+if you if you have a
+
+08:48.320 --> 08:54.920
+probability distribution over two variables or two subsets of variables XA and XB and this probability distribution
+
+08:55.120 --> 08:57.920
+Is a Gaussian distribution normal then?
+
+08:58.920 --> 09:02.300
+What we have is that the marginal distributions are also Gaussians
+
+09:02.420 --> 09:07.800
+So if you for example integrate away this part XB that only P of XA remains
+
+09:07.800 --> 09:12.560
+This will be a Gaussian distribution and the same way the other way around that P of XB
+
+09:13.060 --> 09:15.940
+also will be a Gaussian distribution if a marginalize out A
+
+09:16.780 --> 09:19.940
+And the same holds for the conditional distributions
+
+09:19.940 --> 09:22.740
+So P of XA given XB
+
+09:22.740 --> 09:29.580
+so assuming I know XB the probability distribution about XA will be a normal distribution again and
+
+09:30.540 --> 09:37.400
+Exactly in the same way the other way around P of XB given XA is also a Gaussian distribution
+
+09:38.260 --> 09:42.660
+So this is a key property that we are going to exploit if we derive the Kalman filter
+
+09:42.660 --> 09:48.340
+So we will be mainly relying on computing marginals and conditionals and also convolutions
+
+09:49.740 --> 09:55.720
+And in the important thing is here that all those distributions stay Gaussian distributions to not
+
+09:56.080 --> 10:01.800
+Violate the assumption that everything stays Gaussian because in the next step of the Kalman filter we will again
+
+10:02.200 --> 10:05.640
+require our distributions to be Gaussian so that all
+
+10:07.480 --> 10:12.160
+All operations hold we are not going to dive into the details how the conditional and the marginal look like
+
+10:12.640 --> 10:16.360
+Marginal is computed very easily the condition is slightly more complicated
+
+10:16.360 --> 10:22.220
+But you typically need end up with the show complement being executed in order to come up with this conditional
+
+10:22.260 --> 10:29.260
+But these are the two of that you need if you want to perform the derivation of the Kalman filter from scratch and
+
+10:30.360 --> 10:35.020
+The next thing we'll look into is our linear models for the motion as well as for the observation
+
+10:35.060 --> 10:39.840
+What does this mean a linear model? So a linear model means that
+
+10:40.300 --> 10:44.100
+The Bose models can be expressed through a linear function
+
+10:45.020 --> 10:47.980
+here shown in this setup and
+
+10:48.580 --> 10:50.580
+So
+
+10:50.580 --> 10:52.140
+We are
+
+10:52.140 --> 10:55.700
+Having a variable this can be a multi-dimensional variable
+
+10:55.700 --> 10:59.380
+so I'm having matrix ax and some constant term and
+
+10:59.940 --> 11:06.820
+The key thing is that if we take such a linear function and we transform a Gaussian through this linear function
+
+11:06.820 --> 11:08.540
+It stays a Gaussian distribution
+
+11:08.540 --> 11:14.780
+and again this is an important property because if we want to take our current belief that is Gaussian and we want to
+
+11:15.780 --> 11:19.820
+Combine it with them with a with a Gaussian model like an observation or a prediction
+
+11:19.820 --> 11:24.980
+we need to make sure that the result that we get out is actually also a Gaussian distribution and
+
+11:25.980 --> 11:32.660
+This function may add additional uncertainty to this to the process like motion model. So I start with a Gaussian belief
+
+11:32.660 --> 11:34.240
+I perform my motion
+
+11:34.240 --> 11:41.840
+This is likely to increase the uncertainty that I have and but through this linear model and my Gaussian noise associated to that
+
+11:42.000 --> 11:46.960
+I can ensure that everything stays Gaussian. And so this is something that
+
+11:47.880 --> 11:51.560
+These models that the Kalman filter actually exploits. So
+
+11:52.080 --> 11:58.920
+In the Kalman filter, we assume to have zero mean Gaussian noise and this linear models
+
+11:58.920 --> 12:06.480
+So this is basically the step for the prediction there for the for the pictures of yes for the control commands that we say
+
+12:07.080 --> 12:09.080
+the current state
+
+12:09.320 --> 12:13.520
+Xt equals a matrix AT times the previous state
+
+12:14.280 --> 12:16.280
+plus a matrix BT
+
+12:16.720 --> 12:21.360
+Multiplied with the control commands which takes into account the changes of the state given the control
+
+12:21.480 --> 12:25.280
+So this part basically says how does the how does the state changes without doing anything?
+
+12:25.520 --> 12:28.440
+And this is kind of what is the additive term that?
+
+12:29.160 --> 12:36.480
+That is added to that state base of the control command and then we have some Gaussian error over here and
+
+12:36.960 --> 12:43.040
+Similarly for the observation so what we are basically doing here we are computing a predicted observation
+
+12:43.760 --> 12:48.400
+based on the state so we have this matrix CT which maps from the
+
+12:50.320 --> 12:56.520
+From the space of states into the space of observations and if I multiply this matrix C with
+
+12:56.960 --> 13:04.420
+The current state XT it basically tells us what we should observe and this is what we often call the predicted observation
+
+13:04.420 --> 13:10.240
+So we take the matrix C we multiply the variable X to it and then it tells us what our predicted
+
+13:10.340 --> 13:14.840
+Observation is going to be and this is also associated with some Gaussian noise term
+
+13:14.900 --> 13:19.020
+So these are will be the linear models that are involved in the Kalman filter
+
+13:19.820 --> 13:24.300
+So let's dive a little bit into the details and explain the individual components here
+
+13:24.300 --> 13:26.260
+So we start with this matrix A
+
+13:26.260 --> 13:33.220
+A is an n by n matrix where n is the dimensionality of my state vector and it tells us how the state evolves from
+
+13:33.380 --> 13:41.160
+time t minus 1 to time t if we don't apply any controls or have any noise or errors
+
+13:41.500 --> 13:45.520
+Associated with it. So AT basically tells us how does the state evolve?
+
+13:45.520 --> 13:50.380
+so in the most trivial case this AT may be an identity matrix because if you
+
+13:50.580 --> 13:57.420
+If you say if I don't do anything my state shouldn't change in this case AT is an identity matrix and then turns
+
+13:58.340 --> 13:59.740
+the
+
+13:59.740 --> 14:06.060
+belief about the state at time t into the previous state XT minus 1 plus
+
+14:06.400 --> 14:08.400
+the change that comes from the control command
+
+14:08.660 --> 14:14.180
+But I may have a reason that this is not an identity matrix that the state evolves
+
+14:14.500 --> 14:21.500
+even if I don't do anything if you think for example about a vehicle you're driving and you're pushing the gas pedal and
+
+14:21.620 --> 14:23.260
+Even if you don't push the gas pedal
+
+14:23.260 --> 14:29.860
+You still have some remaining that's a constant velocity which changes the state the position of your vehicle over time
+
+14:29.980 --> 14:33.500
+So this information may then be encoded in your matrix AT
+
+14:34.300 --> 14:37.460
+Another alternative is if you have external factors
+
+14:37.980 --> 14:39.500
+like
+
+14:39.500 --> 14:42.860
+UAV and you have a blowing wind. So even if you don't
+
+14:43.580 --> 14:48.100
+Control the wind itself. It's an external factor, which is in there and it which could be
+
+14:48.900 --> 14:54.620
+integrated into this matrix AT so that the wind generates some drift for you UAV for example
+
+14:55.540 --> 14:57.140
+and then the
+
+14:57.140 --> 15:02.340
+Second important part is this matrix BT. The matrix BT is an N by L matrix
+
+15:02.340 --> 15:07.780
+where N is the dimensionality of the state space and L is the dimensionality of your control commands of your UT
+
+15:08.340 --> 15:15.460
+And it basically tells you how UT changes the state. So it tells me if I take a
+
+15:16.220 --> 15:22.040
+Odometry command or another control command or some velocities that I give to my system. How does those
+
+15:22.620 --> 15:29.420
+Velocities change the state of my system. So it's a mapping from the space of control commands
+
+15:29.700 --> 15:32.020
+into the state space and
+
+15:32.860 --> 15:39.540
+Therefore and it's an additive term. So this is something that we add in the previous model to our previous state
+
+15:40.180 --> 15:43.940
+Or the how the previous state evolves plus this term BT
+
+15:43.940 --> 15:51.260
+So it's an additive term which tells you how much do I increase or decrease every individual dimension of my state vector
+
+15:51.500 --> 15:53.500
+based on the control commands and
+
+15:54.380 --> 16:01.500
+This is what we need for the prediction step and then we have for the correction step. We need this matrix T
+
+16:01.620 --> 16:05.900
+which is in K by N matrix so K is the dimensionality of my
+
+16:06.380 --> 16:09.060
+Observation and N is the dimensionality of my state space and
+
+16:09.660 --> 16:14.560
+It basically tells me how I can map the current state
+
+16:14.980 --> 16:18.400
+into an observation and that means is what am I
+
+16:18.980 --> 16:21.700
+What I'm going to observe or do I expect to observe?
+
+16:22.420 --> 16:24.900
+Given that I'm in the state XT
+
+16:24.900 --> 16:29.280
+so if I'm XT and I want to get an observation what I'm
+
+16:29.640 --> 16:33.620
+Expecting to observe and this is what this matrix CT tells us. So it maps
+
+16:34.580 --> 16:36.180
+From the
+
+16:36.180 --> 16:37.660
+state space
+
+16:37.660 --> 16:44.100
+The n-dimensional state space XT into the space of observation, which is here referred to as ZT
+
+16:44.780 --> 16:49.620
+And then what we have for both models, we have random variables representing
+
+16:50.500 --> 16:52.500
+Gaussian noise and this is
+
+16:52.900 --> 16:54.540
+zero mean
+
+16:54.540 --> 16:55.660
+Gaussian noise
+
+16:55.660 --> 17:00.680
+independent of each other and this is typically referred to or expressed with two covariance matrices
+
+17:00.920 --> 17:04.160
+RT and QT and it depends a little bit on the
+
+17:04.600 --> 17:12.040
+Community you're coming from sometimes RT is the noise for the control commands sometimes for the observation and QT the other way around
+
+17:12.240 --> 17:18.520
+So I'm using here RT as the noise for the motion and QT as the noise noise for the controls
+
+17:18.960 --> 17:21.120
+This is in line with the probabilistic robotics book
+
+17:21.120 --> 17:27.040
+For example a large body of literature outside that community actually uses it the other way around
+
+17:27.160 --> 17:34.360
+So be a bit careful if you compare that with some other material make sure you're using the right uncertainties over here
+
+17:35.260 --> 17:38.340
+Okay, so let's have a look to what it means
+
+17:39.240 --> 17:46.040
+linear model so given that we are in the state of probability distributions, so we need to estimate the
+
+17:46.920 --> 17:49.380
+Probability distribution accordingly. So what does it mean?
+
+17:50.440 --> 17:55.040
+To have a linear motion model with Gaussian noise
+
+17:55.040 --> 18:01.000
+So if we write it down, what means having P of XT given UT and XT minus 1
+
+18:01.000 --> 18:02.600
+That means I know where I've been before
+
+18:02.600 --> 18:10.000
+I know the control command that I'm executing what the probability distribution where I'm ending up and this must be a Gaussian
+
+18:10.360 --> 18:14.680
+Distribution because everything in the Kalman filter is Gaussian. So how does it look like?
+
+18:15.400 --> 18:17.840
+okay, obviously it is a Gaussian distribution and
+
+18:19.720 --> 18:21.720
+We should make sure that
+
+18:22.040 --> 18:26.600
+We have we know where we have been before and the question is where are we going to end up?
+
+18:27.080 --> 18:34.180
+When we execute execute the control command UT and this is again where our linear model comes into the game
+
+18:34.180 --> 18:39.640
+So our matrix AT our matrix BT so we can say okay. How does
+
+18:40.760 --> 18:47.000
+XT changes XT minus 1 changes if we move to XT it was 8 times
+
+18:47.840 --> 18:50.160
+XT minus 1 plus B times
+
+18:51.000 --> 18:56.740
+UT and this gives me a new prediction where I'm going to be so this will be the mean of my Gaussian distribution
+
+18:57.080 --> 18:59.700
+So they specify the mean of that Gaussian distribution
+
+18:59.700 --> 19:05.180
+So I'm basically looking how far am I away from the mean and then I need to divide this
+
+19:05.620 --> 19:09.560
+Taking into account the uncertainty of my motion. So in this case the
+
+19:10.200 --> 19:15.340
+The covariance matrix RT as the uncertainty associated to this so that I can specify
+
+19:15.940 --> 19:23.220
+Where what's the probability distribution of where I'm ending up given I know where started and the control command actually have executed
+
+19:23.360 --> 19:26.940
+So then we can actually write down a standard Gaussian distribution
+
+19:28.220 --> 19:31.460
+so this is constant vector over here and this is my
+
+19:32.740 --> 19:37.700
+Exponent what I can see in here. This is exactly the part of the linear
+
+19:38.700 --> 19:42.760
+Motion model. So this is basically the negative mean
+
+19:43.640 --> 19:45.440
+So where I'm
+
+19:45.440 --> 19:51.720
+Expecting to be based on the control command that executed and of XT minus this term minus the mean
+
+19:51.720 --> 19:55.640
+So basically how far am I away from the mean same expression pops up over here?
+
+19:55.640 --> 20:02.540
+And then we divide that by the covariance matrix or the inverse of the multiplied with the inverse of the covariance matrix
+
+20:02.920 --> 20:06.840
+That encodes the uncertainty of that motion model
+
+20:06.840 --> 20:12.860
+So how much noise to I add do I add to the motion and so this is then my probability distribution
+
+20:13.520 --> 20:15.520
+which is Gaussian and
+
+20:15.540 --> 20:22.340
+Incorporates the linear model in order to tell me how the system advances from t minus 1 to t
+
+20:23.400 --> 20:30.440
+And I can do the same exercise for the for the observations. How does the observation look like?
+
+20:31.000 --> 20:35.640
+So again, we assume we have our linear model and everything is Gaussian
+
+20:35.680 --> 20:43.160
+So again, we need to compute our predicted observation and then see how far are we away with our real observation from that predicted observation
+
+20:43.360 --> 20:46.840
+So the predicted observation takes into account the current state CT
+
+20:46.840 --> 20:54.080
+So that was an XT sorry and I compute that by taking this matrix CT and multiplying CT with XT
+
+20:54.280 --> 20:57.120
+so CT times XT gives me the
+
+20:57.440 --> 21:03.940
+predicted observation what I'm the mean observation what I'm expected to observe and then I take into account what the difference between what I'm
+
+21:03.980 --> 21:10.260
+Expecting to observe and what I'm observing in reality and then I have a Gaussian distribution
+
+21:10.740 --> 21:14.520
+Over that difference with the uncertainty of my observation
+
+21:14.660 --> 21:19.460
+So very similar as before we have our constant factor over here
+
+21:19.460 --> 21:26.340
+Which now just uses the uncertainty of the observation of the uncertainty of the control command and then we have here our negative mean
+
+21:26.340 --> 21:28.040
+Which is CT times XT
+
+21:28.080 --> 21:35.080
+So what I'm predicted what I'm expecting to observe and I'm basically computing the difference between what I'm actually observing and what I'm
+
+21:35.440 --> 21:39.880
+Expecting to observe and then take the uncertainty of that observation into account
+
+21:40.080 --> 21:45.720
+So this is again my Gaussian distribution as the model for my observation
+
+21:46.480 --> 21:49.480
+Taking into account that everything is linear over here
+
+21:50.060 --> 21:53.600
+okay, so that means we have shown that the
+
+21:53.600 --> 21:58.320
+Motion and the observations are
+
+21:59.600 --> 22:00.960
+linear
+
+22:00.960 --> 22:04.800
+Gaussian models that means we end up having Gaussian
+
+22:05.240 --> 22:11.760
+distributions and the previous state is exploited or the current state is exploited the predicted state in an
+
+22:11.960 --> 22:15.040
+In a linear fashion and everything stays Gaussian
+
+22:15.680 --> 22:17.760
+Or is Gaussian in these models?
+
+22:17.760 --> 22:23.840
+So the next thing that we need to do is we need to show that everything also stays Gaussian if we compute our updates
+
+22:23.840 --> 22:27.560
+And for that we need to go back to the recursive based filter equations
+
+22:27.960 --> 22:35.300
+so one of the equation tells me that the current belief is the predicted belief times my
+
+22:36.480 --> 22:45.000
+My observation and this was just a normalization constant making sure that the integral ends up being one over all possible states
+
+22:45.640 --> 22:50.240
+So this part over here something that means it just derived this was the
+
+22:51.120 --> 22:53.120
+Motion of the observation model. Sorry
+
+22:53.560 --> 22:58.280
+And so we know that this is the Gaussian distribution because we just have written it down
+
+22:59.000 --> 23:01.000
+and then we have our
+
+23:01.440 --> 23:06.380
+Predicted belief and the question is what is our predicted belief? Was this a Gaussian? Is it not a Gaussian?
+
+23:07.680 --> 23:12.080
+Assuming that it is a Gaussian if you assume that the the predicted belief is the Gaussian
+
+23:12.120 --> 23:18.520
+Then we know that the result is a Gaussian because a product of two Gaussian distribution again ends up being a Gaussian
+
+23:18.680 --> 23:22.780
+So as the product of two Gaussians is a Gaussian again
+
+23:22.840 --> 23:27.640
+The only thing we need to show is that the predicted belief is a Gaussian distribution
+
+23:27.680 --> 23:30.040
+So the predicted belief of the Gaussian distribution
+
+23:30.040 --> 23:35.780
+it turns out that the corrected belief also will be a Gaussian distribution because the only thing that happens is that I'm
+
+23:35.800 --> 23:41.360
+Multiplying this Gaussian with another Gaussian and that will lead to a Gaussian distribution again
+
+23:41.640 --> 23:48.460
+So the next thing we need to inspect is is this part over here the predicted belief. Is this a Gaussian? Yes or no?
+
+23:48.720 --> 23:54.160
+Okay, so let's have a look into the definition. So I have my predicted belief
+
+23:54.800 --> 24:02.040
+Which was the integral of all previous states the previous belief times my opposite my my motion model
+
+24:02.800 --> 24:07.840
+So we just defined that this term the motion model is a Gaussian distribution, right?
+
+24:07.840 --> 24:12.280
+So that's the thing that we just did just have written it down how it looks like explicitly
+
+24:12.440 --> 24:15.000
+so we know that this is a Gaussian distribution and
+
+24:15.800 --> 24:21.440
+About our previous belief. We can also assume it to be a Gaussian distribution
+
+24:22.000 --> 24:28.920
+because we said we start up with an initial belief the initial belief is a Gaussian distribution and then if we can if
+
+24:29.480 --> 24:31.480
+this is Gaussian and
+
+24:31.680 --> 24:33.680
+the whole update steps
+
+24:34.680 --> 24:39.600
+Involve operations that everything stays Gaussian the next belief will also be Gaussian
+
+24:39.600 --> 24:42.160
+So in the next belief is recursively fed into that
+
+24:42.520 --> 24:48.440
+so the only thing that I need to show is basically that I start with a Gaussian my initial belief the constraint that I had and
+
+24:48.600 --> 24:50.180
+then that
+
+24:50.180 --> 24:56.680
+Assuming it is Gaussian if the result is also Gaussian as a result is plugged into it again. It will stay Gaussian
+
+24:57.560 --> 24:59.560
+As it is a recursive expression
+
+25:00.400 --> 25:02.880
+It's similar to a proof by induction where you say
+
+25:03.400 --> 25:08.660
+we have our initial state that we describe which has its Gaussian and then we need to make sure that
+
+25:08.960 --> 25:14.820
+In the induction going from n to n plus 1 this is our time step going from t to t plus 1 that everything
+
+25:14.960 --> 25:18.760
+Stays a Gaussian distribution and that's actually what we are going to do here
+
+25:18.760 --> 25:22.660
+So the question is is this is this sufficient that these two are Gaussian distributions
+
+25:23.120 --> 25:26.120
+But I still have this integral over that variable in there
+
+25:26.120 --> 25:32.360
+So is it is that sufficient so that these two are Gaussian so that this term also is a Gaussian distribution
+
+25:32.880 --> 25:34.480
+That's a good question
+
+25:34.480 --> 25:37.680
+But what it actually is if you inspect that equation further
+
+25:37.920 --> 25:43.160
+Then you see that this is actually a convolution of two functions. So we are
+
+25:43.680 --> 25:45.960
+convolving these functions over here and
+
+25:46.640 --> 25:49.240
+the convolution of two Gaussians is
+
+25:49.920 --> 25:55.560
+Again a Gaussian distribution and as a result of this the overall term will stay a Gaussian distribution
+
+25:56.360 --> 26:01.460
+Maybe you haven't seen that yet. So I can go very quickly through the proof that this is the case that
+
+26:02.260 --> 26:09.660
+In this example here those two distributions are Gaussian our resulting belief will will stay a Gaussian
+
+26:10.380 --> 26:14.300
+We're just going can go quickly over it. We start with our predict belief
+
+26:14.820 --> 26:20.060
+Just writing down the definition and then just filling the individual
+
+26:21.460 --> 26:25.020
+Two probability distributions based on what we had before
+
+26:25.620 --> 26:31.900
+Based on the definitions, so this is what we have had shot before this is kind of our motion model
+
+26:31.900 --> 26:38.340
+I'm just kind of ignoring here the the constant terms. So they are all in in the normal in normalization constant over here and
+
+26:38.900 --> 26:43.520
+then I've here the product of two exponential functions one of my
+
+26:44.340 --> 26:48.260
+motion model and the other one is just the Gaussian about our
+
+26:48.940 --> 26:52.460
+Our previous belief so the recursive belief
+
+26:53.460 --> 27:00.980
+So this term over here, okay, and what I can do I can actually combine those exponential functions, so
+
+27:02.980 --> 27:09.060
+What we can do is we can say we can formulate a new Gaussian distribution in here over
+
+27:09.740 --> 27:14.540
+take combining these two exponential functions so I can say this can be expressed as
+
+27:14.940 --> 27:20.620
+The exponent about some function LT and the question is how do these things need to be combined?
+
+27:20.660 --> 27:25.180
+They need to combine the following way as the sum of those two
+
+27:25.980 --> 27:29.140
+Exponents over here. So you have two exponential functions to multiply them
+
+27:29.140 --> 27:36.180
+you combine can combine them into one by just adding up the individual terms here in the exponential function and
+
+27:37.100 --> 27:41.580
+Then we can actually split that term LT up into two terms one term
+
+27:41.820 --> 27:47.820
+LT that depends on XT minus 1 and XT and another part which only depends on XT and
+
+27:48.060 --> 27:54.880
+Then I can actually rewrite this integral into two parts or it can move one part of the expression out of it
+
+27:55.020 --> 27:57.740
+namely the part that only depends on XT and
+
+27:58.300 --> 28:00.300
+Then I have the integral over
+
+28:00.740 --> 28:07.440
+XT minus 1 sitting over here. So this is a Gaussian distribution can be expressed again as a Gaussian distribution
+
+28:07.440 --> 28:14.500
+It's just those terms of the exponent which only depend on the variable XT and don't take into account the variable XT minus 1 and
+
+28:14.980 --> 28:23.260
+Then this is basically a marginalization operation of the variable XT minus 1 also being a Gaussian and a marginalization of
+
+28:25.060 --> 28:28.820
+Of a Gaussian distribution as we said before stays a Gaussian distribution
+
+28:28.820 --> 28:33.260
+So this will turn then the overall term into a product of two Gaussian distributions
+
+28:33.260 --> 28:39.300
+Which again is Gaussian if you want to go a bit more to the details and go step by step through this proof
+
+28:39.300 --> 28:41.420
+I recommend the probabilistic robotics book
+
+28:42.220 --> 28:43.300
+Chapter
+
+28:43.300 --> 28:46.020
+3.2 will actually guide you exactly through that process
+
+28:46.020 --> 28:52.540
+So as a result of this the belief the predicted belief is also a Gaussian distribution
+
+28:52.540 --> 28:55.380
+So that finally we can say this is a Gaussian distribution
+
+28:55.380 --> 28:56.420
+This is a Gaussian distribution
+
+28:56.420 --> 29:02.020
+The integral over it is a Gaussian distribution as a result of this my predicted belief is a Gaussian distribution
+
+29:02.100 --> 29:09.380
+So this is Gaussian multiplied with another Gaussian distribution. This is just a normalization constant. So we don't care about it and
+
+29:10.220 --> 29:13.420
+So as a result of this this will be a Gaussian distribution
+
+29:13.420 --> 29:19.620
+So as long as we are living in this linear world and the individual models are Gaussian everything will stay Gaussian
+
+29:19.740 --> 29:22.860
+So from the beginning to the end, we'll never leave the Gaussian world
+
+29:23.540 --> 29:25.300
+and that's important
+
+29:25.300 --> 29:30.380
+An important property so that we can actually update our belief at every point in time
+
+29:30.740 --> 29:35.740
+And can execute the steps also in the future when the new observation the new controls come in
+
+29:36.100 --> 29:39.580
+Because if you would leave the Gaussian world at some point that would mean
+
+29:40.100 --> 29:45.220
+That we don't have a Gaussian input anymore for the next state and then the whole thing would actually break
+
+29:45.260 --> 29:51.100
+So it's important that we live in this all the time in this Gaussian world so that we can recursively
+
+29:51.620 --> 29:58.500
+apply our update rules and evolve the state from time t minus 1 to the time t so
+
+29:59.060 --> 30:01.060
+what we have learned so far is that
+
+30:01.060 --> 30:03.060
+That
+
+30:03.060 --> 30:09.940
+We use linear models for the observation the control commands which we actually have written down this for the motion command
+
+30:09.980 --> 30:11.980
+It's an XT
+
+30:12.620 --> 30:18.740
+Predicted is AT times XT minus 1. So how does the state change if I don't do anything plus
+
+30:19.260 --> 30:25.460
+BT times UT how does the control changes our state plus some Gaussian noise and for the observation
+
+30:25.460 --> 30:30.540
+we can compute a predicted observation in linear case by saying ZT the predicted observation is
+
+30:31.060 --> 30:38.520
+the matrix CT multiplied with the current state XT saying how which observation what the
+
+30:39.060 --> 30:44.260
+System generate if we are currently in XT. That's what this function CT tells us plus some Gaussian noise
+
+30:44.260 --> 30:50.020
+And so if we have that everything is Gaussian, then we will stay continuously in this
+
+30:50.540 --> 30:52.540
+Gaussian world and
+
+30:52.740 --> 31:00.600
+have basically shown that everything stays Gaussian as long as we're living in this Gaussian or everything is Gaussian and linear and
+
+31:01.060 --> 31:03.060
+So that all the steps are
+
+31:03.700 --> 31:07.700
+Gaussian distributions all the time. So the only thing we need to do we need to maintain
+
+31:08.500 --> 31:11.880
+Gaussian distributions in the overall step of the Kalman filter
+
+31:11.880 --> 31:19.680
+So, how do we represent our Gaussian distributions Gaussian distributions can be easily represented by a mean and a covariance function
+
+31:19.700 --> 31:24.800
+So the only thing we need to provide is actually or need to store in our Kalman filter
+
+31:24.800 --> 31:29.180
+if you think about it from an algorithmic point of view is a mean and
+
+31:29.340 --> 31:35.680
+a covariance matrix and we start with a mean the covariance matrix of the belief the state of the belief or the
+
+31:36.100 --> 31:42.100
+parameters of the belief at the previous point in time and evolve it into the new mean and new
+
+31:42.860 --> 31:50.060
+covariance matrix at the current point in time from T minus 1 to T taking into account a Gaussian distribution for the
+
+31:50.540 --> 31:54.620
+motion noise and a Gaussian distribution for the observation noise
+
+31:55.580 --> 32:02.780
+So all those things everything stays Gaussian in here so the main question is how does T look like so the
+
+32:03.700 --> 32:04.860
+current
+
+32:04.860 --> 32:09.900
+the mean of the current belief and the covariance matrix of the of the of the current belief and
+
+32:10.540 --> 32:17.140
+relating that to all the Gaussian distributions of the previous belief and that's the thing that we actually need to sit down and actually
+
+32:17.500 --> 32:20.220
+derive by hand and this is very similar to
+
+32:20.860 --> 32:25.060
+the derivation that I just started with the convolution showing that this the
+
+32:25.940 --> 32:30.500
+convolution of those two Gaussian stay Gaussian by splitting this up into
+
+32:31.500 --> 32:36.300
+into a product of Gaussians and then a marginalization operation and then can show that
+
+32:36.700 --> 32:43.260
+I'm actually still staying in a Gaussian world very similar things happen if I say kind of how can I express the mean and the
+
+32:43.260 --> 32:49.980
+covariance matrix and to derive this so what's the key toolbox that I so need in order to derive the Kalman filter
+
+32:50.300 --> 32:55.780
+algorithm is the fact that the product of two Gaussians is still a Gaussian distribution
+
+32:56.380 --> 33:02.940
+That if I take Gaussian distributions and transform them under linear transformations, they stay Gaussian distributions
+
+33:03.900 --> 33:06.500
+the marginal and the conditional distribution of
+
+33:07.140 --> 33:11.700
+Gauss of a Gaussian distribution stays a Gaussian. That's something important that we need to exploit
+
+33:12.580 --> 33:17.740
+Then we need to be able to compute this mean and covariance matrix of the marginal and the conditional distributions
+
+33:17.780 --> 33:23.640
+So basically executing this we need to take into account the convolution of two function as Gaussian
+
+33:23.640 --> 33:26.420
+We will use the matrix inversion lemma and a few other
+
+33:27.100 --> 33:34.140
+mathematical toolboxes that we know either from a probability theory or from linear algebra and then this leads us to a
+
+33:34.300 --> 33:37.500
+Short algorithm, so I'm not showing this derivation here
+
+33:37.500 --> 33:40.900
+This would be an exercise which would take a bit longer for that video here
+
+33:41.340 --> 33:46.880
+But there is a lot of literature out there. I'm approaching it from the linear algebra point of view or from the
+
+33:47.580 --> 33:52.620
+Probability theory point of view and lets you derive the Kalman filter from scratch
+
+33:52.780 --> 33:59.040
+Once you have done the exercise you will come up with an algorithm that looks like this. It's basically a five line algorithm
+
+34:00.100 --> 34:03.220
+The first two lines the lines two and three over here
+
+34:04.020 --> 34:06.020
+tell us the how the
+
+34:06.780 --> 34:13.940
+Believe evolves given the motion command. So this is the prediction step over here those two lines. So what happens?
+
+34:13.940 --> 34:17.860
+What is the input to the Kalman filter has to start maybe from the beginning we have our previous
+
+34:18.540 --> 34:20.540
+mean and the
+
+34:20.660 --> 34:23.660
+Uncertainty of our previous belief. So this is kind of the recursive belief
+
+34:23.780 --> 34:31.980
+We add our control command and our current observation and now want to evolve the state from t minus 1 to t
+
+34:32.620 --> 34:38.620
+That means we need to compute a new mean and a new covariance matrix at time t and we do this in two steps first
+
+34:38.740 --> 34:41.840
+Executing the prediction step and then executing the correction step
+
+34:41.900 --> 34:47.260
+So in the prediction step, we need to evolve the mean and the covariance matrix
+
+34:47.420 --> 34:53.780
+so we have our predicted mean so the one with the bar is a predicted mean at time t is our
+
+34:54.440 --> 35:01.040
+Previous mean at time t minus 1 multiplying it with my matrix at so, how does the state evolve if I don't do anything?
+
+35:01.400 --> 35:04.520
+This part over here plus BT times UT
+
+35:04.520 --> 35:10.540
+so how does the control command changes our state and they both are added up and this is kind of my
+
+35:10.680 --> 35:13.860
+linear model that I have in here and based on this I need to
+
+35:14.880 --> 35:16.880
+specify how the
+
+35:16.920 --> 35:19.640
+uncertainty evolves and this is basically
+
+35:20.480 --> 35:26.000
+The effect on how does the first order error propagation? How does the uncertainty of?
+
+35:26.720 --> 35:28.480
+Gaussian distributions
+
+35:28.480 --> 35:33.640
+Changes if it is squeezed through a linear function and here I have the matrix AT
+
+35:34.840 --> 35:41.240
+multiplied with the uncertainty of the previous belief AT transposed plus RT, so
+
+35:41.920 --> 35:48.880
+This is basically the additional noise that the motion adds to the current state. So this is my
+
+35:49.440 --> 35:53.360
+prediction step and then for this point I have my predicted belief computed in that way and
+
+35:53.560 --> 35:58.520
+Then I have my correction step which is the three lines four or five and six over here and
+
+35:59.320 --> 36:05.400
+what basically happens here is that I'm computing a weighted sum of these two Gaussian distributions or
+
+36:05.720 --> 36:12.000
+weighted sum of the belief basically a product of two Gaussian distributions and the weighting factor is this KT over here
+
+36:12.000 --> 36:13.440
+It's a so-called Kalman gain
+
+36:13.440 --> 36:20.020
+The Kalman gain tells me how much more do I trust the observation or how much more do I trust my belief?
+
+36:20.020 --> 36:21.920
+so it weights the
+
+36:21.960 --> 36:28.360
+Prediction and the correction with each other and we have with this term over here
+
+36:29.480 --> 36:31.900
+It's basically a ratio taking into account
+
+36:32.960 --> 36:34.440
+the
+
+36:34.440 --> 36:40.900
+the uncertainty of my observation so sitting over here and then at some involvement taking into account the
+
+36:41.520 --> 36:43.520
+my matrix CT so the
+
+36:44.480 --> 36:48.560
+the model which tells me how to map from the state space into the space of observations and
+
+36:48.880 --> 36:53.320
+What basically happens in the end is then that in this term
+
+36:53.320 --> 36:59.920
+I take my my new believe is my predicted mean and then a correction term in this correction term tells me
+
+37:00.360 --> 37:06.240
+how much does the observation actually changes my state and what it what we do is we compute the difference between
+
+37:06.560 --> 37:08.840
+the actual observation that I've obtained and
+
+37:09.760 --> 37:16.080
+the predicted observation so you kind of see that this term over here was baby difference between the predicted belief and
+
+37:16.360 --> 37:21.760
+The predicted observation and the actual observations of this term that was sitting in the
+
+37:22.720 --> 37:27.100
+exponent of my observation model and multiplied with
+
+37:28.000 --> 37:35.140
+KT with the Kalman gain and what the Kalman gain basically tells me here is is how much does the
+
+37:35.600 --> 37:40.800
+difference between the actual observation and the predicted observation will change my state and
+
+37:41.840 --> 37:43.840
+So I'm basically
+
+37:43.840 --> 37:46.080
+Taking into account. What's the difference between
+
+37:47.160 --> 37:54.280
+what I should observe and what I'm actually observing and this difference is then mapped through the Kalman gain matrix into the
+
+37:54.920 --> 37:58.620
+into the state space and tells me how I need to update my
+
+37:59.140 --> 38:05.640
+predicted mean in order to take the correction through the observation into account and
+
+38:06.480 --> 38:10.640
+then I need to also update not only the mean house need to update my
+
+38:11.000 --> 38:15.080
+My covariance matrix so that through the observation
+
+38:15.080 --> 38:19.640
+For example, my uncertainty to believe decreases because I get a new observation
+
+38:19.640 --> 38:26.840
+I get new information into the system and therefore the uncertainty typically reduces through my observation
+
+38:26.840 --> 38:33.520
+This needs to be appropriately updated so that the uncertainty in my current belief is appropriately taken into account
+
+38:34.040 --> 38:37.160
+then the last step I just kind of return the
+
+38:38.160 --> 38:45.860
+updated mean and the updated covariance matrix now representing the Gaussian distribution at time T
+
+38:45.860 --> 38:47.860
+so the updated belief and
+
+38:48.120 --> 38:53.660
+Then in the next step this information would be fed in again here into the Kalman filter observation
+
+38:53.840 --> 38:57.240
+Taking the new T plus 1 and Z T plus 1 into account
+
+38:57.240 --> 39:03.760
+This would be then the next step the next evolvement given that we have a recursive state estimation algorithm over here
+
+39:03.760 --> 39:05.120
+So
+
+39:05.120 --> 39:12.280
+Maybe a small example in 1d. So consider that I have a belief and I perform a prediction
+
+39:12.800 --> 39:14.800
+so I'm
+
+39:15.160 --> 39:17.440
+Predicting what the state will be at the next point in time
+
+39:17.440 --> 39:23.120
+And let's say this Gaussian distribution the red Gaussian distribution over here is my prediction step
+
+39:23.120 --> 39:30.040
+And then I get a new measurement which is shown here illustrated here by this green probability distribution
+
+39:30.080 --> 39:34.840
+So I have a prediction and a measurement and now need to combine those and
+
+39:35.680 --> 39:41.120
+The combination of those is basically takes account which one weighs more depending on the uncertainty that I have
+
+39:41.320 --> 39:46.680
+So a belief the probability distribution which has a large covariance matrix
+
+39:47.140 --> 39:51.240
+Will have a smaller impact on the final belief than one which is more peaked
+
+39:51.240 --> 39:57.320
+You can nicely see it here in this illustration the correction which is shown here by the blue curve is
+
+39:57.640 --> 40:03.720
+Closer to the green curve to the measurement rather than the prediction and the only reason for this is that I'm trusting my
+
+40:03.920 --> 40:09.720
+Measurement more than my prediction which can be seen of on the variance of these two distributions
+
+40:09.720 --> 40:12.160
+So the green curve has a smaller variance
+
+40:12.160 --> 40:16.200
+so I trusted more and therefore it will have a stronger impact and
+
+40:16.760 --> 40:20.920
+After applying the correction step ending up with this blue curve over here
+
+40:21.640 --> 40:28.800
+What you can see also here the blue curve has a smaller uncertainty than the green curve because it combines two Gaussian distributions
+
+40:28.800 --> 40:35.000
+And so the uncertainty that we have here in the end is of the resulting Gaussian distribution is smaller than the two uncertainties
+
+40:35.000 --> 40:38.500
+We had here with the blue and the red curve over here
+
+40:38.520 --> 40:44.640
+So we are actually getting more certain by adding this additional information into the game in general
+
+40:44.640 --> 40:50.220
+It is like this that the prediction step increases my uncertainty because I add
+
+40:50.580 --> 40:53.060
+additional source of uncertainty to my game
+
+40:53.940 --> 40:58.780
+Given that I have a belief and through the motion. I kind of add more uncertainty to the belief
+
+40:58.780 --> 41:02.740
+I have the uncertainty that I had before plus the error that I make
+
+41:03.260 --> 41:05.260
+through my control command and
+
+41:05.340 --> 41:12.580
+Then the measurement through the measurement again new information in there. I can reduce the uncertainty that I have
+
+41:14.140 --> 41:16.980
+By combining those two Gaussian distributions
+
+41:17.020 --> 41:22.020
+So the prediction step increases the uncertainty the measurement reduces the uncertainty and
+
+41:22.660 --> 41:26.380
+I mean unless the motion is perfect
+
+41:26.380 --> 41:33.700
+Then we don't add any uncertainty or if my measurement doesn't tell me anything then I'm not reducing the uncertainty
+
+41:33.700 --> 41:37.140
+but in most real-world situations that will not be the case and
+
+41:38.060 --> 41:45.020
+The motion will increase uncertainty and the measurement will reduce the uncertainty that I have in here
+
+41:45.220 --> 41:46.780
+But the important thing is in the end
+
+41:46.780 --> 41:51.620
+it's basically a weighted mean of these two beliefs of these two state estimates and
+
+41:52.100 --> 41:56.460
+The the weight is computed based on the uncertainty of these distributions
+
+41:56.460 --> 42:02.340
+so here the red one has a smaller weight than the green one over here and this will then lead to the
+
+42:02.940 --> 42:09.020
+To the new belief so we can take this a step further. So let's say we start now with the blue curve, which is now my
+
+42:09.260 --> 42:10.580
+I
+
+42:10.580 --> 42:14.620
+Believe at the next point in time and I can perform a new prediction
+
+42:14.620 --> 42:16.500
+So on a new prediction will be over here
+
+42:16.500 --> 42:22.740
+So this day the system has moved into this direction or evolved the state in the positive x-axis direction
+
+42:22.740 --> 42:29.780
+But through this motion became more uncertain and then we get a new observation in this is my the new observation that I get
+
+42:30.020 --> 42:32.620
+here and this time the observation is not that
+
+42:33.980 --> 42:38.540
+good as the observation that I had before this can change from observation to observation and
+
+42:39.020 --> 42:43.860
+Now I'm basically combining those distributions and get the yellow curve over here
+
+42:43.860 --> 42:48.380
+which sits quite nicely in the middle between the two curves, so
+
+42:49.340 --> 42:53.940
+Everything that I do stays Gaussian. I'm basically combining the prediction and the correction
+
+42:54.660 --> 42:58.460
+Into a new Gaussian belief and I do this in a recursive fashion
+
+42:59.940 --> 43:03.500
+And again the two key assumption that the Kalman filter does is
+
+43:04.460 --> 43:11.020
+With Gaussian distributions and my noise everything is Gaussian. So it means my prior belief is Gaussian my
+
+43:11.540 --> 43:13.540
+observation model has Gaussian noise and
+
+43:14.340 --> 43:18.700
+my motion model has Gaussian noise and my motion at my observation model are
+
+43:19.700 --> 43:25.300
+linear so they are linear models and following these equations over here and
+
+43:25.940 --> 43:27.940
+under these two assumptions
+
+43:28.100 --> 43:30.300
+Everything is good. Everything stays Gaussian
+
+43:30.300 --> 43:35.280
+We know how to update our belief and it's actually the optimal estimator the best thing that we can do
+
+43:37.180 --> 43:41.060
+The key question that however is there what happens if this is not the case
+
+43:41.380 --> 43:48.620
+So the assumptions these two assumptions actually very strong assumptions that everything is Gaussian and that every every model is linear are
+
+43:48.900 --> 43:50.540
+hard assumptions
+
+43:50.540 --> 43:56.300
+Especially the one with the linear motion observation models. This is basically violated all the time
+
+43:56.500 --> 44:02.940
+You can still argue that a lot of sensors may have a Gaussian noise characteristic or the Gaussian noise is a good approximation
+
+44:03.580 --> 44:05.580
+Of the noise that we're actually obtaining
+
+44:05.900 --> 44:10.260
+most of the time you're actually kind of okay with this assumption, but the
+
+44:10.780 --> 44:16.140
+Linear motion and linear observation is something which is in most situations not the case
+
+44:16.300 --> 44:19.460
+You know this if you'd want to describe the motion of a vehicle
+
+44:19.460 --> 44:24.340
+for example, even the 2d plane or even worse if you're in 3d you have
+
+44:25.340 --> 44:28.980
+Angular components often involved because the system is moving into some direction
+
+44:29.420 --> 44:35.020
+So you will have sine and cosine functions popping up and these functions are not linear functions
+
+44:35.020 --> 44:42.460
+And as a result of this they violate this assumption that the Kalman filter makes and cannot be applied in the plane vanilla
+
+44:42.700 --> 44:47.740
+Kalman filter so and as we do state state estimation often using
+
+44:48.380 --> 44:51.940
+the Euclidean space where we want to perform our estimations then
+
+44:52.900 --> 44:55.420
+And this involves also orientations and angles
+
+44:55.420 --> 45:02.100
+This is something that we need to take into account so we need to find ways for dealing with those nonlinear functions
+
+45:03.820 --> 45:11.340
+So what happens if we have a nonlinear system so most realistic systems as I said involve
+
+45:11.460 --> 45:17.740
+Or is it will have systems which are nonlinear and the question is how can we take this nonlinearity into account?
+
+45:17.820 --> 45:20.300
+So we need to get rid of those two
+
+45:20.780 --> 45:25.020
+Expressions and be what happens if we are nonlinear these functions are linear functions anymore
+
+45:25.100 --> 45:28.600
+So they turn into some new functions the function G and function H
+
+45:28.980 --> 45:33.380
+One for the motion and one for the observation which are not necessarily
+
+45:34.820 --> 45:36.260
+Linear anymore, right?
+
+45:36.260 --> 45:42.860
+So the question is first let us expect what changes if you put in a different function G and a different function H
+
+45:42.860 --> 45:46.780
+Which are not linear anymore. Why is this a problem? Let's let's illustrate that
+
+45:47.780 --> 45:51.340
+Okay, we can do this very nicely in a graphical way with this type of plot
+
+45:51.340 --> 45:56.180
+So what we see down here is a Gaussian distribution and this is our input
+
+45:56.820 --> 46:02.940
+and want to transform this Gaussian distribution through a function and
+
+46:03.540 --> 46:06.900
+Let's say it is a linear function. So this function that we see over here
+
+46:08.580 --> 46:10.940
+So and this should this
+
+46:11.940 --> 46:18.420
+Gaussian distribution should be squeezed through this linear function and will give me a new Gaussian over here
+
+46:18.780 --> 46:22.620
+Okay. So how does it look like? How can I illustrate this? I can take every point here on
+
+46:24.020 --> 46:25.580
+that function
+
+46:25.580 --> 46:29.780
+It can move up here and basically deflect this ray
+
+46:30.300 --> 46:35.060
+Onto the x-axis and this is where this point will be mapped to before this new Gaussian
+
+46:35.060 --> 46:42.120
+So the mean over here will be mapped to this new mean this value over here will be mapped to this value over here
+
+46:42.380 --> 46:49.260
+So all the probability methods that which sits down here will be actually transformed through this function ending up in this belief
+
+46:49.260 --> 46:53.220
+it's a very nice way for illustrating what happens with the function and
+
+46:53.780 --> 46:58.480
+If I squeeze it through with the Gaussian distribution or any other distribution if I squeeze it through
+
+46:58.980 --> 47:04.540
+In this case this linear function. So now I said okay want to get rid of the assumption that everything is linear
+
+47:04.540 --> 47:09.860
+That means we need to replace this function by a nonlinear function. Let's take a function which looks like this
+
+47:09.980 --> 47:12.340
+So this is clearly a nonlinear function over here
+
+47:13.100 --> 47:15.920
+So what we now need to do is we need to take every
+
+47:17.060 --> 47:19.660
+point here on that curve or the probability math actually
+
+47:20.220 --> 47:25.740
+associate with it and squeeze it through this nonlinear function over here and
+
+47:26.580 --> 47:31.060
+What happens the resulting distribution that we actually get is this black curve over here?
+
+47:31.660 --> 47:35.980
+We can clearly see that this black curve over here is not a Gaussian
+
+47:36.780 --> 47:42.260
+So this input Gaussian is transformed into this black curve, which is clearly not a Gaussian distribution
+
+47:43.140 --> 47:45.780
+So by using these nonlinear functions
+
+47:47.060 --> 47:51.820
+To evolve my state or perform my observation to cooperate my observation
+
+47:51.820 --> 47:55.900
+I'm actually leaving this Gaussian world assumption
+
+47:56.300 --> 48:01.700
+We can still approximate this function here this black function by a Gaussian distribution
+
+48:01.700 --> 48:06.900
+Then we'll get the blue curve over here, but it's very obvious the case that this approximation
+
+48:07.740 --> 48:11.980
+Is quite far away from the original function over here
+
+48:12.540 --> 48:14.340
+So that's a problem that we have
+
+48:14.340 --> 48:17.420
+So if we put in a Gaussian through this nonlinear function
+
+48:17.580 --> 48:25.260
+then the output function will not be a Gaussian anymore and as a result of this the Kalman filter is not applicable anymore because
+
+48:25.420 --> 48:27.460
+we are leaving this Gaussian world and
+
+48:28.300 --> 48:33.140
+As soon as we leave this Gaussian world the Kalman filter can't handle that anymore
+
+48:33.820 --> 48:36.880
+So the key question is what can we do to resolve this?
+
+48:37.100 --> 48:41.900
+So which tricks do we have in our kind of toolbox in order to modify the algorithm?
+
+48:41.900 --> 48:44.340
+So that this information can be taken into account
+
+48:45.780 --> 48:47.780
+Maybe not taken into account perfectly
+
+48:47.820 --> 48:50.520
+Maybe we still need to make some assumptions in here
+
+48:50.520 --> 48:56.960
+But what can we do in order to deal with these nonlinearities at least to some reasonable degree?
+
+48:58.160 --> 49:02.320
+So what happens if it's nonlinear function, what can we do in order to solve that?
+
+49:03.440 --> 49:07.280
+One the easiest trick to do is let's say okay, and we know the function is nonlinear
+
+49:07.720 --> 49:14.280
+But let's say let's assume it to be linear and locally linearize it so perform local linearizations
+
+49:14.720 --> 49:18.680
+So basically taking a point and at that point
+
+49:19.120 --> 49:27.160
+computing the first derivative of this function and fit a line through this nonlinear function at a specific point at the linearization point and
+
+49:28.160 --> 49:32.800
+And treat it as a linear function depending how far I'm away from my linearization point
+
+49:33.240 --> 49:39.840
+This is something that we know as Taylor expansion or a tool known as Taylor expansion that we are
+
+49:40.440 --> 49:43.680
+Frequently using over here. So how does it work?
+
+49:45.040 --> 49:49.480
+So what we need to do is if we want to look to our prediction model over here
+
+49:49.480 --> 49:54.920
+So we have our nonlinear function G with the parameters UT and XT minus 1
+
+49:55.480 --> 49:59.880
+So what we need to do is so here kind of XT minus 1
+
+50:01.520 --> 50:06.440
+So we need to take into account how basically how far are we away
+
+50:07.080 --> 50:08.240
+in
+
+50:08.240 --> 50:11.840
+From with our new estimate given our previous belief
+
+50:11.880 --> 50:15.960
+So we start by evaluating the function at the linearization point
+
+50:17.640 --> 50:19.640
+Okay, so
+
+50:19.760 --> 50:26.120
+Where are we our previous mean and then we add to that
+
+50:28.320 --> 50:36.120
+The Jacobian of the first derivative of this function with respect to our state X
+
+50:37.240 --> 50:41.760
+Plus the question is how far am I away from my linearization point?
+
+50:42.600 --> 50:44.600
+so
+
+50:44.760 --> 50:46.840
+If you see this as my variable X
+
+50:47.840 --> 50:51.920
+then basically how far I'm away with my variable X from the
+
+50:52.840 --> 50:57.940
+From my mean and this basically is a linearization of my prediction step
+
+50:59.240 --> 51:01.780
+Same thing for the correction step that I have
+
+51:02.480 --> 51:04.480
+If I have my function
+
+51:04.960 --> 51:08.480
+That depends on XT. This is my variable over here
+
+51:08.520 --> 51:11.320
+I say I am at my linearization point
+
+51:11.320 --> 51:15.560
+Which is the predicted belief because the best estimate that I have about the state
+
+51:16.160 --> 51:20.920
+before executing the correction and then I compute the first derivative or
+
+51:22.280 --> 51:28.820
+Jacobian in the multi-dimensional case of that function H with respect to XT and then I have
+
+51:29.320 --> 51:36.440
+XT minus me prime. So how far is the how far is my variable away from my linearization point?
+
+51:37.000 --> 51:40.720
+So this turns a linear function so this is a constant this is
+
+51:42.120 --> 51:47.400
+So there's a constant linearization point the Y value over here. This is my
+
+51:49.120 --> 51:50.560
+My linearization
+
+51:50.560 --> 51:57.160
+So basically the slope of my linear function and this basically tells me how far am I away from that linearization point
+
+51:57.240 --> 52:02.480
+The same holds for the correction step as well as for the prediction steps. So I'm just kind of as a short reminder
+
+52:02.720 --> 52:10.120
+How does this first derivative look like in the multi-dimensional case in the multi-dimensional case? It's not a single value. It's
+
+52:11.960 --> 52:15.720
+It's it's a matrix the Jacobian which is a non square matrix
+
+52:16.160 --> 52:18.920
+And so if you have an m-dimensional function
+
+52:19.600 --> 52:26.240
+So in this case, this would be our state X. For example the dimensionality of that state m-dimensional and
+
+52:26.680 --> 52:28.680
+then we have
+
+52:29.040 --> 52:31.040
+n different
+
+52:31.600 --> 52:35.140
+Variables to which I'm going to derive it to this would be the
+
+52:35.480 --> 52:42.280
+partial derivative of the first dimension of the function divided by the first variable the first dimension of the function divided with respect to the
+
+52:42.280 --> 52:44.280
+second variable and so on and
+
+52:44.300 --> 52:45.720
+Here in the individual columns
+
+52:45.720 --> 52:49.020
+We have that for whatever the m's dimension of my function G
+
+52:49.160 --> 52:54.440
+Derived with respect to the first dimension of the parameter until the nth dimension of the parameter
+
+52:54.440 --> 52:58.180
+It's basically a matrix filled with this partial derivatives
+
+52:58.180 --> 53:00.180
+Again
+
+53:00.220 --> 53:04.500
+We can also illustrate this how can I use this for linearization?
+
+53:05.100 --> 53:07.380
+So if this is the function that I have in here
+
+53:07.540 --> 53:13.860
+For example in this 2d case this will lead to this plane and basically I'm moving on that plane
+
+53:13.860 --> 53:16.020
+This is kind of my two-dimensional
+
+53:17.020 --> 53:24.260
+function which is a local linearization of the green function here at that point or even more shown over here if this is my
+
+53:24.260 --> 53:26.860
+Original function I want to compute the linearization point in here
+
+53:26.860 --> 53:31.140
+I basically get this blue plane and I'm basically moving on that blue plane
+
+53:31.420 --> 53:35.500
+We can see also here is typically if I stay close enough to the linearization point
+
+53:35.500 --> 53:41.840
+it can be a good approximation, but the further I move away from the linearization point of the worth the
+
+53:43.300 --> 53:47.100
+The the approximation gets especially with this blue curve down here
+
+53:47.140 --> 53:54.460
+So this Jacobian is basically the generalization of you the typical gradient of first derivative that you have and in case we have
+
+53:54.980 --> 54:01.500
+Multiple dimensions, so we leave the 1d world which we nearly always do if you perform real-world state estimation with the Kalman filter
+
+54:02.340 --> 54:06.720
+Okay, so the result of this these things turn into linear functions, right?
+
+54:06.740 --> 54:14.500
+Because it's just a constant which is specified based on the linearization point times my variable how far I am actually away
+
+54:15.020 --> 54:19.900
+So, let's see how this changes my overall setup that we had before
+
+54:20.100 --> 54:24.940
+So this was our linear assumption then this was our nonlinear function where we say, okay
+
+54:24.940 --> 54:29.660
+This is kind of the result that we have. So what we are now doing how does this local linearization works?
+
+54:29.660 --> 54:32.940
+So we choose the mean as our linearization point
+
+54:32.940 --> 54:37.660
+so this is my linearization point and then approximate this blue function by a
+
+54:38.220 --> 54:40.940
+linear function here shown in red
+
+54:40.940 --> 54:45.640
+So this is my linearization point my Taylor approximation this red curve
+
+54:45.720 --> 54:51.700
+And now I'm taking this Gaussian and transform it under this red curve under this linearized function
+
+54:52.040 --> 54:55.120
+Then I will actually get this
+
+54:56.240 --> 54:57.720
+red
+
+54:57.720 --> 54:59.720
+function over here
+
+54:59.960 --> 55:06.520
+You should note that this red function is now a Gaussian distribution because there's a linear function that was a Gaussian distribution
+
+55:06.960 --> 55:09.240
+But of course it cannot cover
+
+55:09.800 --> 55:15.720
+The nonlinearities of this blue function in an appropriate way again if you would use the blue function
+
+55:15.720 --> 55:18.960
+We would end up with this black curve over here if you approximate
+
+55:19.680 --> 55:22.560
+or take this black curve and approximate it by a mean and
+
+55:23.440 --> 55:26.920
+variance or variance it would add up with this blue function over here and
+
+55:27.840 --> 55:30.660
+But the problem is this is something that we typically cannot do well
+
+55:30.920 --> 55:34.520
+So what we the only thing we can do is we can perform this local linearization
+
+55:34.960 --> 55:39.160
+Compute this red curve over here take the Gaussian transfer it under the red curve
+
+55:39.160 --> 55:42.040
+And then we'll end up having this red distribution over here
+
+55:42.040 --> 55:46.880
+And there's even a mistake between the red and the blue curve so as we are far away from being perfect
+
+55:47.000 --> 55:52.000
+But it's kind of the best thing that we can do in our current case or the easiest thing we can do
+
+55:52.000 --> 55:55.240
+Let's say that way that's not the best thing we can do there are better ways for
+
+55:55.800 --> 56:01.160
+Performing those approximations, but it's kind of the standard way of doing this performing a local linearization
+
+56:02.160 --> 56:03.120
+And
+
+56:03.120 --> 56:08.040
+The question is how large is the mistake that we are actually doing and what does it actually depend?
+
+56:08.440 --> 56:15.400
+And it actually depends on two quantities on the first quantity is kind of how far is this red curve away from the blue?
+
+56:15.400 --> 56:22.060
+Curve so how large is the mistake that I'm doing through the local linearization if the blue and the red curve are very similar
+
+56:22.280 --> 56:28.660
+Also, the approximation error can be assumed to be small if they deviate strongly then the approximation error will be large
+
+56:29.380 --> 56:33.380
+And the second thing on what it won't what the approximation error depends on is
+
+56:34.260 --> 56:39.740
+actually the uncertainty the input of that function over here, so
+
+56:40.820 --> 56:45.920
+So the if the uncertainty is large that means a lot of probability mass is
+
+56:46.380 --> 56:48.980
+distributed over the space here and that means
+
+56:49.580 --> 56:55.020
+more probability mass will be mapped through the red function where I'm far away from the linearization point and
+
+56:55.340 --> 56:57.140
+Under the assumption that the further away
+
+56:57.140 --> 57:04.820
+I'm from the linearization point the larger my approximation error gets the larger the error that is generated through the transformation itself
+
+57:05.700 --> 57:11.700
+so the smaller the uncertainty of this Gaussian distribution down here the smaller the error of the
+
+57:12.060 --> 57:18.300
+Of the of the output here. We can actually illustrate this. Let's say we take a function which a larger variance
+
+57:18.300 --> 57:21.760
+So no more probability mass is spread out further away from the mean
+
+57:21.960 --> 57:28.880
+That means I'm further away from the linearization point and that means that this approximation error gets larger and larger over here
+
+57:30.440 --> 57:36.240
+So we can see this for example by the difference between those two means even if you just compute the difference between the two Gaussian the
+
+57:36.240 --> 57:39.580
+Red Gaussian and the blue Gaussian if we on the other hand
+
+57:40.160 --> 57:42.920
+Have a Gaussian with a smaller uncertainty in here
+
+57:42.920 --> 57:48.640
+So if this is more peaked over here, then the error will be also smaller over here
+
+57:48.760 --> 57:54.080
+So if this is more peak you can even see even the blue curve looks like more like a Gaussian distribution
+
+57:54.080 --> 57:56.360
+It's not a Gaussian, but it's more like a Gaussian distribution
+
+57:56.400 --> 58:01.520
+We can also see that the red and the blue curve come closer together. So the approximation error gets smaller
+
+58:02.080 --> 58:03.880
+so this means that
+
+58:03.880 --> 58:11.240
+there are two things that impact the approximation error first is how far am I away from the actual nonlinear function and
+
+58:12.000 --> 58:13.600
+What's the uncertainty
+
+58:13.600 --> 58:18.880
+Involved in this and so this is also one of the things that we will get to know about the Kalman filter
+
+58:19.520 --> 58:23.680
+the cloak of the smaller the uncertainty the smaller the approximation error and
+
+58:24.400 --> 58:26.400
+kind of more similar my
+
+58:27.760 --> 58:35.120
+Control model or my observation model is with respect to a linear world model the better the the performance of the Kalman filter
+
+58:36.780 --> 58:37.880
+Okay
+
+58:37.880 --> 58:43.200
+So, let's have a look into the linear how does the linearized model looks like in
+
+58:43.880 --> 58:47.480
+in terms of the motion model, so this was basically so
+
+58:48.400 --> 58:51.380
+what we're basically doing is we are taking the
+
+58:52.520 --> 58:58.480
+The motion model as we specified it before but now we replace this a times
+
+58:59.120 --> 59:01.400
+Xt minus 1 plus B
+
+59:01.960 --> 59:07.800
+Ut with my nonlinear function over here. So this is not my linearized function
+
+59:08.200 --> 59:09.680
+my linearized motion
+
+59:09.680 --> 59:13.600
+So I'm performing the linearization and then turn it into a Gaussian distribution
+
+59:14.200 --> 59:17.860
+So the only thing which has changed compared to before this is not this
+
+59:18.300 --> 59:22.380
+Ax Bu term plus Bu term, but it's actually the
+
+59:23.040 --> 59:26.560
+the linearized form using the Taylor approximation and
+
+59:27.620 --> 59:29.840
+the same thing for my
+
+59:31.400 --> 59:33.360
+For my
+
+59:33.360 --> 59:36.000
+observation model instead of having here
+
+59:36.960 --> 59:44.440
+Ct times Xt. I now have my linearized observation model. So how does the
+
+59:46.600 --> 59:54.840
+How's the how's the mapping from the state space to the observation state space in this linearized form and that's shown over here
+
+59:55.200 --> 59:58.200
+And what we now need to do is we need to take
+
+59:58.840 --> 01:00:02.160
+Those linearization and put it into the Kalman filter algorithm
+
+01:00:02.240 --> 01:00:07.200
+All right, so we before the Kalman filter algorithm and now we need to turn it into the Kalman filter algorithm
+
+01:00:07.200 --> 01:00:09.920
+which takes those linearized models into account and
+
+01:00:10.680 --> 01:00:12.320
+Luckily, there are very little changes
+
+01:00:12.320 --> 01:00:17.640
+I need to make to the algorithm to the Kalman filter algorithm to turn it to what we call the extended Kalman filter algorithm
+
+01:00:18.120 --> 01:00:20.120
+extended here because it
+
+01:00:21.080 --> 01:00:24.440
+extends the Kalman filter in the sense that we can use it with nonlinear models and
+
+01:00:25.280 --> 01:00:31.320
+It stays very very similar. The only thing that has changed are those two parts over here
+
+01:00:32.240 --> 01:00:37.800
+Which is I'm replacing the linear model with my nonlinear function for predicting the mean
+
+01:00:38.120 --> 01:00:45.540
+So here I'm actually using this nonlinear function for making the prediction because I'm predicting just one single point and this I can do
+
+01:00:46.120 --> 01:00:47.160
+without
+
+01:00:47.160 --> 01:00:49.160
+requiring my linearization
+
+01:00:49.720 --> 01:00:52.040
+The same holds for the observation
+
+01:00:52.040 --> 01:00:57.160
+So here I'm really using the function HT to map the predicted mean into what I'm expecting to observe
+
+01:00:57.320 --> 01:01:02.840
+To be able to compute the difference between what I'm actually observing what I'm predicted to observe and
+
+01:01:03.240 --> 01:01:06.480
+then what changes are the matrices the
+
+01:01:07.120 --> 01:01:14.320
+matrix A and A transpose and C and C transpose which are now replaced by G and H which are the Jacobians of
+
+01:01:14.560 --> 01:01:16.120
+the
+
+01:01:16.120 --> 01:01:18.120
+of my
+
+01:01:19.560 --> 01:01:26.800
+Motion and my observation and the rest stays identical between the Kalman filter and the extended Kalman filter algorithm
+
+01:01:27.240 --> 01:01:34.040
+so because I'm just using the linearized models and so only the involved matrices in this linear function actually
+
+01:01:34.600 --> 01:01:37.160
+Changed and the rest will stay the same
+
+01:01:38.960 --> 01:01:40.960
+But I also want to look into
+
+01:01:41.480 --> 01:01:46.320
+into here explain a bit it is actually what happens and where's my
+
+01:01:48.080 --> 01:01:55.840
+Correction step if I'm for example having a very good observation or very bad observation and just kind of to give you a small hint
+
+01:01:55.880 --> 01:01:59.040
+What what will change in here? So consider you have
+
+01:01:59.840 --> 01:02:01.600
+an
+
+01:02:01.600 --> 01:02:08.520
+Observation which is perfect. So it is the perfect observation. It's the sensor with zero noise
+
+01:02:08.800 --> 01:02:11.040
+So the question is how can we?
+
+01:02:12.200 --> 01:02:19.440
+See what happens to my state space in this situation. Okay, let's go a little bit into the details and explain
+
+01:02:19.440 --> 01:02:20.600
+What what's going to happen?
+
+01:02:20.600 --> 01:02:26.000
+So what happens if you have the perfect sensor a perfect sensor means the noise of the sensor is zero
+
+01:02:26.360 --> 01:02:33.920
+That means we have our covariance matrix over here. And this covariance matrix is basically a matrix full of zeros, right?
+
+01:02:33.920 --> 01:02:37.280
+It's kind of the perfect sensor zero uncertainty associated to that
+
+01:02:38.420 --> 01:02:41.960
+Okay, so that means this term drops away
+
+01:02:43.200 --> 01:02:48.440
+So that what remains is here when we could be the common gain. It's just the inverse of H transposed
+
+01:02:49.440 --> 01:02:51.440
+Sigma bar and H
+
+01:02:52.560 --> 01:02:59.880
+HT transpose so if I'm computing the inverse, I'm getting the inverse and I need to swap the order of the variables over here
+
+01:03:00.280 --> 01:03:08.120
+Okay. So what happens if I'm inverting this term over here? I will receive these individual matrices inverted but kind of swapped
+
+01:03:08.560 --> 01:03:10.560
+So I will have H
+
+01:03:10.920 --> 01:03:12.840
+transposed
+
+01:03:12.840 --> 01:03:17.560
+Inverse sitting over here. So I will have H transposed times H transposed inverse
+
+01:03:17.720 --> 01:03:19.720
+so those two variables will
+
+01:03:20.280 --> 01:03:24.280
+Be gone because this identity matrix and then the next term is will be
+
+01:03:26.360 --> 01:03:33.960
+Sigma bar so the predicted uncertainty and the predicted uncertainty inverse again multiplied with each other give me the identity matrix
+
+01:03:34.160 --> 01:03:37.000
+so the only matrix which will remain will be
+
+01:03:37.480 --> 01:03:38.440
+HT
+
+01:03:38.440 --> 01:03:39.760
+inverse
+
+01:03:39.760 --> 01:03:41.680
+so the
+
+01:03:41.680 --> 01:03:43.200
+Jacobian of
+
+01:03:43.240 --> 01:03:48.600
+My observation model inverted this will be my new common gain in this setup
+
+01:03:49.320 --> 01:03:54.280
+Okay. Now, let's see what happens if we take this common gain into account if we take this common gain into account
+
+01:03:54.800 --> 01:03:57.240
+Which just kind of the observation?
+
+01:03:59.120 --> 01:04:01.120
+Function that we
+
+01:04:01.240 --> 01:04:05.640
+That we have in here inverted and what I'm actually doing
+
+01:04:06.160 --> 01:04:08.200
+Like I kind of expand this
+
+01:04:08.960 --> 01:04:11.240
+This bracket over here. So it is
+
+01:04:12.160 --> 01:04:14.160
+H inverse
+
+01:04:14.200 --> 01:04:15.880
+times ZT
+
+01:04:15.880 --> 01:04:23.680
+So H inverse times ZT means I'm mapping from the state of observations into the state space
+
+01:04:24.280 --> 01:04:30.680
+So I'm taking what I actually observed with the perfect sensor and map it into the state space
+
+01:04:32.240 --> 01:04:37.560
+Okay, so this will give me the product of these two terms will give me
+
+01:04:38.440 --> 01:04:44.360
+Where am I given that sensor reading what's my state given that sensor reading and
+
+01:04:45.040 --> 01:04:47.040
+Then this term over here
+
+01:04:48.000 --> 01:04:50.760
+Will be the inverse of H
+
+01:04:53.480 --> 01:04:55.480
+Times H of
+
+01:04:55.720 --> 01:04:57.040
+the
+
+01:04:57.040 --> 01:05:01.720
+Of the of the mean so only the mean will remain
+
+01:05:02.640 --> 01:05:04.640
+But then I have the mean
+
+01:05:04.760 --> 01:05:08.320
+Minus the mean so these terms will cancel each other out will be zero
+
+01:05:08.320 --> 01:05:14.000
+So the only thing which will remains will be H inverse times ZT and this will basically
+
+01:05:14.240 --> 01:05:19.680
+Take the observation map the observation into the state space one to one and the remaining state
+
+01:05:19.880 --> 01:05:25.100
+Will be what the sensor told me which makes sense if I have the perfect noise-free sensor
+
+01:05:26.040 --> 01:05:32.600
+The prediction is completely canceled out and I'm only taking the observation to determine my state space and that's exactly what happens
+
+01:05:33.600 --> 01:05:38.500
+Now we can turn it around and see the other thing what happens actually if my sensor is
+
+01:05:39.320 --> 01:05:42.280
+The worst center ever so it doesn't provide me any information
+
+01:05:43.320 --> 01:05:47.180
+So we can see this as a covariance matrix
+
+01:05:48.640 --> 01:05:53.680
+Which is has infinity on the main diagonal zero information
+
+01:05:54.680 --> 01:05:56.640
+completely useless sensor
+
+01:05:56.640 --> 01:05:58.640
+Okay, so that means I have this
+
+01:05:59.480 --> 01:06:00.560
+This
+
+01:06:00.560 --> 01:06:04.720
+Term over here this this is basically a sum of something plus infinity
+
+01:06:05.360 --> 01:06:08.640
+The sum of something finite plus infinity gives me infinity
+
+01:06:09.040 --> 01:06:17.320
+So what remains is basically a covariance matrix which takes infinity on the main diagonal and then I'm inverting this matrix
+
+01:06:18.040 --> 01:06:26.040
+Multiplied with some finite values. So basically the result will be zero because I'm dividing by infinity
+
+01:06:26.040 --> 01:06:28.040
+So whatever number I put in here
+
+01:06:28.760 --> 01:06:34.000
+Given this is this inverse basic division. The Kalman gain will turn into zero
+
+01:06:34.760 --> 01:06:37.740
+So the Kalman gain will be a matrix, but just filled with zeros
+
+01:06:39.000 --> 01:06:43.020
+if I now go to the next step say my current belief is my
+
+01:06:43.400 --> 01:06:49.320
+Predicted belief plus the Kalman gain and something and the Kalman gain is a zero matrix. Everything will cancel out
+
+01:06:49.360 --> 01:06:51.480
+the only thing which will remains is the
+
+01:06:52.040 --> 01:06:55.300
+current belief a current mean is the predicted mean
+
+01:06:55.580 --> 01:06:59.080
+Which makes absolutely sense if my sensor doesn't provide me any information
+
+01:06:59.420 --> 01:07:04.780
+What I should do is I should trust my prediction and that's exactly what turns what happens
+
+01:07:05.500 --> 01:07:07.500
+so if
+
+01:07:08.060 --> 01:07:13.320
+The sensor has infinite uncertainty the Kalman gain will turn into zero and then just the
+
+01:07:14.700 --> 01:07:17.900
+Predicted belief will remain as my state estimate
+
+01:07:18.220 --> 01:07:24.660
+And so as a result of this we can see that these kind of two extreme cases can be very nicely
+
+01:07:25.100 --> 01:07:30.040
+explained what happens if you put your uncertainty of your sensor to zero or to infinity and
+
+01:07:30.420 --> 01:07:34.660
+You will either completely trust your observation or you will completely trust
+
+01:07:34.660 --> 01:07:40.500
+Ignore the observation and basically just trust your prediction and this is exactly what happens and what also makes sense in here
+
+01:07:41.660 --> 01:07:47.860
+Okay, we can now use the Kalman which we just introduced as a general framework over here for performing different
+
+01:07:47.900 --> 01:07:51.620
+Things such as localization. So there's just a kind of very small
+
+01:07:52.180 --> 01:07:54.700
+illustration example in one of the next lectures
+
+01:07:54.700 --> 01:07:59.900
+We will dive more into the details and provide you with the full approach to EKF based localization
+
+01:07:59.900 --> 01:08:01.900
+So you get an idea how that looks like?
+
+01:08:02.900 --> 01:08:08.740
+Or look into other state estimation tasks using the Kalman filter, but just kind of a small illustration what we've seen here
+
+01:08:08.740 --> 01:08:15.180
+So what you see here, this gray line is the actual trajectory that the platform had been taken and here we're one two
+
+01:08:15.180 --> 01:08:20.460
+Three four five six landmarks in the environment. So things that the sensor can actually observe
+
+01:08:20.820 --> 01:08:23.060
+So the system has an initial belief
+
+01:08:23.060 --> 01:08:26.820
+Let's say starts over here and then things it moved over here
+
+01:08:26.820 --> 01:08:31.140
+although in reality it took this movement then it got an observation over here, which is still
+
+01:08:31.980 --> 01:08:34.420
+Seems to be so based on the observation
+
+01:08:34.940 --> 01:08:39.780
+the system will think it is actually here because you have noise in your observation and
+
+01:08:40.180 --> 01:08:42.060
+The system thinks it's actually here
+
+01:08:42.060 --> 01:08:46.780
+Although it was kind of closer to the landmark based on the noise of the observation then it moves on
+
+01:08:46.940 --> 01:08:52.700
+It probably was moving over here moving straight and then you get a new observation which actually drags a system
+
+01:08:52.700 --> 01:08:58.620
+Kind of closer to the real belief and then turning around you always get your observations and update your belief
+
+01:08:58.620 --> 01:09:01.100
+so this is basically the mean estimate of
+
+01:09:01.820 --> 01:09:09.180
+the trajectory that the system has taken based on the on the motion commands and the landmark observation that you actually get and
+
+01:09:10.180 --> 01:09:14.960
+so if you if you run the EKF, this is kind of the
+
+01:09:17.260 --> 01:09:20.620
+The motion that is actually executed that is estimated
+
+01:09:20.620 --> 01:09:26.700
+So here you can always see kind of the uncertainty of the prediction and the observation being integrated
+
+01:09:26.700 --> 01:09:30.340
+so this is the uncertainty of the belief and then you have the
+
+01:09:30.780 --> 01:09:36.500
+Prediction and observation taking into account combine that in a recursive state estimation fashion
+
+01:09:36.500 --> 01:09:43.340
+So in the end, it's a weighted sum of the predictions and the observations and this is kind of a small video example
+
+01:09:43.340 --> 01:09:46.660
+How that looks like in reality, you can what you see here
+
+01:09:46.660 --> 01:09:51.340
+These are landmarks and if the thing is flashing up, you can see the actual observation
+
+01:09:51.420 --> 01:09:53.860
+This is basically what the motion command tells you
+
+01:09:53.860 --> 01:09:58.620
+so your prediction you can see the system has a drift over here and you can see here always kind of the
+
+01:09:58.860 --> 01:10:00.860
+the estimate of the state the
+
+01:10:01.060 --> 01:10:02.300
+The
+
+01:10:02.300 --> 01:10:06.380
+estimate of the predicted state and then taking the cons the observation for
+
+01:10:06.780 --> 01:10:10.140
+Correcting the belief and the actual trajectory is driving
+
+01:10:10.140 --> 01:10:14.980
+The system is driving here on that circle and what you can see here with this blue line
+
+01:10:14.980 --> 01:10:17.260
+Which is the estimate of the extended Kalman filter
+
+01:10:17.260 --> 01:10:22.540
+you can actually track the motion of the Eagle really well if you compare this kind of to just be
+
+01:10:22.620 --> 01:10:27.300
+The motion that you would use where you would end up with this pink trajectory over here
+
+01:10:27.940 --> 01:10:33.900
+It's kind of a small example or a teaser how you can actually localize a system using an extended Kalman filter
+
+01:10:35.260 --> 01:10:39.140
+So this brings me to the end of the lecture today and just as a kind of short summary
+
+01:10:39.140 --> 01:10:43.740
+What have you learned or what should you have learned today? So the extended Kalman filter
+
+01:10:44.100 --> 01:10:50.140
+Is a variant of the Kalman filter and the Kalman filter itself was the base filter
+
+01:10:50.380 --> 01:10:56.780
+For the Gaussian linear case and it's the EKF is one way to handle nonlinearities
+
+01:10:56.780 --> 01:11:00.540
+It does so by local linearizations by computing Taylor expansions
+
+01:11:01.020 --> 01:11:07.080
+And there's not the only way this is just one way kind of the straightforward the most common way
+
+01:11:07.460 --> 01:11:12.760
+But there are different variants not to perform better approximations such as the unscented Kalman filter
+
+01:11:13.380 --> 01:11:21.060
+Where you go a different way than just using one linearization point in local linearizations. You may take more advanced approaches and
+
+01:11:21.720 --> 01:11:27.300
+The EKF is still or is one of the standard toolbox of it we can use today for
+
+01:11:27.780 --> 01:11:33.860
+State estimation and it works well, unless you either have extremely large uncertainties involved
+
+01:11:33.860 --> 01:11:35.860
+so if you somewhere need to start with an
+
+01:11:37.140 --> 01:11:41.400
+With a prior belief which is a more or less uniform distribution or which is multimodal
+
+01:11:41.980 --> 01:11:43.980
+Then this can be problematic
+
+01:11:44.940 --> 01:11:50.420
+because then you're introducing large errors in your linearization as we've seen and the second thing is if you're
+
+01:11:50.980 --> 01:11:52.380
+nonlinear
+
+01:11:52.380 --> 01:11:56.620
+Models cannot be approximated well by a linearized function
+
+01:11:56.620 --> 01:12:00.180
+And this also something when the Kalman filter is likely to fail
+
+01:12:00.180 --> 01:12:04.060
+but as long as your models are not too far away from
+
+01:12:05.100 --> 01:12:10.420
+Your from a linearized function a linear function or your uncertainties can be bounded
+
+01:12:10.420 --> 01:12:16.540
+For example by using high-quality sensors. The Kalman filter is a standard tool that we can use for
+
+01:12:17.220 --> 01:12:19.220
+recursive state estimation
+
+01:12:19.500 --> 01:12:22.260
+So if you want to dive a little bit deeper into the topic
+
+01:12:22.260 --> 01:12:30.380
+I recommend the probabilistic robotics book, especially chapter 3 and chapter 7 over here. And if you're interested in deriving the
+
+01:12:31.380 --> 01:12:35.020
+like the Kalman filter by manipulating Gaussian distributions, I
+
+01:12:36.100 --> 01:12:40.540
+Recommend the article by Schoen and Lindstrom, which you'll find fairly on the net
+
+01:12:41.380 --> 01:12:44.460
+Where they go step by step through the derivation
+
+01:12:45.140 --> 01:12:47.220
+Whatever five six pages something like this and
+
+01:12:47.420 --> 01:12:53.140
+Ending up in deriving the Kalman filter so you can actually with the tools that I've shown you in the lecture derive it by hand
+
+01:12:53.260 --> 01:12:57.300
+Also, we have not explicitly done this derivation here
+
+01:12:58.020 --> 01:13:00.900
+With this I'm coming to the end of today
+
+01:13:00.900 --> 01:13:09.020
+I hope you learned something about recursive state estimation how a concrete realization of a recursive base filter looks like namely the Kalman filter and
+
+01:13:09.260 --> 01:13:14.540
+Extended Kalman filter and now have tools at hand that you can actually use it for your own problems
+
+01:13:14.700 --> 01:13:17.900
+And the remaining part of those of the lecture in the upcoming parts
+
+01:13:17.900 --> 01:13:24.140
+we will look into examples how we can use the Kalman filter to actually solve one concrete state estimation problem like
+
+01:13:25.620 --> 01:13:27.140
+localization or
+
+01:13:27.140 --> 01:13:33.320
+Simultaneous localization mapping just as two examples. So thank you very much for your attention and see you soon. Bye
+

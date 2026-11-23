@@ -1,0 +1,941 @@
+WEBVTT
+
+00:00.000 --> 00:07.000
+Hello, I want to start this part of the course with the short introduction into the simultaneous localization or SLAM problem.
+
+00:07.000 --> 00:11.000
+So what is it about and why it is part of that course?
+
+00:11.000 --> 00:16.000
+So simultaneous localization mapping plays a vital part in this course.
+
+00:16.000 --> 00:22.000
+So actually the whole course has something to do with the simultaneous localization mapping problem.
+
+00:22.000 --> 00:28.000
+We will introduce least squares first, which is a main technique that we use to perform the state estimation problems.
+
+00:28.000 --> 00:38.000
+We then look into kind of the 2D SLAM problem, which is somewhat easier to grasp and understand using laser range scanners.
+
+00:38.000 --> 00:46.000
+And then we relax the problem, we make the problem more general, allowing for outliers in our data association.
+
+00:46.000 --> 00:51.000
+And then we'll also look into how to perform state estimation using cameras.
+
+00:52.000 --> 01:04.000
+And so taking sensor information, camera or laser rangefinder, using this information and turning this into a geometric model is kind of the whole purpose of this course here.
+
+01:04.000 --> 01:16.000
+And again, we have a teaching part which takes place here and we also have homework assignments where you actually have to implement solutions that we have discussed here in that course.
+
+01:17.000 --> 01:22.000
+So what is SLAM? Let's start with a very general form.
+
+01:22.000 --> 01:32.000
+So SLAM means we want to compute the poses, that means position and heading of a mobile platform, of a robot or of a sensor.
+
+01:32.000 --> 01:39.000
+And while the sensor moves through the environment and at the same point in time while estimating the pose, we also want to build a map of the environment.
+
+01:39.000 --> 01:42.000
+So we want to build a model of what the environment looks like.
+
+01:42.000 --> 01:57.000
+This model can be a dense 3D model, but also can be, let's say, positions of distinct points in the environment, maybe features I've extracted from my sensor data and then estimating the location of those features or landmarks in the environment.
+
+01:57.000 --> 02:04.000
+And this can serve as our model so we can again use that model in order to estimate our pose given that model.
+
+02:04.000 --> 02:11.000
+So there are three problems which actually come here together, something we refer to as localization, mapping and SLAM.
+
+02:11.000 --> 02:17.000
+So localization is the problem of estimating the pose, so answering the where am I question.
+
+02:17.000 --> 02:21.000
+Mapping refers to building a map, so what does the world look like.
+
+02:21.000 --> 02:29.000
+And SLAM, since for simultaneous localization and mapping, is the problem of addressing those two problems at the same point in time.
+
+02:29.000 --> 02:32.000
+So solving the localization and the mapping problem together.
+
+02:32.000 --> 02:38.000
+That's kind of challenging because we typically need to have a map in order to estimate our pose well.
+
+02:38.000 --> 02:43.000
+And on the other side, we need to have a good pose estimate in order to build a map.
+
+02:43.000 --> 02:50.000
+So we have a dependency between those two tasks and if we have a map given, localization is typically easy.
+
+02:50.000 --> 02:54.000
+If we have a good pose estimate, mapping is typically easy.
+
+02:54.000 --> 03:01.000
+But if you want to solve both things at the same time, it gets somewhat more challenging and that's the problem that we are tackling here.
+
+03:01.000 --> 03:08.000
+Again, I said we can do localization and SLAM and mapping with landmarks or with dense representations of the environment.
+
+03:08.000 --> 03:11.000
+But as my first example, I want to start with landmarks.
+
+03:11.000 --> 03:16.000
+So we have a robot that moved through the environment, which is indicated here by this circle.
+
+03:16.000 --> 03:20.000
+And we have landmarks, which are those stars here in the environment.
+
+03:20.000 --> 03:29.000
+And while the robot moved through the environment, it has a sensor to perceive where those landmarks are relative to its own location.
+
+03:29.000 --> 03:34.000
+But the problem is that those observations are noisy and also the motions of the robot are noisy.
+
+03:34.000 --> 03:41.000
+So while the robot moved through the environment, not everything is perfect and this leads to an uncertainty that we have here.
+
+03:41.000 --> 03:48.000
+So let's say the robot moved through the environment and in reality, it performs this movement over here.
+
+03:48.000 --> 03:57.000
+But the system sinks that is actually moving over here based on, let's say, weed encoders that the system can take or based on other information.
+
+03:57.000 --> 04:06.000
+So what the robot has, it will perceive a landmark and will now say, okay, that landmark, according to my current observation, is here.
+
+04:06.000 --> 04:12.000
+But I actually know that this landmark is over here because of a map of the environment, because we are under the localization problem here.
+
+04:12.000 --> 04:20.000
+So that means the robot can correct its post and says, okay, I should be actually closer to this location in order to take this information into account.
+
+04:20.000 --> 04:25.000
+And so the system will correct its post and will drag the system more toward this real post.
+
+04:25.000 --> 04:29.000
+So the system can continue on and get further corrections.
+
+04:29.000 --> 04:33.000
+And using this information, it can actually estimate its post.
+
+04:33.000 --> 04:41.000
+So that means the landmarks, so those stars, are constant, they are assumed to be given, and we just correct our post towards the real post.
+
+04:41.000 --> 04:44.000
+In the mapping example, it's slightly different.
+
+04:44.000 --> 04:51.000
+Here we assume we know our relative movement and we still have noise in our sensor observations and we want to build a map,
+
+04:51.000 --> 04:58.000
+so the location of these landmarks in this example, in order to have a map of the environment.
+
+04:58.000 --> 05:04.000
+So while the robot moved through the environment and takes observations, we now see these kind of gray stars over here,
+
+05:04.000 --> 05:11.000
+which are now the assumed positions of the landmarks estimated by the robot.
+
+05:11.000 --> 05:24.000
+And the offset between the true poses shown in yellow and the estimated poses shown in gray is actually the result of the noise in my sensor observation.
+
+05:24.000 --> 05:32.000
+In SLAM, we are trying to estimate the location of the landmarks and the position of the platform at the same point in time.
+
+05:32.000 --> 05:36.000
+So we don't have the reference where those landmarks are in the world.
+
+05:36.000 --> 05:45.000
+We need to estimate it while we are moving through the environment and moving with noisy motion, so having no perfect relative pose estimates.
+
+05:45.000 --> 05:55.000
+So while the system moved through the environment, it in this case deviates from the true pose, so the system thinks it moves over here,
+
+05:55.000 --> 06:00.000
+it sees a landmark, so it builds its own map and puts the landmark estimate over here and over here.
+
+06:00.000 --> 06:10.000
+So we can see that the real map and the map estimated by the platform is not identical, obviously, because there is noise in the process.
+
+06:10.000 --> 06:15.000
+But as the system moved through the environment and may come back to those landmarks at a later point in time,
+
+06:15.000 --> 06:20.000
+we may be able to correct for those errors that we have done, at least the non-systematic errors,
+
+06:20.000 --> 06:24.000
+so that in the end we actually build, hopefully, a consistent map of the environment,
+
+06:24.000 --> 06:35.000
+where at least the relative arrangement of those landmarks is consistent with reality, even if we, for example, don't have an absolute reference frame.
+
+06:35.000 --> 06:45.000
+So the simultaneous localization and mapping problem means we want to build a map of the environment using the sensor data from a mobile platform,
+
+06:45.000 --> 06:52.000
+for example, a mobile robot or a person holding a camera, for example, in its hand or using your smartphone.
+
+06:52.000 --> 06:59.000
+This is all what qualifies as a sensor and we move the sensor through the environment, we want to build a map of the environment.
+
+06:59.000 --> 07:09.000
+At the same point in time, we want to localize ourselves in that map that we are actually building and to come up with a map and a trajectory estimate.
+
+07:09.000 --> 07:14.000
+So there are various variants of the simultaneous localization and mapping problem.
+
+07:14.000 --> 07:23.000
+So considering some examples, a person moves a sensor through the environment, collects the sensor data and then wants to build a map of the environment afterwards.
+
+07:23.000 --> 07:29.000
+This is something that we often call the full SLAM problem or an offline SLAM problem.
+
+07:29.000 --> 07:38.000
+Here all the sensor data is collected initially and then we have all the sensor data at hand and want to build the best possible map of the environment.
+
+07:38.000 --> 07:51.000
+Another alternative is, this is more important if we think about robotics applications, drones, self-driving cars, is that we process the information in real time or near real time
+
+07:51.000 --> 08:00.000
+and want to turn the new observation that we get directly into a model as well as a pose estimate so that the system can react based on those estimates.
+
+08:00.000 --> 08:15.000
+So if, for example, a self-driving vehicle needs to make decisions where to go, it should be able to build the environment model as well as estimating its own pose online in real time and make decisions based on what it sees.
+
+08:15.000 --> 08:24.000
+So this is something that we call online SLAM. This is also very related to the bundle adjustment problem.
+
+08:24.000 --> 08:29.000
+This is basically the SLAM problem for cameras using only camera observation.
+
+08:29.000 --> 08:39.000
+SLAM can be formulated in a somewhat more general form, taking into account different sensing modalities, motions, but all in all those problems are extremely similar.
+
+08:39.000 --> 08:47.000
+So SLAM can be seen as kind of online bundle adjustment using arbitrary sensors, not just only cameras.
+
+08:47.000 --> 09:12.000
+So there's one example of a platform that we have built, it was during that time, still in Freiburg, where we had a robot navigating through the environment, being equipped with a sensor, laser sensor, so one was sitting down here, another laser sensor sitting over here, as well as cameras, perceiving the environment and estimating a map as well as its own pose.
+
+09:12.000 --> 09:27.000
+So again, we have this what is often referred to as chicken or egg problem, so a map is needed for localization, but a good pose estimate or localization information is also needed for mapping, and so we have this coupling of localization and mapping.
+
+09:27.000 --> 09:33.000
+And we need to solve it actually in real time in order to autonomously navigate.
+
+09:33.000 --> 09:40.000
+So in order to take the model into account and use, for example, a planning system in order to plan a path towards a goal location.
+
+09:40.000 --> 09:47.000
+For that, we need to be able to build a map and estimate the pose at the same point in time.
+
+09:47.000 --> 10:00.000
+And in the end, that's something that most autonomous systems, most mobile robots, UAVs, autonomous cars need if they want to drive autonomously or navigate autonomously through the environment.
+
+10:00.000 --> 10:10.000
+Of course, we can always have maps, so if we have built a map beforehand, for example, through a human operator and then use this map for navigation, this dramatically simplifies our problem.
+
+10:10.000 --> 10:19.000
+But typically, at some point in time, the environment changes or the system should be deployed in a space where there's no map before.
+
+10:19.000 --> 10:29.000
+And if you want to build these truly autonomous systems, then we actually need to solve the SLAM problem as well in an online fashion in order to solve most of the navigation tasks that we do.
+
+10:29.000 --> 10:42.000
+So SLAM is an important part and has been used in a lot of different settings and is basically the key ingredient for most applications.
+
+10:42.000 --> 10:51.000
+So some examples, if you're at home, if you have a vacuum cleaner, you can either have a vacuum cleaner which just does random walk, then it may not need a model of the environment.
+
+10:51.000 --> 11:00.000
+But as soon as you want to do, let's say, some systematic cleaning or performing lawn mowing, you need to have an idea where you are and what your environment looks like in order to do that in a systematic fashion.
+
+11:00.000 --> 11:02.000
+So here SLAM is needed.
+
+11:02.000 --> 11:09.000
+If you think about UAVs flying around mapping the environment, there you need this information.
+
+11:09.000 --> 11:18.000
+UAVs have the advantage that they're typically flying outdoors and typically have, let's say, good clearance to the sky, so GPS is a very helpful sensor here.
+
+11:18.000 --> 11:33.000
+But maybe you're also flying in urban canyons where the GPS signal is not very good or even flying indoors and then you also need to equip those systems with the ability to localize themselves in the map that they're building using the onboard sensing capabilities.
+
+11:33.000 --> 11:37.000
+It's relevant for underwater applications like reef monitoring.
+
+11:37.000 --> 11:49.000
+People from Australia have built very nice systems which allow to dive, for example, at different reefs, monitoring coral reefs and other underwater structures.
+
+11:49.000 --> 12:03.000
+Also for exploring abandoned mines, historical places like catacombs for those setups, you need systems which can navigate autonomously through the environment and build a map of that space.
+
+12:03.000 --> 12:05.000
+So just have a few examples here.
+
+12:05.000 --> 12:16.000
+These are different robotic platforms starting from indoor cleaning services through underground reef monitoring, underwater reef monitoring, exploring mines or even outer space applications.
+
+12:16.000 --> 12:28.000
+And in all those setups, you actually need the ability to build a map of the environment and estimate your pose with respect to that map.
+
+12:28.000 --> 12:30.000
+So here's a short example.
+
+12:30.000 --> 12:32.000
+This is the mint cleaning system.
+
+12:32.000 --> 12:39.000
+It's one of the early cleaning systems now owned by iRobot, originally built from Evolution Robotics.
+
+12:39.000 --> 12:45.000
+And that used a so-called North Star system which was basically a small projector projecting infrared patterns to the ceiling.
+
+12:45.000 --> 12:54.000
+And then the system could actually perceive those artificially created landmarks and build a SLAM system in order to perform systematic cleaning.
+
+12:54.000 --> 12:58.000
+And I just have a short video which illustrates this.
+
+12:58.000 --> 13:03.000
+So what you see here is the example.
+
+13:03.000 --> 13:15.000
+The North Star projects a pattern to the ceiling and you see the cleaning robot driving through the environment and cleaning the floor so that you have a systematic cleaning setup and not doing random work.
+
+13:15.000 --> 13:26.000
+For example, which is needed if you do wet cleaning so that the system can also navigate very nicely around all those structures in the environment and performs systematic cleaning.
+
+13:26.000 --> 13:31.000
+And for that, you actually need to be able to estimate where you are.
+
+13:31.000 --> 13:36.000
+You should be able to estimate what the environment looks like and where you have been.
+
+13:36.000 --> 13:41.000
+So another example I want to show here is how those systems may work internally.
+
+13:41.000 --> 13:48.000
+So this is an example of a SLAM system using 2D laser rangefinder that Giorgio Grevetti and myself have built.
+
+13:48.000 --> 13:53.000
+So what you see here is a robot that's kind of a zoomed view.
+
+13:53.000 --> 13:59.000
+You see the laser range scan, so it's kind of a 2D scan like scanning in a plane moving through the environment.
+
+13:59.000 --> 14:04.000
+And here you see the map that the system actually builds up while moving through the environment.
+
+14:04.000 --> 14:07.000
+And you can see here how the robot drives around.
+
+14:07.000 --> 14:10.000
+Everything which is black here basically are obstacles.
+
+14:10.000 --> 14:13.000
+This is kind of the current scan which you can see over here.
+
+14:13.000 --> 14:19.000
+The system moved through the environment, estimated its pose, and now when it re-enters a known part of the environment, you can see that the map is shaking a little bit.
+
+14:19.000 --> 14:29.000
+This is an optimization procedure which works based on least squares estimation, trying to estimate where the system is in the environment.
+
+14:29.000 --> 14:39.000
+When coming back to a previously seen place in the environment, an estimate, then a hopefully consistent map of the environment containing here buildings,
+
+14:39.000 --> 14:44.000
+different trajectories, so that's the computer science campus in Freiburg.
+
+14:44.000 --> 14:53.000
+And this is an example of a SLAM system which allows to take the local observation, estimate how the system is moving, building a local map,
+
+14:53.000 --> 15:01.000
+and then basically extending the map, localizing in that map, extending the map, and in this way build a large-scale map of the environment.
+
+15:02.000 --> 15:09.000
+Okay, so let's get a little bit more technical and try to understand how we can formulate the SLAM problem.
+
+15:09.000 --> 15:13.000
+So what is given? So we assume to have access to the robot controls.
+
+15:13.000 --> 15:17.000
+That means we have an idea which command the robot actually executes.
+
+15:17.000 --> 15:21.000
+For example, if it drives a meter forward within a second.
+
+15:21.000 --> 15:28.000
+This information may be noisy, but these are motion commands or can also be odometry information, and we assume to have access to this information.
+
+15:28.000 --> 15:32.000
+The same holds for our sensor observations, typically referred to as Z.
+
+15:32.000 --> 15:39.000
+These are, for example, camera images or laser data in the example before, and we have a sequence of those observations,
+
+15:39.000 --> 15:49.000
+and we always assume to know the point in time when this observation has been taken or when the sensor, the control command, was actually admitted to the platform.
+
+15:49.000 --> 15:51.000
+So we assume to have time-synchronized data here.
+
+15:51.000 --> 15:59.000
+And what we want to estimate is the map of the environment, which we refer to as M, as well as the path of the platform.
+
+15:59.000 --> 16:06.000
+And with path, I actually mean the position and orientation information or heading information of the platform.
+
+16:06.000 --> 16:16.000
+So it typically consists of a positional part and an orientational part, which is the direction, so orientation angles involved in here, also at different points in time.
+
+16:17.000 --> 16:24.000
+So given control commands and observation, we want to estimate the map of the environment as well as the trajectory of the platform.
+
+16:24.000 --> 16:27.000
+And we do this as a probabilistic approach.
+
+16:27.000 --> 16:34.000
+So we don't say the robot is exactly here because it's information that we typically cannot estimate or cannot provide.
+
+16:34.000 --> 16:37.000
+What we are estimating are probability distributions.
+
+16:37.000 --> 16:49.000
+So we are trying to provide a probability distribution where, for example, the mean of this probability distribution is as close as possible to the true pose of the platform, but we also have a knowledge of uncertainty.
+
+16:49.000 --> 16:52.000
+So how certain are we about this information?
+
+16:52.000 --> 17:00.000
+And this typically relates to or has to always relate to the uncertainty that I have in my observations and the uncertainty that I have in my motion.
+
+17:01.000 --> 17:09.000
+So the uncertainty of the motion and the uncertainty of the observations will impact the uncertainty of the overall map that we actually have.
+
+17:09.000 --> 17:20.000
+So this boils down to estimating a probability distribution p of x and m given, so we read this as given, all my observations and all my control commands.
+
+17:20.000 --> 17:28.000
+So in the probabilistic view of the SLAM problem, everything boils down to estimating this probability distribution.
+
+17:28.000 --> 17:31.000
+And, of course, there are a lot of variants how I can do this.
+
+17:31.000 --> 17:35.000
+What are assumptions, for example, about the form of this probability distribution?
+
+17:35.000 --> 17:41.000
+If the thing is expected to be Gaussian or not, this will have a big impact on the state estimation algorithm that we are using.
+
+17:41.000 --> 17:50.000
+Will certain models which relate controls and positions or observations and positions be linear or nonlinear?
+
+17:50.000 --> 17:54.000
+Yeah, this has a big impact on the tank that we are actually using.
+
+17:55.000 --> 18:00.000
+But in the end, everything boils down to estimating this probability distribution.
+
+18:00.000 --> 18:06.000
+What we can also do, we can look into this from a graphical model point of view.
+
+18:06.000 --> 18:17.000
+So again, graphical models like Bayes networks are one way for, let's say, illustrating probability distribution or especially illustrating dependencies between probability distributions.
+
+18:17.000 --> 18:22.000
+So what we have here are different circles and the circles refer to variables.
+
+18:22.000 --> 18:26.000
+So what you see here, for example, is xt-1, xt, xt-1.
+
+18:26.000 --> 18:31.000
+So these are the pose information of the platform at different points in time.
+
+18:31.000 --> 18:36.000
+And then we have our control commands, our observations, and our map.
+
+18:36.000 --> 18:42.000
+And we can read those errors in this plot as kind of influences or impacts.
+
+18:42.000 --> 18:47.000
+So the, for example, control command impacts the next pose.
+
+18:47.000 --> 18:54.000
+So if I am somewhere and I'm executing a control command, this is an impact on the next observation.
+
+18:54.000 --> 19:02.000
+And so also being at a position xt, where I am, the information where I am impacts the next observation, what I'm going to see.
+
+19:02.000 --> 19:10.000
+And so this is important because the position of the robot impacts the observation.
+
+19:10.000 --> 19:14.000
+Of course, where are the landmarks will impact what I'm seeing.
+
+19:14.000 --> 19:23.000
+And so those errors model kind of dependencies between those variables can be read as impacts or influences.
+
+19:23.000 --> 19:27.000
+And we can see those things which are here, this grey box around.
+
+19:27.000 --> 19:31.000
+These are the variables that are unknowns that I actually want to estimate.
+
+19:31.000 --> 19:35.000
+And those variables over here are the knowns.
+
+19:35.000 --> 19:41.000
+So this is unknown, this one is unknown, and everything in between here is known.
+
+19:41.000 --> 19:48.000
+And now those errors actually tell me something about the probability distributions that I'm interested in.
+
+19:48.000 --> 19:53.000
+And the independence assumptions that I can make in those probability distributions.
+
+19:53.000 --> 20:04.000
+And again, what we're estimating here is the full sequence of poses and the map of the environment given all the unknowns.
+
+20:04.000 --> 20:07.000
+And this is something that we often refer to as the full SLAM problem.
+
+20:08.000 --> 20:13.000
+So full SLAM means I'm estimating also the whole trajectory information over here.
+
+20:13.000 --> 20:19.000
+And this is different to what is referred to as online SLAM often.
+
+20:19.000 --> 20:23.000
+In online SLAM we are only estimating the current pose of the platform.
+
+20:23.000 --> 20:25.000
+We don't really care about the rest.
+
+20:25.000 --> 20:27.000
+We don't really care where we have been in the past.
+
+20:27.000 --> 20:29.000
+Why is this relevant?
+
+20:29.000 --> 20:34.000
+This is, for example, relevant if we think about an autonomous robot driving through the environment
+
+20:34.000 --> 20:39.000
+who makes decisions based on the map that it builds, but it's not really interested in where it has been before.
+
+20:39.000 --> 20:44.000
+So we're just interested in where am I right now in order to make the right decision.
+
+20:44.000 --> 20:52.000
+And this is something that we are often referring to as online SLAM where we're only interested in estimating the current state of the system.
+
+20:52.000 --> 20:56.000
+So where is the robot right now and what does the world look like?
+
+20:56.000 --> 21:00.000
+We're not interested about where the platform has been previously.
+
+21:00.000 --> 21:08.000
+So in terms of the graphical model, we can see then only these two variables are now the quantities that I actually want to estimate.
+
+21:08.000 --> 21:13.000
+And I can actually ignore the past poses.
+
+21:13.000 --> 21:20.000
+And this is equivalent to marginalizing out those variables, so integrating them away.
+
+21:20.000 --> 21:28.000
+So this means the online SLAM problem, where I'm only interested in xt and not in the other poses,
+
+21:28.000 --> 21:39.000
+can be seen as integrating over all the previous poses of the full SLAM distribution and then only the current pose in time actually survives.
+
+21:39.000 --> 21:51.000
+So this graphical model for online SLAM basically boils down to estimating only this variable and this variable and integrating out those other variables,
+
+21:51.000 --> 22:00.000
+which can, from a mathematical point of view, be seen as an integral over all the previous poses, simply marginalizing out the other variables.
+
+22:00.000 --> 22:04.000
+So you may ask yourself now, why is that actually a difficult problem?
+
+22:04.000 --> 22:11.000
+It's just a probability distribution to estimate where the dimensionality increases, for example, compared to localization.
+
+22:11.000 --> 22:19.000
+So the problem that we have is that mapping and SLAM are tightly coupled problems.
+
+22:19.000 --> 22:26.000
+And if both are unknown at the same point in time, this is something which can be a challenging problem.
+
+22:26.000 --> 22:34.000
+So for example, the robot drives through the environment, gets observations and then moves on.
+
+22:34.000 --> 22:38.000
+So these ellipses should indicate here the uncertainty of the platform.
+
+22:38.000 --> 22:42.000
+The robot moves on and then the next observation is taken.
+
+22:42.000 --> 22:51.000
+The robot sees those observations here, moves on and then it may get another observation and can now relate those poses with each other.
+
+22:51.000 --> 22:56.000
+And the problem that we have is that those variables also are correlated now with each other.
+
+22:56.000 --> 23:03.000
+Because the better I know, for example, this position over here, the better I should know those other positions.
+
+23:03.000 --> 23:14.000
+Or if I would know exactly where this landmark is, this would reduce this uncertainty here but would also reduce the other uncertainties, for example, of this landmark or about this pose or about this pose.
+
+23:14.000 --> 23:27.000
+So the map estimate and the pose estimate get correlated with each other and these correlations need to be taken into account in the state estimation problem in order to get a correct probabilistic belief.
+
+23:27.000 --> 23:34.000
+That's one thing which makes it difficult or especially computationally difficult because we need to maintain all those correlations.
+
+23:35.000 --> 23:44.000
+The second thing why SLAM is a tricky problem is typically something which we refer to as known versus unknown correspondences or the data cessation problem.
+
+23:44.000 --> 23:50.000
+So the problem is that the platform often doesn't know perfectly what it sees.
+
+23:50.000 --> 23:58.000
+So if you think about a landmark, with a sensor we can extract landmark information, so estimating what we're actually seeing.
+
+23:59.000 --> 24:08.000
+But the problem is we cannot uniquely identify those landmarks. At least we can do it most of the time but we can't guarantee that this is always the case.
+
+24:08.000 --> 24:14.000
+For example, if we have visual features, let's say sift features, sift features come with a descriptor vector.
+
+24:14.000 --> 24:27.000
+This descriptor vector tries to describe the local environment as good as possible but we still may be able to mix up features, for example, if we have repetitive structures in the environment.
+
+24:27.000 --> 24:31.000
+Because just the local surrounding is hard to distinguish for those features.
+
+24:31.000 --> 24:40.000
+Or if we even have a laser range scanner and we just detect, for example, corners out of a range scan, it's hard to actually make the right data associations given all those corners.
+
+24:40.000 --> 24:48.000
+And so known correspondences simplify our life but unknown correspondences can make the SLAM problem very, very hard.
+
+24:48.000 --> 24:55.000
+So we can see this here, let's say we have three landmarks in the environment, one, two, three, but the system can't distinguish those landmarks.
+
+24:55.000 --> 25:06.000
+It just gets two observations so it can be either the case that the platform is over here and sees those two landmarks or the platform is over here a little bit to the right and observes those two landmarks.
+
+25:06.000 --> 25:08.000
+So basically the setup that we have here.
+
+25:08.000 --> 25:11.000
+So we cannot really distinguish in which situation we are in.
+
+25:11.000 --> 25:21.000
+And if I make the wrong data association, this typically leads to problems in my state estimation algorithms because I get overly confident and actually get wrong estimates about those poses.
+
+25:21.000 --> 25:25.000
+So these unknown correspondences turn out to be a really hard problem.
+
+25:25.000 --> 25:34.000
+And there's actually a dependency between the uncertainty of the platform and making the right or wrong data association.
+
+25:34.000 --> 25:46.000
+So if you, for example, can say this is my uncertainty of the robot, those two possible data associations are both in line with my probabilistic estimate.
+
+25:46.000 --> 25:59.000
+If I would have a better estimate in terms of a low uncertainty, so for example, this ellipse is much, much smaller, then I might be able to say, okay, this data association is much more likely than the other data association.
+
+25:59.000 --> 26:01.000
+So I can stick with this one.
+
+26:02.000 --> 26:08.000
+But again, the more uncertain I am, the harder my data association problem becomes.
+
+26:08.000 --> 26:22.000
+And if I then make a wrong decision, my belief about the world gets wrong, which leads me to making wrong data associations in the future and finally to a divergence of, for example, my filter or my state estimation system.
+
+26:22.000 --> 26:25.000
+And that's one of the things what makes SLAM actually a tricky problem.
+
+26:25.000 --> 26:34.000
+So data association or wrong data associations is one of the key things that we need to take care of and handle if you want to build a real world SLAM system.
+
+26:37.000 --> 26:39.000
+So in terms of the maps, what does actually a map look like?
+
+26:39.000 --> 26:41.000
+We're talking here only about those features.
+
+26:41.000 --> 26:43.000
+So this is one example how that could look like.
+
+26:43.000 --> 26:53.000
+So what you see here on the right-hand side is Victoria Park in Sydney, and this was one of the famous SLAM datasets researchers used for a very long time.
+
+26:53.000 --> 26:58.000
+And you were estimating basically the trunks of trees or pole-like features in the environment.
+
+26:58.000 --> 27:00.000
+This is one example how we can localize.
+
+27:00.000 --> 27:11.000
+The other thing could be really 3D scans of environments, building dense models or these floor plan-like maps, these grid maps that you could use to actually build a map of the environment.
+
+27:11.000 --> 27:20.000
+And these are all different representations from volumetric representations or planar ones to feature-based representations.
+
+27:20.000 --> 27:25.000
+This is all different representations that we can handle using the SLAM system.
+
+27:27.000 --> 27:30.000
+If you look to the question, how is a SLAM problem typically solved?
+
+27:30.000 --> 27:35.000
+If you look to the robotics literature, there are kind of three, I call them traditional paradigms on how to do that.
+
+27:35.000 --> 27:40.000
+One is the Kalman filter, at least in the robotics community, people started with the Kalman filter.
+
+27:41.000 --> 27:46.000
+Using this as an estimator to estimate where the platform is in the environment and where our landmarks are.
+
+27:46.000 --> 27:57.000
+Then we have particle filter-based representations which have the advantage that they get rid of the Gaussian assumption about the world and we can estimate multimodal beliefs, those particle filter applications.
+
+27:57.000 --> 28:06.000
+And then there are the graph-based approaches which typically refer to least squares formulations of the simultaneous localization mapping problem.
+
+28:06.000 --> 28:10.000
+And in this course, we are only looking to the graph-based representations over here.
+
+28:10.000 --> 28:20.000
+So if you're interested in the Kalman filter or particle filter-based representation, I would refer you to my 2012 robot mapping course which is available also on YouTube.
+
+28:20.000 --> 28:25.000
+There we go in detail, also in terms of the Kalman filter and the particle filter.
+
+28:25.000 --> 28:35.000
+But here in this course, I want to focus on the graph-based representations because today most of the systems for tackling the SLAM problem will use those graph-based representations.
+
+28:35.000 --> 28:46.000
+Because the graph has some attractive properties also when taking to count multiple different sensors, when being able to revise previous data station decisions for example.
+
+28:46.000 --> 28:55.000
+The idea of using this graph-based representation and least squares approach is very attractive and is today, let's say, the most frequently used representation.
+
+28:55.000 --> 29:03.000
+And therefore, we are actually sticking here with this graph-based paradigm for the simultaneous localization mapping problem.
+
+29:05.000 --> 29:15.000
+As I said, everything boils down to observations and controls which are used in order to estimate where I am and what the world looks like.
+
+29:15.000 --> 29:26.000
+So the information about how good my observations are and the information on how well I can describe my motion has a key impact on my state estimation system.
+
+29:26.000 --> 29:34.000
+So if I go back to this graphical model representation that I've shown you in the beginning, we could see here if we kind of take out this area over here.
+
+29:34.000 --> 29:49.000
+We have the variable which describes the position of the platform at time t, the variable which describes the position of the platform at time t-1 and the control command which guides the platform from t-1 to t which is called ut over here.
+
+29:49.000 --> 29:55.000
+And so these two arrows are the two incoming arrows into the variable xt.
+
+29:55.000 --> 30:00.000
+And so this element here is something that we can use to describe the motion model.
+
+30:00.000 --> 30:07.000
+So where am I at time t given I know where I have been at time t-1 and given my control command?
+
+30:07.000 --> 30:14.000
+This is something, if you remember the courses from last semester, this is something that referred to as the motion model.
+
+30:14.000 --> 30:16.000
+The same holds down here.
+
+30:16.000 --> 30:28.000
+The probability distribution of an observation given the map of the environment, given the position of the platform is something that we refer to as the observation model.
+
+30:28.000 --> 30:32.000
+So p of z given x, where x in this example also includes that.
+
+30:32.000 --> 30:39.000
+And these are the two models, the observation model and the motion model which have a key impact on our system.
+
+30:39.000 --> 30:51.000
+So for the motion model, just as a short reminder for you, what is the probability of being at a position x at time t given I know where I was before and given the command that I executed.
+
+30:51.000 --> 30:54.000
+And there are different ways how I can actually model this.
+
+30:54.000 --> 30:57.000
+We can use a Gaussian distribution for example.
+
+30:57.000 --> 31:06.000
+So through the motion typically the uncertainty of the Gaussian increases and the kinematics of the system basically tell me how the mean is going to be shifted.
+
+31:06.000 --> 31:17.000
+Or we can have non-Gaussian distributions, these banana shape distributions that we looked into which take into account that you have a Gaussian noise in your rotations and in your translations.
+
+31:17.000 --> 31:24.000
+But given the non-linearity of those models, this doesn't result in an overall Gaussian distribution.
+
+31:24.000 --> 31:31.000
+So we have a simple Gaussian model or we have these non-Gaussian models where we obtain these banana shape distributions.
+
+31:31.000 --> 31:43.000
+And those models will again play an important role in the simultaneous localization and mapping problem because this is one of those models that we may want to use in order to formulate our least squares problem.
+
+31:44.000 --> 31:48.000
+Very similar for the observation models, we looked into different observation models.
+
+31:48.000 --> 31:53.000
+So what is the likelihood of an observation given the pose or given the current state.
+
+31:53.000 --> 31:58.000
+So additionally to pose we should also add the map over here which is now part of the state space.
+
+31:58.000 --> 32:06.000
+And it's important to estimate what is the likelihood of an observation of what we are seeing given the current state of the world.
+
+32:06.000 --> 32:12.000
+So assuming I know where I am and assuming I know what the world looks like, what is the likelihood of obtaining an observation.
+
+32:12.000 --> 32:17.000
+And this is the key element for performing updates for example.
+
+32:17.000 --> 32:27.000
+If you think about landmarks, we can think about a simple Gaussian model where we have an estimate about where something is in the environment, a landmark for example.
+
+32:27.000 --> 32:34.000
+If we also looked into non-Gaussian models as beam based models, this will play not a very big role in here.
+
+32:34.000 --> 32:39.000
+So if you think about landmarks, that will be the model that we will be using most of the time at least.
+
+32:39.000 --> 32:46.000
+But there is another concept which will play an important role which is something that I informally often call a virtual observation.
+
+32:46.000 --> 32:55.000
+And the idea of a virtual observation is to relate the poses from which an observation has been taken and use this as a measurement.
+
+32:55.000 --> 33:03.000
+So if you have two positions like I'm standing right now here, I'm looking in this direction and at a later point I'm standing here and looking into this direction.
+
+33:03.000 --> 33:09.000
+By comparing those observations I can tell something about this relative transformation between those two poses.
+
+33:09.000 --> 33:15.000
+And I can use this as an observation, as kind of a virtual observation, not taking into account what I've actually been seeing.
+
+33:15.000 --> 33:21.000
+So if you have the example, for example, you see three landmarks over here and we have observation of those three landmarks.
+
+33:21.000 --> 33:28.000
+And let's say in situation one the robot has been seeing those three landmarks from this location.
+
+33:28.000 --> 33:34.000
+And then the robot moves on and takes this, gets a second observation, so has a second observation from here, but seeing the same landmarks.
+
+33:34.000 --> 33:45.000
+Then by knowing that it sees the same landmarks and by exploiting the properties of my sensor, I can actually generate a virtual observation which tells me how far did the robot move.
+
+33:45.000 --> 33:48.000
+Something like a relative orientation of the platform.
+
+33:48.000 --> 33:55.000
+And this is a knowledge about the relative poses and I can also use this as an observation in our SLAM graph.
+
+33:55.000 --> 34:02.000
+And that's actually something that we will be using a lot also in the next part of the course when we start with graph-based SLAM,
+
+34:02.000 --> 34:09.000
+taking into account these virtual observations in order to relate the pose of the robot at different points in time.
+
+34:09.000 --> 34:15.000
+So by now you should have a rough idea what the simultaneous localization and mapping problem is about.
+
+34:15.000 --> 34:18.000
+So it was a very informal and brief introduction.
+
+34:18.000 --> 34:25.000
+So it's the task of estimating where the platform and what does the world look like given observation and controls.
+
+34:25.000 --> 34:32.000
+It's always handled or at least in this course always handled as a probabilistic state estimation problem.
+
+34:32.000 --> 34:40.000
+That means we're using state estimation techniques or optimization techniques which are directly related to state estimation problems.
+
+34:40.000 --> 34:46.000
+And when I estimate the probability distribution telling us where the platform is and what the world looks like.
+
+34:46.000 --> 34:51.000
+And there are different variants how we can do this like full SLAM or online SLAM.
+
+34:51.000 --> 34:58.000
+And there are different map representations that I can build like volumetric representations or landmark-based representations.
+
+34:58.000 --> 35:04.000
+And there are different state estimation techniques I can use and we are restricting ourselves here to the graph-based representations.
+
+35:04.000 --> 35:10.000
+And so this is the framework we are kind of in.
+
+35:10.000 --> 35:18.000
+We will start with using laser range scanners and the second part of the course will also look at what happens when we actually have cameras at hand.
+
+35:18.000 --> 35:21.000
+Okay, so that's it from my side for today.
+
+35:21.000 --> 35:29.000
+As for the reading material it may be good to reread the SLAM chapter in the Handbook on Robotics.
+
+35:29.000 --> 35:39.000
+This is an overview paper describing what I have told you here slightly going a little bit more into details what different variants of the SLAM problem are out there.
+
+35:39.000 --> 35:44.000
+But it gives you a very good overview. You can access it by Ecampus part of this chapter.
+
+35:44.000 --> 35:53.000
+And so this should give you an overview and basically allow you to revisit what we have been talking here today.
+
+35:53.000 --> 35:59.000
+As a second part there you may revisit the basic math slide set that is available also in Ecampus.
+
+35:59.000 --> 36:08.000
+It's just a summary of different concepts like brief reminder to least squares estimation, how to solve a system of linear equations,
+
+36:08.000 --> 36:13.000
+homogeneous coordinates, different things like this which will be used at some point in time in this course.
+
+36:13.000 --> 36:23.000
+You should be aware of all that thing but in case you have forgotten that over the last years it may be good to have a look to the slide set and revisit this material.
+
+36:23.000 --> 36:37.000
+So with this I thank you very much for your attention and I hope you will be with us for the remaining part of the term and hopefully able to understand the concept of SLAM.
+
+36:37.000 --> 36:47.000
+How can we build a state-of-the-art graph based SLAM system and how to interpret laser data as well as camera data in order to perform this data estimation.
+
+36:47.000 --> 36:53.000
+So stay with us, stay tuned, do your homework assignments in order to improve your knowledge.
+
+36:53.000 --> 37:02.000
+Most of them are coding based homework assignments using Python and you should get the support from Nivet who is tutoring the course.
+
+37:02.000 --> 37:05.000
+If you need support please let us know. Thank you very much.
+

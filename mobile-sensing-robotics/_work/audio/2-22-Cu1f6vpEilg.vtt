@@ -1,0 +1,920 @@
+WEBVTT
+
+00:00.000 --> 00:08.000
+So welcome everyone. I want to talk today about the RANSAC algorithm, which is one approach for dealing with outliers in your data.
+
+00:08.000 --> 00:17.000
+So if you have real-world data from a laser range scanner or from multiple camera images, you will need to make data association between those measurements,
+
+00:17.000 --> 00:24.000
+between parts in the image number one and parts in the image number two, or between parts of a laser range scan in scan one and parts of a second scan.
+
+00:24.000 --> 00:30.000
+And those data associations are often correct, but they are not outlier-free.
+
+00:30.000 --> 00:39.000
+And the approach here gives us a chance on identifying those outliers and eliminating those outliers in order to make our state estimation algorithms more robust.
+
+00:39.000 --> 00:45.000
+So let's start with an example with a pair of images taken from different viewpoints that you have seen already.
+
+00:45.000 --> 00:48.000
+And what I want to do is I want to make data associations between those two images.
+
+00:48.000 --> 00:53.000
+So saying this point in this image number one corresponds to this point in image number two.
+
+00:53.000 --> 00:57.000
+I need those correspondences in order to compute, for example, the relative orientation.
+
+00:57.000 --> 01:07.000
+So where has this image been taken with respect to the other image or the other viewpoint for the simultaneous localization mapping problem and a large number of other applications.
+
+01:07.000 --> 01:15.000
+And what we can do, we can extract features from those images and make feature correspondences based on a feature descriptor value, for example.
+
+01:16.000 --> 01:34.000
+So if you run the SIFT algorithm and draw now all found correspondences on top of these two images, we can see that there are a lot of correct ones, or seem to be consistent ones, let's say that way, which are those going from this side to the other side, but we see a lot of random lines going all over the image.
+
+01:34.000 --> 01:37.000
+And these are typically the outliers, the incorrect data associations.
+
+01:37.000 --> 01:44.000
+And what we want to do is we want to take this outlier set and turn it into this outlier set, which is a set of inliers.
+
+01:44.000 --> 01:49.000
+And here we can see all those correspondences are rather consistent with each other.
+
+01:49.000 --> 02:00.000
+And this consistency is something that we will actually exploit in the RANSAC algorithm in order to find the inliers and outliers and get rid of those outliers.
+
+02:01.000 --> 02:08.000
+So this was an example for image-based matching, where we want to match the content of two images, but we can also fit models in laser range data.
+
+02:08.000 --> 02:15.000
+So consider you have aerial laser range scans, so taken from top, and you want to estimate the ground plane.
+
+02:15.000 --> 02:22.000
+So you want to actually estimate this plane, or in this 2D illustration line over here, that corresponds to the ground plane.
+
+02:22.000 --> 02:32.000
+Although there are measurement points which are reflected from the trees, the robot, the building, whatever, but you want to say which one are inliers for the ground plane and which are outliers.
+
+02:32.000 --> 02:40.000
+And this is also a technique or a problem where RANTHEC can help you in order to identify those points which lie on that line.
+
+02:40.000 --> 02:50.000
+So today we're looking into the RANSAC algorithm, an approach which is nearly 40 years old by now, but still the gold standard today for dealing with outlier situations.
+
+02:50.000 --> 03:04.000
+So when you have data and made data associations, and those data associations are affected by outliers, or you have outliers, you want to fit a model through that, and you need to identify which of the data points are inliers and outliers for your model estimation technique.
+
+03:04.000 --> 03:06.000
+Okay, how does it work?
+
+03:06.000 --> 03:15.000
+So it is a trial and error approach, actually quite easy to explain, quite easy to grasp, and has the advantages that can deal with high fractions of outliers.
+
+03:15.000 --> 03:23.000
+So even with 50% outliers in your data set, you're typically able to find the inlier set and then perform your state estimation algorithm.
+
+03:23.000 --> 03:27.000
+So it's actually a very powerful algorithm.
+
+03:27.000 --> 03:35.000
+So the key idea is to partition the data points into inliers and outliers, and then use only the inliers to perform the subsequent state estimation task.
+
+03:35.000 --> 03:38.000
+And it does so by a very simple approach.
+
+03:38.000 --> 03:51.000
+It basically guesses inliers, does model computations use those guessed inliers, and then take all the other points which have not been used so far to evaluate how consistent they are with the computed model.
+
+03:51.000 --> 03:59.000
+And then this process is repeated over and over and over again, and then in the end I take the model which has the highest agreement of the data points.
+
+03:59.000 --> 04:03.000
+And this is basically all what RANSEC is about.
+
+04:03.000 --> 04:10.000
+And again, it's very simple to explain, very simple to implement, and maybe we should go through this with a concrete example.
+
+04:10.000 --> 04:12.000
+So again, we have the three steps.
+
+04:12.000 --> 04:17.000
+The first one is the sampling step, the second one the model computation step, and the third one the scoring step.
+
+04:17.000 --> 04:24.000
+So the sampling step, what it does, it basically picks a few data associations and assumes they are inliers.
+
+04:25.000 --> 04:35.000
+And I need to pick a small number of those inliers, and this is typically the number we call S, the number of data points that I need in order to compute my model.
+
+04:35.000 --> 04:49.000
+So for example, if I want to compute the relative orientation between two camera images, I am using an algorithm here which is called the five-point algorithm, so it needs five data points in order to do the computations.
+
+04:49.000 --> 04:53.000
+This means I would sample five data points in order to do the computation.
+
+04:53.000 --> 05:01.000
+Or if I want to fit a line through data points, then I typically need two data points in order to fit a line through those two points.
+
+05:01.000 --> 05:05.000
+So the model determines how many data points I need to sample.
+
+05:05.000 --> 05:13.000
+So after I've sampled my data points, I use those data points as perfect inliers, for no outliers, and do my standard model computation.
+
+05:13.000 --> 05:17.000
+So this is my background knowledge, this describes the task that I actually want to do.
+
+05:18.000 --> 05:31.000
+And then in the third step, I take all the remaining data points, all the data points I haven't used so far in the model computation, and estimate or score them how consistent are those data points with the model that I have computed so far.
+
+05:31.000 --> 05:38.000
+How many of the remaining points are inliers and outliers? And the inliers give me a count, a score, and the higher the score, the better.
+
+05:38.000 --> 05:48.000
+And then I repeat this process, again, sample inliers, do the model computations, do the scoring, repeat this over and over again, and always store the model which has the highest number of inliers.
+
+05:48.000 --> 05:53.000
+So that in the end, I found the best model and can split my data sets into inliers and outliers.
+
+05:53.000 --> 05:59.000
+Again, let's go to a very concrete example. We have points in 2D, and we want to fit a line through those two points.
+
+05:59.000 --> 06:07.000
+So I assume there is one line that passes through these points, some of the points are inliers, some of the points are outliers, but I do not know which one they are.
+
+06:08.000 --> 06:13.000
+So a line could go over here, a line could be over here, or maybe even here.
+
+06:13.000 --> 06:16.000
+So what's the best line given these data points?
+
+06:16.000 --> 06:20.000
+The first thing I need to do, I need to sample the number of data points needed to fit my model.
+
+06:20.000 --> 06:25.000
+In order to fit a line through a data point, I need two points. So I need to sample S equals two points.
+
+06:25.000 --> 06:33.000
+Let's randomly pick these two points out here. So I pick these two points, sample those points, step number one is done.
+
+06:33.000 --> 06:36.000
+Now comes step number two, I need to fit a line through those two points.
+
+06:36.000 --> 06:39.000
+So a line which passes through these two points.
+
+06:39.000 --> 06:42.000
+Also something that I can do in a straightforward fashion.
+
+06:42.000 --> 06:46.000
+So this is my line, I computed my model, and I'm happy with my model.
+
+06:46.000 --> 06:54.000
+And then the third step is to say how many of the remaining data points or the red data points actually agree with this line.
+
+06:54.000 --> 07:01.000
+So this point clearly agrees with this line, that's one probably as well, those two may be, but all the others are actually far away from that line.
+
+07:01.000 --> 07:03.000
+So they typically don't agree with that line.
+
+07:03.000 --> 07:11.000
+So what I need, I typically have a parameter like this delta parameter over here, which tells me how far can I be away from the model and still be considered an inlier.
+
+07:11.000 --> 07:16.000
+So in this example, I have count four inliers, one, two, three, four.
+
+07:16.000 --> 07:19.000
+These two points are not counted because I used them to compute the model.
+
+07:19.000 --> 07:22.000
+And then I get an inlier count of four.
+
+07:22.000 --> 07:27.000
+So this model will lead to four inliers that I found in the remaining data set.
+
+07:27.000 --> 07:29.000
+And then I simply repeat this process.
+
+07:29.000 --> 07:35.000
+So start from scratch, I've saved the best model, start from scratch, and now I sample those two points over here.
+
+07:35.000 --> 07:36.000
+So these are my two points.
+
+07:36.000 --> 07:40.000
+Now I need to fit a line and this line goes through this one.
+
+07:40.000 --> 07:41.000
+So that's my line.
+
+07:41.000 --> 07:53.000
+And again, I need to do my scoring and so now I score one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve points.
+
+07:53.000 --> 07:56.000
+So the inlier count goes to twelve in this example.
+
+07:57.000 --> 08:01.000
+So the model with twelve inliers is better than the model with four data points.
+
+08:01.000 --> 08:05.000
+So I ignore, I forget the model with four and say this is now my best model.
+
+08:05.000 --> 08:09.000
+And then I repeat this process over and over and over and over again until I say I'm done.
+
+08:09.000 --> 08:11.000
+Let's say one thousand trials.
+
+08:11.000 --> 08:15.000
+And then I say, OK, that was my best data set I found.
+
+08:15.000 --> 08:17.000
+My separation inliers and outliers.
+
+08:17.000 --> 08:22.000
+So all the blue points plus those two are now used to estimate the line.
+
+08:22.000 --> 08:25.000
+And all the others outliers, the red points are thrown away.
+
+08:26.000 --> 08:36.000
+What one typically does after running the RANSAC, so after having thrown away all the outliers, is then perform an even better or computationally more demanding algorithm for fitting the line.
+
+08:36.000 --> 08:40.000
+For example, at least square fit through these lines or something.
+
+08:40.000 --> 08:45.000
+So here's another example where we want to compute the translation based on two images.
+
+08:45.000 --> 08:53.000
+And consider we have five possible data associations here shown through the errors in red and in white.
+
+08:53.000 --> 08:55.000
+Red are two outliers.
+
+08:55.000 --> 08:58.000
+The white one are inliers in this illustration.
+
+08:58.000 --> 09:00.000
+So what would RANSAC do?
+
+09:00.000 --> 09:12.000
+We would select a random match out of the possible matches, let's say the black one over there, and then evaluate all the others how well this translation is in line with all the other data associations.
+
+09:12.000 --> 09:15.000
+And it turns out none of them is actually a good fit.
+
+09:15.000 --> 09:21.000
+All of them are shown in red so they are inconsistent with the black one and so we have an inlier count of zero.
+
+09:21.000 --> 09:23.000
+Then we repeat the process.
+
+09:23.000 --> 09:33.000
+We select another data point like this one and then see how the translation between those images would actually look like and count all the others.
+
+09:33.000 --> 09:42.000
+So in this example we have one, two, three, four green ones which are consistent and one, two outliers which are inconsistent.
+
+09:42.000 --> 09:48.000
+And so this translation hypothesis would give us an inlier count of four.
+
+09:48.000 --> 10:02.000
+And then we repeat this process n times or t times over and over again, select the match count inliers, select the match count inliers until we find the most consistent set and return the one which has the highest number of inliers.
+
+10:02.000 --> 10:05.000
+Which would be exactly this transformation.
+
+10:05.000 --> 10:18.000
+So just as a small example, as an illustration, how you can actually use it to find the data associations between image pairs so that a translation between those images is consistently explained.
+
+10:18.000 --> 10:29.000
+The next example I want to look into is a feature-based alignment where I want to stitch two images together based on the feature that I found.
+
+10:29.000 --> 10:36.000
+So you see here two images taken of the scene with a partial overlap so the images overlap approximately in this part.
+
+10:36.000 --> 10:39.000
+So this is the same mountain and I want to stitch those images together.
+
+10:39.000 --> 10:41.000
+How can I actually do this?
+
+10:41.000 --> 10:47.000
+What I do is I extract my features, so these are all the white points, my key points that I found.
+
+10:47.000 --> 10:52.000
+And then based on the image descriptor I compute potential putative matches.
+
+10:52.000 --> 10:54.000
+So these are the red lines over here.
+
+10:54.000 --> 10:59.000
+So some seem to be very consistent over here, some seem to be more likely to be wrong.
+
+10:59.000 --> 11:10.000
+And so what I do is I hypothesize a transformation by selecting a small subset of data points, S equal 3 for example, those three.
+
+11:10.000 --> 11:19.000
+And I hypothesize a transformation that is generated from these three associations and then I verify that with all the others.
+
+11:19.000 --> 11:24.000
+So in this case these are all the associations which support this transformation that I computed.
+
+11:24.000 --> 11:34.000
+And then I repeat this process over and over and over again until I find the largest number of inliers or supporting other data associations, which is the case here.
+
+11:34.000 --> 11:47.000
+So that I can then stack those two images together and find here the correct stitching for the correct transformation, how I need to transform image number two into image number one so that they are in the same reference frame.
+
+11:48.000 --> 11:58.000
+Of course, with proper stitching algorithm I will still need to do some color corrections or color fading from one image to the other, but from the transformation point of view that's the way to go.
+
+11:58.000 --> 12:01.000
+So I can again look back to the Notre Dame example.
+
+12:01.000 --> 12:03.000
+So this is my two images.
+
+12:03.000 --> 12:09.000
+I compute, for example, Harris key points, which are the points now shown in here with different colors.
+
+12:09.000 --> 12:16.000
+And then I can make the data station based on a descriptor that I computed for all those Harris key points.
+
+12:16.000 --> 12:18.000
+And so this may be my data association.
+
+12:18.000 --> 12:28.000
+I can see some of them seem to be correct, but others are more likely to be wrong, like this one over here where the left-hand side of the tower is matched with its own right-hand side in the other image.
+
+12:28.000 --> 12:35.000
+We can see this happens because they are simply repetitive structures or very similar local regions in the images.
+
+12:35.000 --> 12:42.000
+And then what I do, I can run my RANSAC algorithm and separate my points into inliers and outliers.
+
+12:42.000 --> 12:47.000
+And I can see all of those which are shown here in green are inliers, all others are outliers.
+
+12:47.000 --> 12:59.000
+And so that I would remove those data associations for all those red points, keep the green ones, and then can compute, for example, my relative orientation between those two images.
+
+12:59.000 --> 13:01.000
+And that's basically what I need to do.
+
+13:01.000 --> 13:07.000
+I run my three steps and then run them over and over and over again until I've identified my inliers and outliers.
+
+13:07.000 --> 13:11.000
+I throw away the outliers and continue working with the inliers.
+
+13:11.000 --> 13:15.000
+The only question we haven't answered yet is how often do we need to try?
+
+13:15.000 --> 13:20.000
+So we said repeat this process, but how often do I need to repeat this process?
+
+13:20.000 --> 13:28.000
+And this is actually something which is not that easy to answer because it requires knowledge about the underlying outlier distribution.
+
+13:28.000 --> 13:39.000
+And if you have no idea what your outlier distribution is, or not necessarily what the number of outliers is or the outlier ratio is in your dataset, then it can be tricky.
+
+13:39.000 --> 13:42.000
+So you typically need that in order to have a good estimate.
+
+13:42.000 --> 13:48.000
+So let's see which parameters are involved in my RANSAC algorithm and how they affect the number of trials that I need to do.
+
+13:48.000 --> 13:52.000
+So the important parameters start with the number of sample data points S.
+
+13:52.000 --> 13:56.000
+So how many of the data points in the first step do I need to sample?
+
+13:56.000 --> 13:59.000
+And there's a number of data points that I need in order to compute my model.
+
+13:59.000 --> 14:04.000
+So if I need five data points for computing my model, I need to sample five of the points here.
+
+14:04.000 --> 14:14.000
+And since they all must be inliers in order to get the right result, the larger that number S is, the more difficult it is to actually draw those inliers.
+
+14:14.000 --> 14:21.000
+A second important parameter is the outlier ratio E, given by the number of outliers divided by the number of overall data points.
+
+14:21.000 --> 14:26.000
+So if you have 10% outliers, then every tenth point is an outlier.
+
+14:26.000 --> 14:28.000
+And this is also important information.
+
+14:29.000 --> 14:36.000
+So what we want to have is we want to have a number T that we want to compute that tells us how often do we need to try.
+
+14:36.000 --> 14:39.000
+Let's say that's T. I'm interested in computing T.
+
+14:39.000 --> 14:45.000
+So T is what I want to have. The question is how big should that T be? How can I actually compute it?
+
+14:45.000 --> 14:53.000
+And I cannot give you an exact guarantee by saying you need to try five times and then you for sure have the right result.
+
+14:53.000 --> 14:59.000
+Because we are drawing samples and there's only a probability with which I can provide that.
+
+14:59.000 --> 15:04.000
+So let's say I want to be certain with 99% probability that I get the right result.
+
+15:04.000 --> 15:08.000
+How should T look like? And that's actually something that I can do.
+
+15:08.000 --> 15:18.000
+So given S, given E, given a probability that I specified, let's say 99% of the cases I want to do the right thing, then we can actually compute T.
+
+15:18.000 --> 15:24.000
+And what we want to look into is how do we actually obtain that T? How can we estimate how many trials we actually need?
+
+15:24.000 --> 15:29.000
+Assuming that we really have random outliers here and there's no systematics in the outliers itself.
+
+15:30.000 --> 15:35.000
+So let's look to one RANSAC iteration. So one step of sampling model computation scoring.
+
+15:35.000 --> 15:38.000
+How likely it is to succeed to find the right result?
+
+15:39.000 --> 15:41.000
+What does it mean to find the right result?
+
+15:42.000 --> 15:47.000
+To find the right result means sampling with S the only inlier point.
+
+15:47.000 --> 15:56.000
+So there's no single outlier in this set of size S that I can then compute the model only using inliers and then have a correct result.
+
+15:56.000 --> 16:00.000
+So what is the probability of only drawing inliers?
+
+16:01.000 --> 16:03.000
+So what the probability of drawing a single inlier?
+
+16:04.000 --> 16:07.000
+The probability of drawing a single inlier is 1 minus E.
+
+16:07.000 --> 16:11.000
+So 1 minus the outlier ratio is the probability that a data point is an inlier.
+
+16:11.000 --> 16:14.000
+So if I draw one inlier, it's 1 minus E.
+
+16:15.000 --> 16:19.000
+I, however, need to do this S times because I need to have S inliers.
+
+16:19.000 --> 16:24.000
+So it's 1 minus E times 1 minus E times 1 minus E and the whole thing S times.
+
+16:25.000 --> 16:27.000
+This is the probability for drawing only inliers.
+
+16:29.000 --> 16:31.000
+So 1 minus E to the power of S.
+
+16:32.000 --> 16:36.000
+And now I'm actually interested, what's the probability of actually making a failure, of failing?
+
+16:37.000 --> 16:44.000
+If I want to fail, that means I need to have at least one of those data points, maybe even more, as an outlier.
+
+16:44.000 --> 16:47.000
+So it's 1 minus the expression that I have.
+
+16:47.000 --> 16:55.000
+So the probability of failing once, so P is the probability of success, so 1 minus P is the probability of failing once.
+
+16:55.000 --> 17:01.000
+So in one iteration of RANSAC is 1 minus E to the power of S.
+
+17:01.000 --> 17:08.000
+This is of drawing only inliers and this is the opposite probability, 1 minus of having only drawn inliers.
+
+17:08.000 --> 17:12.000
+That means one data point is an outlier.
+
+17:13.000 --> 17:17.000
+So this is the probability of failing once in one iteration.
+
+17:18.000 --> 17:23.000
+So now I need to look, what's the probability actually of failing T times?
+
+17:23.000 --> 17:28.000
+If I have T iterations, what's the probability of failing always, never succeeding at all?
+
+17:28.000 --> 17:39.000
+It's taking both expressions to, or taking the expression to the power of T, and so if it is 1 minus the success probability always,
+
+17:39.000 --> 17:44.000
+so it's failing T times, so the P is now a slightly different meaning, it's not one iteration, it's all iterations,
+
+17:44.000 --> 17:47.000
+it's the same expression I had before to the power of T.
+
+17:47.000 --> 17:53.000
+Because I'm repeating the same thing T times, and what's the probability of failing T times?
+
+17:53.000 --> 17:56.000
+It's just failing once to the power of T.
+
+17:57.000 --> 18:02.000
+Okay, so that means all the time I'm actually failing.
+
+18:02.000 --> 18:08.000
+So what I now have, I have an expression over here where it pops up P, my overall success probability,
+
+18:08.000 --> 18:15.000
+the outlier ratio, the number of data points S I need to sample, and T.
+
+18:15.000 --> 18:22.000
+So I know P because I set it, I assume to know E for my data set, and I know S because I need to fit my model.
+
+18:22.000 --> 18:24.000
+T is the only unknown in here.
+
+18:24.000 --> 18:25.000
+So it's great.
+
+18:25.000 --> 18:34.000
+So I can now move T to one other side of the equation, and then I'm actually able to compute T based on P, E, and S.
+
+18:34.000 --> 18:35.000
+So how do I do this?
+
+18:35.000 --> 18:37.000
+I compute the logarithm of both sides.
+
+18:37.000 --> 18:41.000
+So log of 1 minus P and the logarithm of this equation.
+
+18:41.000 --> 18:47.000
+So if I do this, I get log 1 minus P over here, since I have the T and the exponent here,
+
+18:47.000 --> 18:51.000
+this T moves down as a product times the log of the remaining expression.
+
+18:51.000 --> 18:52.000
+Okay, great.
+
+18:52.000 --> 18:57.000
+So I have T over here, I only need to divide this equation by this expression over here,
+
+18:57.000 --> 19:00.000
+move it to the other side, and then I have my equation for T.
+
+19:00.000 --> 19:02.000
+And that's exactly what I get.
+
+19:02.000 --> 19:09.000
+So the number of trials that I need depends on my success probability that I want to achieve,
+
+19:09.000 --> 19:13.000
+on my outlier ratio, and my number of data points that I need to sample.
+
+19:13.000 --> 19:20.000
+So if I have a 40% outlier ratio, S equals 5, and I want to have a 99.9% success probability,
+
+19:20.000 --> 19:28.000
+I will put in here 99.9%, or 0.999, this is 0.4, and this is 5.
+
+19:28.000 --> 19:32.000
+And then I can do my expression and compute the T.
+
+19:32.000 --> 19:39.000
+This is the number of trials that I need in order to come up with the right solution in the 99.9% of all cases.
+
+19:39.000 --> 19:45.000
+Okay, so let's have a look on how this T actually looks like for different numbers of data points that I need,
+
+19:45.000 --> 19:47.000
+outlier probabilities, and so on.
+
+19:47.000 --> 19:52.000
+So let's assume we have an outlier probability of 10%, so this is shown over here,
+
+19:52.000 --> 19:54.000
+and this is my success probability that I want to have.
+
+19:54.000 --> 20:02.000
+So I typically say, let's say, with 95% probability I want to be successful, or with 99, or 99.9, or 99.99.
+
+20:02.000 --> 20:07.000
+And this is the S, so if my algorithm needs two data points for fitting a line,
+
+20:07.000 --> 20:11.000
+or three, or four, or five, or ten, fifteen, twenty.
+
+20:11.000 --> 20:14.000
+You can see the number of trials that you need, which are shown in the table,
+
+20:14.000 --> 20:21.000
+increases for increasing success probability and increasing number of data points I need to sample.
+
+20:21.000 --> 20:26.000
+You can see for 10% of the outlier cases, even if I need to estimate 20 parameters
+
+20:26.000 --> 20:30.000
+and I want to be certain with 99.99%, I just need 72 trials.
+
+20:30.000 --> 20:33.000
+That's actually not too much, something I can do.
+
+20:33.000 --> 20:37.000
+If the outlier ratio, however, increases, it gets more complicated.
+
+20:37.000 --> 20:43.000
+So with a 30% outlier ratio, with a small number of parameters, S, still everything looks good.
+
+20:43.000 --> 20:48.000
+But if I have a larger number of outlier free points I need to sample,
+
+20:48.000 --> 20:51.000
+I'm easily ending up in far more than 10,000 data points that I need,
+
+20:51.000 --> 20:58.000
+which is typically something you at least can't do for applications that require real-time operation.
+
+20:58.000 --> 21:02.000
+When we even increase it to 50% outliers,
+
+21:02.000 --> 21:07.000
+then it turns out that maybe with five parameters that you want to estimate,
+
+21:07.000 --> 21:10.000
+you have around 300 trials, something you may be able to do,
+
+21:10.000 --> 21:18.000
+but not much more for applications that have strict computational bounds for their operations.
+
+21:18.000 --> 21:23.000
+If I increase the outlier ratio to something like 80%, I can still say, with two or three parameters,
+
+21:23.000 --> 21:29.000
+I'm still able to do this, but with 20 parameters, I have something like 10 to the power of 15 number of trials,
+
+21:29.000 --> 21:34.000
+which is obviously nothing you want to compute in any reasonable amount of time.
+
+21:34.000 --> 21:37.000
+So what we can see is, of course, the outlier ratio matters.
+
+21:37.000 --> 21:41.000
+The higher the number of outliers, the more complicated your problem actually is.
+
+21:41.000 --> 21:45.000
+But the other parameter is this S, which also plays an important role.
+
+21:45.000 --> 21:48.000
+So even if you have high outliers, if you just have a small S, you're still good.
+
+21:48.000 --> 21:52.000
+If S increases, then it becomes problematic.
+
+21:52.000 --> 21:59.000
+And that's the reason why we are often interested in algorithms for estimating our models
+
+21:59.000 --> 22:03.000
+that require a small number of data points.
+
+22:03.000 --> 22:05.000
+So, for example, if you think about the relative orientation,
+
+22:05.000 --> 22:09.000
+so estimating how one camera moved with respect to another camera,
+
+22:09.000 --> 22:12.000
+there is an eight-point algorithm and a five-point algorithm.
+
+22:12.000 --> 22:15.000
+Eight-point is much easier to implement than the five-point algorithm.
+
+22:15.000 --> 22:17.000
+You could say, I'm fine with eight points.
+
+22:17.000 --> 22:21.000
+These three points more is not worth implementing the additional algorithm.
+
+22:21.000 --> 22:24.000
+But it turns out if you need to do this in the context of RANSAC,
+
+22:24.000 --> 22:26.000
+which is something you need to do in reality,
+
+22:26.000 --> 22:30.000
+it actually matters because five-point is far better than eight points
+
+22:30.000 --> 22:33.000
+in the context of a large number of outliers.
+
+22:33.000 --> 22:37.000
+So you want to go for those algorithms which requires a small number of S.
+
+22:37.000 --> 22:43.000
+So small S is better, especially in situations where you have a large number of outliers.
+
+22:43.000 --> 22:46.000
+And then there's another parameter just to be complete here,
+
+22:46.000 --> 22:50.000
+this threshold when a point is considered to be an inlier or an outlier.
+
+22:50.000 --> 22:52.000
+That's something which really depends on the model
+
+22:52.000 --> 22:55.000
+and the quality of your sensor that you're considering,
+
+22:55.000 --> 22:57.000
+a parameter you need to put in there.
+
+22:57.000 --> 23:01.000
+But it doesn't affect the number of trials that you actually need to do.
+
+23:01.000 --> 23:05.000
+But with this approach, we are able to estimate how many trials do we need,
+
+23:05.000 --> 23:08.000
+assuming we know roughly our outlier ratio
+
+23:08.000 --> 23:12.000
+and all the other parameters are actually something that I'm supposed to know.
+
+23:12.000 --> 23:15.000
+So RANSAC in sum is an interesting algorithm
+
+23:15.000 --> 23:18.000
+because it's very easy to implement, very easy to understand,
+
+23:18.000 --> 23:20.000
+and allows us to robustly deal with outliers.
+
+23:20.000 --> 23:23.000
+It separates our data points into inliers and outliers
+
+23:23.000 --> 23:25.000
+so that I can continue working with the inliers,
+
+23:25.000 --> 23:29.000
+I forget the outliers, and can run my state estimation algorithm
+
+23:29.000 --> 23:31.000
+based on the inliers only.
+
+23:31.000 --> 23:34.000
+It works well for real-world situations with something like
+
+23:34.000 --> 23:37.000
+one to maybe eight to ten parameters.
+
+23:37.000 --> 23:39.000
+It of course depends on your outlier ratio,
+
+23:39.000 --> 23:42.000
+but you want to keep as small as possible
+
+23:42.000 --> 23:45.000
+if you have parameters or models with 20, 30 parameters.
+
+23:45.000 --> 23:48.000
+RANSAC is probably not your algorithm of choice.
+
+23:48.000 --> 23:54.000
+The downsides of RANSAC is that the computational complexity grows quickly
+
+23:54.000 --> 23:56.000
+as the fraction of outliers increase,
+
+23:56.000 --> 23:59.000
+especially for larger values or not small values of S,
+
+23:59.000 --> 24:01.000
+something you need to keep in mind.
+
+24:01.000 --> 24:05.000
+And what RANSAC also doesn't do very well is estimating multiple fits.
+
+24:05.000 --> 24:07.000
+So you're going to have multiple lines
+
+24:07.000 --> 24:09.000
+or multiple hypotheses for something being extracted.
+
+24:09.000 --> 24:14.000
+RANSAC is also not the algorithm that you would actually consider using.
+
+24:15.000 --> 24:21.000
+Common RANSAC applications are finding corresponding points in images,
+
+24:21.000 --> 24:25.000
+which is needed, for example, for computing the fundamental matrix
+
+24:25.000 --> 24:27.000
+or the essential matrix.
+
+24:27.000 --> 24:29.000
+This is a five-point algorithm I was mentioning.
+
+24:29.000 --> 24:32.000
+This is needed for computing visual odometry information,
+
+24:32.000 --> 24:34.000
+so to estimate how a camera moved through the environment,
+
+24:34.000 --> 24:37.000
+which is basically stacking those essential matrices together.
+
+24:37.000 --> 24:41.000
+For computing homographies, for finding the ground plane,
+
+24:41.000 --> 24:45.000
+for doing ICP in the context of laser-based scan matching
+
+24:45.000 --> 24:48.000
+or in the context of Kinect-based matching of images.
+
+24:48.000 --> 24:51.000
+They're all techniques where RANSAC plays an important role.
+
+24:51.000 --> 24:55.000
+Again, the problem with RANSAC is it may get computationally expensive
+
+24:55.000 --> 24:56.000
+if you have a lot of outliers,
+
+24:56.000 --> 25:00.000
+but it's the gold standard way today for separating data points
+
+25:00.000 --> 25:02.000
+into inlayers and outliers.
+
+25:02.000 --> 25:05.000
+So to summarize this, RANSAC is the standard tool
+
+25:05.000 --> 25:08.000
+for performing fitting tasks in the presence of outliers.
+
+25:08.000 --> 25:10.000
+It's a trial and error approach,
+
+25:10.000 --> 25:13.000
+and if I need to explain it in 30 seconds or even less,
+
+25:13.000 --> 25:16.000
+you could say guess a subset of inlayers from your data points,
+
+25:16.000 --> 25:19.000
+compute a model given this guessed data points,
+
+25:19.000 --> 25:23.000
+and then score the model by testing how the remaining data points
+
+25:23.000 --> 25:25.000
+and the model are consistent with each other.
+
+25:25.000 --> 25:28.000
+Count it, repeat the process over and over again,
+
+25:28.000 --> 25:31.000
+and take the result which has the highest score.
+
+25:31.000 --> 25:32.000
+And that's basically it.
+
+25:32.000 --> 25:36.000
+The number of repetitions you need to do depends on this T
+
+25:36.000 --> 25:38.000
+that I showed on how to compute.
+
+25:38.000 --> 25:40.000
+So thank you very much for your attention.
+
+25:40.000 --> 25:44.000
+I hope that was useful for performing state estimation problems
+
+25:44.000 --> 25:45.000
+in the presence of outliers
+
+25:45.000 --> 25:49.000
+and helps you to get the idea on how RANSAC actually works.
+
+25:49.000 --> 25:50.000
+Thank you.
+

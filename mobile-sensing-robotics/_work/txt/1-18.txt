@@ -1,0 +1,1102 @@
+[00:00] Have you ever asked yourself how a robot makes a decision how to go from its current location
+[00:06] to a target location?
+[00:08] Then this lecture is for you because we will discuss motion planning for mobile robots.
+[00:14] So how do robots make decisions where to navigate in order to reach a target location?
+[00:20] So typically a robot knows where it is, it knows where it should go to, it has a map
+[00:24] of the environment and knows something about its own shape or own body form so that it
+[00:30] knows how it can execute local motion commands such as go a meter forward and that the system
+[00:36] will execute that without bumping into walls next to the robot for example.
+[00:42] And then a motion planning algorithm generates a sequence of motion commands or a sequence
+[00:45] of states that the robot needs to visit in order to reach the target location.
+[00:50] And it can do so in an optimal fashion.
+[00:53] An optimal fashion means there's no better way for doing this in terms of the output result.
+[00:58] So there's no better trajectory than the trajectory that the algorithm actually proposes.
+[01:04] And of course this optimality as always comes with some assumptions such as which stage
+[01:09] can we visit, do we discretize our space, but that's something that we're going to explore
+[01:14] in this lecture today.
+[01:16] So typically we are interested in computing a path or trajectory which guides the robot
+[01:22] on its fastest route to its goal location.
+[01:26] And that's what we are going to discuss today, how do we make this decision where to navigate
+[01:31] in order to reach our goal.
+[01:33] So that can be a robot such as the one shown here on that slide which navigates through
+[01:37] the catacombs under Rome and needs to reach a certain location in those catacombs but
+[01:42] can be also any other type of robot or even yourself if you use your sub-nav system in
+[01:49] the car and the system tells you where to navigate.
+[01:52] You can do this with an algorithm called A*, even though in devices used today there may
+[01:59] be some more advanced or optimized algorithms for the problem at hand, but the basic motion
+[02:05] planning algorithm that underlies this can be solved with an A*.
+[02:11] So more concretely we are looking today into robot motion planning using the A*, and discuss
+[02:18] what A*, means, how it works, and how we can use this algorithm in order to build real
+[02:25] robots that navigate through the world.
+[02:27] So the motion planning problem is a standard problem in robotics since its beginnings,
+[02:34] so there's a famous quote made by Latombe in 1991 which states that motion planning
+[02:40] is an essential task that robots need to do because in order to do something useful most
+[02:45] of the robotic systems, at least of the mobile robotic systems, need to move through the
+[02:49] environment from A to B in order to succeed, in order to fulfill its task.
+[02:55] So moving through the environment is a core ingredient of most robotic systems today and
+[03:01] therefore motion planning or path planning is an important capability for those systems.
+[03:08] If we look to the, let's call it, classical motion planning and what are the traditional
+[03:14] goals that we always look into, so the first thing we want to ensure is that the robot
+[03:19] never collides with an object.
+[03:21] So if we have walls or doors in the environment we want to make sure the robot will never
+[03:26] bump into a wall, always fit through the door frame and without touching on the right or
+[03:32] on the left-hand side the door frame or collide with a door or any other object in the space.
+[03:37] So collision-free trajectory is a requirement that we typically have.
+[03:42] And among this set of collision-free trajectories from a start location to a goal location,
+[03:49] we are typically interested in finding the trajectory which guide the robots on the shortest
+[03:54] path or that the robot can reach its target location as quickly as possible.
+[04:00] So the shortest path is not always the fastest path, so there can be trajectories along which
+[04:06] you can, which are longer, but along which you can drive faster, so you may take a small
+[04:11] detour into account if you can drive faster on that trajectory.
+[04:16] It's similar to you when you're sitting in your car and there are two roads you can take,
+[04:20] the one is a highway and the other one is a local street to the city.
+[04:24] Even though the trajectory along the highway is somewhat longer, you can drive faster on
+[04:29] that highway and therefore will reach your target location faster.
+[04:32] So for several applications we are interested in the fastest route, but there are also applications
+[04:39] where we may be interested in the shortest path.
+[04:42] Often they are similar, but not necessarily the same.
+[04:45] So the traditional goal in robot motion planning is provide a collision-free trajectory that
+[04:52] allows us to reach the goal as quickly as possible.
+[04:56] This is often formulated in static worlds.
+[04:58] That means the robot knows about the world and also knows that the world does not change.
+[05:03] That means there are no dynamic obstacles around, there are no humans moving around,
+[05:07] no other traffic participants for example.
+[05:10] So this is something which is a very strong assumption and typically not justified in
+[05:15] the real world.
+[05:16] So whenever we go to real world robotics we need to take dynamic environments into account.
+[05:21] That means environments that change while the robot is operating in this environment.
+[05:27] These can be quickly moving obstacles like other traffic participants, but this could
+[05:31] also mean that there are objects which are placed in the environment that hadn't been
+[05:36] around when the robot was building its map for example, or just data that's not stored
+[05:40] in the map in general.
+[05:41] And how can we deal with this?
+[05:43] So how can we still navigate effectively, have an efficient algorithm that computes
+[05:50] a path quickly and get out a path which guides us to the target location as quickly as possible
+[05:56] and that we can still give some guarantees, at least guarantees under some assumptions
+[06:01] that the robot will not bump into an object even as an object it didn't know before.
+[06:09] In order to do that of course we typically need to make some assumptions how objects
+[06:13] move through the environment, if the object is much faster than the robot, basically chases
+[06:18] the robot, of course this can lead to a collision, a collision we cannot avoid.
+[06:23] But if we make certain assumptions about the movements of the other objects in the environment
+[06:30] we can make certain statements at least probabilistic statements if this trajectory will lead to
+[06:36] collision yes or no.
+[06:37] So we are interested in finding trajectories that are reliable and that we can efficiently
+[06:43] navigate on.
+[06:44] And there have been a lot of techniques proposed in order to deal with those dynamic environments.
+[06:50] Often we have to distinguish two things in here, a core planning algorithm that plans
+[06:54] general paths from A to B and then what we call like a local collision avoidance systems
+[06:59] that tries to follow that path but is allowed to deviate from the path in order to avoid
+[07:04] collisions.
+[07:05] And prominent examples are the dynamic window approaches which are techniques which basically
+[07:10] take into account which changes in the velocities the system can do and this generates your
+[07:15] local window of states that you can reach and then the question is which is the best
+[07:21] velocity to choose in that window.
+[07:24] So you're basically choosing the velocity commands that bring you close to the goal
+[07:29] or along the trajectory towards the goal.
+[07:32] And there is a large series of other approaches, some for example optimized for very confined
+[07:37] spaces so where it's very hard for the robot to navigate, others more optimized through
+[07:43] environments where you can go as fast as possible and can make smooth avoidance maneuvers around
+[07:51] optical objects in the world or that make some assumptions regarding optimal or near
+[07:57] optimal behavior while navigating through the environment.
+[08:00] So it depends a little bit on the approach that you want to do and the goals and your
+[08:04] environment that you are in.
+[08:07] So we will be looking today especially here into the so-called A-star algorithm which
+[08:12] is a very popular search algorithm, a so-called informed search algorithm that is used for
+[08:17] a large variety of different planning problems, not only in robotics.
+[08:21] It has been developed for robotics and is again one of the key AI techniques that we
+[08:26] use today, that we find today in a lot of applications and it's kind of the gold standard
+[08:31] planning method.
+[08:32] So it's kind of important to understand how that approach works because it allows you
+[08:36] to generate a sequence of states that you need to visit to go from a star to a goal
+[08:41] location and it does so in a very effective manner.
+[08:45] There again extensions and variants of the A-star algorithm such as ARA-star, Anytime
+[08:50] Real-time A-star for example which is a real-time algorithm that takes the computational resources
+[08:55] or an anytime algorithm sorry that takes the computational resources into account in order
+[09:01] to optimize the trajectory but guarantees or not guarantees but in most of the settings
+[09:07] comes up with an initial trajectory very quickly that you can start navigating on and then
+[09:12] optimize this trajectory on the way or the D-star family of algorithms which can be used
+[09:19] if you do a lot of replanning.
+[09:20] So if you don't do a plan just once but replan while the environment is changing and then
+[09:25] they allow you for substantially more efficient updates.
+[09:30] And then there are also other approaches like Markov decision processes which you then need
+[09:35] to take into account if the uncertainty in your motion execution plays an important role.
+[09:41] So if you assume the system can actually execute what it wants to execute then you're typically
+[09:45] fine with your A-star algorithm but if you have uncertainties in your motion execution
+[09:52] you have to go for other things other techniques such as MDPs for example.
+[09:57] So let's have a look what are the key challenges today in motion planning.
+[10:01] So what the key challenges are we want to find an optimal path.
+[10:05] Optimal means under the cost functions that I'm providing.
+[10:08] This can be shortest paths, shortest collision-free paths, fastest paths, a path or trajectory
+[10:14] which minimizes certain accelerations that occur that are very pleasant for humans if
+[10:21] humans are driven by the autonomous vehicle like an autonomous car.
+[10:25] You just want to have the fastest trajectory, you want to have also trajectory which is
+[10:28] for example legal or a trajectory that is very convenient to when you're sitting in
+[10:33] the car and you don't care if you arrive at the goal two or three seconds slower as long
+[10:38] as your ride is more pleasant for example.
+[10:41] So there may be different cost functions that you want to take into account here in
+[10:46] this lecture we are basically looking into the shortest path or the fastest path.
+[10:51] Then the second question is do you need to take into account uncertainties?
+[10:55] These can be uncertainties in the action execution so when you go from A to B and you give a
+[11:01] command to the system is the command actually being executed or is something else executed?
+[11:07] So for example if you say go a meter forward and the system goes on the 95 centimeters
+[11:12] forward is this being taken into account?
+[11:16] Is this actually a problem for you?
+[11:18] So this is something that needs to be considered and you may also take into account uncertainties
+[11:23] in your perception system that your perception system is not perfect.
+[11:27] The other question is how can you quickly react to unforeseen obstacles?
+[11:31] So if a new obstacle is in your path something that you are not aware of how quickly can
+[11:37] you react to these unforeseen obstacles?
+[11:40] Or what happens if other traffic participants are moving through the environment and may
+[11:44] collide with you even if you would stop?
+[11:46] So these are things that your planning system may take into account but that somehow depends
+[11:51] on the application you're actually targeting.
+[11:54] If we look into most robotics navigation stacks we can see a so-called layered architecture
+[12:01] so you have different layers of planning until control algorithms which are executed by the
+[12:09] system running at different frequencies and having different tasks that the system is
+[12:13] going to do.
+[12:14] So what you can see here is a classical three layered architecture on the highest level
+[12:19] you have your planning algorithm so that's something that we are starting with here with
+[12:23] our ACE algorithm.
+[12:24] So how to use a map of the environment and the information where you are in the world
+[12:30] in order to plan a path that guides the robot to its target location.
+[12:35] Maybe you do that once per second or once every five seconds or maybe three times per
+[12:40] second so but at a rather low frequency you're basically reviving your plan based on the
+[12:46] new estimates where you are in the environment and what happens around you.
+[12:50] And then you typically communicate a sub-goal so a sub-goal let's say five meters in front
+[12:56] of a robot to our local planning system a collision avoidance system and the collision
+[13:01] avoidance system runs at a much higher frequency typically at the frame rate of your sensor
+[13:05] so this can be something from five hertz to 30 hertz or 50 hertz maybe even checking if
+[13:13] there is an obstacle that moves near the path that the system wants to execute so that there's
+[13:19] a risk for a collision and if it sees that there's a risk that the robot would collide
+[13:24] with an obstacle it plans or varies a trajectory and generates alternative trajectories that
+[13:29] the system then picks in order to avoid a collision that's something that we often refer
+[13:33] to as a collision avoidance system or a local planner.
+[13:37] And then this collision avoidance system actually generates typically a motion command or the
+[13:42] transition to a next state and then you have a local controller that turns this local information
+[13:48] into an actual steering command or control the motors of the vehicle so that the vehicle
+[13:54] actually executes the path that or the the motion command it should execute and typically
+[13:59] there's also a correcting control loop that for example odometers are taken into account
+[14:03] so a sensor that counts the revolution of the wheels in order to make sure the platform
+[14:08] actually executes what it should execute and take some corrective actions.
+[14:13] So today we will be looking more on the planning side looking a little bit also into collision
+[14:16] avoidance or a system which solved these two tasks jointly.
+[14:20] Control is something that we cover in this course but not in this lecture here today.
+[14:26] So let's look into the standard motion planning problem or planning problem starting here
+[14:30] from the top.
+[14:32] If we look into the standard motion planning problem we typically have as our inputs a
+[14:36] start pose or start configuration where the robot is right now.
+[14:40] It doesn't necessarily only has to be a pose it could also be again a full state if velocities
+[14:44] for example matter and you start with a given velocity you may want to take that into account
+[14:49] as well.
+[14:50] And then there is a goal configuration like you need to end up at a certain location with
+[14:55] a certain velocity or I don't care about the velocity as long as you reach a certain X
+[14:59] Y configuration as fast as possible.
+[15:02] So different ways for defining the goal state it may also not just be one state could also
+[15:07] be multiple states.
+[15:10] And then you need a description of the robot often it's a geometric description or to understand
+[15:15] what's the size of the robot in order to check or combine this with the representation of
+[15:19] the environment in order to identify the valid states so states which are which don't generate
+[15:25] a collision with the environment or with other objects around.
+[15:29] So typically you need to have some description of the robot and some description of the environment
+[15:32] or representation of the environment so that you can do these collision checks in order
+[15:37] to know what's free space what's occupied space.
+[15:40] And given that you have that information the planning algorithm should turn this input
+[15:43] information into the output information and the output is the pass to get the shortest
+[15:49] pass or the optimal pass or minimum cost path that's maybe be a bit more general minimum
+[15:55] cost pass and you define the cost function beforehand and that move the robot from a
+[16:00] start configuration to a goal configuration without colliding with any obstacle.
+[16:04] So a collision free pass that is optimal under some cost function and we will start here
+[16:09] with the shortest pass so there should be no other paths around that visits a sequence
+[16:14] of states from the valid states and should reach the goal more quicker or faster or on
+[16:21] a shorter trajectory that's something that shouldn't be there there may be other alternative
+[16:25] paths which are equally good but no better paths and then we found an optimal solution
+[16:31] our algorithm computed an optimal solution to that planning problem.
+[16:37] Next thing we would I would like to look into is the configuration space and try to
+[16:42] at least very briefly introduce the concept of configuration space.
+[16:46] So the plannings plot problem actually lives in kind of our real world and we have a typically
+[16:52] a movement robot let's say a physical object that moves through the environment and can
+[16:56] control its own configuration in order to go from A to B.
+[17:01] So we are living in the in the real world but internally we are using something which
+[17:06] is called the configuration space and perform the planning in that configuration space.
+[17:12] So the configuration are kind of the configurations the system can be in so for example if you
+[17:18] have a robot which also has an orientation this orientation would be taken into account
+[17:22] in this configuration space but it's not just that it basically the configuration configuration
+[17:28] space or state and configuration space allows you to describe we are all points the full
+[17:33] shape of the robot actually lived in the world.
+[17:36] So if you for example have a robot with a joint then you have a joint angle that you
+[17:40] may be able to control which changes the configuration of the robot and such the points that are
+[17:46] occupied in the real world.
+[17:48] So you need this concept of configuration in order to decide if a certain configuration
+[17:53] is actually collision free.
+[17:55] So if you have a let's say an arm and whatever the shoulder is the defines the position of
+[18:01] that arm then just based on this shoulder position you can't decide if this is collision
+[18:07] free or not.
+[18:08] So my arm may be collision free and even if I don't change the configuration of my shoulder
+[18:12] that will lead to a collision.
+[18:13] So you need to take the full configuration of the arm into account and take also the
+[18:16] joint angle here into account and the representation of the platform itself in order to make the
+[18:21] decision if we here are an obstacle free or an obstacle configuration.
+[18:27] So therefore we have in the end states in configuration space and based on this state
+[18:33] in configuration space or a configuration in short that allows us to decide if it is
+[18:38] collision free or not.
+[18:40] Quite often those configuration spaces are discretized.
+[18:43] So for example let's say an object can move whatever just in one centimeter grid and has
+[18:49] a one degree discretization in its orientation just as an example.
+[18:54] So I can show here a very simplified discretized configuration space.
+[18:59] So this is basically an occupancy grid map where you have cells very large cells now
+[19:04] and so we assume that the robot can only be in the center of every grid cell and can basically
+[19:10] move to its neighboring cells.
+[19:11] So that's a very simplified form of a discretized configuration space and this in this case
+[19:16] is just a 2D configuration space assuming the robot can move arbitrarily in all directions
+[19:21] for example as an omni drive and then just can move from grid cell to grid cell.
+[19:26] Again this is an approximation we discretize the space and if we are generally living in
+[19:30] a continuous world and we discretize it, it is an approximation but this is one example
+[19:35] for a discretized configuration space.
+[19:38] Then the planning system only uses this discretized configuration space for example in order
+[19:42] to plan a path from the start location over here to a goal location over there which states
+[19:47] does a system need to visit in order to come up with a valid trajectory that guides the
+[19:52] robot along that path.
+[19:53] So this is an example for such discretization.
+[19:57] In general we split up the configuration space in free space and in obstacle regions or in
+[20:03] occupied space.
+[20:05] So then we have a workspace which is set of configurations that we want to live in that
+[20:12] part of the space that is collision free for the system where the system can actually
+[20:16] be.
+[20:17] So our workspace is basically a general space of real numbers for example and this is for
+[20:26] example our workspace over here and it contains a set of obstacles which are shown here in
+[20:32] this greenish gray color over here.
+[20:35] So this is basically the surrounding, let's say kind of the wall so to say and you have
+[20:39] some obstacles sitting here in between.
+[20:42] And then we have configurations that describe the robot.
+[20:45] This is for example an initial configuration and a goal configuration and with those configurations
+[20:53] we can actually describe the shape of the robot.
+[20:56] This is done with this function a of q.
+[20:59] So q describes the configuration, again with my arm it could be the joint angle and the
+[21:03] position of my shoulder and then this function a of q basically maps the robot into our space
+[21:12] and so which parts are occupied here in that workspace so that we can make the decision
+[21:18] will this lead to collision with an obstacle yes or no.
+[21:22] So what we're doing technically is we are taking, we define the free space as the configurations
+[21:27] in configuration space so my configurations in configuration space so that the a of q
+[21:35] so the shape of the robot intersected with all obstacles gives me the empty set.
+[21:40] So these are basically all the wide regions over here so where there is no overlap of
+[21:46] the robot with an obstacle and then the occupied space is simply the whole space minus the
+[21:51] free space.
+[21:53] This is one way how we can describe the free configuration space so the configurations
+[22:00] that the system can be in without colliding with obstacles that we have in that surrounding.
+[22:07] And then what we typically do or need we need to have two configurations in this free space
+[22:11] an initial configuration or a current configuration and our goal configuration so then the goal
+[22:17] is to find a path that can connect in configuration space the initial space and the goal state.
+[22:23] So it could for example look like this this could be a trajectory here in that configuration
+[22:27] space and that can be described by a function tau from 0 to 1 that maps only into the free
+[22:33] space so it's not allowed to map into the occupied space because that would then lead
+[22:38] to a trajectory which leads to collision so that tau of 0 is my initial configuration
+[22:46] and tau of 1 is the goal configuration over here so I'm basically having a function which
+[22:51] describes which states I need to visit in order to move from the initial configuration
+[22:56] to my goal configuration.
+[22:59] And that means we can actually do the planning so find that function that mapping over here
+[23:05] in our configuration space so that we basically have a point that we move through the C-space
+[23:11] which describes the trajectory from the initial configuration to the target configuration
+[23:17] and this is kind of a more formal definition how I can perform this or how a trajectory
+[23:21] a path or solution to the planning problem looks like in this configuration space.
+[23:28] So this configuration space or C-space is not necessarily continuous it is shown over
+[23:32] here often it is actually discretized and there are different ways how I can discretize
+[23:39] my configuration space so the configuration space can be discretized in different manners
+[23:45] and there are kind of two general approaches how I can do this.
+[23:48] The first one is a combinatorial approach and this is something that we will be using
+[23:53] here in the lecture which basically says I take all possible states and I break them
+[23:57] discretize them down into into smaller states like a voxel representation in the 3-space
+[24:03] or a grid cell representation in the 2D space so similar to an occupancy grid map for example
+[24:09] if you just consider a set of 2D states.
+[24:12] So this is what is called combinatorial discretization which then leads to a combinatorial planning
+[24:18] problem.
+[24:19] The problem in here is that the dimensionality of the configuration space actually increases
+[24:26] so there's a robot which has a lot of different joints for example this space gets very high
+[24:31] dimensional and the number of discretized states that I'm actually generating is exponential
+[24:37] in the dimensionality of my search problem and this can be a problem.
+[24:41] So that's something that you would apply if you're planning in low dimensional spaces
+[24:46] 2D spaces maybe 3D spaces then you can do this discretization or this combinatorial
+[24:52] discretization if you go to 10, 20, 30 dimensional spaces this is not going to fly anymore.
+[24:59] What you then do is use sampling based techniques that means we don't necessarily discretize
+[25:05] our state space uniformly but we sample possible configurations and we are sampling possible
+[25:11] configurations in the in C free so we need to have a technique to generate configuration
+[25:17] this is the free space which are close to a given configuration for example close to
+[25:22] our current configuration so that we then by sampling they're basically expanding the
+[25:26] states around our current configuration and expense states sample states and then plan
+[25:31] only in those sample states and we are expanding or sampling these states during the planning
+[25:36] process and with the hope that with an intelligent strategy we only need to sample a small subset
+[25:43] of the overall space and then through the sampling process don't need to discretize
+[25:49] all the different dimensions we only need to explore the states which kind of look as
+[25:53] if they would be promising to lead the robot to the goal and if this is the case if we
+[25:57] have this additional information at hand then these sampling based planning techniques can
+[26:02] be very efficient so with those two different approaches we can actually generate our c-space
+[26:09] discretization so the next thing we need to do we need to search through this possible
+[26:14] configurations in order to find a sequence of states in configuration space that guides
+[26:20] me from my current configuration to my goal configuration I said already we need to search
+[26:28] so planning can be solved by using search algorithms in order to search the configuration
+[26:34] space for a sequence of configurations that guide me from the current configuration to
+[26:41] my goal configuration and we have again two different concepts in search strategies that
+[26:47] we want to distinguish here these are the uninformed search techniques and the informed
+[26:52] search techniques so again the goal is to find a sequence of actions or path that guides
+[26:58] me from my initial configuration to my desired goal configuration and how do I find the sequence
+[27:05] I can search through all the possible states that I'm expanding in my configuration space
+[27:12] and then start from my initial configuration and hope to at some point in time end up at
+[27:16] my goal configuration and if I found that the transition from the initial configuration
+[27:21] to the goal configuration I also found a sequence of actions that I can actually execute in
+[27:26] order to come from my current state to my goal state and the uninformed search algorithms
+[27:31] are kind of the simplest form of search algorithms and they kind of form of a blind search they
+[27:36] are blindly searching through my configuration space they may need to take into account how
+[27:42] many steps they already have been taken from the start location until they reach a certain
+[27:47] state and then they always try to make the decision of expanding the cheapest node for
+[27:51] example in order to in order to explore the space further until they find the goal configuration
+[27:59] but there are different ways how these costs can be taken into account this can be a search tree
+[28:05] that I'm expanding I'm just looking into the the level or the depth of that search tree I may have
+[28:10] a cost function associated with every state so individual cost functions for individual transitions
+[28:15] between states that may be taken into account these are in different variants of this uninformed
+[28:20] search techniques but what the uninformed search technique is is not doing it doesn't exploit any
+[28:26] additional information about the problem or additional knowledge about the goal or things
+[28:31] let's say upper bounds or lower bounds for example that I can generate in order to say something how
+[28:40] cheap or how expensive a trajectory may be if I know where I am with respect to a goal configuration
+[28:47] so the uninformed search technique don't use this they only use their cost function they're
+[28:51] expanding their own cost function and popular algorithms in this context are breadth-first
+[28:57] search depth-first search uniform cost search these are commonly used techniques so just will
+[29:03] introduce and is with one slide basically each in order to kind of guide you towards from the
+[29:09] uninformed search techniques towards the informed search techniques because a star is an informed
+[29:15] search technique in contrast to the uninformed search techniques the informed search techniques
+[29:20] and use additional information about the environment and Michael configuration and that's something what
+[29:26] we call a heuristic heuristic is an estimate of the cost so how expensive is it in order to if I
+[29:33] started my current configuration and I want to reach a goal configuration to reach that goal
+[29:37] configuration from my start configuration of course if I would have the perfect knowledge
+[29:42] about this my planning problem would be very easy because I could just make a gradient descent in
+[29:46] this in this cost function but what the heuristic does it provides an estimate for that so it can
+[29:52] estimate the cost these are not the actual cost but an estimate of that cost and how can I exploit
+[29:57] an estimate and still come up with a good solution or maybe even an optimal solution and that's what
+[30:04] the informed search techniques are about they are using this heuristic to speed up the search
+[30:08] sort of find the goal configuration more quickly but the quality of the found solution should
+[30:15] actually be the still the optimal solution not all of the informed search techniques are optimal
+[30:23] the first thing technique will discuss for example greedy search is not an optimal trajectory optimal
+[30:28] search technique that leads to an optimal trajectory but a star for example is and for
+[30:34] that we need to have certain constraints on how that heuristic could look like or should look like
+[30:39] but what you can general say that these informed search techniques use a heuristic use additional
+[30:45] information in order to find a solution faster so if we have an optimal search algorithm that means
+[30:53] an algorithm which provides me with a trajectory which is optimal that means there is no better
+[30:57] trajectory or no better a sequence of actions guiding the robot from its current location to
+[31:02] the target location the question is under which how do I compare algorithms under which criteria
+[31:08] or things I'm actually evaluating and can compare different search algorithms and there are a couple
+[31:15] of things I can take into account the four kind of most commonly used criteria for evaluating
+[31:23] search algorithm are shown here so it's completeness optimality time complexity and space complexity so
+[31:29] what does that mean completeness means does the algorithm actually find a solution a valid sequence
+[31:36] of configurations from the start to the goal location in case it exists so of course I can
+[31:41] define a planning problem where there is no path from a start configuration to a goal configuration
+[31:46] so for example of two rooms but there's no door between the rooms and the robot is in room number
+[31:51] one and the goals in room number two there's no way to reach the goal configuration and that means
+[31:56] there you can't find a path but the question is if there is a doorway can actually guarantee that
+[32:03] the algorithm will find it and this is what I refer to as completeness so that the algorithm
+[32:08] find a solution if there exists one and of course we would like to have complete algorithms because
+[32:14] we don't want the algorithm to abort and say I can't find a solution although there is a solution
+[32:18] that's something that we would like to avoid so the algorithm should report a solution if there
+[32:23] is one the second thing is optimality and this is what I already referred to before is the result
+[32:30] that the path that the planning algorithm actually generates is is the optimal one or is there a
+[32:35] better one optimal under some cost function so there can be other alternative path which are as
+[32:42] good as the one that I have were they are worth but they can't be better if this is the case then
+[32:49] I found an optimal path because there is no better path under the specified cost function people talk
+[32:57] about optimal planning algorithms you always need to remind yourself that this is under the defined
+[33:03] cost function that doesn't mean this is the best algorithm for any robot navigation problem it's
+[33:08] kind of the algorithm which generates the best possible solution under the assumption that have
+[33:15] been made in those assumption of the cost functions the discretization of the state of the
+[33:19] configuration space and other things just to keep that in mind they'll be careful with the word
+[33:23] optimal algorithm or optimal technique unless you specified what optimality means for you and then
+[33:29] there are things like time complexity and space complexity so how long does it take to find a
+[33:35] solution how much memory is needed to do that and in this kind of how much we typically don't refer
+[33:40] to whatever 20 seconds or 10 gigabytes we refer to that in relation to the number of states or the
+[33:49] number of transitions which are out there so it's a complexity for example provided in terms of the
+[33:54] big O notation so it's not just kind of whatever it takes 10 seconds to compute a path it's more
+[34:00] like it's an algorithm which has whatever is linear in the number of states and quadratic in
+[34:05] number of transitions for example or edges that we have in this in this search problem so these are
+[34:10] things that I want to take into account so in the end I want to have algorithms which are complete
+[34:14] which are optimal have a low time the low space complexity that's kind of the best thing I want
+[34:18] to have okay so now let's dive into some examples of uninformed and then informed search techniques
+[34:26] and we can actually gradually build them up and then kind of combine all the different
+[34:30] search techniques that we're now presenting so that in the end we come up with the a-star algorithm
+[34:34] we start here with the very basic search algorithms breadth-first search BFS or depth-first search
+[34:42] DFS where you are expanding your configuration space in a certain order not taking any cost into
+[34:52] account so you're basically expanding a note and you can basically say every note that you're
+[34:58] actually expanding is has a certain call or has a fixed cost a cost of one associated to this and
+[35:04] you may want to find the kind of number of states that you need to visit which is the smallest
+[35:10] number of states to reach your goal location so this is kind of a tree where you're starting so
+[35:15] one is your initial configuration and you're expanding basically the neighboring states that
+[35:18] you can reach from the state number one and you stop once you found your goal configuration so for
+[35:24] example from one you have the neighbors two three and four that you may consider to visit and two
+[35:30] has a neighbors five and six and the state five has a neighbors nine and ten and so on and so
+[35:35] forth and you're basically searching through this tree that you're expanding your search tree until
+[35:41] you find your goal configuration so you start over here and in breadth-first search you're
+[35:47] basically passing this level by level so you start with your initial configuration then you
+[35:52] first inspect all the neighbors so two three and four and then you can expect the next level then
+[35:57] the neighbors of two which are five and six neighbors of three three has no neighbors nothing
+[36:02] to do here neighbors of four is seven and eight and so and then you have kind of five six seven
+[36:08] eight is the next level where you haven't checked for the neighbor so you start checking the
+[36:11] neighbors so from five it's nine and ten and so on and so forth until you find in this example for
+[36:16] example state number twelve as your as your as your as your goal configuration so this is
+[36:22] breadth-first search and you're expanding this basically row by row and you can see this this
+[36:26] is basically a cost of zero because it's a state that I'm in two three and four are states which
+[36:31] I could visit with cost of one so making one movement so to say from one state to its neighboring
+[36:40] state and then the second level would require two movement steps three movement steps and so on and
+[36:46] so forth so by searching through this space I actually have an optimal algorithm assuming
+[36:53] that they all have kind of a cost of the same cost in which I'm expanding that it's also a
+[36:58] complete algorithm it will simply go through all states and will find the solution if a solution
+[37:03] exists somewhat different is depth-first search here I'm basing and going level by level I'm
+[37:10] basically checking for the first neighbor and then its first neighbor and then that's first
+[37:14] neighbor until there are no neighbors and then I'm basically back tracing back and expanding all
+[37:20] the other states so I'm basically going deep in my search tree this is somewhat different properties
+[37:26] it's definitely not an optimal solution because I may find a path by just going into the dapps to a
+[37:34] goal configuration although they may be a shorter path just by going through a different neighbor
+[37:38] and guess given that I'm exploring going deep first and not expanding it level by level as
+[37:44] for breadth breadth-first search then I may not come up with the optimal solution it is a complete
+[37:51] algorithm if we are in finite spaces so if there's just a limited number of states I can explore if
+[37:57] this is an infinite number of spaces I may run into a kind of an endless loop or an infinitely
+[38:02] large corridor down here and although there's a very short pass over here to my goal location and
+[38:08] I may miss this and therefore will not find a solution even though a solution exists which is
+[38:15] maybe even a very simple path so if neighbor number eight would be actually the goal but I'm
+[38:19] starting with two and continue forever searching this part of the tree I may not find the
+[38:24] configuration although it would actually been pretty close so there's not an optimal solution
+[38:29] and it's not complete in infinite spaces it has different complexities they basically depend on
+[38:38] how many neighbors do we have how deep is the goal so in which level is the goal so basically how far
+[38:44] the goal is away or the maximum depth of the tree these are different parameters on which those two
+[38:50] algorithms actually depend on and breadth-first search is kind of the the absolute basic technique
+[38:56] that we may want to use for path planning problems how often often however we don't have equal cost
+[39:02] for all those expansions so some trajectories are more expensive and some trajectories or some
+[39:07] transitions are cheaper and this lead us into a so-called cost sensitive search which is still
+[39:11] an uninformed search because it only uses this cost function and it doesn't take any further
+[39:16] information into account about the goal and what we have here is that all nodes are treated
+[39:21] uniformly so in the same way so independent of the level for example they are in compared to BFS
+[39:28] and DFS but they are distinguished based on a cost function so there's a cost function and which
+[39:34] tells you the transition how to go from one node to another node but the nodes itself are treated
+[39:39] uniformly therefore it's called uniform cost search it doesn't mean we have uniform cost so
+[39:45] this may be a bit confusing it doesn't mean we have uniform cost in that search it means all the
+[39:50] nodes are uniform but we have a cost or different cost form the transition to go from one node to
+[39:55] the other node okay so and what this algorithm does it takes into account the accumulated cost
+[40:01] on the way so if we have my graph over here and I have here numbers on those edges and these are
+[40:08] costs of going from a node one to a node two would be a cost of two to go from one to six would be
+[40:15] cost of seven so this is what those numbers mean here in written to the edges and what the algorithm
+[40:21] does it looks into the accumulated cost so the cost that I have invested so far so my path cost
+[40:28] so far so if I'm for example the cost of this node number five if I started one would be two
+[40:33] plus four equals six so this would have an accumulated cost of six and this node over here
+[40:39] would have an accumulated cost of five plus six equals eleven so this is a so-called g cost or
+[40:44] the accumulated path cost and what the uniform cost search does it basically always expand the
+[40:50] node which has the smallest accumulate accumulated path cost so we are basically always looking our
+[40:57] what is the the nodes which I reached in the cheapest possible way so far and I'm trying
+[41:01] to expand those nodes and this leads to behavior which is actually similar to a breast for search
+[41:07] if we have uniform costs so if all those costs would be one but often this is not the case we
+[41:13] have different costs for different transitions and then the cost-sensitive search is actually
+[41:19] the algorithm that you should use because it expands the cheaper nodes further all the
+[41:24] nodes which lead to a cheaper accumulated path cost and it's an optimal and complete algorithm
+[41:29] so you will find the optimal solution and even if the solution exists you will actually find it
+[41:36] and this is kind of a standard approach in the uninformed search technique that you're just
+[41:42] saying okay let's see what I pay in the end how expensive it is to reach a node and I'm always
+[41:47] kind of expanding the cheapest node until I find my goal location because if I do this strategy and
+[41:53] find the goal I can actually guarantee that I found the cheapest solution because there's no
+[41:58] other cheaper path out there any other node I can reach with a lower cost and I haven't found the
+[42:03] goal so far so the first time I find the goal I know it is actually an optimal solution and again
+[42:10] if I use this uniform cost search but I have uniform costs so if all the costs are one which
+[42:15] is illustrated over here this basically means we are passing through it level by level and then
+[42:20] the uniform cost search basically degenerates to BFS so there's a direct relation to between
+[42:26] uniform cost search and BFS so BFS is a special case of this uniform cost search with transition
+[42:33] cost of one so there's a direct link between those techniques there is also an other link so you may
+[42:39] have experienced the dextrose algorithm which is an algorithm which expands the whole search space
+[42:44] and tries the or compute the shortest path to from all nodes to one node for example you start
+[42:53] your expansion from your goal node and if you run this search starting basically from your from your
+[42:59] goal configuration and expanding the whole tree and save those g cost for all the nodes that you
+[43:07] expanded so the whole the whole configuration then this is actually dextrose algorithm we get
+[43:12] the same result as dextrose algorithm would do so there's a direct link between the uniform cost
+[43:18] search and in dextrose algorithm which may allow you to relate that to techniques you potentially
+[43:24] have seen so far so this is a part of the uninformed search techniques so uninformed again
+[43:30] means we are not exploiting any further information about the goal or about the problem that we are
+[43:37] using and this with this we can define rather simple search strategies and these strategies
+[43:42] will lead to optimal solutions and some of them are also complete it's kind of great the problem
+[43:48] with those techniques is it takes a while until I actually find my goal configuration so the
+[43:52] question is can I do better and can I generate solutions which can exploit somewhat more
+[43:58] information and in through that additional information can find the goal configuration
+[44:04] quicker and that's what the informed search techniques are about so the informed search
+[44:11] techniques are in contrast to the uninformed search techniques they don't use any they use
+[44:18] prior they use further information about the problem in order to be better than the uninformed
+[44:22] search techniques so we use additional knowledge and this additional knowledge is encoded in a
+[44:27] so-called heuristic heuristic is a cost estimate so it's a function that estimates the cost from a
+[44:34] configuration from any input configuration to the goal configuration and this cost will not be the
+[44:39] actual cost but it's a hint it gives you some idea how that cost could look like and of course the
+[44:44] better that estimate is the better or the faster I can probably find the goal configuration if your
+[44:51] heuristic is completely random of course it is not of any help may even distract you and guide you
+[44:56] to the wrong direction but often we can actually provide you with certain bounds on cost like
+[45:02] whatever reaching the target configuration from my current configuration you can't do that better
+[45:07] than a certain distance because you take the straight line distance between two configurations
+[45:12] into account you can say there there can't be any faster or shorter path rather than a straight
+[45:17] line distance assuming that we're living in a Euclidean world and so this allows you to provide
+[45:22] a bound for that cost and this is very very valuable which you can exploit in the search
+[45:27] to guide the search expanding nodes which potentially lead to the target location or
+[45:34] to the goal location faster than the expansion of other nodes and that's exactly what the
+[45:39] search techniques do they look into nodes which are promising which are most likely to lead to a
+[45:46] goal configuration quicker so they are there these heuristics to speed up the search and one
+[45:52] technique is greedy search in greedy search or the simplest form of greedy search we are basically
+[45:59] trying we're only taking to count this cost estimate so how good can I actually reach from
+[46:05] that node my goal location so they're kind of the simplest form of greedy search they're more
+[46:09] advanced ones and you're basically just checking using your estimate estimation function you're
+[46:15] heuristic how far is it from that state to the goal you're only always looking into the state
+[46:20] which is which promises you to be the one calls to the goal under this heuristic so consider you
+[46:26] have expended a certain number of states and you're kind of here in that state number four
+[46:29] and assuming our goal would be that state number 12 which where we don't know how to reach it yet
+[46:34] then what the heuristic function can do it tells you okay from 4 to 12 you have the H function
+[46:42] tells you an estimate of the cost although you haven't expended those nodes yet so you don't
+[46:47] know how they look like otherwise you would know the cost already so you haven't expended them but
+[46:51] this H function can give you a good guess on what that cost could be and then if you're having
+[46:56] current nodes to expand to look further you would always take the node which promises you the
+[47:02] shortest distance to the goal under this heuristic so the greedy search ignores the the accumulated
+[47:10] path cost so far so it ignores how expensive it was to reach for just says from all the nodes
+[47:15] that I've seen always expand the one which guides me closer to the goal so it greedily optimizes
+[47:20] based on that heuristic and this leads to algorithms which typically find the solution
+[47:26] very quickly so they are faster in finding the goal location if we have a good heuristic the
+[47:32] problem with this algorithm is it's not guaranteed to find actually the optimal solution because
+[47:37] your heuristic is most likely not be the optimal solution and and you will not and given that it's
+[47:43] optimal you cannot guarantee that you will actually find the optimal solution so you were
+[47:47] you get your result quicker but the quality may suffer and what we can then do is we can say okay
+[47:54] let's combine uniform cost search and the ideas of greedy search to come up with a new algorithm
+[48:00] which on the one inside takes into account the the accumulated pass cost so far but also takes
+[48:07] into account the estimated cost to the goal and this is what the a-star algorithm does so a star
+[48:13] you can see a star as a combination between uniform cost search and greedy search so uniform
+[48:18] cost search in the sense that it considers the accumulated path cost and greedy search in the
+[48:23] sense that it takes the heuristic into account and actually computes a sum of accumulated cost plus
+[48:30] a heuristic of how expensive it is to reach the goal from the current configuration that I'm
+[48:36] considering so again in my example if we are again in our node for what a star would do it would take
+[48:42] a sum of two costs into account the cost of reaching for so far so the cost that I know the
+[48:48] actual cost that I computed my accumulated path cost G plus heuristic how expensive it is
+[48:54] potentially to reach my goal location so my state 12 in this example so through this combination of
+[49:01] G and H a star can provide you with an algorithm that combined the advantages of both algorithms
+[49:07] you need to have some constraints on it heuristic so you can't take any heuristic but if you choose
+[49:12] heuristic in a smart manner then you actually end up with an optimal and also complete algorithm
+[49:17] which is called a star and a star is an algorithm that actually has been developed in the robotics
+[49:23] community so in the late 60s Neil's Nielsen at the Stanford Research Institute was involved in
+[49:29] the project was called shaky the robot so one of the this is this this robot over here which was
+[49:36] one of the very early robots that could do Navi solve navigation tasks and perception tasks that
+[49:41] are let's call it similar to the tasks that robots can do today of course in a simplified setup under
+[49:47] more constraints but it's very impressive to see what shaky the robot was able to do in the late
+[49:53] 60s given the capabilities that they had at hand at that point in time and a lot of relevant
+[49:59] that are out there today in our standard algorithms in robotics or an AI today have been developed at
+[50:05] SRI at that time and among them also the a star algorithm which is today really the gold standard
+[50:10] algorithm in AI for informed search and use in the majority of planning systems out there is a star
+[50:18] or some variant of the a star algorithm so it was one of the things where the robots robotics
+[50:24] community actually came up with a new solution that impacted also other fields so how is a star
+[50:31] used for that type of problem so we're using the a star this algorithm which combines the accumulated
+[50:37] pass costs so far and the estimate of the cost for reaching the target location in order to plan
+[50:43] a path for the robot from a start location in to a goal location and what we typically assuming
+[50:50] here is kind of known poses in a map of the environment so we assume to know how the environment
+[50:55] looks like we have a geometric representation of the environment most of the time often that's
+[51:00] an occupancy grid map or a grid map structure but it could also be another discretization polygons
+[51:04] of the environment for example and we assume always to know where the robot is in the environment so
+[51:10] we assume to have a working localization system in hand and then what the algorithm does it provides
+[51:16] you with a sequence of configurations that the robot needs to follow in order to be guided from
+[51:22] its current location to the goal location and if the robot drives along that pass it will be the
+[51:28] optimal pass and it uses a heuristic to do that and the heuristic depends on your cost function
+[51:33] because this heuristic always needs to underestimate the actual cost so you're not allowed to
+[51:38] overestimate the actual cost if you're overestimating the actual cost you don't have the optimality
+[51:44] anymore the property of optimality but if you're underestimating the cost or smaller or equal then
+[51:51] you actually have a heuristic which leads to an optimal solution and if we are looking into the
+[51:56] shortest path problem not the fastest but the shortest path problem the straight line distance
+[52:02] is a very good tool to use assuming we are living in a Euclidean world which we do most of the time
+[52:08] depending on the planning problem you want to solve but if you're living we've been moving to
+[52:12] the 2d world for example we can very well describe it by Euclidean space then the straight line
+[52:20] distance between let's say 2 xy locations or 2 xy that locations is the shortest connection between
+[52:27] those two nodes so it's it's a lower bound for the lengths of a pass going between those two
+[52:34] configurations and this lower bound is exactly what I need for my heuristic so the straight
+[52:38] line distance is a very good heuristic for planning in the 2d or 3d world of course you
+[52:44] may need to take orientations into account which are non-Euclidean or if you look to for example
+[52:50] shortest time planning algorithm so we want to generate the faster trajectory but then you can
+[52:56] still use the straight line distance by saying the fastest possible way from this configuration
+[53:01] to another configuration is driving with the maximum speed that the vehicle can actually drive
+[53:05] along a straight line distance you can't be faster so you can still use these ideas of a
+[53:10] straight line distance in order to come up with an admissible heuristics or an underestimating
+[53:15] heuristic for this A-star planning problem and so that's what kind of a course description how
+[53:23] A-star can be used for robotic path planning so let's see how that looks like in our discretized
+[53:29] configuration space that I have actually seen before so what we see over here we have this
+[53:35] discretization of the environment our system starts over here and wants to go down here and
+[53:40] what it does it basically will expand those nodes over here and will always expand the nodes based
+[53:45] on a combination of the actual path cost accumulated so far to reach a node and the
+[53:53] predicted cost from that state to the goal so what I can do is just kind of run this animation
+[53:58] once and then we can see how that evolves so you see always the nodes which are expanding so for
+[54:04] those gray states here we actually know the cost the other costs here actually boundary call or
+[54:10] states where not all the neighbors have been explored yet where I know that the cost already
+[54:15] and I'm basically expanding that always expanding these new nodes which are here the kind of the
+[54:20] boundaries between the already explored space and the unexplored space until I find my goal
+[54:26] location and then this gives me the optimal path from my start to my goal so just kind of rerun
+[54:32] that video so with these explanations you may be able to kind of better appreciate that again so
+[54:37] you see how the nodes are expanded and the yellow node is always currently the currently
+[54:42] expanded node and you can see the search is actually guided towards this state so you're
+[54:49] always expanding nodes and it prefers to go down here because it's more promising to reach a goal
+[54:53] location until it reaches the goal and nodes up here for example are not explored because the
+[54:58] heuristic tells me it's probably not a good idea to go here because you're moving further
+[55:01] away from the goal so this is unlikely to be a good path and it's avoids exploring those nodes
+[55:09] and you're still not sure if this is the shortest path because you do not know if there's a doorway
+[55:13] for example over here or this is the shortest path so the algorithm basically expands these
+[55:18] two possibilities until it finds the optimal solution to the goal and that's kind of how
+[55:24] a star works so let's dive a little bit deeper into the a star algorithm what a star does it
+[55:32] minimizes the cost which is a combination of the actual accumulated path cost for a node so how
+[55:39] expensive it is to reach a node n from an initial state so from the initial state to n how expensive
+[55:46] is it so this is the g cost that we used in uniform cost search the accumulated path cost
+[55:52] to reach a node and then it also takes the heuristic into account h of n and h of n is
+[55:57] an estimate starting from n how expensive is it probably or what do I estimate how expensive it
+[56:06] is to reach my goal location so from n to the goal so g is from start to n and h is from n to
+[56:14] the goal where g is the actual cost and h is just an estimate and then what a star use uses the so
+[56:21] called f cost and the f cost is the sum of the g cost and the h cost so the sum of what I know
+[56:28] already plus my estimate so I'm basically always using a combination of something I already know
+[56:33] and I'm estimating the rest and this is what this f cost is some of the costs I already know and my
+[56:40] heuristic cost so it's a combination of the cheapest solution so far and an estimate to the
+[56:47] goal and where this overall sum is the smallest sum this is the node a star is expanding so a
+[56:53] star will always expand the node which the smallest f cost among the nodes it has already considered
+[57:00] or is going to consider it so it basically expends this search tree and always as to expand the node
+[57:07] which which has the smallest f cost but the question is how does age how much age look like
+[57:14] the heuristic look like so that we actually find a good solution because it's clear if if age is
+[57:18] completely arbitrary this is not of help we actually get we actually mess up our cost function
+[57:24] so there are some properties that age must have in order to come up with the right solution so the
+[57:32] first thing is of course if I'm at the goal but that should be pretty clear if I'm if if n is the
+[57:37] goal state then age of n should be zero because if I'm at the goal state I'm at the goal state
+[57:41] there's no further cost but that's kind of easy to achieve what's harder to achieve is that the
+[57:48] cost for all nodes must be the estimated cost must be smaller than the actual cost so I always must
+[57:57] underestimate the actual cost I'm not allowed to overestimate the cost so if that means if there's
+[58:03] a pass from n to the goal and I say my heuristic says all this cost is whatever 10 units but the
+[58:09] actual cost is 8 units that's something which is forbidden I'm not allowed to make an estimate
+[58:14] that is more expensive than the actual cost I always need to make sure that my costs are
+[58:19] smaller than the actual cost so I need to underestimate my cost so if 8 star is kind of the
+[58:26] actual cost the thing which I don't know but which assuming we would know it assume we would know the
+[58:31] perfect cost to the goal then they then call that function H star of n then H of n must always be
+[58:37] smaller or equal than H staff and of course we want to push it up to be as close as possible to
+[58:42] H staff and because of H staff and I know all the cost and then my panning problem is super easy
+[58:47] because I just need to do a gradient descent in this cost function but this is typically not the
+[58:53] case I can't know the optimal accumulated cost for all nodes on the way already so I want to be as
+[59:00] close as possible to H star but it must always be smaller and if this is the case I have a so-called
+[59:05] admissible heuristic and if I have an admissible heuristic and a star will lead to an optimal
+[59:10] solution and again a standard admissible heuristic for planning in Euclidean spaces is a straight
+[59:14] line distance so it's a very good starting point which already is a quite good heuristic again if
+[59:19] you know more about your problem you may take additional information into account but if you
+[59:23] don't any if you just know I'm an Euclidean space you don't know anything else straight line distance
+[59:27] is a very good choice so what happens just as a side note if H is actually larger than H star
+[59:35] so it's not admissible heuristic anymore in this case you lose the property of optimality so the
+[59:41] result that you get is not guaranteed to be the optimal solution anymore but you can say a
+[59:47] relationship by how much you overestimate you can make another bound on your solution so if you have
+[59:54] let's say heuristic which is up to twice as expensive at as the optimal heuristic so you're
+[1:00:00] overestimating cost but not more than a factor of two then you can show that the result that you get
+[1:00:06] is only up to a factor of two worth in the optimal solution and this is a property that some of the
+[1:00:11] anytime algorithms like anytime real-time a star RR star is actually exploiting in order to start
+[1:00:17] with the past which may not be the optimal one but is very very efficient to compute and then
+[1:00:23] optimize it the more computational resources you have available so you as the rule of thumb you
+[1:00:30] must be smaller than H star to be optimal but the larger HN is the faster your search gets so you
+[1:00:36] want to make H of N as large as possible to be fast but still smaller than H star in order to
+[1:00:42] find an optimal solution and depending if you want to give up optimality and optimize for speed or
+[1:00:47] you say a speed is important but not that important I still one of the optimal solution you can try to
+[1:00:52] overestimate or underestimate and H star so it basically depends on your on on the solution
+[1:00:59] of on your application if it is okay to have a path cost which is slightly more expensive than
+[1:01:05] the optimal cost but if you find that therefore in just a fraction of the time you may use your
+[1:01:11] computational resources in a smarter way for your problem so it may be worth to actually make the
+[1:01:15] trade-off so how does a star work as an algorithm we said we are always kind of expanding the search
+[1:01:23] tree and always expand the the tree the the nodes which has the the smallest each cost in practice
+[1:01:32] it's it's like that but it's slightly more complicated if you want to implement this what
+[1:01:37] you need for that you need have a priority queue so a queue where you can put in nodes and the
+[1:01:41] queue orders the nodes and you can always get out the cheapest possible node and what can also
+[1:01:46] happen given that we in the end have a graph structure of our configuration space so can we
+[1:01:51] can reach a node through different ways we need to be able to update nodes if we find kind of a
+[1:01:58] cheaper way for reaching it and this is something that we need to take into account I don't want to
+[1:02:04] go now through an algorithmic description of a star I just want to go to basically a flowchart
+[1:02:08] describing the different stages of a star and this is a drawing from chosen's book so and we
+[1:02:18] can just go through those individual steps of the a star algorithm kind of as a soda quote of flow
+[1:02:22] chart based description on how a star works so we start somewhere over here and what we have we
+[1:02:28] have an open set L which are the nodes that I'm currently considering this is my my priority queue
+[1:02:36] and I have a list or a storage container C which are the closed nodes so those nodes which I have
+[1:02:44] already investigated I know that cost already I'm not not need to take them into account anymore
+[1:02:48] okay so I start and say is my open list empty is there any nodes that I haven't fully investigated
+[1:02:55] they haven't visit all the neighbors and all the costs now finally if this is the case then I'm
+[1:03:01] actually done because then there's nothing to be do to be done anymore I that means basically I
+[1:03:05] explored my whole state space you typically start with O being the initial configuration of the
+[1:03:11] robot being inserted to that into that to that oldest so I'm not starting with an empty list so
+[1:03:17] that's basically the initial configuration okay so that means it's not we're not done yet so what
+[1:03:22] what do we need to do so we need to pick and best from O in the way that it has the smallest F cost
+[1:03:28] that means I'm picking out from my open list the note with the smallest F cost for the smallest
+[1:03:33] accumulated path cost plus heuristic estimate and this is the next note I'm going to expand and this
+[1:03:40] is my search tree the cheapest node in kind of the boundary of notes to explore and I'm actually
+[1:03:46] picking that one okay so what I do I'm remove it from my open list so from the notes to inspect
+[1:03:53] because I'm expecting it right now and then adding to my closed list so those which are already done
+[1:03:57] I don't need to investigate them further then I check if this note that I just took out from my
+[1:04:03] priority queue is it actually the the goal configuration if it is the goal configuration
+[1:04:09] I'm happy I'm done I found the goal configuration everything is good but in the majority of cases
+[1:04:15] this will not be the case because I need to expend a large number of notes until I find my goal so
+[1:04:19] assume we are now on this on this note track over here then what I need to do is that I need to look
+[1:04:25] into all the notes which are neighbors of that note that I'm inspecting so I'm taking that note
+[1:04:30] and basically now I think okay it's not the goal note so I need to look further let's check all its
+[1:04:34] neighbors so I'm basically expanding all those neighbors and see and one check for those neighbors
+[1:04:42] which are not in the in the closed list so those which I haven't visited so far it could be that I
+[1:04:48] visited them already because I reached was next to them on another on another path through the
+[1:04:53] environment because we're in a full graph so there may be several routes to a configuration and then
+[1:05:02] if I'm taking this neighbor out and it's not in the closed list I need to check is it already in
+[1:05:06] the open list so is it already in my notes I actually need to inspect further if this is the
+[1:05:12] case is it's not the case if it's not in Oh I actually need to add it to Oh so it's a note I
+[1:05:17] actually need to consider so next thing to visit if it is not the case that means it is already in
+[1:05:25] Oh I need to see if there is actually the new path that I found is actually a cheaper way for
+[1:05:31] reaching it so if it is only in if it would have been in C so all the notes that I'm in C already
+[1:05:37] done the positive cost can't change anymore everything which is still in Oh may change
+[1:05:41] because I may find a cheaper path to reach that note and and this is this happens over here I need
+[1:05:47] to make the check if the if the cost through the notes that I'm expending is actually cheaper than
+[1:05:52] what I was knowing about it before so in this case I need to update the cost and basically to update
+[1:05:59] the cost in Oh and then I'm done and I'm again checking if there anything else you know potentially
+[1:06:05] I'm now expanding the note that I've just added or one of the neighbors are just added because if
+[1:06:10] the cost from the previous note to one of those neighbors was small it's likely to be now the
+[1:06:14] cheapest one so basically I'm expanding towards the goal but it could also be any other note which
+[1:06:19] is cheaper this is what the priority queue does which is realized with Oh it always picks out the
+[1:06:25] the cheapest note out of the open list and so this is the note that I'm expanding and this is
+[1:06:32] basically the algorithm which can be implemented with a couple of lines of code so one or two pages
+[1:06:37] of code you need in order to get that done assuming you have a priority queue for your
+[1:06:42] implementation which does be handling automatically for you and that's the way how you would then
+[1:06:46] implement that approach and this gives you an optimal algorithm which is complete and we're
+[1:06:54] just comparably fast the only thing you need to do is you specify your path cost and you need to
+[1:06:59] specify a heuristic which is admissible that means that under underestimates the actual accumulated
+[1:07:05] path costs and with this you have your a star algorithm being implemented let's see now how we
+[1:07:12] can how that looks like if we apply that to robot navigation we could apply it out of the box and
+[1:07:17] just plan path but this is often not the best thing we can do we have to make a small small few
+[1:07:22] small tweaks in order to do better we first will do this for simple 2d playing problems but then
+[1:07:29] also see how we can actually exploit that in order to combine this high-level planning that we
+[1:07:34] discussed and this bit more low-level planning this collision avoidance in one go so application
+[1:07:41] to 2d plasma or we stop it so if the robot is in a certain state in this configuration we typically
+[1:07:46] use the innate neighborhood that means we on a grid map we can go into all neighboring states
+[1:07:52] so again very often we do this on our occupancy grid map and plan a pass on an occupancy grid
+[1:07:57] map at least in low-dimensional spaces if you have very complicated configuration spaces that's not
+[1:08:02] what we do anymore but often we plan in a 2d space and so the robot can basically rotate on
+[1:08:08] the spot and then move into different neighboring configurations so that if I'm starting over here
+[1:08:13] and I want to go down here in this room you can see here the expanded nodes it's kind of this gray
+[1:08:18] area darker the gray the more expensive the cost and we are expanding those nodes until I actually
+[1:08:23] find the way to the target location that's basically what we have described so far how
+[1:08:27] the planning actually works and in its basic form nothing needs to be added to that you can plan
+[1:08:34] your path for your robot the sequence of 2d script stalls you need to visit in order to find an
+[1:08:40] optimal solution to the past that's something that works however there are a couple of assumptions
+[1:08:47] which underlie which we have made on the way which may not hold in for real-world robotics and we
+[1:08:52] need to always make sure we revisit our assumptions to see are those assumptions actually valid and
+[1:08:57] justified so the first assumption we made is that the robot knows its own location though what
+[1:09:02] always knows where it is that's kind of an assumption which we often say ah maybe we can
+[1:09:07] assume that but the question is what the quality of my localization estimate how accurate is my
+[1:09:13] localization actually is it accurate up to 20 centimeters you can say okay that's kind of
+[1:09:18] something I can typically assume when navigating with a typical sensor set up in an indoor
+[1:09:22] environment but that may be different if you were you you go really really close to obstacles let's
+[1:09:29] say just one centimeter next to an obstacle in order to optimize your trajectory in this case
+[1:09:34] your pose estimate which has 20 centimeters accuracy may not be good enough anymore and if
+[1:09:42] you and so you need to be aware what means you know your own location so if you need to be really
+[1:09:47] precise millimeter precise that's something which most systems are unlikely to provide to you at
+[1:09:52] least can't guarantee it what you then assume is that your map is correct so assume the map of the
+[1:10:00] environment is correct so either you or your pre-given map is correct or you use your sensor
+[1:10:04] data to update the map but you assume at the point in time when you start the planning process you
+[1:10:08] know that your map is correct and that's something which is again an assumption if you have people
+[1:10:13] which walk through the environment that may not be actually the case and so you need to we need to
+[1:10:19] find a way not to deal with this problem and the other question is is your motion execution
+[1:10:23] actually being correct if you say go a meter forward does the system go a meter forward or
+[1:10:27] does it maybe even drive a little bit to the left inside just as a one degree to the left because
+[1:10:31] there's a small drift if you need to take that into account in the planning process it gets much
+[1:10:37] more complicated a star ignores this and so it means basically that you shouldn't drive really
+[1:10:43] really really close to walls if you do that really really driving close to walls and just turn a one
+[1:10:49] degree more to the left-hand side than you actually should you would actually collide into the wall so
+[1:10:53] although a star computed a collision free pass who guarantee that is actually collision free in the
+[1:10:59] real world no one and so you need to revisit always your assumptions what are the assumptions
+[1:11:04] that you made and maybe you should change your problem a little bit to at least not completely
+[1:11:09] a white the problem that we have but being more robust under small variations of those problems
+[1:11:16] so if I say most of the time actually well localized but sometimes maybe not perfectly can
+[1:11:21] I take that into account in the planning process not necessarily in the planning process itself
+[1:11:26] but in the way I formulate the problem that the solution that the planner generates is actually
+[1:11:32] less sensitive of for example leading to a collision and if those assumptions are at least
+[1:11:38] slightly violated so potential problem that I have that the robot is slightly delocalized that
+[1:11:44] one I just said before so your post estimate is slightly wrong the other thing that you can see
+[1:11:49] if you if you watched a few of the a-style algorithms finding a path from the current
+[1:11:53] configuration to go location that the pass often guides very close to an obstacle because you want
+[1:11:58] to drive as fast as possible and you don't want to make a small detour it's totally fine to go
+[1:12:04] just a millimeter next to a wall because it's collision free right so this according to the
+[1:12:09] planner no overlap between the robot and the wall even if you just pass by with a millimeter of
+[1:12:13] safety distance and the algorithm yeah perfect it's collision free if you would could guarantee
+[1:12:21] to execute that millimeter precise path that would be the case but that's something we can't
+[1:12:25] do in reality so you may want to increase your safety distance to obstacles a little bit don't
+[1:12:30] make the trajectory substantially longer but try to avoid to go to really close to obstacles that's
+[1:12:35] one way how we can actually deal with this potential problem something else that we can
+[1:12:40] see if we have a grid map we basically have discretizations in 45 degrees in the orientation
+[1:12:45] of the platform and so if your if the typical routes that you take or the corridors in your
+[1:12:50] environment for example are not in line with the grid structure that can actually lead to sub
+[1:12:55] optimal trajectories just because of the discretization of your state space you may get
+[1:12:59] actually weird navigation trajectories that the robot does some weird movements when navigating
+[1:13:05] through the environment because you did it to course discretization of your configuration space
+[1:13:09] and that is something you may all want to also want to take into account so we now want to look
+[1:13:14] in the remaining part of the course and how can we should deal with those two potential problems
+[1:13:18] and see how we can actually tackle that so what to do in order to white that the robot is often
+[1:13:24] guided really really close to obstacles because if it is slightly delocalized this would be a
+[1:13:30] suboptimal behavior so they actually coupled those two problems if the power spinning algorithms
+[1:13:35] wouldn't guide the robot that close to obstacles a small delocalization may not be that problematic
+[1:13:40] and that's actually something that we now want to try to achieve how can we change the overall
+[1:13:43] procedure or how can we actually we actually not changing the procedure the plan the the a-style
+[1:13:48] algorithm itself we keep it as it is but how can we chop change the formulation of the problem that
+[1:13:53] we actually get trajectories which keep some safety distance to the obstacles the easiest way you
+[1:14:00] could think of is probably just expand the obstacles so take your map and make all the
+[1:14:04] obstacles 10 centimeters thicker if you do that just for the purpose of planning if the robot
+[1:14:11] was before guided being guided one millimeter next to the obstacle it would be now guided 10
+[1:14:16] centimeters plus one millimeter close to the obstacle where you say okay that's a reasonable
+[1:14:20] safety distance I'll stick with this I just expand all my obstacles and plan a path in this
+[1:14:24] inflated world and so throw what will keep a certain safety distance to obstacles totally
+[1:14:31] fine you can do that that's a very good approach if you have enough clearance in the environment
+[1:14:37] if you don't have any narrow passages in most environments you have door frames for example
+[1:14:42] and the door frames are not too large maybe 80 centimeters wide and if your robot is 70 centimeters
+[1:14:46] wide expanding everything by 10 centimeters would actually lead to a planning problem where there
+[1:14:52] would be no path no way for the robot to actually pass through the doorway so that's optimal so you
+[1:14:57] don't want to enforce the safety distance but say if possible do it and we can do this with a trick
+[1:15:04] and the trick that we are now applying or to solve this to kind of expand the obstacles but don't
+[1:15:11] expand them at the full yes no as a heart constraint we can use a convolution of the
+[1:15:17] grid map so remember we can add a Gaussian blur so to say to our map to our occupancy grid map for
+[1:15:23] example so that means we are basically smoothing the occupancy values in local neighborhoods
+[1:15:29] something that we commonly do in images and image processing so for example you take your favorite
+[1:15:35] image processing software whatever a game Photoshop or whatever it is and you have a
+[1:15:41] filter it's called Gaussian blur what it basically does it takes for every pixel neighboring pixels
+[1:15:45] into account and performs a certain type of smoothing with a certain kernel basically
+[1:15:51] averaging over the occupancy values that means if you have values which where one value is high and
+[1:15:57] the neighboring value is small you basically take some of the high probability mass of being occupied
+[1:16:03] and kind of move it into the neighboring cell which had a low probability so you're increasing
+[1:16:08] the probability the occupancy probability of that of that cell and if you then relate your cost to
+[1:16:14] the probability that the cell is occupied you're basically adding some of the expensive cost of the
+[1:16:19] or infinitely large cost of the of the occupied space into the nearby free space you're basically
+[1:16:27] increasing the cost so it's cheaper for the robot to go to real free space which is far away from an
+[1:16:33] obstacle and just by kind of smearing so to say the cost into the neighboring cells just a little
+[1:16:40] bit the system will actually try to await those cells if it can but if there is no other pass
+[1:16:47] it says okay there's no other way I have to pass through that door frame so at that position the
+[1:16:52] door frame I actually need to be really precise and go directly to the center of the door frame
+[1:16:57] which is also an effect that that smoothing can generate for you that you there would really want
+[1:17:01] the path through the center of the door frame trying to maximize the distance to the walls
+[1:17:07] is a more expensive path the robot may even slow down or use this information to slow down
+[1:17:12] to navigate more precisely but whenever there's enough free space you will actually drive through
+[1:17:17] the free space so what we do we convolve a grid map and perform the a star planning in this
+[1:17:22] convolved grid map so just as a small example basically a 1d cut through a set of grid cells
+[1:17:27] so you have two cells one and zero and one which are occupied occupancy probability of one and
+[1:17:33] those which are next to it have an occupancy probability of zero they are free cells this
+[1:17:37] would be kind of basically a clipped grip map a way of just zeros and one values and if you kind
+[1:17:42] of perform a gaussian or a binomial kernel which is kind of gives you a gaussian blur basically
+[1:17:48] and move it over those cells and do two convolutions then your values your probability
+[1:17:54] values your smooth probability values would actually look like this so those get a little
+[1:17:58] bit lower and those get a little bit higher because you're basically taking probability
+[1:18:02] mass and smearing it into the free space and if you then would actually perform your planning in
+[1:18:08] this convolved drip map or maybe you afterwards actually enlarge those values back to one because
+[1:18:13] they are for sure occupied you never want to go through move through those states and then these
+[1:18:18] values over here will actually generate cost which would like keep the robot here at at cell number
+[1:18:24] four if it if it can do if there would be another obstacle over here would actually go exactly
+[1:18:29] through the middle and that's what the map can convolution does for you if you perform planning
+[1:18:34] in a convolved grid map and this is done through a so-called binomial kernel which basically means
+[1:18:40] for a cell where you want to perform that smoothing this cell over here you say
+[1:18:44] i take half of the probability value of that cell and a quarter of the left and the right
+[1:18:48] cell and do this over all rows and all columns for the map and this basically generates a
+[1:18:53] gaussian blur and this is a form of kind of pre-processing that you're doing you basically
+[1:18:58] perform this convolution and then you take the maximum operation from this convolved map and
+[1:19:02] the original grid map and then perform the planning in this modified map which is also
+[1:19:07] often referred to as a star in an convolved grid map and this allows you to kind of avoid that the
+[1:19:16] robot goes too close to obstacles if it has the possibility to avoid it given the possible
+[1:19:22] trajectories to the goal and this is kind of a standard method that is done today in most
+[1:19:26] planning algorithms that you kind of in this way kind of inflate or not not fully inflate but kind
+[1:19:30] of smoothly inflate your obstacles in the environment and plan in this type of map
+[1:19:35] and this leads to navigation behaviors or trajectories which keep a safety distance if
+[1:19:40] possible to obstacles so you still find trajectories which are close to the optimal
+[1:19:45] trajectory so they're just slightly longer if at all but your motion execution is much more
+[1:19:53] reliable because the system is much less likely to bump into an obstacle taking into account that
+[1:19:58] you could be delocalized or the system doesn't perfectly execute what you want to execute
+[1:20:04] if you would take uncertain action execution into account properly you would need to go to
+[1:20:10] a mark of decision process which is something that we also discuss we'll discuss later on
+[1:20:15] which is a technique in order to plan under uncertainty but kind of this convolving a
+[1:20:19] grid map is kind of a quick fix to get a similar behavior with much less computational effort so
+[1:20:24] it's always valuable to actually take that into account the second thing i want to talk about
+[1:20:30] here is a short remark on that heuristic so we have seen that heuristic should always
+[1:20:35] underestimate the true cost and so the question is can we actually compute the true cost yes we
+[1:20:42] can compute the true cost for a given configuration and that's something that Dijkstra's algorithm is
+[1:20:46] doing for us if you remember Dijkstra's algorithm computes the cost for every node to for each to
+[1:20:55] reach one goal node so we start Dijkstra's algorithm from the goal node and expand the
+[1:20:59] whole state space if we can do this we can actually get a cost for every cell
+[1:21:04] that is the optimal heuristic the problem is performing this operation is more expensive
+[1:21:09] than a star itself or the full or even the uninformed search itself so if you plan only
+[1:21:14] once a star is still the way to go use your euclidean heuristic everything is good if you
+[1:21:19] however plan more often a path to the same goal location then it may be worse to invest a little
+[1:21:27] bit efforts into coming up with a good heuristic and if this is the case so if you say you're
+[1:21:32] re-planning every second still reaching the same goal location you just re-plan in order to avoid
+[1:21:38] if the robot is slightly slightly moved somewhere else you're still in a good trajectory or you may
+[1:21:43] change your map a little bit by adding obstacles based on what you see let's say people walking by
+[1:21:47] and but the underlying planning problem is still very very similar then it makes sense to run a
+[1:21:53] dykstra path first in order to compute the optimal heuristic and then plan with that optimal heuristic
+[1:22:01] and that's something which is very efficient and typically done and which something we will also
+[1:22:05] exploit in the remaining part of the course so with this you get the optimal heuristic for a
+[1:22:09] star so there's an example if this is your goal location you start your dykstra's algorithm from
+[1:22:13] that location so it expands kind of backwards and increase the cost will increase the further
+[1:22:19] you go away the darker the color until you will be reaching here costs and states of high cost
+[1:22:26] and if the environment doesn't change the only thing that you then need to do is basically
+[1:22:29] gradient descent in this map and basically a star will then basically reduce to a gradient descent
+[1:22:36] if you have the optimal heuristic being taken into account because you always expend the right
+[1:22:41] notes it's not it's not fully it's not fully true what i just said so it's not fully a gradient
+[1:22:47] descent that a star will actually generate but it's still extremely fast if you know that you
+[1:22:52] have the optimal heuristic then you could actually do a gradient descent assuming that the environment
+[1:22:57] did never change if you have dynamics around so people walking by you may need to change your
+[1:23:02] cost map again and let's say um we have a person by some of the states will get a higher cost but
+[1:23:09] that's not problematic from the heuristic point of view because heuristics should underestimate
+[1:23:12] so you could stick with this extra heuristic run a star and a star would assume there's no obstacle
+[1:23:17] as soon as it finds an obstacle we'll plan a path around it put a little bit more computational
+[1:23:22] efforts into this but then continue with the optimal heuristic and so that's the way you go
+[1:23:28] for if you take into account that you need to re-plan more often in the remaining part of the
+[1:23:35] lecture i would like to look into high dimensional state spaces so what can we do in order to take
+[1:23:42] into uh take higher state spaces into account or high dimensional spaces for example if velocities
+[1:23:48] matter and i take want to take into account that i cannot artificially um increase the acceleration
+[1:23:53] or the the speed of my robot by putting very high acceleration in that this is a smooth process that
+[1:23:58] i need to do what we can do is we can still use acer planning let's say a five-dimensional state
+[1:24:04] space planning um taking velocities and changing velocities into account how does that work so um
+[1:24:11] what we can do is we just say we don't only plan in the x and y space as we did so far if you plan
+[1:24:15] the grid map we actually plan an x y orientation theta translation velocity and rotation velocity
+[1:24:21] so a five-dimensional state space and plan in this five-dimensional state space so that means
+[1:24:27] the velocities that we are setting basically and the and the current configuration tell us what
+[1:24:31] our neighboring configuration would actually look like so by taking this information into account
+[1:24:37] we are getting the neighboring states automatically in here and so now the only
+[1:24:43] problem is we probably can't discretize this state space fully because moving from a two-dimensional
+[1:24:47] state space to a five-dimensional state space considering that the number of states in would
+[1:24:53] would grow exponentially with the number of dimensions that i add this will lead to
+[1:24:57] substantially larger um planning problems something that is larger than what i can typically
+[1:25:02] handle very well and that's a problem that i have so this state space gets actually huge
+[1:25:09] if i would however be able to plan in this configuration it would be great because i
+[1:25:13] would have a planning problem which generates trajectories where um the the fastest trajectory
+[1:25:19] is better taken into account um because i'm explicitly taking for example the rotations
+[1:25:25] properly into account which is not necessarily the case if i've just planned on a 2d grid map
+[1:25:29] and i can take velocity constraints into account or changes in velocity so i can say for example
+[1:25:35] in certain i don't want to change the velocity dramatically i just have a certain acceleration
+[1:25:41] that bound the change in velocities which generates smooth starting and stopping behaviors
+[1:25:46] for the robot or which can say in certain areas i'm going to drive more slowly and others want
+[1:25:51] to drive faster i can just take that in the planning process already into account in order
+[1:25:56] to come up with the optimal trajectory that i'm going to estimate okay so how does it look like
+[1:26:02] that state space is now this five-dimensional state space and in order to go from state
+[1:26:07] number one into state number two and the velocities actually matter so to go from here to here so from
+[1:26:13] one 5d state another 5d state i may be able to do this if they are nearby and the velocities and the
+[1:26:18] orientation are compatible so competing those neighbors gets more complicated because i need
+[1:26:23] to take the physical constraints of the platform into account but i can for example say i have
+[1:26:28] constraints in the acceleration in the rotate in the rotational part in the translational part
+[1:26:33] how fast i can want to stop or slow down the robot this can be perfectly taken into account and so
+[1:26:39] based on the velocities constraints that i said i actually get out the new configuration of my state
+[1:26:45] the problem that i have is that i typically need to execute that planning system frequently so if
+[1:26:51] i don't have an additional underlying obstacle avoidance system running i need to execute that
+[1:26:55] at high frequencies 10 hertz or maybe five hertz for depending how fast my robot actually goes so
+[1:27:01] if you do indoor navigation maybe five hertz are fine if the robot goes a little bit faster than
+[1:27:06] walking speed you need to increase it 10 hertz if you're driving outdoors on a road you really
+[1:27:10] need to bump it up to whatever 30 hertz 40 hertz maybe so that's the problem you can't run that
+[1:27:16] planner that quickly in this five-dimensional space state space because the number of state
+[1:27:21] that you need to explore is simply too large you need to restrict the search in the state space
+[1:27:25] down so what you can do is you can restrict your your state space in order to just explore a part
+[1:27:31] of the state space and take those states into account which are most likely to be good states
+[1:27:38] and for this we can actually come up with a hierarchical way of planning so the algorithm
+[1:27:44] works the following we start with our occupancy grid map and we use sensor information in order
+[1:27:49] to update our grid map that means if we see an obstacle we just add it to our grid map so we have
+[1:27:56] an grid map with my my standard grid map which contains only the static part of the world the
+[1:28:01] one which is given to me and basically have a second map where i'm just adding what i'm seeing
+[1:28:06] and there is a map i use for planning is basically the maximum of those two maps and of course i do
+[1:28:11] the trick with the convolution itself and then i plan an a star in the standard two-dimensional
+[1:28:16] grid world so i just do a 2d planning using this optimal heuristic and all the tricks that i just
+[1:28:22] explained before so i come up with a trajectory in the 2d world and then i say and then i make
+[1:28:26] the assumption basically the path that i plan in a 2d world and the path that i plan in the 5d world
+[1:28:33] shouldn't be substantially different from the xy position point of view so i may deviate a bit from
+[1:28:38] the path taking the accelerations into account or hard drive on a curve but i shouldn't change the
+[1:28:43] trajectory dramatically and therefore what we can do is we can build up the five-dimensional
+[1:28:48] configuration space only around the trajectory that are planned in this 2d world around this xy
+[1:28:54] space so i kind of restrict the states that i'm actually expanding towards a 5d configuration
+[1:29:00] space so i'm building a small channel in this five-dimensional configuration space and only
+[1:29:05] built at five-dimensional configuration space explicitly in this small channel around the
+[1:29:10] past complete in the 2d world and then do the optimal planning in that channel in my in my
+[1:29:15] 5d space but don't need to expand the full search space for this 5d space and that's something that
+[1:29:22] you can do so let's go through these individual steps so i start with using the occupancy grid
+[1:29:27] map this one over here my static world i convolve it you can see it on this black values here around
+[1:29:33] obstacles this is the result of the convolution and if i detect um i see some obstacles for
+[1:29:39] example from my laser scanner in the environment i can add that to the map and i can add it and
+[1:29:43] what i do in practice i basically have two maps one map which never changes and then a dynamic
+[1:29:47] map which just contains those dynamic obstacles so the thing that i right now see and i get that
+[1:29:52] from my same going to high frequency let's say 10 hertz and can with 10 hertz update that map
+[1:29:57] and take the dynamics into account so that's kind of the first step and then i perform my planning
+[1:30:03] in my um two-dimensional state space so i take that map and plan a path in this two-dimensional
+[1:30:08] map so for example if my goal is over here my current location is over here that's a valid 2d
+[1:30:14] path which guides the robot from the current location to the goal location and here basically
+[1:30:19] these keeping this distance to obstacle is a result of the smoothing and i can do this with
+[1:30:23] using this as optimal heuristic in order to be as fast as possible in planning and don't expand too
+[1:30:29] many states i actually don't want to visit and for that the Dijkstra based heuristic is valuable
+[1:30:33] because i'm executing that now whatever five times per second so i'm doing this really really often
+[1:30:38] and i want to do as many pre-computations as possible for my heuristic to be as close as
+[1:30:43] possible to the optimal heuristic in order to be able to run this a star algorithm fast that means
+[1:30:48] i first need to do this computation so once i invest maybe half a second of computational
+[1:30:53] resources in order to come up with the optimal heuristic but then the thing gets 10 20 30 times
+[1:30:57] faster than the original planning algorithm it gets blazingly fast if you have the optimal heuristic
+[1:31:03] okay and then i'm kind of building up my restricted 5d space again i'm making the assumption here that
+[1:31:09] i'm building this 5d space only around the 2d path and this makes an assumption that the shortest
+[1:31:14] path and the fastest path are not too different so if i have one path which is short but makes a lot
+[1:31:21] of stops and turns and one which is slightly longer but a very nice straight line or curved
+[1:31:27] line then this may not lead to a very good solution because the 2d pass will actually
+[1:31:33] take this small detoured path where the robot actually will drive very slowly
+[1:31:38] compared to the slightly longer trajectory and so if those trajectories are far apart in the xy
+[1:31:44] space then you won't find them and take them into account but this happens very very rarely in
+[1:31:50] reality so what we're doing here we're taking this the xy path that i computed and built this 5d
+[1:31:56] space around this 2d path and basically built up a small channel so how does that look like i've
+[1:32:01] again the example i had before so this was my my path my 2d path to the goal and i'm building up
+[1:32:07] that channel and don't even build up that channel fully to the goal only up to a sub goal let's say
+[1:32:12] five meters or 10 meter ahead of me i said i want to reach that point 10 meters ahead of me and now
+[1:32:16] plan how i can optimally reach that point knowing that i will re-plan anyhow five times per second
+[1:32:21] and within 200 milliseconds i won't drive this 10 meters to the sub goal so i have this blue area
+[1:32:27] which which is shown over here and just for this blue area i'm actually building up this
+[1:32:31] five-dimensional state space which i know can't visualize further so you have to stick with this
+[1:32:35] 2d visualization and knowing that for all those blue states we are actually building up this
+[1:32:40] five-dimensional configuration space and then plan a star in this five-dimensional configurations
+[1:32:46] to configuration space so i'm doing the full planning and what i'm also taking into account
+[1:32:52] in the heuristic i'm basically taking velocities into account how far it is for the distance to the
+[1:32:58] goal but also the cost from Dijkstra's algorithm is taken into account in order to guide the
+[1:33:03] search as fast as possible to that state space or in this case to my sub goal so it's something that
+[1:33:08] you do in order to be efficient here just the so this is the Dijkstra or value iteration is only
+[1:33:14] done in 2d in this 2d space not in the 5d space it's important to note otherwise would be too
+[1:33:18] expensive but then guide the 5d search using at least for the xy states the optimal heuristic
+[1:33:26] so this is an example how that looks like this is a small video animation so this was just one one
+[1:33:31] screenshot in this short space the whole animation of the system starts over here navigates around
+[1:33:35] over here you see the 2d path and then you will also see how the 5d state is expanded you see
+[1:33:42] those dotted white lines this is actually the trajectory that the robot actually computes in
+[1:33:47] every time step and this is the actual trajectory that the system executes then so you can see the
+[1:33:52] curve is not doesn't have this 45 degree rotations it really generates a more smoother trajectory
+[1:33:57] towards going to the target location so that the system then reaches that target location on a
+[1:34:03] trajectory which can actually drive fast taking account the kinematic constraints and we can also
+[1:34:09] not just do that here in simulation we can also do that live and change the environment while
+[1:34:14] the system is navigating in order to come up with an efficient path of the environment as something
+[1:34:19] that you've shown here you see this robot driving through the environment these are unknown obstacles
+[1:34:24] this is a free space also over here and then we can actually walk into and kind of obstruct the
+[1:34:30] robot so the person standing here the robot sees it and then navigates around you can see how this
+[1:34:35] channel is built up for the robot in order to navigate through the environment and then even
+[1:34:40] path through rather narrow doorways and avoid collisions taking always the optimal controls
+[1:34:47] into account so this was kind of the robot view and this here was the internal state of the planner
+[1:34:53] so i can actually rerun that video again so you can see how the trajectory is actually built
+[1:34:58] how new obstacles pop up here so the garbage bin which is over here will pop up in a second over
+[1:35:02] there and so the planner plans around here until the person occupies that space so the planner
+[1:35:08] plans around and then goes navigates through the doorway and then in this case is able to take the
+[1:35:15] kinematic constraints into account and drive very smoothly through the obstacles you can also check
+[1:35:20] how much does the size of the channel actually impacts your solution so the smaller that channel
+[1:35:25] is this kind of blue area the further away from the optimal solution so you can see it here this
+[1:35:30] was the width of 70 centimeters and lengths of a meter 50 so the subcode you're taking to account
+[1:35:35] so something which is very small and then your solution is maybe 10 percent worth in the optimal
+[1:35:40] solution optimal solution means you're planning in the full 5d space but something you can only
+[1:35:45] do offline but if you make the channel a little bit bigger like say whatever the two meter 50 long
+[1:35:50] and 90 centimeters wide or even more than a meter wide and five meters long then there's actually
+[1:35:56] in most indoor environments no difference to the optimal solution so it's a very effective means
+[1:36:01] to build up this restricted configuration space in order to come up with trajectories which are
+[1:36:05] optimal or near optimal although you only have expanded a small fraction of the state space
+[1:36:10] so that you can run that even on by now whatever 18 year old hardware that was a time when this
+[1:36:16] algorithm was developed you can actually run that at several times per second even on very
+[1:36:23] old hardware something that modern robotics systems can actually run easily online so with
+[1:36:29] this i'm coming to the end of today so we have introduced planning as a way for finding optimal
+[1:36:37] or near optimal trajectories from start location to a target location and for that we looked into
+[1:36:44] search techniques uninformed search and informed search techniques where in practice we always use
+[1:36:49] informed search techniques in robotics or most of the time so a star is the gold standard for
+[1:36:54] performing path planning i may do some tweaks to my maps i may do some pre-computations with
+[1:36:59] the heuristic in order to get that fast and you know to allow for effective replanning but it's
+[1:37:03] the gold standard algorithm in order to plan a path for a robot to go from a to b it's an
+[1:37:08] algorithm this is around since the whatever 1969 approximately when neils neilson developed a star
+[1:37:15] for shaky the robot so it's one of the standard planning algorithm used in robotics and now but
+[1:37:20] today a key tool in an ai in order to perform informed search and there are optimizations for
+[1:37:28] that four different types of problems finding heuristics or learning even heuristics in order
+[1:37:33] to not make it a user-defined task but that's all much more in the field of ai rather than robotics
+[1:37:40] because we are often living in a euclidean world where we can quite easily define good heuristics
+[1:37:46] and therefore this is a standard choice that you want to take into account you can do this in 2d on
+[1:37:52] a grid map but you can also expand this with some approximations to higher dimensional spaces
+[1:37:57] in order to take for example kinematic constraints into account okay that's it from my side i hope
+[1:38:02] you've understood how you plan at least if your system has no serious uncertainty in the motion
+[1:38:08] execution and if this is the case you need different techniques but if you can assume
+[1:38:12] your system behaves reasonable then what we presented here is the way to go so thank you
+[1:38:17] very much for your attention

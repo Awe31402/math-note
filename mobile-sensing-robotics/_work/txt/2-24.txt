@@ -1,0 +1,734 @@
+[00:00] Hello, I want to talk today about cameras and especially the parameters that we use to describe
+[00:07] cameras in our models. These are the so-called intrinsic parameters and
+[00:11] extrinsic parameters. And we want to dive a bit into the details on what those parameters are, which physical properties
+[00:18] they actually describe, so that we get an idea how the mapping from the 3D world into the camera actually works.
+[00:25] So it's all about
+[00:27] describing these following mapping. So we have a point in the world,
+[00:32] so a 3D point with an XYZ coordinate, and we have a pixel coordinate with an XY
+[00:38] coordinate in the image. And the question is how do we actually get from this 3D world coordinate onto this
+[00:46] 2D
+[00:47] pixel coordinate. And this is encoded in this transformation matrix P.
+[00:52] And what we want to do today is try to understand what's inside P and which parameters we need to know in order to
+[01:00] actually write that down in mathematical form,
+[01:03] which allows us then to do this mapping from the 3D world to the 2D image.
+[01:08] So this is one of the very very basic equations whenever you work with cameras and try to perform
+[01:15] geometric estimates. So either estimating where a camera is or where 3D points in the environment.
+[01:21] So whenever geometry is involved
+[01:24] this equation will pop up at some point in time. So it's very important to understand how those different parameters affect the
+[01:32] image generation process and that you understand how the 3D points are mapped into the 2D world.
+[01:39] Okay, we are doing things in homogeneous coordinates.
+[01:42] So we have our 3D point here with an XYZ coordinate and the additional dimension
+[01:49] coming from the homogeneous coordinates.
+[01:50] We have our transformation matrix and then we have here a three-dimensional vector with the XY image coordinate and the pixel, the additional
+[02:00] coordinate from the homogeneous coordinate system. And again, just as a reminder,
+[02:05] these are capital
+[02:07] characters. This refers to a point in 3D and these are lowercase
+[02:12] characters
+[02:14] which represents to a point in the image. So just to make your life easier whenever something is smaller case or lowercase
+[02:22] it's in the image or in 2D and whenever it's uppercase it's in the 3D world.
+[02:28] So the mapping from the 3D world
+[02:30] to the 2D pixel coordinate is typically broken up into several transformations because there are several coordinate systems involved.
+[02:38] So we typically have a world or object coordinate frame. This is kind of our external given coordinate frame.
+[02:43] We typically have a camera coordinate frame.
+[02:45] So everything expressed with respect to the camera itself.
+[02:48] And then we have typically coordinate system related to the image itself
+[02:52] and we also have a coordinate system related to the sensor itself. It actually generates my image and
+[02:58] we may have even more coordinate systems involved, but in the basic form these are four coordinate systems.
+[03:05] And so this transformation here actually consists of a sequence of transformation
+[03:10] performing this mapping through this chain of coordinate systems so that we end up from the world coordinate system
+[03:16] finally on the pixel. So there are several coordinate systems involved as I said. World or object,
+[03:23] the camera coordinate system, everything expressed with respect to the camera,
+[03:27] everything with respect to the image plane, the image coordinate system and
+[03:31] everything with respect to the sensor itself, which generates actually our pixel information.
+[03:38] So the world coordinate system is called SO for object,
+[03:43] SK stands for the camera coordinate system,
+[03:47] SC for the image plane coordinate system and SS for the sensor coordinate system.
+[03:54] And whenever you see those small capital indices here on the top left side expresses in which
+[04:02] coordinate system this point is actually expressed. And if there's
+[04:06] no uppercase,
+[04:09] no, sorry, no
+[04:10] index here on the left upper side, that means we're in the world or object coordinate system. So no index is given over here.
+[04:18] What we then can do is we can describe the mapping how to map this point
+[04:22] into this
+[04:24] coordinate. So the transformation we are looking into can be expressed here.
+[04:28] It's our point in the 3D world in the object coordinate system. And then there's a mapping
+[04:34] from the object coordinate system into the camera coordinate system.
+[04:38] So if you see these lowercase index on the right and the upper scale index on the left hand side,
+[04:45] this means from here to there.
+[04:47] So it's a mapping from O to K from the object coordinate system to the camera coordinate system.
+[04:53] And then the next thing is actually a projection from the camera coordinate system to the image plane.
+[05:00] And then we have a transformation from the image plane onto the sensor chip. And so you can see if you chain those
+[05:08] transformations, you always see that those characters must be the same. Then we haven't done a mistake.
+[05:12] Therefore this form of writing this down, this form of notation is quite attractive.
+[05:16] So what we want to do in here is we want to estimate those
+[05:21] transformations here. And later on we can actually combine them into one single transformation.
+[05:26] So let's illustrate them with a small figure to get an idea how that actually works.
+[05:30] So on the one hand side, we have our world or object coordinate frame, which is just somewhere an externally defined coordinate system.
+[05:38] And then we have our camera and the camera sits somewhere in the world. And this is described through this link over here.
+[05:45] But the camera itself says, okay, if I'm working in the camera coordinate frame, that means the camera itself is zero, zero, zero, and then
+[05:53] it looks into the world.
+[05:56] So this is kind of the camera coordinate frame described in here, or the origin of the camera.
+[06:01] And the origin is typically the projection center of my camera.
+[06:04] And then I have an image plane which sits somewhere over here.
+[06:10] And this image plane is typically shifted from the camera
+[06:15] coordinate system by a constant. And this is a so-called camera constant.
+[06:19] So how far is the image plane away from the projection center of my camera?
+[06:25] And then I have the image plane and I have a second coordinate system here, which is a sensor coordinate system.
+[06:31] So where the pixel zero, zero is on the sensor, on the chip, for example.
+[06:35] Which will be different from the one on the image plane because typically
+[06:39] the zero, zero pixel lies on your optical axis in your image coordinate system.
+[06:44] But in the end, we need to go to the sensor coordinate system because these are the pixels that we actually get returned in our image.
+[06:51] And so there are a few things to note in here.
+[06:55] In the...
+[06:57] So the x- and y-axis in the
+[07:00] coordinate system K of the camera and in the image plane are identical.
+[07:05] So it's basically just a shift in the z-direction. This is exactly the shift by the camera constant.
+[07:11] So it's the offset of the image plane from the
+[07:16] from the
+[07:18] projection center of my camera. So that we can express the origin of
+[07:24] the image plane in the camera coordinate system as
+[07:28] zero, zero c. So no shift in x, no shift in y, only a shift along the z-axis and it's typically a
+[07:36] negative shift.
+[07:38] Okay, and
+[07:40] what we then can do is once we have that kind of illustrated, we can now break down these individual mappings.
+[07:46] So how point from here is mapped into the image plane and
+[07:50] we want to break this up into two parts.
+[07:53] From the world to the sensor. So again, object coordinate system, camera coordinate system, image plane coordinate system,
+[08:00] sensor coordinate system, and then we actually do a second transformation inside the sensor coordinate system
+[08:05] for taking into account certain nonlinear errors that appear. So the first thing, the first
+[08:12] transformation here is from the object coordinate system to the camera and this happens in 3D.
+[08:17] There's everything 3D in here.
+[08:19] And then we have the mapping from the camera coordinate system onto the image plane and this is the ideal projection. And here
+[08:26] we are going from a 3D coordinate to a 2D coordinate. That means here we are losing some information.
+[08:32] This is kind of the missing depth information from a single image that happens through this projection from 3D and 2D.
+[08:38] And this happens from the camera coordinate system onto the image plane coordinate system.
+[08:43] And then we have a mapping from the camera coordinate system to the sensor coordinate system and this now happens in 2D.
+[08:49] So we are inside our camera in the image plane and we just in this case see how the image
+[08:56] coordinate system is shifted and what not necessarily only shifted
+[09:00] but also shifted with respect to the sensor coordinate system.
+[09:04] And then this is kind of typically our linear model that we have over here.
+[09:08] And then we have a second
+[09:10] transformation that we put in here and this describes basically the deviation from this linear model because typically we have some nonlinear
+[09:18] deviations, nonlinear errors involved for example through length distortions or something like this.
+[09:23] Which in reality of course doesn't necessarily happen here.
+[09:26] It happens actually already here when we map from the 3D world through our lens into our camera or onto the image plane.
+[09:33] But we kind of put this in here to add an additional transformation on the sensor frame in order to compensate for those nonlinear errors.
+[09:42] So up to here everything is linear and this is the nonlinear step which is added to this.
+[09:48] And we distinguish the, we group the parameters into two different parameters, the so-called extrinsics and the so-called intrinsics.
+[09:54] So you can see extrinsics is everything which happens outside the camera.
+[09:58] So for example, where is the camera? Where do I move my camera through the world? How I'm rotating my camera?
+[10:03] These are the extrinsic things, so stuff that happens outside the camera.
+[10:08] The second set of parameters are the so-called intrinsics, what happens inside the camera.
+[10:12] And this is kind of how for example is the sensor mounted behind the production center.
+[10:18] These are all kind of camera internal parameters.
+[10:22] And so the first ones here are the so-called extrinsics and all the rest is something that we group together as the intrinsics.
+[10:29] So you can see it also intuitively, you can if you calibrate your camera, so you estimate all those parameters, the intrinsics will stay constant when you move your camera.
+[10:38] If you walk with your camera through the world, the intrinsics stay the same but the extrinsic changes because you're moving your camera through the world.
+[10:46] And therefore it makes sense to actually break up those parameters into the extrinsics and intrinsics because the extrinsics will obviously change very often.
+[10:55] And your state estimation algorithms may be focused mainly on the extrinsics once you assume to know the intrinsics because you have so-called calibrated your camera.
+[11:05] So again, extrinsics, everything which happens in the outside world, so it's basically the pose of the camera in the world.
+[11:12] And the intrinsics, everything which happens inside the camera, so how do we get from the camera coordinate system actually to the pixel value itself.
+[11:21] And we start from here in this video and we'll actually move forward until we reach the end of that chain.
+[11:29] So we start with the extrinsic parameters. So that means we're here and we want to go here.
+[11:34] This is the first part of this mapping process to go from the object coordinate system into the camera coordinate system.
+[11:41] And again, this was describing the pose of the camera in the 3D world.
+[11:45] So the main question is how many parameters actually needed for that transformation.
+[11:50] And you know that the camera is basically, you can move your camera through the world, you're not changing your camera or distorting the world or scaling the world, making it larger or smaller.
+[12:00] It's something that we can't do. So this is the only thing we can do.
+[12:04] We can actually translate things to the camera and we can rotate the camera.
+[12:07] So this is so-called rigid body transformation, which consists of three translations in X, Y and Z and of three rotational component, the yaw, pitch and roll angle, for example.
+[12:19] So this means this comes, sums up to six parameters that we need to estimate.
+[12:24] So three for the position and three for the heading information.
+[12:28] So the extrinsic parameters are six extrinsics which describe the pose, that means position and heading of my camera in the world reference frame.
+[12:39] And so this is an invertible transformation because, of course, we can shift the camera around.
+[12:44] It's a transformation from the 3D world in the 3D world, a rigid body transformation.
+[12:50] So something that is always invertible.
+[12:54] OK, so I can express my point P, which is some point in the world coordinate system.
+[13:02] So as XP is XP, YP, ZP. So it has three coordinates.
+[13:07] And what I also have is my projection center of my camera, which is typically referred to as XO.
+[13:15] Depending on the literature, it's also sometimes called boldface Z or ZO for the origin of the camera.
+[13:21] I'll be using here XO.
+[13:23] And so this is the origin of my camera coordinate system.
+[13:29] It's the projection center of my camera.
+[13:32] So the point in the pinhole model where all beams or all rays pass through a single point.
+[13:38] This defines the camera coordinate system.
+[13:41] And this we will refer to XO all the time.
+[13:44] And you can see, though, the characters here of this variable here is slightly slanted.
+[13:49] That means we have Euclidean coordinates.
+[13:51] So it's just XYZ coordinate, not this additional coordinate here in the homogeneous coordinates.
+[13:57] So the extrinsics can be described by a translation between the origin of the world coordinate system and the camera coordinate system.
+[14:07] And this is then the XO, the location of the projection center.
+[14:13] And the rotation, typically expressed as a rotation matrix R from the object coordinate system into the camera coordinate system.
+[14:23] So if you want to express this in Euclidean coordinates, that means the point P expressed in my camera coordinate system
+[14:32] is the XYZ location of the point expressed in its original object or world coordinate system.
+[14:40] We subtract the location of the camera and then perform the rotation.
+[14:45] That's what's actually written in here and written down in Euclidean coordinates.
+[14:50] However, we like to express things in homogeneous coordinates because it's easier to express most of the quantities.
+[14:58] So again, as a short reminder, homogeneous coordinates were those coordinates where you add an additional dimension.
+[15:04] And this additional dimension makes certain things easier.
+[15:08] For example, that you can express translations also through matrix vector multiplication, which you can't do in Euclidean world.
+[15:16] And this allows us to chain transformations in a very elegant way.
+[15:20] Therefore, we will be using homogeneous coordinates in here.
+[15:24] So Euclidean coordinates, again, as was expressed in this form.
+[15:28] And we can write down now the same thing in homogeneous coordinates.
+[15:31] So we take the original Euclidean vector, add an additional dimension to it.
+[15:36] And then we have our rotation matrix or Euclidean transformation matrix, which executes a rotation.
+[15:42] That's the correct expression.
+[15:43] So this R matrix R sits over here.
+[15:46] This is the zero vector and one over here.
+[15:50] Then we have our translational component.
+[15:53] We have the identity matrix over here and the negative X, also the position of the projection center of my camera.
+[16:08] So this is exactly the shift that we had over here.
+[16:11] And then putting the original point in Euclidean coordinates over here.
+[16:15] And then we can multiply those matrices together and then get one transformation matrix, which actually executes this transformation for us.
+[16:23] Or we can just write it down in homogeneous coordinates, where this is our matrix HK, because it maps from the volt coordinate system to the camera coordinate system.
+[16:32] So that a point in the 3D world can be expressed as another point in the 3D world, but now expressed in the camera coordinate system.
+[16:42] So just kind of as a short reminder for the notation, everything, all the fonts which are slanted like this variable over here is in Euclidean coordinates.
+[16:52] Everything which is standing up, so it's not slanted, is in homogeneous coordinates.
+[16:58] So even by just looking to the font, you can distinguish which variables are expressed in Euclidean coordinates or which are expressed in homogeneous coordinates.
+[17:10] So with this, we are done for the first part.
+[17:12] We expressed the extrinsics.
+[17:14] Where is the camera in the world?
+[17:16] And we can express this through this transformation matrix.
+[17:19] Just multiplying a three point from the right hand side to this matrix will turn this point into a point in the camera coordinate system.
+[17:27] And it's basically executing a rigid body transformation.
+[17:32] So the next thing we want to look into are the intrinsic parameters.
+[17:36] So again, the intrinsic parameters are the parameters which happen inside the camera and which are not affected by shifting and rotating the camera around in our world.
+[17:48] So in our list of transformations, we are here at that K, so this part was done, and now we are looking into this chain of transformations and will now move from K to C and then from C to S and then inside the sensor frame, taking account the non-linear errors.
+[18:04] So what happens inside the camera is actually a projection from the 3D world into the 2D world, onto our image plane.
+[18:16] And at that point in time, there's a projection involved.
+[18:19] And the central projection is not invertible because we basically lose one degree of freedom.
+[18:25] We lose the information how far a point is away in the world.
+[18:30] So this transformation here, the ideal projection is not invertible.
+[18:34] The other transformations from the image plane onto the sensor coordinate system were also inside the sensor coordinate system.
+[18:42] These are invertible transformations, but this one is not invertible.
+[18:46] Therefore, the error just goes into one direction.
+[18:50] So this whole mapping, the whole intrinsics can be split up into a three-step process.
+[18:57] So we split up the mapping into three steps.
+[18:59] The first is the ideal perspective projection onto the image plane.
+[19:04] So a point expressed in the camera coordinate system is mapped onto the image plane.
+[19:10] And the second thing is a mapping onto the sensor coordinate system.
+[19:14] So basically your sensor coordinate, your sensor is a chip which has pixels involved and the pixels are read out.
+[19:20] They have a certain index, what is pixel 0, what is pixel 1.
+[19:24] And so depending on how this chip is actually mounted into your camera, the, for example, 0-0 coordinate will not be in the middle of your chip because it's typically in one of those corners.
+[19:34] And so this is what happens here is in 2 from C to S is the mapping onto the sensor coordinate system.
+[19:43] And the last step, this is a transformation inside the sensor coordinate system.
+[19:48] This is basically compensation for the fact that the previous transformations are actually idealized by saying they are the ideal perspective projection.
+[19:58] And here for the mapping, we also only allow a certain type of transformation.
+[20:02] And by keeping this as linear transformations, we actually don't take into account certain nonlinear effects that are in there.
+[20:10] And we will basically summarize the nonlinear effects here in this transformation over here.
+[20:15] So again, in our overall setup, extrinsics are done, this was a rigid body transformation, and we now move towards C through the central projection.
+[20:25] And we are assuming here an ideal projection, so we assume to have a distortion-free lens.
+[20:32] That's something which is not the case in reality, but we assume it to be perfect here.
+[20:37] And these nonlinear errors that we will see later on that we have to deal with in the sensor frame is something that, for example, results from errors in your lens, that your lens is simply not perfect.
+[20:50] But the assumption that we're doing here, the lens is perfect, and also all rays are straight lines, and they pass through the projection center of the camera.
+[21:01] So all rays will pass through one single point, so it's kind of the perfect pinhole.
+[21:07] Again, something which is not the case because the pinhole is not infinitesimally small.
+[21:13] So it has a certain size, and therefore this is not exactly what we are doing here.
+[21:18] And this point, this pinhole point, defines the origin of our camera coordinate system.
+[21:26] So the focal point and the principal point lie on the optical axis.
+[21:31] This is an assumption that we are doing, so the optical axis passes perpendicular through the principal point.
+[21:39] And the distance from the camera to the image plane is constant, so it's the same distance everywhere, and it's the constant C, our camera constant.
+[21:49] So these are the assumptions that we are doing because we are assuming ideal perspective projection.
+[21:56] There's also one thing in terms of notation that we should actually mention.
+[21:59] So if we have a point in the 3D world, then we have that ray which passes through the projection center and then onto the image plane.
+[22:08] So we'll generate an image which stands upside down.
+[22:11] This is kind of the physically motivated model, so how the coordinate system looks like if you look into physics.
+[22:17] That means the Z-axis points backwards, and so we have a positive camera constant over here.
+[22:24] What is however more frequently used, especially in computer vision or in most applications, is the coordinate system where we basically rotate the image plane around by a 180 degree rotation so that the image plane sits in front of the camera.
+[22:38] So if this is my point in the 3D world, and this is my camera projection center, then in reality the image plane actually lies over here behind the projection center.
+[22:51] But we are basically rotating it and putting it here in front, and then the image stands correctly upside.
+[22:57] And then the projection is from this point through the image plane to the point in 3D.
+[23:02] Again, this is kind of equivalent, although it's not in line with physics, but it makes visualizing things much easier.
+[23:12] So we typically use this coordinate frame here and they are equivalent with each other just by a rotation of the image plane by 180 degrees.
+[23:20] So in this case the camera constant is negative so that it sits on the correct side.
+[23:31] So we will be using here this kind of non-physically motivated model where the image plane sits in between the coordinate system of the camera and the point in the 3D world, just to be clear what we're doing here.
+[23:51] And so what we now can say through this ideal perspective projection, we are projecting a point from the 3D world onto the image plane, so this projection over here.
+[24:02] And we can, in order to express where will this point actually projected to, we can use the intercept theory.
+[24:10] So again we have two parallel lines, so we have two lines, one over here, one over here, so straight lines, and two parallel lines, so this line over here and this line which would be sitting over here.
+[24:22] And so this is a coordinate of the point in the world and this would be the same coordinate of the point in our image plane.
+[24:30] And so we can just express this by saying this distance divided by this distance, which is a z-coordinate, is the same as this distance divided by that distance over here.
+[24:42] And this way we can express how a point from the 3D world is actually mapped onto our image plane.
+[24:50] We can express this in a very straightforward way.
+[24:54] So the point in our image plane, so this, for example, x-coordinate over here, this is the x-coordinate, can be expressed by taking the point P over here expressed in the camera coordinate system with respect to this point.
+[25:13] So this is here the x-coordinate of this point, so this distance over here, divided by the z-coordinate of this point, which is this distance over here.
+[25:22] And we know that this must be equal to this coordinate divided by this coordinate.
+[25:26] But this is our camera constant, so if we multiply this point by the camera constant we actually get this distance out.
+[25:33] We can do this for the x-coordinate as well as for the y-coordinate.
+[25:37] So by simply taking the x-location of that point, dividing it through the z-coordinate and multiplying it with the camera constant, we are actually getting the projection of that x-coordinate of that point in the 3D world expressed in the camera coordinate system into our image plane.
+[25:57] And we can do equivalently the same for x as well as for y.
+[26:01] There is no difference and of course the z-coordinate of this point will always be the camera constant because we are projecting the point onto the image plane and the z-coordinate of the image plane is always my camera constant.
+[26:18] Okay, so now let's see how we can express this mapping in homogeneous coordinates.
+[26:23] So if we would express this as a point from 3D to 3D, this would be the x, y, z-coordinate of the point plus my additional dimension.
+[26:34] And then my transformation matrix is just my diagonal matrix in the first three elements over here, which is my camera constant and I have my one sitting over here.
+[26:46] And what we then have and have this projection is in the end we lose one variable, so the z-coordinate is gone.
+[26:55] So we can just kind of eliminate this coordinate over here.
+[27:00] So by dropping that third coordinate, this turns into a two-dimensional system over here.
+[27:07] So these are just x, y-coordinate plus the additional dimension in the homogeneous coordinates.
+[27:13] This is my point in homogeneous coordinates as expressed in my image plane.
+[27:18] And then we have this three by four matrix where we have here sitting the camera constant, here our one and here our zeros and there the x, y, z-coordinate of the point.
+[27:30] So we're mapping from the 3D world, 4D vector, through this matrix onto the 2D world using a 3D homogeneous vector.
+[27:41] So let's verify that what I actually have written here is actually the correct transformation because you may ask yourself, why does it actually look like this?
+[27:48] I don't believe what this guy is saying in the video.
+[27:51] So let's see if we perform the multiplication of the vector with this matrix, we actually get the result that we originally wanted from the interception theory.
+[28:04] Okay, so that was the result that we wanted to have because this is something that we derived from basic geometry.
+[28:11] And this is what we said the result would be.
+[28:16] So let's take this vector here and label it the red vector, this is the black vector and this is the blue vector and this is the green vector.
+[28:24] So if you perform the matrix vector, sorry, vector multiplying from the right hand side with this matrix, then what we need to do is for the first coordinate we need to multiply the red vector with the green vector, right?
+[28:38] So red times green gives me c times xp, zero, zero, zero.
+[28:47] Okay, so we get c times xp over here.
+[28:51] And for the black vector, it's exactly the same except that the y coordinate survives and all other coordinates go to zero.
+[28:57] So this leads black times green gives me c times the y coordinate.
+[29:01] And for the blue vector, it's again the same except that we don't have the camera constant here but a one sitting over here.
+[29:07] So multiplying the blue one with the green one over here, we only get the z coordinate which survives, so this gets our z coordinate over here.
+[29:16] And now consider that we're in Euclidean coordinates, so in order to turn the Euclidean coordinates into, sorry, we're in homogeneous coordinates.
+[29:24] In order to turn the homogeneous coordinates into the Euclidean coordinates, we need to divide by the last component.
+[29:30] So if you divide by the last component by zp over here, this turns into 1.
+[29:35] And here we get c times the x coordinate divided by the z coordinate and c times the y coordinate divided by the z coordinate.
+[29:43] coordinate. These are exactly those parameters that I have here which I
+[29:49] derived from the pure geometry. So this transformation matrix that we have
+[29:55] written over here performs actually this ideal perspective projection from the
+[30:01] 3D world onto the 2D image plane. So as a result of this we can describe the
+[30:08] mapping from the camera coordinate system to the image plane by this matrix
+[30:14] P to which I multiply from the right hand side my homogeneous vector
+[30:19] expressing the 3D point and this projection matrix is this 3 by 4 matrix
+[30:25] which has exactly this form C C 1 all the other elements are 0 over here.
+[30:31] Okay so now we can actually combine what we have done before the extrinsics plus
+[30:37] the projection over here by just multiplying those transformation matrices
+[30:43] together. So we had this transformation matrix which maps from the world
+[30:48] coordinate system to the camera coordinate system and then this
+[30:50] transformation which maps from the camera coordinate system onto the image
+[30:54] plane and just as these are both homogeneous matrices we just multiply
+[30:58] those matrices with each other which gives us the projection matrix which
+[31:02] maps from the world coordinate system onto my image plane and which is
+[31:06] expressed in this form over here. Okay so what we typically do if we now
+[31:13] going further and add the next mapping here onto the sensor chip there's again
+[31:19] another matrix which can be multiplied over here and what we're trying to do
+[31:23] what we are going to do is we put all the elements that are the intrinsic
+[31:28] parameters into one matrix which is a so-called calibration matrix. So whatever
+[31:33] will be added to this matrix here goes into one matrix which we call the
+[31:36] calibration matrix which contains all the intrinsic parameters and this is the
+[31:42] matrix containing all the extrinsic parameters and so we typically express
+[31:47] the camera calibration matrix as a three by three matrix and for this so-called
+[31:53] ideal camera that we have here this is C C 1 is the calibration matrix that we
+[32:01] have over here and we can actually use a special notation to actually write
+[32:05] that down which is kind of this bracket notation over here. So this is a
+[32:12] notation over here where this is a three by three matrix and this is a one by
+[32:17] three vector and the whole thing here is a three by four matrix and then we can
+[32:21] express the overall transformation that we looked into in this form either
+[32:26] writing it like this or writing it like this so this is the calibration matrix
+[32:30] the rotation matrix of the camera and this is a three by four matrix which
+[32:37] has the three by three block here as an identity matrix and the negative shift
+[32:41] we have in there. So let's just maybe to make this notation clearer just have a
+[32:45] look how that looks like. So written with these brackets and this vertical line
+[32:53] over here that means this is a matrix where this identity matrix or what's
+[32:58] written in here the three by three matrix which gives this form over here
+[33:01] and the second part which is this here is a three-dimensional vector which
+[33:05] basically sits over here and if this is quite compact way for writing things
+[33:11] down and then we can use this form of notation everything fits into one line
+[33:16] and we have the rotation matrix in there the calibration matrix in there so that
+[33:20] everything which is related to the intrinsics will be stored in this K and
+[33:23] this is the expression for the extrinsics as well as the projection
+[33:29] itself for going from 3d to 2d but the parameters for this projection actually
+[33:34] sits here in K. So having this calibration matrix of that form for the
+[33:40] calibration matrix for the ideal camera then we can express our projection from
+[33:45] the world into this camera exactly in this form and if you want to kind of
+[33:52] expand all those matrices describing the transformation from the world onto
+[34:00] the image plane we could also write it like this so again this is the shift
+[34:06] that is expressed over here then we have our rotation matrix and then we have our
+[34:10] calibration matrix over here and we can see now is if you kind of perform all
+[34:16] those operations and then normalize to one to just have an idea how that would
+[34:21] look like in Euclidean coordinates then we get an expression which looks like
+[34:25] this which are so called collinearity equation for the image coordinates and
+[34:31] this is the operation that I need to execute in order to transform the 3d
+[34:37] point onto the x-coordinate or 3d point onto the y-coordinate in the image plane
+[34:42] you can see already here from those equations that things get a bit more
+[34:46] ugly if I would do everything in Euclidean coordinates and if I stick
+[34:50] with the homogeneous coordinates it's easier to write down and you're typically making
+[34:54] a smaller number of mistakes because you don't want to mess around with all those
+[34:59] expressions over here so writing down something like this is typically much easier and the number
+[35:04] of mistakes that you typically make is smaller okay so what we've done so far is going from the
+[35:10] world coordinate system into our image plane and now we need to do the next step
+[35:16] moving onto the sensor so the mapping from the image plane onto the sensor assuming only
+[35:22] linear parameters in here so ignoring the non-linear errors so if we are in our kind
+[35:28] of overall overview we now move from this c to this s over here and this is typically done
+[35:36] through an affine transformation that we have over here so the next step is the mapping from
+[35:41] the image plane onto our sensor and important things here are the location of the principal
+[35:48] point so the principal point is a point where the optical axis passes through the image plane
+[35:56] and so it's basically where the zero zero coordinate in xy or in the image plane is
+[36:04] which pixel coordinate on the chip does this actually refer to the second thing is that we
+[36:09] may have a scale difference in the x and y dimension this is depends on the chip design
+[36:15] how the chip is actually set up and we traditionally have a compensation for the shear
+[36:20] of this transformation although i have to say this shear is typically zero for digital cameras today
+[36:28] okay so let's have a look to the location of the principal point so in our sensor chip this is our
+[36:34] coordinate system so this is the pixel zero zero sitting over here in our camera coordinate system
+[36:41] the optical axis passes hopefully somewhere in the middle of a y image and so this is the optical
+[36:47] axis so this is zero zero in the coordinate frame of the image plane and this is just a shift that
+[36:55] it's kind of shift in x and shifted y and this can be expressed by this xh and yh so the principal
+[37:03] point which sits over here which is basically realizes this shift between the image plane
+[37:11] in the camera image plane and the sensor coordinate system so it's just a shift
+[37:18] inside a plane and what we also need to do take into account is a scale difference in the xy
+[37:26] difference so that x may be differently scaled than y this is based on how the chip is set up
+[37:31] and how the wires are set up inside our chip so they are not necessarily equally spaced in
+[37:37] the x and the y direction this is something that we need to take into account and we can add this
+[37:43] by saying the x score we define the scaling axis one and have a scale offset m which is one plus m
+[37:51] for the y coordinate over here so depending on the book or literature using you may also find having
+[37:56] here different camera constants for x and y or focal lengths for x and y and this is basically
+[38:04] equivalent to this scale difference m so m is typically a value which is in the perfect case
+[38:10] would be zero but typically is larger or smaller than zero depending on how the setup how the chip
+[38:17] has actually been produced and then we have a shear compensation that we can take into account
+[38:21] a shear component which holds for analog film but not typically for digital cameras so for
+[38:27] digital cameras this s is a value which is typically around zero so then with this matrix
+[38:34] over here we multiply it here from the left hand side we basically perform at these four additional
+[38:42] parameters to our system four because it's the scale difference the shear the principal point
+[38:48] in x and the principal point in y which are the four additional parameters and they're multiplied
+[38:53] here as an additional transformation in order to go from the image plane onto the chip itself
+[39:00] so if you look how does this change our calibration matrix which should include all the
+[39:05] intrinsic parameters so the new calibration matrix i define as my calibration matrix from the mapping
+[39:13] describing the mapping to the image plane and then from the image plane onto the sensor
+[39:17] which is a multiplication of those two matrices so that the variable c the camera constant
+[39:25] actually populates these three entries over here again this is typically still zero because s is
+[39:31] zero but we have the camera constant then sitting over here this brings us in the end to having the
+[39:37] what is called the calibration matrix for an affine camera or the and it's an affine transformation
+[39:42] and it consists of five parameters the camera constant the shear the scale difference the x
+[39:49] and y coordinate of the principal point and these are typically the five traditional
+[39:57] parameters that are used not taking into account non-linear errors and this is kind of the standard
+[40:03] calibration matrix for realizing this affine transformation
+[40:08] again depending on the literature you're looking into maybe you find two different camera
+[40:13] constants here so whatever c and x cy or also expresses focal length and but you can see here
+[40:20] this c would be cx would be c and cy would be simply c plus c times n so it's a direct
+[40:28] relationship between those quantities and this transformation that is expressed in this form by
+[40:34] in this form by this calibration matrix and by the extrinsic parameter something is called the
+[40:40] dlt or direct linear transform and here we have to be slightly careful because the world dlt or
+[40:45] direct linear transform has two meanings in photogrammetry the first meaning is actually
+[40:51] describing this transformation over here so this transformation that we just had having six
+[40:56] extrinsic parameters in here plus the five intrinsic parameters sitting in our calibration
+[41:00] matrix but it's also used for an approach that estimates those five plus six in some
+[41:08] 11 parameters so you have to look a little bit how the world dlt is used it can be once being used
+[41:14] for describing this expression and it can also be used as an approach for estimating
+[41:21] the parameters of this transformation so and this dlt is what we have here is basically a model
+[41:29] for something that's called an affine camera so a camera that uses an affine transformation
+[41:34] in order to realize the mapping from the world coordinate system onto this sensor so the overall
+[41:39] mapping from the world onto the sensor can be expressed through an affine transformation plus
+[41:47] the the projection that we have realized in here and this takes account only the as i said the
+[41:57] non-linear part so not taking into account that we for example have non-linear lens errors that's
+[42:02] something that we will additionally do so the homogeneous projection matrix expressing the dlt
+[42:08] is something referred to as p or if p has no further parameters exactly this one
+[42:13] has five parameters sitting here in k three parameters sitting in r and three parameters
+[42:18] sitting in the shift so that means some have 11 parameters and if it would be in the euclidean
+[42:24] world this would be my expression over here and the p one one two p three four are the 12 entries
+[42:32] of my of my matrix p so this is kind of the resulting equation for the euclidean parameters
+[42:41] so you may wonder at that point in time this matrix p is a three by four matrix so it means
+[42:47] 12 entries but i said here these are 11 parameters so 11 and 12 how does this come together
+[42:55] it comes together because this matrix p is a homogeneous matrix and the homogeneous entities
+[43:02] are defined only up to a scaling factor this means this the last degree of freedom is taken
+[43:09] through the homogeneous property that i can basically scale this matrix up and down and
+[43:13] still is the same transformation matrix in the homogeneous world and therefore kind of
+[43:19] one parameter is lost because we are living in this homogeneous world and so with these 11
+[43:25] parameters all the elements of this matrix are defined because we know this matrix anyway only
+[43:31] up to a scaling parameter and the matrix in homogeneous coordinates is the same if i multiply
+[43:37] this matrix with any scalar so it's the same entity that we have over here so this brings me
+[43:43] to the end of the part looking into linear errors and this is the key part of the model that we
+[43:53] have in here in reality however we also have to look into non-linear errors that the overall
+[43:59] process is affected by so the second part looks into the non-linear errors so how do we take into
+[44:10] account that certain aspects of the transformations that we have discussed here are actually affected
+[44:14] by non-linear errors and so the non-linear errors of course happen the whole pipeline from k to s
+[44:25] but we say okay let's keep that part here linear with the central projection and
+[44:29] defined transformation and then having only the non-linear aspects encoded as a mapping from s
+[44:38] into s into the sensor frame take into account that some non-linear stuff has happened and trying
+[44:45] to compensate for those non-linearities so there are several reasons for those non-linear errors
+[44:54] very popular ones are your lens distortions for example so you can see it if you go to a
+[44:59] very wide angle lens you can see a barrel distortion so that even straight lines
+[45:04] look like a barrel and these are things that for example you want to get rid of if you want to
+[45:09] estimate the geometric properties of your environment based on a camera other things are
+[45:16] like say the planarity of your sensor or certain other aspects of kind of an imperfect production
+[45:22] process of your camera and lenses will always be imperfect even you can argue that the
+[45:28] quality of lenses has decreased over the last 50 years of course let's say 40 years or 50 years ago
+[45:35] we had more higher quality lenses than what we actually have today in our camera so it's even
+[45:40] more important to look into the those non-linear errors and compensate for non-linear errors
+[45:48] okay so the thing is that how do we do this we do this with a general mapping where we update
+[45:55] the x-coordinate and the y-coordinate on a point with a location-dependent shift
+[46:01] so this location-dependent shift means that every pixel will get shifted a little bit
+[46:09] in an x and y direction in order to compensate for the non-linear errors so if you again have
+[46:15] this idea of a barrel distortion so that straight lines are actually curved to the outside
+[46:19] that would mean that all those points will be moved a little bit more to the inside
+[46:23] so that this barrel goes into straight lines again and this is something which is location
+[46:28] dependent so for every location in the world in the in the world in the image sorry for every
+[46:33] location being an image we get a different shift so an individual shift per pixel and this i can
+[46:39] express by saying the point in my kind of most general or arbitrary frame is my original point
+[46:46] in the sensor frame and then plus a small shift over here and the important thing is that this
+[46:52] shift here actually depends on x so on the location in the image and based on some non-linear
+[47:02] parameters q so it depends where this point is mapped to in my image plane in order to estimate
+[47:09] how the non-linear location-dependent disturbances actually look like and so this is not a easy
+[47:16] transformation that i can very easily express because it can be different for every location
+[47:22] in the image of course i typically assume that there's a very smooth transition or i can express
+[47:27] this for example by a certain parametric form but in theory the transformation is different
+[47:33] for every location in the image and just as a small example over here so this is an image of
+[47:40] a keyboard taken from a regular webcam and what you can see in here is this line is actually a
+[47:47] straight line in reality but you can see this line being curved so this is one of the effect of a
+[47:52] lens distortion that we have and that means a straight line in the world is not mapped to a
+[47:59] straight line in the image so it's not straight line preserving right and so this is an error
+[48:04] that we typically want to compensate and what camera calibration can do for us if we estimate
+[48:09] all the intrinsic parameters including those non-linear errors and then i can actually change
+[48:15] the image so that the straight line again turns into a straight line something that i can see over
+[48:20] here you can also see for example in this part of the image the image content here has been shifted
+[48:26] a bit to the inside in order to make all the straight lines being straight lines and that's
+[48:30] something that i can do with this location dependent shift so that i kind of shift pixels
+[48:37] depending on the location where they are so if i express this with an additional mapping matrix
+[48:43] which maps from my sensor frame to my kind of arbitrary sensor frame i can express this with
+[48:48] a three by three matrix of this form where i have the ones on the main diagonal so this is can see
+[48:55] this as a identity rotation matrix in 2d this is my homogeneous element so the normalization
+[49:05] and this is my shift so this is exactly the shift parameter that i had before that is location
+[49:10] dependent and i can multiply this matrix to the left hand side of my overall mapping that i
+[49:16] designed so far and then this mapping over here takes to count that they are non-linear errors
+[49:22] in the other process and they are kind of compensated through this pixel dependent shift
+[49:28] so this basically means i'm executing my transformation with my linear model and then
+[49:32] doing some fixes in the end for those non-linear errors that i actually have and so if i kind of
+[49:40] multiply this matrix h with my calibration matrix k in order to get a calibration matrix which also
+[49:46] takes into account the non-linear effects then this calibration matrix would look like this so
+[49:50] it is in this part here the calibration matrix stays exactly the same as it was before only here
+[49:56] in the shift component we have the principal point plus this additional shift at the principal point
+[50:01] in y plus this additional shift in y that needs to be taken into account and so the main question
+[50:07] is now how does this delta x delta y function actually looks like so how do i actually do that
+[50:16] and there are different approaches how this can be estimated and we want to kind of group them
+[50:21] into two different groups of approaches the first one are the so-called physics or physically
+[50:27] motivated approaches so these approaches are very well motivated from physics so i'm trying to
+[50:33] actually describe the errors with a more compact math and then trying to take the different effect
+[50:39] that could occur into account and then use the parameters that i get from those physical models
+[50:45] and add them to my process over here um the problem that we have however is that there's
+[50:52] a large number of reasons why there may be non-linear errors it may be very hard to describe
+[50:57] them and it may be also hard to get all the parameters or get kind of ideas of how those
+[51:03] parameters could actually look like and therefore those approaches have become less and less popular
+[51:08] in the past what we can however do is just describe the phenomena that actually happens
+[51:14] and just assume a model and then try to fit parameters to this model so that we can best
+[51:21] we get the best images out under this model assumption that's much easier to do but doesn't
+[51:27] really help us to identify the problem so with a camera calibration just describing the phenomena
+[51:31] or compensating for the phenomena we actually don't get an let's say understanding of what
+[51:37] where the problems actually lies this is what the physically motivated model would do better
+[51:42] nevertheless the second part of models are today the quite popular ones so the one for example is
+[51:49] a barrel distortion um so again we have this barrel distortion that as i said before straight
+[51:55] lines are turned into a barrel form like this and especially if you work with wide angle lens you
+[52:00] can see this effect and so we can say okay a model for the barrel distortion could be that i have my
+[52:07] x and y location and then i have a number of parameters so first one this is kind of the
+[52:13] constant so this is kind of i start basically with my origin x and y coordinate and then i add two
+[52:19] terms to x and y and they depend on what's called r the radius over here and the radius is the
+[52:26] distance from the center of my image plane so my principal point to the pixel coordinate so the
+[52:34] further away the larger this r gets and then i have a quadratic and a term r to the power of four
+[52:42] with different coefficients and i basically need to estimate those coefficients q1 and q2 over here
+[52:47] in order to estimate the the the strengths of this barrel distortion and this is a
+[52:54] simple model which just takes into account two parameters q1 and q2 to compensate for the effect
+[53:00] that the lens distortion in form of a barrel distortion can actually generate so basically
+[53:05] you're shifting my x and y pixel depending how far this point is away from the principal point
+[53:13] so if i'm inside the principal point the radius is zero and there is no shift and the further
+[53:18] um i move away the stronger the shift actually gets and here's kind of one example how this
+[53:24] radial distortion field could look like so there's no distortion in here and the further you go to
+[53:28] the outside world the stronger your distortion actually is and then i can actually turn that
+[53:33] around and shift the pixels in the right direction so that my image gets undistorted using this
+[53:39] information so in the end i can use this type of distortion but i can also use other types
+[53:46] of distortion models that try to describe the phenomena that i see in my distorted images and
+[53:51] then try to estimate the parameters and compensate for them this can be tricky if the models get more
+[53:57] complicated because there are also certain parameters which influence each other because
+[54:02] parts of them compensate for the same effects or enhance certain effects so it's kind of something
+[54:07] which is typically not trivial to do so but in practice what happens is that we do everything
+[54:14] as a two-step process first the linear part second one the non-linear part so in reality we first
+[54:22] assume our linear model we take our 3d point multiply it with the projection matrix p that
+[54:29] we get our point the sensor frame ignoring the non-linearities and then we do a second
+[54:34] transformation that kind of corrects the pixel location and performs this kind of pixel dependent
+[54:42] correction in order to compensate for the non-linear errors so but the overall result is
+[54:47] that the first step is the same for all pixels in my image and the second step is different for
+[54:52] every pixel in my image so that means we get a pixel dependent or point dependent transformation
+[54:58] overall that we need to take into account the first one is the same for all and the second one
+[55:04] is individual for every point so we get individual corrections for every image so that we get the
+[55:10] best possible corrections out for our camera so this was actually the mapping trying to describe
+[55:18] how a point from the 3d world is mapped onto my 2d image and how i can compensate for certain errors
+[55:27] so that in the end i can compute a corrected image where i can compute for every pixel from the 3d
+[55:32] world where this point ends up in the 2d world and i have an understanding how that mapping
+[55:39] from the 3d world to the 2d image plane looks like it's very important aspects or knowledge
+[55:46] that you need to have and if you want to work with cameras and perform geometric estimation
+[55:51] if you want to perform geometric estimation however we typically want to have the process
+[55:55] being the other way around right so we want to say we have a pixel coordinate and want to estimate
+[55:59] where this point is in the 3d world for example at least if you want to estimate the 3d geometry of
+[56:04] the world given our camera image may be slightly different if we know the world geometry and want
+[56:09] to localize our camera then the mapping in one direction may be sufficient but what we often want
+[56:15] to do is what do we want to if we want to get information about the scene from our camera image
+[56:20] so what happens if you want to know something about the scene because then we would need to
+[56:23] invert this process but as we have however seen the central projection is an issue over here
+[56:32] because we lose information when we go from the 3d world to the 2d image plane and also this
+[56:38] non-linear part over here can be a bit tricky for us but let's see how we can invert the mapping and
+[56:45] what can we say if we invert the mapping or which information we can actually get and which
+[56:49] information we maybe not be able to retrieve because this gives us a pretty good idea what
+[56:54] happens actually so the goal is we want to map back from my pixel coordinate in my corrected image
+[57:02] to and infer the coordinate of the point in the 3d world and again i can tell you already right
+[57:08] now that this is not doable so we can't do this perfectly that based on x a we know the x y that
+[57:16] coordinate of the point that's not possible but we can constrain where that point can be in the 3d
+[57:22] world and this is also very valuable information so in the end we can combine multiple images to
+[57:27] actually get information about x so again as we did before a two-step procedure we also now do a
+[57:33] two-step procedure the first step is to map back to the sensor frame and then from the sensor frame
+[57:40] back to the 3d world okay so that's what we're going to do so let's start with the first step
+[57:46] how do i get back from my arbitrary coordinate system after the corrections are applied
+[57:51] to my original sensor coordinate system so this is the first step and the problem is that in
+[57:58] general the nature of this transformation cannot be determined because it requires me to know x so
+[58:06] where i mean where am i in my image plane so where's the pixel in my image plane but the
+[58:11] only thing i have is actually the corrected image right so i do not know where this what this x
+[58:19] looks like for this x a but i only have that x a so as a result of this i i need to invert this
+[58:26] transformation i need to typically perform an iterative approach trying to iteratively invert
+[58:33] this transformation so that i can obtain the sensor coordinate based on the corrected coordinate
+[58:43] for that so the problem again is this point depends on the coordinate of the point to
+[58:50] transform in the image plane but this is an information i don't have if i have my final
+[58:56] pixel location so what i do i start with an iterative procedure we basically start with
+[59:02] an unknown x or with an initial guess for my x and invert this transformation and then kind of
+[59:08] iteratively invert it so that my point my location then actually hopefully converges
+[59:13] so what i can say is assuming my image doesn't have two weird distortions i can start as an
+[59:20] initial guess at least with the pixel coordinate of the corrected image points of this x a so i
+[59:27] say okay i start my transformation from s to a putting in here not the x in the image plane but
+[59:35] basically i'm using my original image coordinate in order to do that process and then i invert
+[59:40] this matrix i multiply x a from that side so it will provide me a transformation into my
+[59:47] sensor coordinate system but of course saying that this is just initial guess because this
+[59:53] transformation is not correct but i'm doing this and the hope is that i'm then closer to my location
+[1:00:01] in the image than i was in the sensor than i was before if i did this once and it worked
+[1:00:07] it should also work next time because i have a better estimate so i take the result that i have
+[1:00:11] and feed it back in here and basically iterate this process and that's what i'm doing here so i'm
+[1:00:18] getting my pixel coordinate in the uh in the sensor frame that i have from the first estimate
+[1:00:24] that i have from the first estimate do the process again but here i keep my x a
+[1:00:31] so it gives me a second estimate put the second estimate in there giving me a third estimate and
+[1:00:35] so on and so forth so typically there's an approach that actually converges quite quickly
+[1:00:39] that i can through this iterative execution of this non-linear function and inverting it
+[1:00:43] actually turn the or inverting the matrix i can turn the arbitrary coordinate system
+[1:00:51] point so the corrected one into the sensor coordinate system and then i have that step
+[1:00:57] done so again this point here is typically is always expressed with respect to the principal
+[1:01:03] point because the distortions are typically going to happen in the image plane therefore always
+[1:01:07] refer to the image plane so you may need to convert this with respect to your um to your
+[1:01:13] principal point just having said that and then the second step is once i am in the sensor plane
+[1:01:19] i can try to invert this mapping which is the same for the overall image
+[1:01:25] so what i need to do is i need to invert my mapping
+[1:01:31] from the 3d world onto the 2d sensor chip now assuming there are no non-linear errors
+[1:01:39] so i have my projection matrix we say x equals px and since i know we are living in homogeneous
+[1:01:47] coordinates so this is only defined up to a scalar so i'm multiplying this scalar over here
+[1:01:54] okay so it's lambda times x equals px and then i can just expand this px into k times r and then
+[1:02:03] this four by three by four matrix with the identity matrix over here the shift over here
+[1:02:07] multiply with the point on the left hand side so this point can be expressed as a euclidean point
+[1:02:14] plus this additional dimension and then i can also split this up into two parts k times r times the
+[1:02:22] x y that location in euclidean coordinates minus k times r times x zero so the location of the
+[1:02:28] projection center in euclidean coordinates okay so nothing i just multiplied this vector with
+[1:02:35] this matrix over here and so this again was a factor resulting from the homogeneous coordinates
+[1:02:41] and this is something that i can exploit in a second that everything is only known up to a
+[1:02:47] constant so what i now want to do is actually from this equation i actually want to get x on one side
+[1:02:54] and all the other quantities on the other side because right i want to know something about
+[1:02:59] capital x where the point in the 3d world so what i can do is i can take this equation
+[1:03:05] and i can simply add this term over here so this term goes away and moves to the other side
+[1:03:10] and then i can multiply from the left hand side kr inverse so that this
+[1:03:15] becomes the identity matrix only the x survives so i can express x as kr inverse times kr x zero
+[1:03:25] plus lambda times kr inverse times small x just by multiplying kr in brackets inverse from the left
+[1:03:34] hand side of this equation so this part and this part they cancel out to the identity matrix so
+[1:03:40] what survives is just the x zero and here i can do nothing about it now let's have a look to this
+[1:03:48] to this equation this equation says i have the point in euclidean coordinates right so it's x y
+[1:03:55] that coordinate equals to the x y that coordinate of my camera coordinate system and then plus
+[1:04:02] a scale factor so a number any arbitrary one-dimensional number
+[1:04:11] and then i have here a product of kr inverse so a matrix which is contained which is the
+[1:04:20] three by three matrix which is the multiplication of my calibration matrix and my rotation matrix
+[1:04:28] inverted times a vector so this actually gives me a direction
+[1:04:36] and so now we can actually interpret what that actually means and this is a super important
+[1:04:41] thing in here the term kr inverse times x describes the direction of the ray
+[1:04:49] from the camera origin x zero to the point x in the 3d world
+[1:04:55] okay so what it says the point must lie on a ray starting from the projection center
+[1:05:03] into the world and so this must be the direction vector to that point and this lambda basically
+[1:05:13] tells me how far that point is away so this is actually the direction vector already
+[1:05:19] and this is the length of the direction vector so that means kr inverse times the pixel coordinate
+[1:05:29] tells me the direction of a ray so i can estimate on which ray that point x must lie in the 3d world
+[1:05:40] based on my pixel information my knowledge where the camera is in the world and my intrinsic
+[1:05:49] parameters but i do not know how far it is away because i can't resolve the scale parameter
+[1:05:54] and this is exactly these one degree of freedom of information which is lost
+[1:05:58] when i'm projecting from the 3d world onto the 2d image plane i'm losing one degree of freedom
+[1:06:04] and this degree of freedom sits in here by saying i do not know how far
+[1:06:09] i am on that ray where that point lies on that ray i only know it lies on that ray so it's kind
+[1:06:14] of one degree of freedom which is which can't be resolved and this is the reason why i cannot fully
+[1:06:20] invert the mapping going from a pixel coordinate to a 3d world coordinate because this one degree
+[1:06:26] of freedom is lost and it sits in here but the really important thing to note is that from the
+[1:06:30] calibration matrix and the rotation of the camera if i multiply those two matrices invert them and
+[1:06:36] multiply a pixel coordinate to this i get the direction of the ray from the origin of the camera
+[1:06:44] to the point in the 3d world and this is a very important information that we will we have to
+[1:06:49] exploit or we will exploit if we think about 3d reconstruction tasks we're estimating where our
+[1:06:55] point can be in the 3d world so it's important to understand that what this inversion of that
+[1:07:01] mapping actually means so what we've discussed so far was the mapping how to go from the 3d world
+[1:07:07] to the 2d image location with all the different steps of the coordinate system with the different
+[1:07:12] coordinate systems and we discussed in which way i can go back which way i can go back from a pixel
+[1:07:18] coordinate to the 3d world and i can do this only up to one degree of freedom which i cannot resolve
+[1:07:29] before coming to the end i'm going to briefly talk about different classifications of cameras
+[1:07:34] because different cameras have different names and there's kind of an um and a different number
+[1:07:40] of parameters and so if people talk for example about a normalized camera or euclidean camera
+[1:07:45] at least you should get an idea what that actually means in terms of the parameters
+[1:07:49] so we can here sort our calibration parameters um saying where is the camera in the world x y z
+[1:07:56] location where is the camera looking to your pitch rolling what the camera constant what is the shift
+[1:08:05] of the chip with respect to my image plane coordinate system is there a difference in
+[1:08:11] the x y coordinate and the scale and what are the non-linear parameters that are involved
+[1:08:18] so assume we only have a camera uh camera where we have those parameters so that means
+[1:08:25] the non-linear parameters are all zero there is no scale no shear there is no scale difference
+[1:08:31] there is no principal point the camera constant is one the rotation matrix and identity that
+[1:08:37] would be something we call a normalized camera so normalized camera is just a camera which is
+[1:08:43] shifted with respect to the x y z location with respect to the world coordinate system
+[1:08:48] that means there's no rotation involved the camera constant is one um there is no shear
+[1:08:54] there is no difference in the scale in x and y and there are no non-linearities involved
+[1:08:59] so very very simple camera just basically i'm just allowed to shift the camera
+[1:09:04] if i also want to be able to rotate the camera so look into different directions
+[1:09:07] but still don't change the intrinsics of the camera it stays exactly the same
+[1:09:11] this is something that we call unit camera it's just a camera which just points into a different
+[1:09:17] direction if we have a camera which has a different c so that means where the image
+[1:09:25] plane has a different distance there's not a distance of one from the projection center
+[1:09:32] and it's something that we have an ideal camera because it performs the name comes from the fact
+[1:09:37] that it performs an ideal perspective projection this camera if we then have a shift of the image
+[1:09:46] plane but we don't scale the pixels and we have no shear there's something called the Euclidean
+[1:09:50] camera because it's basically the transformation which happens in the image plane is just a shift
+[1:09:57] in x and y and if we have a camera that also has the parameters m and s is something we call
+[1:10:06] an affine camera because here we have this affine transformation and this is a straight line
+[1:10:11] preserving camera and this is a camera assuming no non-linear errors so this is kind of the dlt
+[1:10:18] transformation is exactly this transformation and the important thing to note is that straight lines
+[1:10:23] in the world stay straight lines if straight lines don't stay straight lines there's an indicator
+[1:10:28] that we have non-linear errors which happens if we add those additional parameters q1 q2
+[1:10:34] and even more parameters to that and so these different parameters have cameras have different
+[1:10:42] calibration matrices so again the unit camera just become the calibration matrix is an identity
+[1:10:48] matrix that means the overall number of parameters is six because six for the extrinsics zero for the
+[1:10:55] intrinsic there are no free parameters in here the ideal camera just has a camera constant which is
+[1:11:00] the same in for the x and y direction so this is six plus one seven degrees of freedom Euclidean
+[1:11:07] camera adds a shift in the xy plane over here sorry with x and y so we get three additional
+[1:11:16] parameters here in some nine or we have the fine camera which is a dlt which gives us 11 degrees
+[1:11:21] of freedom or the general camera which has the 11 degrees of freedom plus the number of degrees of
+[1:11:27] freedom that i need in order to describe my non-linearities so if you have a camera where we
+[1:11:35] know this calibration matrix we talk about a calibrated camera if you do not know those
+[1:11:40] parameters we talk about an uncalibrated camera so if you kind of take your camera you take it
+[1:11:46] out of the box you bought it and you start making pictures with it you don't know anything about the
+[1:11:51] calibration parameters so this is an uncalibrated camera now you may sit down and implement an
+[1:11:57] algorithm for calibrating the camera so for estimating those intrinsic parameters for
+[1:12:01] estimating this k and then you can add that k you take the images out of the camera and multiply
+[1:12:07] um kind of the image or the point that you extracted from the image with this calibration
+[1:12:12] matrix k so you then have calibrated camera because the locations of the points have been
+[1:12:18] changed in your images and your images are now calibrated sometimes people use the term metric
+[1:12:24] camera this is basically a camera where the intrinsics don't change so camera that you want
+[1:12:28] to use for measurement typically they are certain properties of that camera so they are explicitly
+[1:12:36] designed so that the intrinsics change as little as possible but it's a term that it's not that
+[1:12:40] frequently used today anymore and the process of estimating those intrinsic parameters is what we
+[1:12:46] call camera calibration and also something that we will actually look into so in some what we
+[1:12:53] have done in this lecture today we looked into the description how we can describe the mapping
+[1:12:58] from the world coordinate system onto the chip so not even the image plane but actually the whole
+[1:13:05] chip coordinate system so that we know which pixel belongs the correspondence between world
+[1:13:11] coordinates and pixels with this aspect the extrinsics are the the camera through respect
+[1:13:19] the parameters of the camera with describe where the cameras in the world and where it is looking
+[1:13:24] to so everything which is outside the camera so to say and the intrinsics are things which happen
+[1:13:29] inside the camera so the mapping from the camera coordinate system to the sensor coordinate system
+[1:13:35] taking potentially non-linear errors into account although those five intrinsic parameters that we
+[1:13:42] have been using here are those which are which don't take into account any non-linear errors
+[1:13:51] this is described with the dlt this 11 degree of freedom transformation x equals px that's what
+[1:13:57] we refer to as the dlt we then also looked a little bit to the non-linear errors at least
+[1:14:01] the spiral distortion and how the inversion of the mapping process looks like so if i'm in the
+[1:14:09] pixel core i have pixel coordinates how can i actually invert that mapping back to the original
+[1:14:15] world coordinate system and it turns out i can't recover the position of the point the 3d world
+[1:14:20] fully i can only say on which straight line this point may lie but i have no idea how far it is
+[1:14:26] actually away from my projection center so also visually we can summarize this this was the
+[1:14:32] overall mapping from the world to the sensor these are kind of our extrinsics these are our intrinsic
+[1:14:39] parameters this was the rigid body transformation here we have the camera in the world then we have
+[1:14:44] a central projection going from the camera coordinate system to the image plane then we
+[1:14:48] have a fine transformation going from the image plane onto the sensor and then we have potentially
+[1:14:54] some non-linear errors that we actually need to compensate for so with this i'm coming to
+[1:15:00] the end of this lecture i hope you have a good understanding now how to map points from the 3d
+[1:15:05] world on to an image where are those points in your image which pixel the point in 3d will be
+[1:15:14] mapped to and have an idea if we can go back how we can go back and which information we can actually
+[1:15:20] get out of it thank you very much for your attention

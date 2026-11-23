@@ -1,0 +1,2096 @@
+WEBVTT
+
+00:00.000 --> 00:06.200
+Welcome everyone, my name is Lasse Peters and in today's lecture we're going to discuss
+
+00:06.200 --> 00:09.680
+numerical methods for model predictive control.
+
+00:09.680 --> 00:13.680
+And so this lecture assumes that you already have a good understanding of the high-level
+
+00:13.680 --> 00:18.760
+idea of model predictive control, or MPC for short, and in today's lecture we're going
+
+00:18.760 --> 00:23.680
+to look into some of the mathematical tools that are used in the background to solve these
+
+00:23.680 --> 00:27.260
+problems.
+
+00:27.260 --> 00:31.680
+And so let's begin by briefly reviewing the high-level idea of MPC.
+
+00:31.680 --> 00:39.520
+So let's look at this example of a car following a racetrack, the circular racetrack, which
+
+00:39.520 --> 00:43.240
+is given by this dashed reference.
+
+00:43.240 --> 00:49.660
+And the idea of MPC is that at every time step we look at our current state, which in
+
+00:49.660 --> 00:56.460
+this case may for example be the position and heading of this car and its velocity,
+
+00:56.460 --> 01:03.060
+and then we make a plan for a fixed or a finite time into the future.
+
+01:03.060 --> 01:09.060
+So maybe 20 or 30 time steps into the future using a model to make these predictions and
+
+01:09.060 --> 01:13.780
+optimizing our plan, our receding horizon plan.
+
+01:13.780 --> 01:22.660
+So the plan that is stretching a fixed distance into the future for a given objective.
+
+01:22.660 --> 01:25.260
+And so the high-level idea is as follows.
+
+01:25.260 --> 01:30.720
+We always take the current state and then we have some objective, for example, minimize
+
+01:30.720 --> 01:36.260
+the deviation from this reference while also maximizing progress along the track.
+
+01:36.260 --> 01:41.600
+And then this state and the objective are handed over to this MPC module that is making
+
+01:41.600 --> 01:49.780
+predictions into the future and optimizes the controls, so the inputs to the system,
+
+01:49.780 --> 01:55.800
+for example the steering and brake pedal commands, to minimize the cost, so to fulfill
+
+01:55.800 --> 01:58.300
+this objective.
+
+01:58.300 --> 02:04.360
+And then we have a plan for say a couple of time steps into the future, maybe 20 or 50,
+
+02:04.360 --> 02:10.820
+but we will only apply the very first of those inputs.
+
+02:10.820 --> 02:12.220
+And then from there we start again.
+
+02:12.220 --> 02:19.580
+So we again take the state, we plug it into our MPC module to update, to get a new receding
+
+02:19.580 --> 02:23.680
+horizon plan, so a new plan into the future.
+
+02:23.680 --> 02:31.380
+We again take only the first step, so we again only apply the first input, and so we do this
+
+02:31.380 --> 02:33.600
+in a loop.
+
+02:33.600 --> 02:39.740
+And in this framework there's one important part which we will focus on today, which is
+
+02:39.740 --> 02:40.740
+the optimizer.
+
+02:40.740 --> 02:51.820
+So the tool that is optimizing this trajectory to fulfill our objective, so to minimize the
+
+02:51.820 --> 02:54.900
+cost J.
+
+02:54.900 --> 03:01.440
+And so the mathematical formulation of this optimization in the inner loop was as follows.
+
+03:01.440 --> 03:06.980
+So we could cast this control problem as constraint optimization where our task was to minimize
+
+03:06.980 --> 03:15.820
+some cost function J by choosing suitable states x and inputs u, and this is a sequence
+
+03:15.820 --> 03:20.700
+of states and inputs u over the prediction horizon into the future where the prediction
+
+03:20.700 --> 03:22.740
+horizon is capital T.
+
+03:22.740 --> 03:30.460
+But we are not interested in arbitrary states or inputs, or we can't just choose them arbitrarily,
+
+03:30.460 --> 03:35.380
+but they are coupled because they need to be dynamically feasible.
+
+03:35.380 --> 03:41.380
+That is, the states that we are choosing, they must be achievable by the dynamics model
+
+03:41.380 --> 03:43.020
+that we have.
+
+03:43.020 --> 03:48.180
+And so, for example, if we have a car, we can steer and we can accelerate to the front
+
+03:48.180 --> 03:53.100
+and back, but we cannot immediately move sidewards because the tires are preventing us from doing
+
+03:53.100 --> 03:54.100
+that.
+
+03:54.100 --> 04:00.660
+And so we have dynamic feasibility as an equality constraint here, and then we may additionally
+
+04:00.660 --> 04:07.980
+have some state and input constraints, meaning that we can only choose certain controls,
+
+04:07.980 --> 04:13.300
+maybe we have a maximum acceleration or for the state a maximum velocity that we allow
+
+04:13.300 --> 04:16.300
+or a maximum deviation from the track.
+
+04:16.300 --> 04:23.060
+And finally, we have an initial constraint, initial state constraint, meaning that all
+
+04:23.060 --> 04:28.860
+our plans must start from this x in it, which we may get from our state estimation pipeline.
+
+04:28.860 --> 04:33.540
+So we know where we are now, and the objective is telling us what we want to do, so make
+
+04:33.540 --> 04:39.300
+progress along the track, and we have to make sure that all our states start from our current
+
+04:39.300 --> 04:40.300
+position.
+
+04:40.300 --> 04:46.580
+And just as a quick reminder on notation, we use this x1 to capital T and u1 to capital
+
+04:46.580 --> 04:53.180
+T to denote the tuple of all of these states and inputs.
+
+04:54.180 --> 05:00.660
+Okay, and so at our previous lecture where we've discussed the high-level idea of MPC,
+
+05:00.660 --> 05:04.120
+which you can also find on this channel, there we've just assumed that we have access to
+
+05:04.120 --> 05:07.540
+some software tool to solve this problem.
+
+05:07.540 --> 05:13.360
+So that lecture is focused on how can we synthesize a given, so how can we write a given control
+
+05:13.360 --> 05:15.940
+problem as an optimization problem.
+
+05:15.940 --> 05:21.020
+And then once we have that, we have this formulation that we can hand over to one of these libraries,
+
+05:21.020 --> 05:27.780
+for example, Kasady, which is a numerical optimization library or constraint optimization
+
+05:27.780 --> 05:32.460
+library, which has interfaces for C++, Python, and MATLAB, or there's also JuMP, which is
+
+05:32.460 --> 05:34.720
+a similar library in Julia.
+
+05:34.720 --> 05:39.060
+And all of these libraries work in a way that you have your problem description, so here's
+
+05:39.060 --> 05:46.420
+a very simplified toy problem of constraint optimization, and you can make a symbolic
+
+05:46.420 --> 05:53.060
+description in a very compact form of this problem, and then just hand it over to the
+
+05:53.060 --> 05:55.740
+optimizer and it will solve it for you.
+
+05:55.740 --> 06:01.080
+Now in today's lecture, we want to sort of get rid of this assumption that we just have
+
+06:01.080 --> 06:05.860
+some tool that it magically tells us the solution, instead we want to look behind the curtains
+
+06:05.860 --> 06:11.400
+of what is involved in order to solve these kinds of problems.
+
+06:12.400 --> 06:21.980
+So that's the focus of today, we will look at the numerical background of these tools.
+
+06:21.980 --> 06:29.200
+And before we dive into these methods, I want to quickly simplify the problem a little bit
+
+06:29.200 --> 06:31.160
+for the scope of this lecture.
+
+06:31.160 --> 06:36.840
+And so here we have a slightly reduced problem formulation where we don't have state and
+
+06:36.840 --> 06:38.720
+input constraints.
+
+06:38.720 --> 06:43.840
+So we will drop these constraints where the controls can only be in a specific set and
+
+06:43.840 --> 06:46.520
+the states can only be in a specific set.
+
+06:46.520 --> 06:51.640
+So the only constraints we are left with are the constraints for initial conditions and
+
+06:51.640 --> 06:54.020
+for dynamic feasibility.
+
+06:54.020 --> 07:06.680
+And so we end up with this smaller problem, which is to some extent similar to solve.
+
+07:06.680 --> 07:12.920
+And so another thing I want to remind you is that, and that's also something we've already
+
+07:12.920 --> 07:18.520
+introduced in the previous lecture, is that we will assume that our objective is time
+
+07:18.520 --> 07:20.160
+separable.
+
+07:20.160 --> 07:28.120
+That is, we don't just have an arbitrary cost function here, but we assume that we can write
+
+07:28.120 --> 07:36.160
+this cost as a sum of stage costs, meaning that there are these small g, so g of x and
+
+07:36.160 --> 07:39.800
+t, so of the state and input at each time step.
+
+07:39.800 --> 07:42.860
+And we can write the total cost as the sum of these stage costs.
+
+07:42.860 --> 07:48.800
+So the total cost over the entire horizon will be the cost at the first, at the second,
+
+07:48.800 --> 07:51.000
+plus the third, and so on.
+
+07:51.000 --> 07:57.400
+And so this will be an important assumption for some of the tools that we will develop
+
+07:57.400 --> 08:00.080
+throughout this lecture.
+
+08:00.680 --> 08:07.640
+Okay, and so before we directly dive into how we can solve the problem, I want to introduce
+
+08:07.640 --> 08:14.280
+one very important tool that we will make use of throughout this lecture, which is the
+
+08:14.280 --> 08:16.880
+idea of state elimination.
+
+08:16.880 --> 08:23.240
+And the idea of that is that we can reduce the problem even further by getting rid of
+
+08:23.240 --> 08:29.180
+the state decision variables and converting this problem that you've seen on the previous
+
+08:29.180 --> 08:32.520
+slide into an unconstrained optimization problem.
+
+08:32.520 --> 08:36.220
+And so I'm hoping that you may recognize that as something that you've already seen in other
+
+08:36.220 --> 08:42.020
+disciplines to make that more familiar to you.
+
+08:42.020 --> 08:49.100
+And so the idea of state elimination builds on this idea of forward simulation, which
+
+08:49.100 --> 08:53.900
+is that we have this very specific structure of the problem, that all the states are always
+
+08:53.900 --> 08:58.660
+connected to the previous state via the dynamics constraints.
+
+08:58.660 --> 09:05.140
+And so if we have the initial conditions, which we will be given by our state estimation
+
+09:05.140 --> 09:13.380
+pipeline, for example, and then we can get rid of all the future states by writing them
+
+09:13.380 --> 09:15.420
+in terms of control.
+
+09:15.420 --> 09:20.860
+So the idea is that in the end, we only want to have the control variables, so the u1 to
+
+09:20.860 --> 09:27.640
+t as decision variables in our optimization, and we don't want to have the states.
+
+09:27.640 --> 09:32.900
+And so the idea is that we can write trivially, we can write x1 as x in it, because that's
+
+09:32.900 --> 09:35.560
+just our initial constraint.
+
+09:35.560 --> 09:39.880
+And then x2, we can write as just simulating the dynamics one step forward in time.
+
+09:39.880 --> 09:47.920
+So we apply f, which was our dynamics function, which takes x one step into the future.
+
+09:47.920 --> 09:53.200
+And so we can apply f on the initial state with the first input, and we get the second
+
+09:53.200 --> 09:54.200
+state.
+
+09:54.200 --> 09:58.400
+And so we can do that recursively, so we can do it again for x3.
+
+09:58.400 --> 10:02.300
+We just apply two times f, where the inner f takes the initial state and applies the
+
+10:02.300 --> 10:11.360
+first input, and then the outer dynamics take that resulting state, which is now x2, and
+
+10:11.360 --> 10:12.360
+applies u2.
+
+10:12.360 --> 10:17.280
+And so we can do this one after another.
+
+10:17.280 --> 10:28.360
+And so we can define this function f t, where f t is the function that takes the initial
+
+10:28.360 --> 10:35.520
+state at time step t, and then the sequence of controls ranging from that small t, so
+
+10:35.520 --> 10:41.880
+the intermediate time step small t, to capital T, so until the end of the horizon, and it
+
+10:41.880 --> 10:46.440
+will give us the resulting trajectory, so the induced trajectory that we just get from
+
+10:46.440 --> 10:51.600
+applying these inputs in open loop from that state.
+
+10:51.600 --> 10:59.880
+And so f1 is, for example, this forward simulation function starting from the initial state,
+
+10:59.880 --> 11:05.280
+so from x1, and that's just the thing that we've seen on the previous slide.
+
+11:05.280 --> 11:10.800
+And so that exactly gives us the entire trajectory if we plug in the initial state and the entire
+
+11:10.800 --> 11:13.360
+sequence of controls.
+
+11:13.360 --> 11:15.460
+Now why is this useful?
+
+11:15.460 --> 11:20.900
+So we can use this to eliminate the state variables and rewrite our objectives in terms
+
+11:20.900 --> 11:23.960
+of only controls and initial conditions.
+
+11:23.960 --> 11:29.180
+So if we use this forward simulation function starting at the first time step, then we can
+
+11:29.180 --> 11:36.820
+write our original objective, which depended upon states and inputs, now as this new objective
+
+11:36.820 --> 11:47.420
+J tilde, which only depends on the controls you want to t, so the control sequence and
+
+11:47.420 --> 11:55.200
+the initial state, and we can do that by substituting the first, so here originally we had to plug
+
+11:55.200 --> 12:01.420
+in the sequence of states, but now instead we plug in the forward simulated sequence.
+
+12:01.420 --> 12:08.140
+So this forward simulation function f1 will give us x1 to t, and so that's exactly what
+
+12:08.140 --> 12:12.980
+we needed as the first argument to our original cost function.
+
+12:12.980 --> 12:19.880
+And so with this rewritten objective, the nice thing is that now we have an unconstrained
+
+12:19.880 --> 12:30.020
+optimization problem with fewer decision variables, so now we only depend upon these inputs you
+
+12:30.020 --> 12:34.380
+want to u t, and the initial conditions they are given, so they are not a decision variable,
+
+12:34.380 --> 12:40.460
+they are just fixed, and the nice thing is that not only do we have fewer decision variables,
+
+12:40.460 --> 12:45.040
+but we don't have any constraints, because all the constraints, so the initial conditions
+
+12:45.040 --> 12:49.940
+and the dynamics constraints, they are implicitly satisfied, because the forward simulation
+
+12:49.940 --> 12:58.100
+function will always produce dynamically feasible states.
+
+12:58.100 --> 13:07.620
+And so with this rewriting of the problem, we have just an unconstrained optimization
+
+13:07.620 --> 13:13.860
+problem that you may have already seen in other disciplines, and so you essentially
+
+13:13.860 --> 13:18.500
+get some cost landscape, here we just plotted it for two decision variables, so say you
+
+13:18.500 --> 13:25.860
+had only u1 and u2, and these were only scalars, then maybe the cost looks something like this,
+
+13:25.860 --> 13:34.500
+and your task is now to minimize this cost by taking a suitable choice of these control inputs.
+
+13:34.500 --> 13:40.700
+And in general, this cannot be done analytically, so we can't just say okay, this is the minimum,
+
+13:40.700 --> 13:46.100
+we can just step there, instead we have to take an iterative approach to approximating
+
+13:46.100 --> 13:51.140
+this, and I'm sure you've maybe already seen this in another context, where you may take
+
+13:51.140 --> 14:02.580
+gradient descent, so small steps in the steepest direction of descent, so in the opposite gradient
+
+14:02.580 --> 14:09.260
+direction towards a local minimum, or maybe even a Newton's method, and we'll get to these
+
+14:09.260 --> 14:16.100
+kinds of methods later throughout the talk.
+
+14:16.100 --> 14:21.580
+But before we do that, I want to quickly, we will do a bit of a deep dive into a special
+
+14:21.580 --> 14:30.220
+case, which is these unconstrained problems, or problems with convex quadratic costs, meaning
+
+14:30.220 --> 14:38.340
+that the cost has only up to squared terms of the decision variables, so it's a polynomial
+
+14:38.340 --> 14:44.780
+where the highest term is a squared term, and so we get these sort of, in multi-dimensions,
+
+14:44.780 --> 14:56.140
+we get these quadratic surfaces, or in one dimension you would just get a parabola, and
+
+14:56.140 --> 15:01.700
+so for these convex quadratic costs, the nice thing is that we can compute the minimum analytically,
+
+15:01.700 --> 15:06.740
+so here we could just say, if we had this entire cost landscape, we could just directly
+
+15:06.740 --> 15:15.660
+step to this global minimum by taking the gradient of this quadratic function and just
+
+15:15.660 --> 15:20.500
+setting it to zero, and so we're just solving for the point where the gradient of this function
+
+15:20.500 --> 15:23.020
+is zero.
+
+15:23.020 --> 15:31.540
+And this kind of special case also exists in optimal control, which is called the linear
+
+15:31.540 --> 15:37.300
+quadratic regulator, and so the linear quadratic regulator is a special case of an optimal
+
+15:37.300 --> 15:43.860
+control problem, where the dynamics are linear and the costs are quadratic, and so this is
+
+15:43.860 --> 15:49.980
+exactly the OCP that we've seen earlier, just with these additional assumptions, so we want
+
+15:49.980 --> 15:59.220
+to minimize our states and inputs to minimize this objective, where this objective now takes
+
+15:59.220 --> 16:10.060
+a very special form, so it's the sum of these squared terms, where the deviation of X from
+
+16:10.060 --> 16:17.900
+the origin is penalized with some cost matrix Q, and the deviation of the input, so any
+
+16:17.900 --> 16:25.540
+non-zero input is penalized with a cost matrix R, and our total cost is just the sum of these
+
+16:25.540 --> 16:28.540
+state costs over time.
+
+16:28.540 --> 16:35.020
+And then our dynamics, so these are the quadratic costs, and then the dynamics, which are linear,
+
+16:35.020 --> 16:40.860
+take this form, where the state at the next time step is always A times X at the previous
+
+16:40.860 --> 16:47.780
+time plus B times U, so this is just a linear equation of how the state evolves over time.
+
+16:47.780 --> 16:51.660
+And of course we still have our initial conditions, and the last important assumption that we
+
+16:51.660 --> 16:59.740
+will make use of here is that Q must be symmetric, so Q must equal its transpose, and must also
+
+16:59.740 --> 17:06.220
+be positive semidefinite, which means that it must have eigenvalues greater or equal
+
+17:06.220 --> 17:14.740
+to zero, and R must be strictly positive definite, meaning that it must have eigenvalues only
+
+17:14.740 --> 17:17.520
+greater than zero.
+
+17:17.520 --> 17:21.800
+With that problem description at hand, we can attempt to solve the LQR problem, and
+
+17:21.800 --> 17:27.140
+the first approach that I want to show here is the so-called batch solution.
+
+17:27.140 --> 17:34.320
+And so the batch solution attempts to solve for all controls at once, so in one batch
+
+17:34.320 --> 17:42.800
+for the entire horizon, and it does so by exactly exploiting this idea of state elimination
+
+17:42.800 --> 17:47.720
+that we've seen earlier, and this will allow us to cast the LQR problem essentially as
+
+17:47.720 --> 17:51.080
+a linearly squares problem.
+
+17:51.080 --> 17:56.240
+So let's look at what the forward simulation idea looks like for the linear dynamics.
+
+17:56.240 --> 18:01.240
+And so this is exactly what we've seen earlier.
+
+18:01.240 --> 18:07.220
+For X1 we just get the initial state, and then for the later states we can exploit this
+
+18:07.220 --> 18:09.760
+very special structure of the linear dynamics.
+
+18:09.760 --> 18:16.580
+So for X2 it's just A times the initial state plus B times U1.
+
+18:16.580 --> 18:21.860
+And then for all the later states we just always take the previous expression, which
+
+18:21.860 --> 18:27.200
+is the previous state, we multiply it from the left with this A matrix, and then we add
+
+18:27.200 --> 18:31.120
+B times the input at that time.
+
+18:31.120 --> 18:37.600
+And so because of this very special structure of the dynamics, we can write it down in this
+
+18:37.600 --> 18:42.380
+compact expression for an arbitrary time step into the future all the way up to capital
+
+18:42.380 --> 18:53.180
+T. And now using this forward simulation idea, we can also write the forward simulation function
+
+18:53.180 --> 18:55.940
+as a single matrix equation.
+
+18:55.940 --> 19:03.700
+So here we just stacked all of the states into one long vector, so that we call this
+
+19:03.700 --> 19:05.400
+now capital X.
+
+19:05.400 --> 19:13.060
+And then we can, so this is the trajectory that we want to find, and we can find this
+
+19:13.060 --> 19:19.600
+trajectory with this matrix equation simply by multiplying the initial state with this
+
+19:19.600 --> 19:27.560
+stacked matrix, which we call A over bar, and then we collect all the terms that were
+
+19:27.560 --> 19:33.120
+multiplied with U into a capital, so B over bar matrix.
+
+19:33.120 --> 19:35.460
+And then we also have the stacked inputs here.
+
+19:35.460 --> 19:40.800
+And so you can convince yourself that this matrix expression is exactly doing the same
+
+19:40.800 --> 19:42.500
+thing as we've seen on the previous slide.
+
+19:42.500 --> 19:51.480
+So for example, X1 is just the identity matrix times X in it, and then there's no, these
+
+19:51.480 --> 19:53.740
+entries are all zero, so no input is applied.
+
+19:53.740 --> 19:59.940
+And then X2 is just A times the initial state plus B times U1, and all the other entries
+
+19:59.940 --> 20:06.660
+are zero, so all the other U's get multiplied with zeros here.
+
+20:06.660 --> 20:13.000
+And with this matrix equation at hand, we can just write the entire forward simulation
+
+20:13.000 --> 20:18.560
+as this compact matrix expression.
+
+20:18.560 --> 20:26.720
+And for this sort of matrix form of our problem, where we've now stacked all our states and
+
+20:26.720 --> 20:33.620
+inputs into long vectors, we can also define new cost matrices, and so we will form this
+
+20:33.620 --> 20:42.540
+block diagonal Q over bar, which just consists of the Q's at every time step stacked along
+
+20:42.540 --> 20:50.040
+the diagonal as block matrices, and then R over bar just stacks the, or takes the block
+
+20:50.040 --> 20:55.700
+diagonal of the original control cost matrices R.
+
+20:55.900 --> 21:05.440
+And with this at hand, we can write a new cost J over bar, which can now be compactly
+
+21:05.440 --> 21:12.080
+expressed only in terms of these stacked states and inputs, simply by multiplying this Q from
+
+21:12.080 --> 21:17.080
+left and right with X, and R from left and right with U.
+
+21:17.080 --> 21:23.040
+And so this looks very similar, like our original state cost, a stage cost, so the cost at a
+
+21:23.100 --> 21:28.020
+single time step, but now this expresses the cost for the entire horizon, because these
+
+21:28.020 --> 21:32.140
+are also the stacked states for the entire horizon, and the stacked controls for the
+
+21:32.140 --> 21:33.140
+entire horizon.
+
+21:33.140 --> 21:38.580
+And so this will cover, or this will represent the exact same objective, so encode the same
+
+21:38.580 --> 21:43.260
+task as we originally had.
+
+21:43.260 --> 21:47.720
+And combining this rewritten cost with the idea of forward simulation that we've seen
+
+21:47.740 --> 21:53.420
+earlier, we can now write again our tilde cost.
+
+21:53.420 --> 21:59.900
+So we take our objective and then the, so this objective in terms of the stacked states,
+
+21:59.900 --> 22:04.660
+and then we also had this forward simulation function as a matrix expression, and so we
+
+22:04.660 --> 22:12.060
+can replace each of the axes in this expression with the corresponding forward simulation.
+
+22:12.060 --> 22:17.260
+And if we rearrange the terms and sort of tidy up this expression a little bit, then
+
+22:17.280 --> 22:29.280
+we get this compact J tilde, right, so that's the cost in terms of only the sequence of
+
+22:29.280 --> 22:38.120
+all the inputs with state constraints eliminated, and we can write it as this quadratic expression
+
+22:38.120 --> 22:39.120
+in U.
+
+22:39.120 --> 22:45.140
+So U is just left and right multiplied onto this H matrix, and then there's also some
+
+22:45.160 --> 22:48.000
+linear term and a constant in U.
+
+22:48.000 --> 22:53.600
+And so this H matrix is, for example, what you see down here, so it has exactly the same
+
+22:53.600 --> 23:02.320
+shape as our original block-diagonalized control matrix, so, right.
+
+23:02.320 --> 23:09.200
+And with this reduced cost, which now only depends on the inputs but on the sequence
+
+23:09.200 --> 23:18.380
+of all the inputs, we can write the batch formulation of LQR as a linearly squares problem,
+
+23:18.380 --> 23:28.740
+and so this is the unconstrained optimization problem that represents the LQR's problem
+
+23:28.740 --> 23:30.220
+as a single batch.
+
+23:30.220 --> 23:39.660
+So we need to solve over all the inputs U in one go for our J tilde.
+
+23:39.660 --> 23:46.180
+And if we look at this, this is a quadratic expression in U, so this is a polynomial just
+
+23:46.180 --> 23:54.520
+where U are vectors, and the highest term that is showing up is a squared term.
+
+23:54.520 --> 24:06.460
+And so we can check that H is, so this is convex because H is positive definite by construction
+
+24:06.460 --> 24:12.880
+because R we assume to be positive definite and Q we assume to be positive semi-definite.
+
+24:12.880 --> 24:19.080
+And so you can show that this will always be convex, meaning that it's sort of upwards
+
+24:19.080 --> 24:25.800
+curve the cost landscape, and so that allows us to solve for the minimum, the global minimum
+
+24:25.800 --> 24:30.320
+of this expression simply by setting the gradient to zero.
+
+24:30.320 --> 24:36.880
+And so we can take the gradient here of exactly this expression, set it to zero, and then
+
+24:36.880 --> 24:39.500
+solve for the input.
+
+24:39.500 --> 24:48.620
+And so that will involve sort of bringing U star, which is the optimal controls that
+
+24:48.620 --> 24:55.500
+we are looking for, to this side, and so we need to take here the inverse of H in order
+
+24:55.500 --> 24:56.740
+to do so.
+
+24:56.740 --> 25:01.060
+Okay, that concludes the section on the batch approach to LQR.
+
+25:01.060 --> 25:07.620
+And so to summarize, this approach exploited the fact that we can eliminate the state variables
+
+25:07.620 --> 25:12.040
+with linear dynamics in a very specific way to write this problem as an unconstrained
+
+25:12.040 --> 25:17.020
+optimization problem, which we can recognize to be a linearly squares problem, and then
+
+25:17.020 --> 25:22.860
+this problem allows us, or this formulation allows us to directly solve for all controls
+
+25:22.860 --> 25:25.060
+in one batch.
+
+25:25.060 --> 25:26.740
+A few comments on this approach.
+
+25:26.740 --> 25:32.180
+So the nice thing about that approach is that we can solve it analytically, which is derived
+
+25:32.180 --> 25:36.060
+from the fact that it is a convex quadratic problem.
+
+25:36.060 --> 25:41.580
+And so this is much more efficient than having to take small steps towards a local solution.
+
+25:41.580 --> 25:49.380
+Instead, we can find the global solution simply by solving a linear system of equations.
+
+25:49.380 --> 25:56.460
+But still, this requires us to invert this rather large matrix, which has the dimensions
+
+25:56.460 --> 26:01.660
+MT, where M is the number of controls that we have and T is the number of time steps
+
+26:01.660 --> 26:09.840
+that we have in our planning horizon, times MT, towards this big matrix H.
+
+26:09.840 --> 26:16.240
+And so this dependence on the time horizon here makes it a bit problematic, because if
+
+26:16.240 --> 26:23.120
+we have a lot of time steps into the future, then computing this inverse may be quite expensive.
+
+26:23.120 --> 26:27.620
+And so the question is, can we do better?
+
+26:27.620 --> 26:29.180
+And the short answer is yes.
+
+26:29.180 --> 26:34.520
+And so the idea that we can follow is this idea of dynamic programming, which gives rise
+
+26:34.520 --> 26:36.380
+to a different solution to LQR.
+
+26:36.420 --> 26:41.060
+So technically, dynamic programming can also be applied to different settings.
+
+26:41.060 --> 26:44.540
+But in this LQR setting, it works out quite nicely.
+
+26:44.540 --> 26:50.600
+And so the main idea that we will exploit is that we can exploit the sequential structure
+
+26:50.600 --> 27:00.080
+of the problem induced by the dynamics even more to compute not only the forward simulation,
+
+27:00.080 --> 27:05.220
+but also to compute a more efficient inverse of this H matrix.
+
+27:05.220 --> 27:12.860
+And so before we dive into the math, I want to quickly highlight the underlying principle
+
+27:12.860 --> 27:18.180
+that allows us to perform this dynamic programming idea.
+
+27:18.180 --> 27:19.740
+And this is the principle of optimality.
+
+27:19.740 --> 27:24.600
+And here we'll just start with an example before we come up with the formal definition.
+
+27:24.600 --> 27:32.240
+And so imagine that you are tasked to find a plan to this goal location C, and you're
+
+27:32.240 --> 27:34.340
+starting in A.
+
+27:34.340 --> 27:41.180
+And so you know this optimal plan from A to C. Imagine that you already know this plan.
+
+27:41.180 --> 27:47.980
+And this optimal plan leads through B. Now, the principle of optimality states that if
+
+27:47.980 --> 27:53.740
+this is the optimal plan from A to C, then you can also take any tail portion of the
+
+27:53.740 --> 28:00.020
+plan, for example, this tail bit that starts in B and ends in C. And this will still be
+
+28:00.020 --> 28:05.980
+the optimal plan for this tail problem, meaning that if we are in B and we're asking ourselves
+
+28:05.980 --> 28:12.060
+what is the best way to get to C, we can just sort of truncate or get this tail portion
+
+28:12.060 --> 28:15.100
+of our original plan and invoke that.
+
+28:15.100 --> 28:18.100
+And it should be easy to convince yourself that this is true.
+
+28:18.100 --> 28:23.480
+Imagine we can just sort of try to find a counterexample or contradict it.
+
+28:23.480 --> 28:29.300
+Imagine there was an alternative plan from B to C that was better.
+
+28:29.300 --> 28:35.060
+So imagine that this has a lower cost from B to C, then obviously from B to C would take
+
+28:35.060 --> 28:36.740
+this gray route.
+
+28:36.740 --> 28:43.940
+But if that was true, then our original plan would also take this gray route from B to
+
+28:43.940 --> 28:48.060
+C. So it cannot have been optimal in the first place.
+
+28:48.060 --> 28:54.700
+And so, yeah, the summary is that we can always take any tail portion of the plan and it will
+
+28:54.700 --> 28:58.160
+be still optimal for the tail problem.
+
+28:58.160 --> 29:04.600
+More formally, imagine that you know the optimal solution to some optimal control problem.
+
+29:04.600 --> 29:09.260
+So we know the optimal sequence of inputs.
+
+29:09.260 --> 29:14.140
+You star from 1 to capital T, where T is the planning horizon.
+
+29:14.140 --> 29:23.440
+And then following these controls will induce this state trajectory X star.
+
+29:23.440 --> 29:29.120
+And any tail sequence of this original control sequence, starting at some intermediate time
+
+29:29.120 --> 29:35.760
+step small t, so from small t to capital T, will also be the optimal solution to this
+
+29:35.760 --> 29:46.840
+tail problem over this cost-to-go JT, where the cost-to-go JT is just the stage cost summed
+
+29:46.840 --> 29:51.200
+up starting from small t to capital T.
+
+29:51.200 --> 29:58.880
+So this cost just cares about all the stage costs after our intermediate time step t.
+
+29:58.880 --> 30:07.340
+And so this tail problem says we want to minimize this cost-to-go starting from t into the future
+
+30:07.340 --> 30:15.060
+with only the tail constraints and with the initial condition that we start on our optimal
+
+30:15.060 --> 30:18.420
+trajectory at time t.
+
+30:18.420 --> 30:24.140
+And so this is exactly the same as the example that we've seen on the previous slide.
+
+30:24.140 --> 30:29.000
+And so dynamic programming exploits this idea of this principle of optimality in a very
+
+30:29.000 --> 30:38.100
+specific way and it uses it to break up the problem into smaller tail problems that may
+
+30:38.100 --> 30:41.100
+be simple to solve.
+
+30:41.100 --> 30:47.300
+And so imagine again the same setting that we are trying to find a plan, a way to go
+
+30:47.300 --> 30:53.340
+to c and now we don't know where we start from, so previously we knew okay we start
+
+30:53.340 --> 31:03.020
+from a, now we just say okay we want to go to c from an arbitrary state in this setting.
+
+31:03.020 --> 31:10.860
+And so we start from c and then we go to some intermediate time step here t and we enumerate
+
+31:10.860 --> 31:14.160
+all the states that we could possibly be at at that time.
+
+31:14.160 --> 31:18.880
+So for example we could be at this state and then we solve the optimal control problem
+
+31:18.880 --> 31:28.240
+from this state into the future to reach c and then we also do that for this intermediate,
+
+31:28.240 --> 31:34.380
+for the state here which was our original intermediate state b and we get this tail
+
+31:34.380 --> 31:38.880
+plan and we can do it for the bottom one and so we have to do it for all the states.
+
+31:38.880 --> 31:43.000
+And so the controls that we compute they are not a fixed sequence of controls but rather
+
+31:43.000 --> 31:51.920
+they are a function of this state that I will be at and I have to compute these controls
+
+31:51.920 --> 31:55.440
+so we have to compute this entire function meaning we have to find the controls for all
+
+31:55.440 --> 31:58.340
+possible states.
+
+31:58.340 --> 32:02.840
+And in addition to that we will also record the optimal cost to go which is the cost that
+
+32:02.840 --> 32:10.200
+we incur if we follow the optimal plan meaning that what is the cost that we have to pay
+
+32:10.200 --> 32:14.260
+even if we play it optimally from here onwards into the future.
+
+32:14.260 --> 32:20.040
+So for this state up here even though we found the best possible sequence of controls we
+
+32:20.040 --> 32:27.700
+still have a cost of 10 in this example and here we have a cost of 1 and here a cost of
+
+32:27.700 --> 32:29.160
+4.
+
+32:29.160 --> 32:36.040
+And so we denote this optimal cost to go by j star and again j star t is a function of
+
+32:36.040 --> 32:42.680
+this state because the cost that we will incur in the future depends on where we are
+
+32:42.680 --> 32:45.520
+at this time step.
+
+32:45.520 --> 32:55.560
+And using this optimal cost to go we can now extend the tail problem into backward in time
+
+32:55.560 --> 32:59.600
+and so here we have just divided the whole horizon into two steps.
+
+32:59.600 --> 33:02.460
+So we have this intermediate time step and then the initial time but technically you
+
+33:02.460 --> 33:06.180
+could also take many small steps.
+
+33:06.180 --> 33:16.700
+And so here we now have to look again at which states at which of these states sorry we have
+
+33:16.700 --> 33:22.360
+to enumerate all of the states and then we have to again solve an optimal control problem.
+
+33:22.360 --> 33:27.300
+But here we don't minimize gradually how can we reach any of these states so we don't just
+
+33:27.300 --> 33:35.820
+care about the immediate cost but we minimize the immediate cost until time t plus the cost
+
+33:35.820 --> 33:39.300
+to go that we would incur from there on to the future.
+
+33:39.300 --> 33:48.020
+So for example if we were in this state then this would be the optimal trajectory because
+
+33:48.020 --> 33:54.860
+this has a potentially maybe it has a high cost but then at least here when we reach
+
+33:54.860 --> 33:57.460
+this state b we have a small cost to go.
+
+33:57.460 --> 34:02.020
+And so because for example this top state here has a very high cost to go none of these
+
+34:02.020 --> 34:07.400
+states decided to go there because even though maybe we can reach this state quite cheaply
+
+34:07.400 --> 34:13.820
+whatever we can do there will be quite expensive and so even the optimal cost to go is still
+
+34:13.820 --> 34:15.200
+quite high.
+
+34:15.200 --> 34:21.040
+And so now we have the second portion of the plan which is again a function of the state
+
+34:21.040 --> 34:24.180
+now a function of the initial state.
+
+34:24.180 --> 34:32.700
+And once we have this function which is a feedback strategy because it maps a state
+
+34:32.700 --> 34:41.060
+to controls we can now plug in our initial conditions and so we say okay we were at state
+
+34:41.060 --> 34:48.320
+a and if you are at state a we can just evaluate this we can just evaluate the feedback strategy
+
+34:48.320 --> 34:57.480
+at that state and we recover our original plan.
+
+34:57.480 --> 35:01.480
+Okay and so just a few comments on this idea of dynamic programming.
+
+35:01.480 --> 35:07.760
+So you may think this is a from this example you may think this is a horrible idea because
+
+35:07.760 --> 35:13.760
+you have to now instead of being able to solve just a single sort of for a single initial
+
+35:13.760 --> 35:20.520
+conditions to a initial condition to a specific goal we now have to solve for all possible
+
+35:20.520 --> 35:26.980
+states that we could be at and in general that poses a challenge because that means
+
+35:26.980 --> 35:34.640
+that we need to be able to represent this optimal cost to go J star T as a function
+
+35:34.640 --> 35:41.420
+of state for example and so this optimal cost to go is defined as the original cost to go
+
+35:41.420 --> 35:47.240
+evaluated at the optimal strategy and the corresponding state that we get from forward
+
+35:47.240 --> 35:53.180
+simulating these forward simulating this strategy.
+
+35:53.180 --> 35:58.700
+And so a naive approach to represent this optimal cost to go would for example be to
+
+35:58.700 --> 36:04.420
+discretize the state into small volumes and then compute this cost to go so solve the
+
+36:04.420 --> 36:11.580
+optimal control problem for each of these small volumes for each of this possible regions
+
+36:11.580 --> 36:18.260
+of the state space that we could be in and then just compute this lookup table and then
+
+36:18.260 --> 36:24.700
+when we sort of want to evaluate this function we just look up the value in this discretized
+
+36:24.700 --> 36:26.380
+setting.
+
+36:26.380 --> 36:33.300
+And so while that is in general possible it is often a bad idea because this approach
+
+36:33.300 --> 36:40.800
+requires you to solve an exponential number of problems in the state dimension and you
+
+36:40.800 --> 36:48.020
+also have to make a choice about the discretization but the good news is in the setting of LQR
+
+36:48.020 --> 36:54.460
+we are in a special case where we can compute this cost to go and also the feedback strategy
+
+36:54.460 --> 36:58.480
+quite efficiently and we can represent them in closed form and this is what we will look
+
+36:58.480 --> 37:03.880
+into throughout this part of the lecture.
+
+37:03.880 --> 37:10.000
+And so let's look at the recursive setup of the LQR problem so sort of the dynamic programming
+
+37:10.000 --> 37:15.840
+perspective of this problem just as a reminder here we have our original problem for LQR
+
+37:15.840 --> 37:21.960
+with costs and so quadratic costs and linear dynamics and if we look at the smallest possible
+
+37:21.960 --> 37:29.360
+tail problem that is the sort of the smallest sub problem that we can solve we can just
+
+37:29.360 --> 37:35.840
+look at the final stage so we just look at the very last time step and we can ask ourselves
+
+37:35.840 --> 37:40.040
+okay what is the best control that we can apply at the final time and so we get only
+
+37:40.040 --> 37:45.480
+a single decision variable because this best control that we're looking for is a function
+
+37:45.480 --> 37:52.120
+of state so the state is given and so from the perspective of this optimization problem
+
+37:52.120 --> 37:59.280
+this is a constant because x is a constant and then we have to just minimize this and
+
+37:59.280 --> 38:08.160
+so because we assumed r to be positive definite meaning that any non-zero control input would
+
+38:08.160 --> 38:13.080
+result in a positive cost the best thing that we can do is just to simply not apply any
+
+38:13.080 --> 38:18.160
+input at all and so the solution of this optimization problem would be that we don't
+
+38:18.160 --> 38:25.720
+apply any input and in fact it is also quite common to just get rid of this these inputs
+
+38:25.720 --> 38:31.440
+at the final time entirely because they will always just turn out to be zero anyway and
+
+38:31.440 --> 38:36.400
+for the optimal cost to go so at the final time step we can just evaluate our original
+
+38:36.400 --> 38:43.660
+cost here or the original cost to go so which is just the last term of this summed cost
+
+38:43.660 --> 38:50.400
+so the just the last time step so if small t equals capital t we can just plug in the
+
+38:50.400 --> 38:57.480
+solution where u is zero and so if we look at this then if u is zero then this term is
+
+38:57.480 --> 39:06.400
+gone and all we have is this and so the optimal cost to go as a function of state is just
+
+39:06.400 --> 39:14.960
+x transpose p x where p is equal to q where q is our state cost matrix and so we will
+
+39:14.960 --> 39:25.200
+use this p to track the cost to go in the state and which is something that we have
+
+39:25.280 --> 39:30.520
+to compute and in contrast to this small q which is something that we are given as part
+
+39:30.520 --> 39:35.520
+of the problem description and so we have to here finding p is trivial we can just sort of
+
+39:35.520 --> 39:40.640
+look at this and see that p is equal to q and later we will have to update it for the next
+
+39:40.640 --> 39:46.760
+time steps and so let's look at how this update works so now we take this extend this problem
+
+39:47.000 --> 39:56.040
+one step backwards in time so now we try to find the input the best input at the previous
+
+39:56.040 --> 40:04.960
+time step so at the yeah at the t minus one so the second to last time step and so now we need
+
+40:04.960 --> 40:11.960
+to optimize over these two decision variables so what we have to optimize is the immediate cost
+
+40:12.040 --> 40:18.960
+that we incur for the decision that we make now plus the optimal cost to go which is the
+
+40:18.960 --> 40:25.080
+cost that we incur for whatever state we end up in and so this state that we end up in is connected
+
+40:25.080 --> 40:31.040
+to our initial state via the dynamics and so that's why we have these dynamics constraints
+
+40:31.040 --> 40:38.520
+and we can for our particular problem we can sort of plug in those things that we've already
+
+40:38.640 --> 40:45.960
+computed so the immediate cost here this G is exactly our stage cost as we have defined it for
+
+40:45.960 --> 40:54.120
+LQR so this is just this quadratic expression in states and controls and then we can also get rid
+
+40:54.120 --> 40:59.360
+of the dynamics constraints so we here we still have the dynamics constraints and the decision
+
+40:59.360 --> 41:05.280
+variable for X but here we can get rid of these dynamics constraints by applying exactly the same
+
+41:05.280 --> 41:12.040
+trick of forward simulation so we simply replace X t so which is the t at X at the final time
+
+41:12.040 --> 41:20.960
+step so the next state we can replace it with the dynamics so that we now have only a decision
+
+41:20.960 --> 41:27.080
+variable as only only the decision variable of the controls at t minus one and we have no
+
+41:27.080 --> 41:38.440
+constraints at all and if we now substitute if we now substitute back our so we we already
+
+41:38.440 --> 41:45.640
+computed a closed form expression for the cost to go at the next time step and so here we can plug
+
+41:45.640 --> 41:56.120
+this in so we can replace this function with a with this expression X transpose PX and therefore
+
+41:56.160 --> 42:03.120
+we can write our our optimization problem like this and if we look at this so we here we've
+
+42:03.120 --> 42:09.000
+just rearranged the terms so that here we have a squared term in X then we have the squared term
+
+42:09.000 --> 42:16.840
+in U and then we have the mixed term we can look at this so from the perspective of optimizing over
+
+42:16.840 --> 42:25.220
+U as a function where this solution is a function of X X again is a constant and so this is just a
+
+42:25.340 --> 42:31.940
+constant this is a linear term down here and the highest term that shows up here is a quadratic in
+
+42:31.940 --> 42:42.180
+U and we can convince ourselves that because R was assumed to be positive definite and Q was
+
+42:42.180 --> 42:49.140
+assumed to be positive semi-definite and PT is exactly Q then positive semi-definite plus
+
+42:49.180 --> 42:57.020
+positive definite still remains positive definite so this matrix is so this expression is convex
+
+42:57.020 --> 43:04.780
+quadratic in U meaning that again we have this nice upwards curved cost landscape and therefore
+
+43:04.780 --> 43:09.540
+we can apply the same trick as we've seen earlier just now solving for only a single time step and
+
+43:09.540 --> 43:17.100
+so we can find the global minimum of this cost landscape simply by setting the gradient to 0
+
+43:17.100 --> 43:22.700
+so we take the gradient of the expression that you saw on the previous slide and set it equal to 0
+
+43:22.700 --> 43:31.500
+now we have to solve for U star to get the optimal input at the previous time step and this will turn
+
+43:31.500 --> 43:38.340
+out to be this linear feedback strategy in the state so we just have some matrix F multiplied
+
+43:38.340 --> 43:43.540
+with the state which will give us the control that we which is the best control that we can
+
+43:43.540 --> 43:53.660
+apply at that state to fulfill our task and this F matrix so the feedback matrix is computed with
+
+43:53.660 --> 44:01.540
+this formula which is simply done by rearranging or by isolating U star here on the left and
+
+44:01.540 --> 44:06.660
+whenever you see this inverse you have to ask yourself okay can I safely invert this matrix
+
+44:06.660 --> 44:12.180
+and we've just convinced ourselves on the previous slide that this matrix is positive definite so we
+
+44:12.180 --> 44:21.220
+can safely do so and then we can this resulting feedback controller we can now evaluate at an
+
+44:21.220 --> 44:29.940
+arbitrary state simply by multiplying that state with this matrix okay that was the backup so how
+
+44:29.940 --> 44:36.580
+we sort of compute the controls at once time step backward in time now we also have to backup the
+
+44:36.580 --> 44:44.620
+costs so the optimal cost to go we can again do that by plugging in the optimal so the optimal
+
+44:44.620 --> 44:55.140
+control function into our cost to go and so we will end up again with this kind of expression
+
+44:55.140 --> 45:03.460
+where we get a cost that is quadratic in the state now so we again have X transpose PX but
+
+45:03.460 --> 45:15.900
+now this P at the previous time step is updated because is updated because we plug in this
+
+45:15.900 --> 45:25.260
+expression here for U and our cost function and so again we get this updated updated optimal cost to
+
+45:25.260 --> 45:30.380
+go so that the only thing that we now have to convince ourselves is what's happening with this
+
+45:30.380 --> 45:36.860
+matrix so what are these properties and you can show that this matrix is still positive
+
+45:36.860 --> 45:42.260
+semi-definite even though we don't know took it one step backwards in time and this is again
+
+45:42.260 --> 45:49.780
+derived from the assumptions that are were positive definite and Q was positive semi-definite so
+
+45:49.780 --> 45:59.580
+therefore P is also positive semi-definite and so all of this are composing this idea together we
+
+45:59.580 --> 46:05.740
+already have the dynamic programming algorithm for LQR we've now just seen how we can take we
+
+46:05.740 --> 46:10.700
+can we can sort of back up the cost and the controls for one time step but we can now apply
+
+46:10.700 --> 46:17.940
+this idea recursively so we start at the initial time where we have seen that the initial cost to
+
+46:17.940 --> 46:25.780
+go matrix PT must be exactly Q and then we can recursively compute the state feedback strategies
+
+46:25.820 --> 46:33.140
+for each of the time steps before that until we are at the initial time by applying this recursive
+
+46:33.140 --> 46:38.220
+rule which is exactly the two equations that we have derived on the previous slides so we can
+
+46:38.220 --> 46:44.980
+always back back up sort of all all these expressions from the next time step so this
+
+46:44.980 --> 46:52.860
+is just the the optimal cost to go matrix at the next time so we know all of these because they are
+
+46:53.700 --> 46:59.740
+in the future and we recursively going backwards so we can this way we can compute the feedback
+
+46:59.740 --> 47:08.220
+gain and we can do the same for the quadratic cost and with that we then have a state feedback
+
+47:08.220 --> 47:15.340
+controller for each of the time steps and we know that when we follow this optimal controller we
+
+47:15.340 --> 47:22.380
+can ensure this cost which is the best cost we can achieve in this given problem and so to
+
+47:22.420 --> 47:30.460
+summarize the main idea of the dynamic programming approach to LQR is that we can decompose the LQR
+
+47:30.460 --> 47:37.540
+problem into smaller one-step optimizations so instead of solving one big batch problem
+
+47:37.540 --> 47:48.020
+over T over all of the T time steps we just solve T very small one-step problems and the the nice
+
+47:48.020 --> 47:55.620
+thing is that we can do this in a nice recursive fashion to get a state feedback strategy and we
+
+47:55.620 --> 48:01.460
+can solve for these state feedback strategies one stage at a time now a few comments on this
+
+48:01.460 --> 48:05.780
+approach in particular in contrast to the batch approach that we've seen in the previous chapter
+
+48:05.780 --> 48:12.900
+and so the main thing here is that instead of having to invert one big H matrix which is MT
+
+48:13.540 --> 48:22.340
+so it grows with the with a horizon of the problem we now only have to invert T so the number of time
+
+48:22.340 --> 48:29.220
+steps that we have in the planning horizon smaller matrices which are always of the dimension
+
+48:29.220 --> 48:36.740
+m times m so we the this matrix that we have to invert which is perhaps the most expensive part
+
+48:36.740 --> 48:43.220
+of this whole computation now has a constant size it doesn't depend on the planning horizon so this
+
+48:43.220 --> 48:49.460
+is now linear complexity in the horizon because we just have to solve more of these small matrices
+
+48:49.460 --> 48:55.460
+for a longer horizon but the matrix itself doesn't grow and the other nice thing about this approach
+
+48:55.460 --> 49:00.340
+is that we don't just get a sequence of controls that we have to apply so just the values of the
+
+49:00.340 --> 49:06.340
+controls in open loop that are only valid for a very specific initial condition instead we have
+
+49:06.340 --> 49:10.100
+solved for a feedback strategy that we can evaluate at arbitrary states
+
+49:10.660 --> 49:17.780
+and this is quite interesting because it also allows you to compensate for errors so imagine
+
+49:17.780 --> 49:22.820
+that you end up at a slightly different state you don't have to recompute this whole optimization
+
+49:22.820 --> 49:28.580
+procedure again you can just evaluate your feedback strategy at this new state estimate
+
+49:28.580 --> 49:39.860
+okay so that concludes the section on on lqr so this bit of a deep dive for the special case
+
+49:39.860 --> 49:48.100
+where we could compute the the optimal solution quite efficiently now we look at how we can use
+
+49:48.100 --> 49:53.220
+this idea to also solve non-linear problems so problems where we don't have linear dynamics but
+
+49:53.220 --> 49:58.900
+potentially non-linear dynamics and also non-cryogenic costs and the main idea that we
+
+49:58.900 --> 50:05.380
+will exploit is that we can approximate the solution to a non-linear optimal control problem
+
+50:06.260 --> 50:12.980
+via iterative sort of local approximations of the original problem as lqr and then we can
+
+50:13.540 --> 50:19.540
+take small steps in lqr direction and we will go into how that works here so
+
+50:20.180 --> 50:27.540
+um remember for lqr we could sort of analytically compute the global minimum of the cost landscape
+
+50:27.540 --> 50:32.260
+and the batch approach and the dynamic programming approach were just vehicles to doing that
+
+50:32.820 --> 50:41.620
+in different ways and so it's a bit simpler to think about this perhaps in 1d and but if we
+
+50:41.620 --> 50:50.900
+now have a non-linear cost so our non-crydactic cost non-crydactic cost landscape then we cannot
+
+50:50.900 --> 50:55.220
+solve this analytically anymore but what we can do is we can exploit this lqr solution
+
+50:55.860 --> 51:01.380
+to take steps towards the the solution or steps towards at least a global local solution
+
+51:02.020 --> 51:11.060
+and so what lqr or iterative lqr does is that we form a quadratic approximation of this cost
+
+51:11.060 --> 51:17.300
+landscape so we do a taylor series approximation here and taylor approximation here and for that
+
+51:17.300 --> 51:26.420
+this will give us an lqr problem which we can solve analytically to global optimality and so
+
+51:26.420 --> 51:36.260
+this will take us in the direction of a local minimum and so we are here we sort of approximated
+
+51:36.260 --> 51:41.780
+the original problem about this red point which is our operating point down here and then we always
+
+51:41.780 --> 51:49.460
+step to this next point and so now our operating point is this new red point down here we again
+
+51:49.460 --> 51:55.460
+form a quadratic approximation of the cost landscape so we again locally approximate
+
+51:55.460 --> 52:00.180
+this problem as lqr and then again we step to the minimum of the lqr problem
+
+52:00.180 --> 52:08.260
+and if we repeat that sufficiently many times then we will be at a local minimum which is why
+
+52:08.260 --> 52:13.060
+we're using this different color for for this so here there's another minimum over here which is
+
+52:13.060 --> 52:19.140
+perhaps the global minimum of the cost landscape but at least we can still find a locally optimal
+
+52:19.140 --> 52:26.020
+solution and so if you've seen other approaches like the newton's method this will seem very
+
+52:26.020 --> 52:31.300
+familiar to you and in fact this is just a special case of the newton's method where we
+
+52:31.300 --> 52:39.060
+exploit the the very structure of this control problem and so let's look at the algorithm of
+
+52:39.060 --> 52:44.660
+iterative lqr for which you can see the flow chart over here and we go through the idea of iterative
+
+52:44.660 --> 52:50.820
+lqr step by step so the first thing that we need always for these iterative approaches is some
+
+52:50.820 --> 52:58.740
+initial guess so we need to know some idea of controls that we may want to apply and this can
+
+52:58.740 --> 53:05.300
+just be maybe for this car just slowly driving forward can be a simple initialization and the
+
+53:05.300 --> 53:13.940
+first thing that we will do is we roll out these we roll out these controls to get the corresponding
+
+53:13.940 --> 53:19.300
+trajectory so we can just take these controls and we have the initial conditions from our state
+
+53:19.300 --> 53:25.220
+estimation pipeline and we just apply the forward simulation function that we've defined earlier to
+
+53:25.220 --> 53:31.860
+get the entire sequence of states so we know the initial state we know all the controls which we
+
+53:31.860 --> 53:37.140
+get from our initial guess so these are not the the optimal controls but there are just some
+
+53:37.140 --> 53:44.820
+controls that we may apply and then we get this trajectory so these are the sort of step one and
+
+53:44.820 --> 53:51.860
+two and the next thing that we will do is that we compute we want to approximate this problem
+
+53:51.860 --> 53:58.820
+as a linear as a lqr problem so and that is we need linear dynamics and quadratic costs and so
+
+53:58.820 --> 54:05.460
+the first thing is that we do is that we linearize the dynamics about the operating point so we've
+
+54:05.460 --> 54:10.580
+just we've we have some initial guess of what the controls are and we've simulated these forward in
+
+54:10.580 --> 54:19.860
+time to get the corresponding states and now we can if this was the original dynamics potentially
+
+54:19.860 --> 54:27.860
+non-linear so here these blue dynamics we can locally approximate these dynamics with a Taylor
+
+54:27.860 --> 54:33.700
+series expansion to first order and so this is the operating point which is the simulated state
+
+54:34.580 --> 54:43.140
+that we are at at that time and at this iteration of the algorithm and so the affine approximation
+
+54:43.140 --> 54:50.180
+of this just goes through this point over here this red point so there it will be perfectly
+
+54:50.180 --> 54:54.420
+there it will perfectly match the original dynamics and then the further you go away from it
+
+54:54.420 --> 55:00.900
+it may potentially deviate from the non-linear dynamics and so the Taylor series approximation
+
+55:00.900 --> 55:06.980
+about that point is this exactly this expression here where we've shifted our coordinate system
+
+55:06.980 --> 55:14.660
+into this point so that we are now not using x as a state but we're using delta x which we define as
+
+55:14.660 --> 55:20.100
+the deviation from the operating point so we're asking ourselves what are the dynamics around
+
+55:21.140 --> 55:27.780
+this point our so our current operating point and we do the same sort of centering about the
+
+55:27.780 --> 55:35.780
+operating point for the u so delta u is just u minus u bar which is the input at the operating
+
+55:35.780 --> 55:42.820
+point and we exactly get when we do that we exactly get these linear dynamics that we've
+
+55:42.820 --> 55:50.180
+already know how to work with so just a times x plus b times u with a slightly redefinition of
+
+55:50.180 --> 55:58.180
+the state here and these a and b matrices they are simply computed from the Taylor series
+
+55:58.180 --> 56:08.420
+expansion so a for example is the Jacobian of the dynamics in x so how does this state change
+
+56:08.420 --> 56:14.100
+when i slightly apply a different and when i'm slightly at a different state
+
+56:14.100 --> 56:24.660
+and same for b i'm this is the Jacobian of the original dynamics in u and so this gives us
+
+56:25.380 --> 56:30.660
+these linear dynamics we can apply the same trick for the cost so if this was the original
+
+56:30.660 --> 56:36.980
+potentially non-quadratic cost so this blue thing here the the blue cost landscape then we can
+
+56:37.780 --> 56:42.340
+form a quadratic approximation this time about the operating point so here
+
+56:43.220 --> 56:47.540
+this was our operating point now we fit a quadratic function to that
+
+56:48.420 --> 56:55.300
+point where we want to match the value at this point we match the slope and then we also match
+
+56:55.300 --> 57:02.020
+the curvature and so this is the quadratic approximation of g around this operating point
+
+57:02.020 --> 57:09.620
+which again we write in terms of our delta state so delta x and delta u the deviation from this
+
+57:10.340 --> 57:19.700
+center and if we look at this so if you look at this this is exactly this part we already know
+
+57:19.700 --> 57:25.380
+so this is exactly the quadratic cost that we've already seen and that we know how to work with
+
+57:25.380 --> 57:30.500
+and then there are some of these additional terms and just for reference these terms that show up
+
+57:30.500 --> 57:36.820
+in the cost they're computed like this we're not going over these in detail these are exactly the
+
+57:36.820 --> 57:41.780
+sort of the same idea of Taylor series expansion that we've seen at the previous slide but now
+
+57:41.780 --> 57:48.900
+we're asking ourselves how can we how can we work with the additional terms so here we already know
+
+57:48.900 --> 57:55.540
+these quadratic terms we know how to incorporate in the LQR problem now here some additional terms
+
+57:55.540 --> 58:01.140
+that we haven't seen before there's one further trick when we want to solve the LQR problem
+
+58:01.140 --> 58:08.100
+we can augment our state to now include an additional one at the bottom and so we define
+
+58:08.100 --> 58:17.300
+a new state z as just delta x and a one as a one additional state component we can do the same for
+
+58:17.300 --> 58:27.060
+the input so instead of u we now use v which is delta u and then a one at the bottom and if we
+
+58:27.060 --> 58:32.580
+do that we also have to define the corresponding state matrices and you can the corresponding
+
+58:32.580 --> 58:37.060
+dynamics and you can convince yourself that this encodes exactly the same dynamics as before
+
+58:37.060 --> 58:43.380
+so we just embed this a tilde here as the top left entry in this block diagonal matrix
+
+58:44.100 --> 58:50.660
+and b we pad with a zero on the bottom or with zeros and at the bottom and then we can rewrite
+
+58:50.660 --> 58:59.220
+this quadratic cost q where previously we had these additional affine terms we can now embed
+
+58:59.220 --> 59:06.820
+these in the quadratic cost matrix here and same for the control cost and so you can convince
+
+59:06.820 --> 59:15.140
+yourself that also this cost which is now here represents exactly the same objective that we've
+
+59:15.140 --> 59:20.260
+seen on the previous slide and so now we have this standard LQR problem that we've already seen
+
+59:20.980 --> 59:26.020
+how to solve either with a batch approach or more efficiently with a dynamic programming approach
+
+59:26.020 --> 59:31.300
+and we can just solve the solution or find the solution of this problem so now we add this
+
+59:32.100 --> 59:39.380
+part of the algorithm and then as the final part of our iteration we will step towards this
+
+59:39.380 --> 59:47.300
+solution that is we've now found this global optimum of the local approximation about our
+
+59:47.300 --> 59:54.820
+operating point and we want to now take a step in that direction and that is we will take our
+
+59:54.820 --> 01:00:04.020
+original operating point sorry this is this one and we just take some step size alpha between zero
+
+01:00:04.020 --> 01:00:11.460
+and one in this direction so if we want where to go a full size of step size one in this direction
+
+01:00:11.460 --> 01:00:17.300
+of delta u star then we would exactly end up at this blue point which seems like a good idea in
+
+01:00:17.300 --> 01:00:24.900
+this setting but in practice we may also choose to take smaller steps here and we will see some
+
+01:00:24.900 --> 01:00:32.660
+of the trade-offs trade-offs soon okay and so now we are at the end of this iteration now we have to
+
+01:00:32.660 --> 01:00:39.620
+repeat and so we have an updated operating point so we have updated controls we will
+
+01:00:39.860 --> 01:00:48.660
+um we will roll out these controls again to get the updated states then we get a new approximation
+
+01:00:48.660 --> 01:00:56.740
+of this problem as a local lqr problem and then we can solve that problem again and we will we
+
+01:00:56.740 --> 01:01:03.140
+will repeat that until our operating point has converged that is until the state between iterations
+
+01:01:03.140 --> 01:01:12.100
+does not change anymore okay so that concludes the algorithm that you can the iqr algorithm that
+
+01:01:12.100 --> 01:01:18.900
+you can use to approximate non-linear optimal control problems there are a few or two practical
+
+01:01:18.900 --> 01:01:24.500
+considerations that i want to highlight here which are important to make this algorithm work reliably
+
+01:01:24.500 --> 01:01:31.140
+in practice and so we here will just go over the main ideas of why that is important what you can
+
+01:01:31.140 --> 01:01:39.060
+do to to address these points and so the first point is that we have to make sure that our cost
+
+01:01:39.060 --> 01:01:48.500
+landscape remains positive definite or that our lqr problem remains positive definite that is
+
+01:01:50.180 --> 01:01:56.980
+in our original example here that we used to visualize this idea we had we just formed this
+
+01:01:56.980 --> 01:02:01.940
+quadratic approximation and it was nice and upwards curved and when we step to that minimum
+
+01:02:01.940 --> 01:02:10.100
+we would actually make progress to a local minimum of the original cost however in other settings
+
+01:02:10.100 --> 01:02:16.740
+when we linearize maybe about this operating point here then the cost landscape may have
+
+01:02:16.740 --> 01:02:22.820
+no curvature at all and that corresponds to this matrix that we had in our lqr problem not being
+
+01:02:22.820 --> 01:02:29.460
+invertible and so yeah because this doesn't have any curvature so it will have zero eigenvalues
+
+01:02:30.740 --> 01:02:36.420
+or even worse if we are close to a maximum then the quadratic approximation of the original cost
+
+01:02:36.420 --> 01:02:42.020
+landscape will take this shape and setting the gradient to zero will not find a minimum but a
+
+01:02:42.020 --> 01:02:47.460
+maximum and so then this matrix is invertible but it's just this update is pointing in the wrong
+
+01:02:47.460 --> 01:02:55.860
+direction and in order to fix this issue we have to apply what is called a regularization
+
+01:02:55.860 --> 01:03:02.020
+and there are different ways in which we can regularize the problem in general our task is
+
+01:03:02.020 --> 01:03:07.860
+to make sure that this matrix here is always positive definite so previously we've just
+
+01:03:07.860 --> 01:03:14.740
+assumed that this is positive definite but we cannot now these because we just assumed that
+
+01:03:14.740 --> 01:03:21.060
+r is positive definite and p is positive semi-definite but now these matrices are not
+
+01:03:21.620 --> 01:03:26.900
+we can't choose these matrices but they are derived from the local approximation of the
+
+01:03:26.900 --> 01:03:30.100
+problem and so we have to make sure that when we take the Taylor series expansion
+
+01:03:30.740 --> 01:03:36.100
+that these assumptions still hold and a simple thing that we can do is to make sure that this
+
+01:03:37.060 --> 01:03:43.460
+expression remains positive definite we can just add a scaled identity so we add this identity
+
+01:03:43.460 --> 01:03:50.100
+matrix scaled with a small value rho and we have to change this or we have to choose this value rho
+
+01:03:50.980 --> 01:03:56.660
+sufficiently high so that this this local approximation is upwards curved so this
+
+01:03:56.660 --> 01:04:03.220
+essentially just bends the approximation at this point upwards and it will make sure
+
+01:04:04.420 --> 01:04:11.540
+that all of these eigenvalues are positive and we can invert and we'll also take a step in the
+
+01:04:11.540 --> 01:04:16.660
+correct direction now because now when you take a step we would end up here and we actually go
+
+01:04:16.660 --> 01:04:22.900
+towards the minimum the second practical practical consideration that i want to highlight
+
+01:04:23.780 --> 01:04:31.140
+is a suitable choice of the step size step size alpha so when we choose this step size alpha
+
+01:04:31.700 --> 01:04:38.260
+we have to make solve this trade-off between making a lot of progress towards the goal so
+
+01:04:38.260 --> 01:04:46.020
+for example here in our original operating point if this is our local minimum our global minimum
+
+01:04:46.020 --> 01:04:55.300
+of the approximation a step size of one would correspond to exactly going to to this star here
+
+01:04:55.300 --> 01:05:00.660
+so we're making a lot of progress and that is a good idea but on the other hand we also have to
+
+01:05:00.660 --> 01:05:07.060
+make so for this example it's a good idea but on the other hand we also have to make sure that we
+
+01:05:07.060 --> 01:05:14.340
+computed this local approximation with a taylor series expansion and this expansion is only
+
+01:05:15.060 --> 01:05:19.780
+valid for a local neighborhood of our operating point so we have to make sure that we don't
+
+01:05:19.780 --> 01:05:26.900
+move too far because the local model is not very accurate and here's an example of when that can
+
+01:05:26.900 --> 01:05:32.500
+happen so imagine that we have this different cost landscape and we linearize about this operating
+
+01:05:32.500 --> 01:05:41.220
+point here and due to some stronger non-linearity in the original cost this sort of curves up
+
+01:05:41.220 --> 01:05:46.260
+upwards quite quickly whereas our local approximation about this operating point
+
+01:05:46.820 --> 01:05:53.540
+predicts that the minimum will be here and so if we were to take a full step size of alpha equals one
+
+01:05:54.580 --> 01:06:00.180
+to this minimum we would actually not even reduce the cost but instead increase the cost throughout
+
+01:06:00.180 --> 01:06:05.380
+this iteration and so this harms the convergence of the algorithm and we may not even be able to
+
+01:06:05.380 --> 01:06:14.820
+find this local minimum and the fix to make sure that we take a suitable step size
+
+01:06:17.940 --> 01:06:24.180
+so the fix to make it take a suitable step size towards the local minimum is this idea of line
+
+01:06:24.180 --> 01:06:30.900
+search where we try to adaptively find a good value of alpha essentially by trying out different
+
+01:06:31.540 --> 01:06:38.580
+step sizes so for example we try out step size one and then we see that the cost even increases
+
+01:06:38.580 --> 01:06:43.940
+and so then we would in a backtracking line search we would just reduce the step size so
+
+01:06:43.940 --> 01:06:51.940
+we now divide it by two and now we get the smaller step so we have the original we don't have to
+
+01:06:52.740 --> 01:06:57.300
+compute the approximation again so we can still keep the same aqr problem we just have to
+
+01:06:58.020 --> 01:07:03.380
+re-evaluate the cost and so now we see if you take a smaller step then we are a bit closer
+
+01:07:04.980 --> 01:07:10.340
+but we would still not accept this we would still not accept this step because this blue point
+
+01:07:10.340 --> 01:07:16.500
+doesn't sufficiently decrease the cost so it's almost the same height as alpha and so we only
+
+01:07:16.500 --> 01:07:24.740
+accept steps that significantly reduce the cost and so we would divide the step size one more time
+
+01:07:25.540 --> 01:07:31.540
+and now we made only a small step but we are very close to the local minimum here
+
+01:07:33.540 --> 01:07:36.980
+and now we would accept this step because it's neither going up
+
+01:07:38.740 --> 01:07:41.860
+up in cost and it ensures a sufficient decrease
+
+01:07:41.860 --> 01:07:50.580
+okay so that concludes the section on iterative lqr which was the last section of this lecture
+
+01:07:50.580 --> 01:07:57.860
+and so to summarize the approach that ilqr takes is that we can if we have some initial
+
+01:07:57.860 --> 01:08:04.500
+guess for the control so we have some initial strategy that we can apply then we can iteratively
+
+01:08:04.500 --> 01:08:12.020
+refine the strategy by locally approximating our original non-linear optimal control problem
+
+01:08:12.020 --> 01:08:18.020
+about the corresponding operating point as an lqr problem then we solve that lqr problem take
+
+01:08:18.020 --> 01:08:26.180
+a step towards the solution and then repeat that until convergence a few comments are on the this
+
+01:08:26.180 --> 01:08:31.380
+algorithm so in general that is a very efficient and well established algorithm for non-linear
+
+01:08:31.380 --> 01:08:38.340
+optimal control in particular in robotics and it works particularly well if the problem is
+
+01:08:38.340 --> 01:08:42.420
+sufficiently smooth so if there's high non-linear non-linearities
+
+01:08:44.900 --> 01:08:48.500
+maybe even contact then this doesn't work so well because the taylor series expansion
+
+01:08:49.220 --> 01:08:56.020
+is not very accurate but for many problems for example like the self-driving car
+
+01:08:56.580 --> 01:09:04.820
+this is a this is a an excellent algorithm and we've yeah we've already seen that these
+
+01:09:04.820 --> 01:09:09.700
+additional tricks like regularization and line search are very important to make it reliable
+
+01:09:09.700 --> 01:09:15.620
+in practice so if you have some robot that has to follow some track you you cannot sometimes
+
+01:09:15.620 --> 01:09:20.820
+accidentally increase the cost and so getting these practical considerations right is important for
+
+01:09:20.820 --> 01:09:29.300
+reliability and finally i want to highlight that this algorithm can also be extended to include
+
+01:09:29.300 --> 01:09:35.060
+inequality constraints so here for the scope of this lecture we have simplified the setting
+
+01:09:35.060 --> 01:09:41.620
+by assuming that we have no constraints on stated states and inputs beyond the dynamics
+
+01:09:42.820 --> 01:09:49.140
+but there exist extensions like penalty methods where we can include an additional cost term
+
+01:09:49.940 --> 01:09:55.620
+to represent these constraints and we can adaptively estimate the weight for these cost terms
+
+01:09:57.620 --> 01:10:03.940
+okay so that concludes today's lecture to summarize what we've looked at today we've
+
+01:10:04.580 --> 01:10:12.260
+begun with a quick review of model predictive control which motivated this deep dive into
+
+01:10:12.900 --> 01:10:16.980
+optimal control today so there are numerical methods for model predictive control
+
+01:10:17.700 --> 01:10:24.740
+and yeah we've begun or we've started our discussion with a review of how you can
+
+01:10:25.300 --> 01:10:30.180
+eliminate some of the decision variables and the dynamics constraints to obtain an unconstrained
+
+01:10:30.180 --> 01:10:37.940
+optimization problem via forward simulation and to hopefully convince you that you may have already
+
+01:10:37.940 --> 01:10:42.980
+seen this unconstrained optimization problem in other contexts then we've done a bit of a deep
+
+01:10:43.700 --> 01:10:49.300
+dive into how we can solve a special class of these optimization problems or
+
+01:10:49.300 --> 01:10:53.220
+optimal control problems which are problems with linear dynamics and quadratic costs
+
+01:10:54.100 --> 01:11:01.220
+and so we've looked at the batch solution to lqr which uses the idea of forward simulation
+
+01:11:01.780 --> 01:11:08.260
+to solve this as one big linearly squares problem and we've also discussed the idea
+
+01:11:08.260 --> 01:11:12.580
+of dynamic programming which exploits the fact that we can recursively compute
+
+01:11:13.220 --> 01:11:19.940
+the solution to an lqr problem quite efficiently and finally we've pieced all of these different
+
+01:11:19.940 --> 01:11:26.580
+ideas together to come to discuss the iterative lqr algorithm which is an algorithm that solves
+
+01:11:26.580 --> 01:11:33.300
+nonlinear optimal control problems through iteratively approximating the non-linear problem
+
+01:11:33.300 --> 01:11:40.180
+as a small or local lqr problems that we can use to find a step direction and make progress
+
+01:11:40.180 --> 01:11:47.140
+towards a local minimum. Okay so that concludes today's lectures if you are interested in reading
+
+01:11:47.140 --> 01:11:52.580
+more about these topics there are several resources that I can recommend so the first
+
+01:11:52.580 --> 01:11:58.740
+one is this book on predictive control for linear and hybrid systems by Francesco Urelli where also
+
+01:11:58.740 --> 01:12:04.500
+the lecture material for this MPC class from Berkeley is available online. If you're interested
+
+01:12:04.500 --> 01:12:09.860
+in more of the numerical background in particular some of the tricks how you can the practical
+
+01:12:09.860 --> 01:12:14.980
+considerations how you can make how you can even get convergence guarantees and make these
+
+01:12:15.700 --> 01:12:21.460
+algorithms reliably work in practice I recommend this book by Notre-Dame and Wright on numerical
+
+01:12:21.460 --> 01:12:27.860
+optimization and finally if you also interested in optimal control in general trajectory optimization
+
+01:12:27.860 --> 01:12:32.020
+and maybe some coding exercises there are caused by Russ Tedrick from MIT
+
+01:12:32.020 --> 01:12:36.260
+on under-actuated robotics. Thank you for your attention.
+

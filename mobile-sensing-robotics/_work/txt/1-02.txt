@@ -1,0 +1,487 @@
+[00:00] So welcome everyone to the first technical part of that course here we're
+[00:05] going to dive into concepts that we use in robotics and this is a short primer
+[00:12] on probability theory really on a very very basic level just introducing you to
+[00:16] a few let's say rules that we are using and based on those rules we also will do
+[00:21] the first thing today to derive the recursive base filter which is a
+[00:26] framework for state estimation so in order to estimate the current state of a
+[00:31] system for example the position of a mobile robot in the environment based on
+[00:35] sensor data and based on control commands that are for example the
+[00:38] steering commands of that platform and we can do this just from starting from
+[00:42] the very very basics and within a few minutes can derive the framework for the
+[00:46] recursive based filtering which then can have different realizations such as the
+[00:50] Kalman filter or the particle filter and we are going to start with that so these
+[00:56] probabilistic techniques are often used in robotics so whenever we have systems
+[01:03] which need to navigate through the environment which perceive the
+[01:06] environment with sensors and derive actions from that those systems typically
+[01:11] need to work with probabilities because they do not know exactly in which state
+[01:15] they are in they only can estimate where they are and this is best done with
+[01:20] probabilistic approaches because it allows us to explicitly encode
+[01:23] uncertainty and we can take this uncertainty also in decision-making
+[01:27] processes into account in order to be more robust with respect to noise and
+[01:31] our world is always noisy we never live in the perfect world so several
+[01:37] techniques are relevant here in robotics this starts with general state
+[01:41] estimation and then we have let's say common applications of the state
+[01:47] estimation techniques this can be mapping so estimating what the world
+[01:51] looks like as well as localization as means estimating where we are in the
+[01:55] world we can also solve both of the things jointly which is then called
+[01:59] simultaneous localization and mapping or SLAM this is something which will
+[02:03] happen more towards the end or in the second part of this course that we
+[02:07] explicitly dive into the simultaneous localization and mapping problem but you
+[02:11] should already in this course get an idea on what the problem about that is
+[02:15] and then we ask ourselves how can we navigate through the environment and
+[02:18] that's something which typically involves motion planning so planning
+[02:22] what which action to execute in order to reach a goal or come closer to a goal
+[02:27] and then also using controls in order to execute this high-level motions that are
+[02:31] executed we start with state estimation so state estimation in robotics often
+[02:38] refers to things somewhere in space so very often we need to estimate geometry
+[02:44] and that means we need to estimate where is an obstacle where is a landmark where
+[02:48] is a platform some things may be dynamic such as the platform moving through the
+[02:53] environment or this car driving through the environment but there are certain
+[02:58] things in the environment static for example trees in the environment are at
+[03:02] least rather static or lane markings on the road or traffic signs and we want to
+[03:08] estimate the location of those things those objects for example not to build a
+[03:13] map of the environment so a lot of those state estimation problems involve
+[03:17] estimating where the system is so where am I and what does the world look like
+[03:23] and those two problems are coupled with each other you can envision this if you
+[03:28] see for example a street sign 20 meters in front of you it depends where you are
+[03:32] so that you know where this street sign actually is and also the other way
+[03:38] around if you don't know where you are but you have a map of the environment
+[03:41] and you see a street sign or let's say a distinct street sign you can estimate
+[03:44] where you are given that you see it and you know where it is located based on
+[03:49] your map information so there's a coupling between the question where am
+[03:52] I and what does the environment looks like and this is something which can be
+[03:57] seen as localization and mapping or if you solve that jointly what's called the
+[04:02] simultaneous localization and mapping problem and so this is an example of a
+[04:07] 3d model built here with exactly the vehicle you've seen before when you have
+[04:11] a vehicle which is equipped with a 3d lighter scanner so can estimate the
+[04:16] distance to obstacles two objects basically which reflect the lighter beam
+[04:21] and then gives you a range information how far that object is away and by
+[04:24] estimating the pose of the platform so actually driving around here and
+[04:28] integrating this these range information combined with the positional information
+[04:34] you can actually build a 3d model of the environment at least a 3d point cloud in
+[04:39] order to to use this information then to localize navigate or do other things so
+[04:46] there's one of the one example where you have a combined localization and mapping
+[04:50] tasks that you need to solve okay so why probabilities why are probabilities
+[04:57] important here the key reason for this is that the world is noisy so we will
+[05:03] never get perfect observations and we will never exactly execute what we want
+[05:08] to execute so we have uncertainty in the motion execution and we have noise or
+[05:15] uncertainty in our observations there is no perfect sensor there is no perfect
+[05:20] platform which does exactly what what I tell that platform and so those things
+[05:25] are affected by noise and uncertainty and so the bad thing is to take that
+[05:30] uncertainty into account in our model and to take this uncertainty explicitly
+[05:35] into account in state estimation and even in motion execution by taking into
+[05:41] account how certain I am about let's say certain variables in my model so that I
+[05:46] can take that uncertainty into account nor to select the appropriate action we
+[05:49] can see this in a very simple form with the localization problem so traditionally
+[05:55] a system may say the robot is exactly here so the road is precisely here that
+[05:59] x location so if the system is just let's say five millimeters off from that
+[06:03] location that's wrong and maybe can lead to catastrophic failures if you
+[06:09] just pass by an obstacle with a security distance of three millimeters this can
+[06:14] be bad so a better approach is to use a probability distribution that says the
+[06:20] system of the robot is somewhere here I don't know where it exactly is but I
+[06:23] know roughly where it is and I can estimate the probability that the system
+[06:29] is in a certain region and if I take that uncertainty of the platform into
+[06:34] account I may increase my safety distance to obstacles for example or
+[06:38] generate actions that avoid collisions or reduce the probability of collisions
+[06:42] towards zero and that's something that I can do if I have that information but in
+[06:49] order to have that information how certain I am where the platform is I
+[06:53] need to dive into probabilistic approaches so I need to take
+[06:56] probabilities into account and especially my probabilistic model in
+[07:00] order to estimate what the state of the system is and what the world looks like
+[07:05] and therefore we need that okay so let's start with a basic primer on probability
+[07:12] theory again this is not a theoretical course this is just let's say half an
+[07:17] hour wrap-up of key concepts that we will be using here so as I said before
+[07:25] probabilities are a key tool for realizing robust state estimation not
+[07:29] just in robotics also in any other discipline where you work with real
+[07:34] world data and the advantages that the probability theory allows us to
+[07:38] explicitly model uncertainties and explicitly modeling uncertainties make
+[07:43] the mathematical model more complex but also more robust because we cannot
+[07:48] expect the system to be exactly in one state and if I look to the technique
+[07:53] that we consider here in that course I was roughly saying 90% of the techniques
+[07:56] that we are going to present here are based on probability theory so it's
+[08:01] important for you to get comfortable with probability theory and that you are
+[08:05] able to do with basic manipulations if you look into probability theory it
+[08:09] turns out that it is actually based on a small number of axioms so axioms are
+[08:14] definitions and based on this definitions everything else can be
+[08:19] derived and so for example in this example P R of A denotes the probability
+[08:25] that a proposition A is true so P of A means what's the probability that A is
+[08:32] true and with four definitions for this statement so the first definition that
+[08:40] we use the first axiom is that the probability is always a value between
+[08:44] zero and one so it can't be negative it can't be larger than one so it's a real
+[08:50] number between zero and one and the probability of the true events or
+[08:56] something which holds is one and the probability for false so for something
+[09:03] which does not hold is zero so probability of zero means that is not
+[09:07] the case probability of one means this exit is exactly the case probably if
+[09:12] 0.5 so value in between could mean yeah and 50% of the cases it holds and 50% of
+[09:17] the cases it doesn't hold yeah so and then we have if you have two
+[09:22] propositions A and B the probability that A or B is the case or holds is
+[09:31] equal to the probability that A holds plus the probability that B holds minus
+[09:36] the probability that A and B hold together so this is an or and this is an
+[09:42] end so that means A or B and this means A and B is true okay so this means the
+[09:51] probability that A or B is true means either A is true that's fine or B is
+[09:57] true that's fine these are those two probabilities over here and then we need
+[10:01] to subtract something because the event that A and B hold we have basically
+[10:06] counted twice in here so it needs to be subtracted once and this is these are
+[10:11] the four definitions the four axioms on which everything else is based upon so
+[10:17] we can also look to this last axiom over here and visualize it so if this is kind
+[10:21] of the whole space of two events and blue refers to A and B refers is the
+[10:30] yellow refers to B then that A or B holds it's basically this area over here
+[10:38] can be visualized by this area spending either A is true or B is true but if you
+[10:45] count the area of A and the area of B this area in the middle here you have
+[10:50] actually counted twice this and this is the area that A and B holds and
+[10:54] therefore we have to subtract it once in order to actually get that area over
+[10:59] here and this is basically the visualization of this axiom over here
+[11:04] and basically we can start from those axioms and derive everything else from
+[11:08] those axioms so for example just as kind of one small example we want to derive
+[11:14] what does the negation negation of A means so not A so what is the
+[11:19] probability of not A and now I want to use of axioms to derive what not A
+[11:24] actually means in terms of probabilities okay so we can start with using the last
+[11:30] axiom and use instead of B not A okay so it's the proposition that A is false so
+[11:40] that means the probability of A or not A is just applying the axiom the
+[11:46] probability of A plus the probability of not A minus the probability of A and not
+[11:52] A okay so now let's get a step further and combine certain things in here so
+[11:59] what does it mean the probability of that A is true and that A is not true
+[12:04] so the probability that A is true and A is false you can clearly see that this
+[12:10] is a statement which cannot happen so it can't be true and false at the same
+[12:14] point in time so this is the impossible event this is P of false this cannot be
+[12:21] and in here we say the probability that A is true or A is false just these two
+[12:30] options can be true or false and the probability that A is true or A is false
+[12:34] is always the case so it's P of true so we can replace this by P of true and
+[12:40] this by P of false so the next step will look like this a probability of true is
+[12:48] the probability of A plus a probability of not A minus the probability of false
+[12:52] and then we have derived before the probability of false is zero and the
+[12:57] probability of true is one so we can replace this by a one and this by a zero
+[13:02] and then our equation says one equals probability of A plus probability of not
+[13:08] A so what we can do is we can just move this one over here and move the P of not
+[13:15] A to the other side multiply the equations by minus one and then we get
+[13:19] our final equation that the probability of not A is one minus the probability of
+[13:23] A okay so based on those axioms we have derived here what the negation of a
+[13:30] probability looks like so what not A looks like given that we know what P of
+[13:35] A is and similar to this example over here we can use those axioms to derive
+[13:41] different statements we don't dive further into the details but I just want
+[13:46] to show you that basically everything in probability theory is follows from those
+[13:52] axioms and we can use those axioms to derive all the different quantities and
+[13:56] build up everything step by step on each other given if you want to do everything
+[14:00] from scratch that we are going to use you in this course this would be a
+[14:03] longer endeavor therefore now just kind of a fast forward and will very
+[14:07] informally introduce the different rules that we will be using in this course in
+[14:12] order to derive for example the base filter later on okay so let's say X
+[14:19] denotes a random variable so a variable which can take different values and if
+[14:28] you write like this though they would be how we denoted here is the random
+[14:31] variable X can take the values X 1 X 2 X 3 X 4 and so on until X n it's a
+[14:38] countable number of possible outcomes so and then we say P of X equals X I it's
+[14:48] kind of what the probability that the random variable X takes the value X I
+[14:53] we just use it as a kind of a sloppy notation you write just this as P of X I
+[14:59] so this means nothing else than this over here that X equals X I in 99.9
+[15:06] percent of the case I will use this notation sometimes I will use this one
+[15:10] just to make things clearer but typically we write it like this and so
+[15:14] this is the probability that the random variable X takes the value X I and P of
+[15:20] P the function P is called a probability function of probability mass function
+[15:25] this holds for discrete random variables that means random variables
+[15:30] of that form which take a countable number of possible values and this is
+[15:36] what we call it discrete random variable and the associated probability mass
+[15:41] function and this function takes values between 0 and 1 because if you have
+[15:49] whatever n possible outcomes all the n outcomes have a probability which is
+[15:53] small or equal to 1 but in sum it must sum up to 1 because in one of those
+[16:00] events must take place so in sum the probabilities must be 1 so this is
+[16:06] different if we have a continuous variable so a variable which can take
+[16:09] continuous values if you have variable which can take continuous values then we
+[16:16] still can write in a similar way we say P of X I equals X equals X or in short
+[16:22] form P of X is a so-called probability density function the probability
+[16:26] density function is not really a mass function and it can take values for
+[16:32] example which are larger than 1 the important thing in here is that we need
+[16:37] to integrate over this function in order to get the probability that and the
+[16:42] variable lies within an interval and so the integral over the whole density
+[16:47] function again is 1 but not the function values of this density function
+[16:53] so if you want to say what's the probability that X lies within the
+[16:56] interval A and B what we need to do is we need to integrate over our
+[17:02] density function from the from A to B and basically collect all the
+[17:08] probability mass that lies within this interval and this probability mass that
+[17:14] we collect gives me then the probability that the event or that the
+[17:17] variable X takes values between A and B and this P of X can take different forms
+[17:23] this can be a normal distribution it's the most prominent one but can also take
+[17:28] any other form the important thing in here is the integral over this function
+[17:33] must be 1 this is kind of one of the first important thing which holds for
+[17:38] discrete as well as for continuous functions that we have in here so the
+[17:43] sum over all events must be 1 because one event must be true so if I sum up
+[17:48] all the probabilities we must end up with 1 and the continuous case it is the
+[17:54] the equivalent is the integral over my density function and the integral over
+[17:58] my density function must be 1 and if I'm not integrating over the whole space of
+[18:05] values which X can take just a subset then it's just the probability that X
+[18:09] lies in this subset similar to the discrete case if I'm not summing about
+[18:13] over all values X I just a subset then I get the probability that the random
+[18:19] variable capital X takes this subset of values okay so we can do is we can also
+[18:28] combine multiple random variables with each other and this can lead us to
+[18:33] things like joint or conditional probabilities so if you want to express
+[18:38] that we have two random variables a random variable X and in the random
+[18:42] variable Y and want to say what the probability that X takes a value small
+[18:46] X and Y takes the value small Y and so this is again it's short form we write
+[18:53] as P of X comma Y so this is the probability that the random variable X
+[18:58] will take lowercase X and the random variable Y takes the value lowercase Y
+[19:03] if we have this joint then we say the the variables the random variables X and
+[19:09] Y are independent of each other if the following equation holds so if P of X
+[19:15] and Y equals to P of X times P of Y if this is the case the variables X and Y
+[19:23] are independent of each other so the probability that a certain outcome
+[19:28] happens in X for example is independent from the random variable Y so no matter
+[19:35] what Y looks like we can it doesn't change the probability distribution over
+[19:40] X this is basically what this independence means and this is the
+[19:44] definition of independence so X and Y are independent if this holds and then
+[19:51] we have the conditional probability there's something which is typically
+[19:54] written like this so this is P of we read this P of X given Y so this
+[19:59] horizontal bias reads as given so this means nothing else that what the
+[20:03] probability distribution over X and only over X not over Y over X given we know
+[20:09] which value Y takes so given we know what Y looks like this is the probability
+[20:15] distribution over X therefore it's called the probability distribution of X
+[20:20] given Y and so what holds is that we could we can how we can write this is
+[20:28] that P of X and Y is P of X given Y times P of Y so it basically means what's
+[20:37] so the probability of of the joints or that X and Y holds is that the
+[20:43] probability that Y holds without anything else and then the probability
+[20:48] that afterwards basically that X holds given that Y holds and this is
+[20:53] definition of the conditional probability and we can swap both things
+[20:57] around and we'll have exactly the same setup so P of X given Y is P of the
+[21:04] joint divided by P of Y and of course we can do the same thing the other way
+[21:07] around so we can also write P of X and Y are independent if holds P of X given Y
+[21:14] is equal to P of X that means no matter what Y looks like the probability
+[21:19] distribution is the same so Y doesn't have any impact on X if I know why this
+[21:24] doesn't help me in order to say anything about X okay so let's see joint and
+[21:30] conditional probability conditional and joint probabilities will pop up all the
+[21:34] time so make sure you understand what this means given okay so the next thing
+[21:41] I want to look into is the law of total probability so what the law of total
+[21:46] probability law of total probability basically tells me is that if I have if
+[21:54] I sum over all outcomes of Y so all possible outcomes of Y of P of X given Y
+[22:02] times P of Y this is equal to P of X okay so see in the following way Y can
+[22:13] take different values let's say Y can take the values one two three just four
+[22:17] as an example we can say okay we sum of all those values so we try Y equals 1 Y
+[22:21] equals 2 Y equals 3 we say what the probability that Y actually takes the
+[22:26] value of 1 and then say what the probability of X given that Y equals to
+[22:31] 1 so we have the conditional probability times the probability that Y actually
+[22:36] takes this value of 1 and then we do the same thing for Y equals 2 and Y equals
+[22:41] 3 and we sum up all those values that basically means we sum over all values
+[22:46] and only X remains and the same holds for the continuous case except that the
+[22:51] sum is replaced by an integral and integrating overall outcomes of Y okay
+[22:58] very related to this or combined with the previous rule and the law of total
+[23:03] probability we can get a marginalization rule what marginalization
+[23:07] means if I have the joint probability about variables X and Y and I sum over
+[23:13] all outcomes of Y and sum up those probabilities then P of X remains so
+[23:20] that means if I have two variables X and Y and I only know the joint so for all
+[23:27] combinations of X and Y I know what the probability looks like then I can
+[23:31] compute the probability only about X without Y by simply go iterating over
+[23:36] all values of Y and summing up the probabilities of the joint and that's
+[23:41] what the marginalization tells me so if I have the joint I can marginalize out
+[23:45] the variable Y so that in the remaining distribution Y is not there anymore can
+[23:50] get rid of Y by summing of all possible outcomes again summing or integrating
+[23:55] over depending if I'm in the discrete case or in the continuous case okay
+[24:01] let's have a look to a small example to a visualization so what we have in here
+[24:06] is our is let's say a small grit and this is the X dimension this is the Y
+[24:13] dimension so Y can take values 1 and 2 and X can take whatever the values 1 2
+[24:19] 3 4 5 6 7 8 9 in this example so if 18 possible outcomes and let's say we count
+[24:26] often certain outcome actually happens and these are these blue dots over here
+[24:30] so this event X equals 1 and Y equals 1 has happened 1 2 3 times over all the
+[24:36] number of dots that you see in here okay so basically what we have we have
+[24:40] basically counts for all of these outcomes and this is basically a joint
+[24:45] distribution you just count the number of outcomes here 3 divided by the overall
+[24:51] number of dots this is your joint probability distribution what you now
+[24:56] can do is you can for example marginalize out X so you want to get rid
+[25:01] of X you only want to know how often is what the probability for Y equals 1 the
+[25:07] probability for Y equals 2 what you can do is now you can simply sum over all
+[25:12] possible outcomes of X of the joint so that means you count all the dots which
+[25:18] fall into this bin you're basically merging all these bins into one bin and
+[25:22] you're merging all those bins into the second to a second bin and then you
+[25:26] count all the blue dots which fall into this lower bin over here which gives you
+[25:30] this value and you count the number of blue dots which fall into this kind of
+[25:33] merged bin over here which gives you this probability over here so this is then the
+[25:38] probability P of Y by marginalizing out X and what we can do for marginalizing
+[25:44] out X we can also instead of that marginalize out Y then we would get this
+[25:48] distribution so here we are summing up all dots and irrespective of the
+[25:53] value of Y so we sum up we basically merge those two grids those two grids
+[25:58] those two cells those two cells and so on and so forth so this would give 3
+[26:02] this would be 1 2 3 4 5 6 1 2 3 4 5 6 7 1 2 3 4 5 6 7 8 9 this value and so on
+[26:12] and so forth so this is a probability distribution over X marginalizing out Y
+[26:17] we can also express the conditional probability so P of X given Y equal 1 by
+[26:25] ignoring those because I know Y equals 1 so this is given I know Y equals 1 so
+[26:34] I know I'm in this case over here this can be completely ignored and then I'm
+[26:38] just building the histogram out of those blue dots which are sitting here with my
+[26:43] 9 bins so this is an example on for the conditional and the marginalized
+[26:48] probability distribution so we can see okay let's go take another concrete
+[26:54] example again one of those famous example you find a lot of books we have
+[26:58] two variables and M and S which can be true or false so for example male and
+[27:04] not male smoker and non smoker and you want to make a probability distribution
+[27:09] or model the probability distribution if people are smoking and put that into
+[27:15] relation if they're male or female okay so what do we have in here we have 20
+[27:20] male smokers we have 20 female smokers we have 35 non smoking males and we have
+[27:29] 45 non smoking females this is kind of my population of in some 120 people so
+[27:35] what I can do now is I can sum the counts over the different columns over
+[27:41] here so if I sum up those values I will get 40 if I sum up those two I will get
+[27:47] 80 and this is once the number of smokers versus a number of non smokers
+[27:52] so we have out of this 120 people 40 people smoke and 80 people do not smoke
+[27:58] and I can do the same at the bottom here over the rows then it would be that we
+[28:03] have 20 plus 35 males and 20 plus 45 females so 55 males and 65 females which
+[28:11] also add up to 120 people okay so this is my joint probability distribution or
+[28:18] my actually the table of occurrences from which I can now compute my joint so
+[28:24] we can compute all the combinations the probability for all those combinations
+[28:28] so for example P of M and S so that it's the person the male and a smoker what
+[28:37] the probability for that the probably the person the male and smoker are
+[28:40] actually out of my population here 20 people out of 120 so it's 20 the cell
+[28:46] over here divided by 120 okay can do the next thing what the probability of male
+[28:53] and being and being non smoker this again is we have 35 male non smoking out
+[29:01] of 120 so at 35 divided by 120 basically means if I have this population of
+[29:08] people there and I just close my eyes and randomly draw out people how likely
+[29:13] it is that they are male and that they're non smokers and the probably for
+[29:16] that is 35 divided by 120 and we can do this for all the individual cells but
+[29:23] based on this table we can also go a step further and derive other quantities
+[29:27] and the marginalized distribution so for example what the probability of
+[29:31] randomly drawing a male from this population so male is those over here
+[29:36] so it's basically 20 over 120 plus 35 over 120 or which is equal to 55 or 120
+[29:44] so 55 out of this 120 people are male so the probability of selecting a male for
+[29:51] do that randomly with basically closed eyes is 55 divided by 120 and equivalent
+[29:57] to that we can do this for the females of course as well here we have a large
+[30:01] number females ten more so it's not 55 by 120 but 65 divided by 120 we can do
+[30:07] the same thing of course also for the smokers what's the probability that a
+[30:10] random person is a smoker this would be 40 divided by 120 so we can actually
+[30:15] write down those values and just compute the ratios and then get my marginalized
+[30:21] values over here and we can also compute the conditional probability so what's
+[30:29] the probability of a male given that is a smoker and here you need to be a bit
+[30:34] more careful so it means given smoker that means we know the person is smoking
+[30:39] that means we are we are over here this information is completely irrelevant to
+[30:46] me right now because I know already the person is a smoker I don't know if it's
+[30:49] male or female but I know the person smoking so the non smokers can be
+[30:53] completely ignored over here so I'm only interested in this first row of my table
+[30:58] so given I know it's a smoker I only consider this row over here and the
+[31:03] probability for it being male is basically 20 divided by 40 not 120 only 40
+[31:09] because I know the person is a smoker so this will then lead to the P of M and S
+[31:16] so this is what we had over here 20 divided by 120 divided by the probability
+[31:22] that the person is a smoker which is 40 divided by 120 so 20 by 120 divided by
+[31:29] 40 by 120 is exactly the 20 divided by 40 that I was indicating here so it's a
+[31:33] 50 percent chance if I know the person smoking it's a 50 percent chance to say
+[31:38] it's a male or a female in this example okay so these were examples for those
+[31:44] joint probability distribution the probability distribution over the
+[31:48] individual variables and the conditional distribution and it's very important
+[31:52] to understand what that means if you say for example P of X given Y it's very
+[31:57] important so make sure you truly understand what it means and you also
+[32:01] know what independence means because that's a concept that we will need now
+[32:07] when we derive Bayes rule so Bayes rule is can be very easily derived I just
+[32:14] have those two rules that we have seen before so P of X and Y is nothing else
+[32:19] and P of X given Y times P of Y okay so again the joint distribution is the
+[32:26] conditional distribution times the probability distribution over the
+[32:29] individual variable which was given over here in the first part and we can do the
+[32:34] same thing of course by swapping X and Y because P of X and Y is the same of P of
+[32:38] Y and X and so we can derive we can use the definition to write this one down
+[32:45] and so both things are the same so that means that those two equations are the
+[32:49] same those two equations are the same I can put this one on the other side of
+[32:54] the equation and then divide by one of the distributions for example P of Y so
+[33:01] I can say P of X given Y is equal to P of Y given X times P of X divided by P
+[33:07] of Y and that's all what Bayes rule is about so Bayes rule tells me P of X given
+[33:14] Y is P of Y given X times P of X divided by P of Y what we can do with
+[33:19] Bayes rule is we can if we have such a distribution we can basically we can use
+[33:24] it in order to swap those two quantities sometimes I want to estimate X and I
+[33:31] know Y then everything is good but sometimes it's the other way around I
+[33:35] know Y given X but I want to have X given Y and then I can use Bayes rule
+[33:40] assuming I know these other distributions over here and in order to
+[33:45] to compute the distribution I actually want to compute and so this is a very
+[33:49] powerful tool that we will use very often in a lot of derivations and
+[33:53] therefore the Bayes filter is called the Bayes filter because it uses Bayes rule
+[33:58] as a key ingredient in its derivation and so this term here is often also
+[34:04] called likelihood this term is often called the prior and this term is often
+[34:08] called the evidence so we see a likelihood times prior divided by
+[34:12] evidence and one important thing is we can do a use Bayes rule also if we have
+[34:18] what is also called background knowledge so additional information so if I add an
+[34:23] additional information let's say another variable Z and I add them to all
+[34:30] probability distributions additional orders then the same thing holds as well
+[34:34] so Bayes rule with background order so this is a regular Bayes rule and this
+[34:39] Bayes rule with background order so basically we add an additional variable
+[34:42] to all different distributions over here and still the same holds and something
+[34:46] we call background order Z used in here okay so knowing Bayes rule is very very
+[34:53] important because we will actually use this very often you just have to learn
+[34:57] it know it by heart there is no excuse for not knowing Bayes rule
+[35:04] so the next thing I will look into is the so-called the conditional
+[35:08] independence so it combines the conditional distributions and
+[35:11] independence that we had talked before and we say that two variables are
+[35:17] conditionally independent if they are independent if another information if
+[35:23] additional information is available so-called background knowledge so for
+[35:26] example if we have a joint distribution over X and Y giving some extra under Z
+[35:30] and I can say this is equal to P of X given Z times P of Y given Z that means
+[35:38] those two variables X and Y are conditionally independent given Z but
+[35:43] only if Z is available if that is not available I can't say anything about
+[35:48] them maybe they are maybe they are not but it doesn't imply it so this is what
+[35:53] we call a conditional independence conditional independence it's
+[35:56] conditioned on the fact that we know Z okay so this conditional independence
+[36:04] means nothing else that P of X given Y is the same of P of X given Y and Z and
+[36:14] Y sorry so if I have the background knowledge and the conditional
+[36:17] independence holds then knowing Y doesn't tell me anything about X so given
+[36:23] I know Z I have enough information to estimate my probability distribution
+[36:28] over X and the knowledge of Y doesn't help me to say anything further about X
+[36:33] the same the other way around if I know Z I have my probability distribution
+[36:39] about Y and adding the knowledge how X looks like doesn't help me at all and
+[36:44] this is a different way for phrasing the conditional independence but the
+[36:48] important thing which need to take into account this does not imply independence
+[36:54] or else called marginal independence if you want to distinguish explicitly the
+[36:58] conditional independence from the regular independence can call it
+[37:01] marginal independence so that does not mean P of X and Y is P of X times P of Y
+[37:08] it only holds if we have that background information it may hold but it doesn't
+[37:14] imply that that's kind of important to know if we are working with our
+[37:20] probability distributions we often have discrete probability distributions which
+[37:24] we can easily represent for example using histogram just based on those
+[37:29] counts what's the example that I've shown before so if I go two slides or
+[37:33] three few slides back okay a bit longer sorry for that so these were our
+[37:40] histograms this is a way for storing a discrete probability distribution in an
+[37:45] easy way so that's how this is often done if we are living in a continuous
+[37:50] world we have to provide often a parametric function in order to describe
+[37:55] a probability distribution and how are we doing this a very popular choice is
+[38:00] the so-called normal distribution like Gaussian distribution and this can be a
+[38:05] distribution which is one-dimensional can be also multiple multi-dimensional so
+[38:09] in this case it shows the one-dimensional Gaussian distribution it
+[38:12] has a mean and your standard deviation so mu and Sigma and the mean tells you
+[38:20] where is that peak of this distribution and the standard deviation basically
+[38:24] tells you the width of this distribution over here so the smaller the standard
+[38:29] deviation the more narrow this distribution gets and the higher those
+[38:33] values so the more peak the distribution is the smaller the uncertainty of that
+[38:38] distribution and we can write the unimodal or it's always unimodal but we
+[38:45] can derive describe the one-dimensional Gaussian distribution with this
+[38:49] equation over here so we have the question is how far is my variable away
+[38:54] from the X a squared value divided by the standard deviation squared multiplied
+[38:58] with minus 0.5 put into an exponential function and then have a constant over
+[39:03] here which makes sure the integral and sums up to one or integrates up to one
+[39:06] we can do this also in multiple dimensions and multiple dimensions can
+[39:11] be three-dimensional two-dimensional four-dimensional five-dimensional
+[39:14] infinite dimensional then we can typically use this form of writing things
+[39:19] down very similar to the first case except that we now use vectors and
+[39:23] matrices in order to specify this so this is an illustration of a
+[39:27] two-dimensional Gaussian distribution and in 3d it gets harder to visualize so
+[39:31] we typically visualize those ISO surfaces of the of the uncertainty
+[39:37] basically this is a surface which takes the same probability value every point
+[39:41] on that surface and the more you go to the inside of this ellipse or ellipsoid
+[39:46] the higher the probability the further you go to the outside the smaller the
+[39:50] probability but that's something which is very hard to visualize here in this
+[39:54] in this 2d world where we can also do is we can combine multiple Gaussian
+[40:01] distributions so if you need to represent multiple modes for example we
+[40:04] can do this by combining multiples of those Gaussians and this is what we call
+[40:08] a Gaussian mixture or a sum of Gaussian in this case we have a sum over K
+[40:13] components so we have basically K Gaussian distributions and we just sum up
+[40:18] those distributions normal make sure we normalize them so that they sum up to
+[40:23] one so that the integral is one and it's still a probability distribution so by
+[40:27] using three Gaussians this Gaussian over here a second Gaussian over here
+[40:31] and a third Gaussian over here we can represent this red function over here we
+[40:35] can do this in 1d we can do this in multiple dimensions so for example here
+[40:39] with three two-dimensional Gaussian distributions and this is kind of my
+[40:43] armor isosurfaces and this is a 3d visualization of this distribution and
+[40:49] that is something that we are frequently using in in order to represent
+[40:57] distributions which more than one mode it's not always easy because this sum
+[41:03] can be tricky for example in certain state estimation problems or least
+[41:07] squares problems because it will be hard to compute the log likelihood or the log
+[41:12] likelihood is much more complex than in the unimodal case therefore it's not
+[41:16] always a great solution but it's kind of the easiest solution that we typically
+[41:19] have when we have multimodal distribution is to use a Gaussian
+[41:23] mixture model so kind of to sum up this first part over here what we have looked
+[41:28] into is that probability theory is an essential tool that we use to solve a
+[41:35] lot of state estimation problems and what these first 40 minutes here what we
+[41:41] have done so far was to kind of introduce what what does a probability
+[41:45] mean what is uncertainty what is base rule what is conditional independence
+[41:50] what is independence general how to compute basic probabilities at least for
+[41:55] the discrete case what is marginalization what is the law of total
+[41:58] probability probability distributions must sum up to one so these are some
+[42:02] basic knowledge that you will need on a regular basis in order to you know to
+[42:10] deal with those probabilities and in order to understand what how to
+[42:16] manipulate those distributions what are the underlying assumptions and for
+[42:20] example also base rule is one of the key concepts that we will use now in the
+[42:24] next part of the course in order to derive a recursive so-called base filter
+[42:30] recursive state estimation technique thank you

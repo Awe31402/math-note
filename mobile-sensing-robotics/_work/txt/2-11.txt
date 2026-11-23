@@ -1,0 +1,927 @@
+[00:00] Hello, I want to talk today about graph based simultaneous localization mapping or graph
+[00:06] based SLAM and introduce a so called least squares approach to the SLAM problem using
+[00:12] something which is often referred to as post graphs.
+[00:16] So this is a popular technique, which you find today in most state of the art systems
+[00:21] out there that are designed to build a map of the environment and localize a platform
+[00:27] within that map.
+[00:28] And we're looking here to a special form of that, which is the so called post graph based
+[00:32] approach that is an approach which doesn't use landmarks but reduces everything to the
+[00:38] poses.
+[00:39] So everything is kind of reduced to the poses or landmarks are marginalized out.
+[00:43] This leads to a graph structure, which is actually rather easy to maintain and is actually
+[00:50] very flexible also in terms of the observations that you're including and therefore became
+[00:54] one of the standard tools when doing lighter based SLAM for example or working with RGBD
+[01:00] cameras or similar.
+[01:02] So most of those systems which build maps of the environment which have a certain size
+[01:07] which are not let's say a single room or something like this typically use a graph based or post
+[01:12] graph based SLAM approach in the background in order to correct the poses and build a
+[01:18] consistent map of the environment.
+[01:20] And the goal of this lecture today is to introduce you to these graph based SLAM systems
+[01:25] so that you are in the end able to build your own system that performs the optimizations
+[01:30] in here.
+[01:32] And what we're using in order to do this is the technique called least squares that we
+[01:37] just have introduced in the previous lecture.
+[01:40] And so I assume you know how these squares work and at least in a very basic setup.
+[01:45] So Gauss-Newton is something that you should be able to explain or implement and with this
+[01:52] tool at hand and with knowing how ICP works, or at least what the output of ICP is, you
+[01:58] should be able to understand this lecture today.
+[02:01] So within the typical SLAM paradigms we are here in the graph based SLAM approach, which
+[02:05] is, as I said, over the last years became the most popular technique and it basically
+[02:10] is a least squares approach to SLAM.
+[02:13] Of course, there are extensions using different error functions, robustified kernels and things
+[02:18] like this, but we are sticking here with the basics, which should allow you to understand
+[02:22] how this graph based SLAM actually works.
+[02:25] So least squares, again, was an approach for computing a solution of an overdetermined
+[02:30] system.
+[02:31] Overdetermined means here that we have more equations than unknowns.
+[02:35] Unknowns in our example, our parameters, where the robot is in the environment, which will
+[02:39] generate us this post graph and the equations stem from our constraints and constraints
+[02:46] can result from observations or from control commands.
+[02:49] And our goal is to find a configuration for those poses, for that post graph that minimizes
+[02:55] the sum of the squared errors that are introduced by those equations, so by the observations.
+[03:01] So that we have a configuration of these parameters or of these nodes in our graph that allows
+[03:09] us to estimate where the robot is so that the current configuration is as good as possible
+[03:15] in line with what we have seen or experienced.
+[03:17] And again, this least squares approach we apply today to this SLAM problem.
+[03:22] So let me very easily introduce this problem.
+[03:25] So consider we have a mobile robot like this guy here driving around through the environment
+[03:30] and at distinct points in time, let's say every second, for example, we are generating
+[03:35] a pose and the pose is here explained or illustrated by those triangles.
+[03:40] So the robot moved through the environment and while it is moving through the environment,
+[03:44] let's say every second or whenever the robot moved more than three meters or five meters,
+[03:49] that doesn't really matter here, we create a pose or a variable.
+[03:53] And this variable describes the pose of a platform at that point in time.
+[03:57] Pose refers here to the XY or XYZ location plus the heading information.
+[04:02] So XY and the orientation theta in the 2D case or the opposite roll angles, for example,
+[04:08] in the three-dimensional case.
+[04:10] And while the robot is driving through the environment, it creates these poses in this
+[04:14] so-called pose graph and between those poses, they are constraints.
+[04:18] And these constraints result from the motion of the platform.
+[04:22] So for example, you have a robot which counts the revolution of the wheels.
+[04:25] Let's say it counts, often have the wheels been turned and this allows the platform to
+[04:29] estimate its poses.
+[04:31] So let's say I'm the robot right now here, I'm creating a node at the current point in
+[04:35] time, so I'm driving around, I'm turning my wheels, turning my wheels for a certain amount
+[04:39] of time, and then I'm standing here and creating a new pose, a new variable.
+[04:44] And then there exists a constraint between the current pose where I am and the pose where
+[04:49] I have been before, and this constraint results in how many revolutions did the wheels make.
+[04:56] And so if there were, because the revolution of the wheels are related to the distance,
+[05:00] for example, between those two nodes.
+[05:03] So this allows you to say, okay, pose two is, for example, a meter away from pose one.
+[05:08] You're typically uncertain about this information because maybe it's a meter and two centimeters
+[05:14] or 95 centimeters or a meter 20 or a little bit more to the right or to the left.
+[05:20] So you see there are some uncertainties because this information is not perfect.
+[05:23] So see those constraints as kind of soft constraints which say, okay, pose two should be approximatively
+[05:29] a meter away from pose number one, and I think you kind of get the information here.
+[05:33] So the robot drives around, creates poses after different points in time or after things
+[05:39] has traveled a certain distance, and then we have those constraints, and those constraints
+[05:43] can stem from the odometry information or the robot may even use a sensor, for example,
+[05:48] scan matching or ICP aligning consecutive scans in order to estimate its pose.
+[05:53] So this can generate this type of structure that we see here.
+[05:56] So now the robot continues moving through the environment at some point in time.
+[05:59] It revisits a previously seen place.
+[06:01] So it comes back to the same area over here.
+[06:05] And this is one key element in the context of the SLAM problem, something we often refer
+[06:08] to as loop closing.
+[06:10] So the robot comes back to a previously seen place along its trajectory, and at that point
+[06:15] in time, it can actually not create only these sequential constraints but can also generate
+[06:20] those constraints here to previous poses.
+[06:22] How does that work?
+[06:24] So this can work, for example, through an ICP approach.
+[06:27] So we have introduced ICP before where we take, for example, 3D laser scans of the platform
+[06:32] taken at a previous point in time, so taken here or here, and align them with the scan
+[06:39] taken from this location.
+[06:40] And through the alignment of the scans, we can actually compute the relative transformation
+[06:44] between those nodes, something I was in the last lecture on the ICP lecture referring
+[06:48] to as virtual constraints or virtual observations.
+[06:51] And this is exactly those edges over here, or those constraints, soft constraints over
+[06:56] here.
+[06:57] So by revisiting previously visited or places where we've been before or reobserving previously
+[07:04] seen areas, we can generate these constraints between non-successive poses, these kind of
+[07:09] loop closer, so to say.
+[07:11] And so while the robot's driving through the environment, we are getting this kind of graph
+[07:15] structure.
+[07:16] So it's not a kind of chain of poses or a list as it was before, it's really a graph
+[07:19] structure that we now get here.
+[07:22] And this is what gave the name pose graph because we have a graph that consists of poses
+[07:28] of these triangles.
+[07:30] And so this graph is very central to the SLAM problem that we also call it the graph-based
+[07:35] SLAM problem, and we use it to represent our problem here.
+[07:39] So this type of graph is the representation for our SLAM system.
+[07:44] So everything in the graph that we have in there is important for the SLAM problem.
+[07:50] We will use this information in order to compute a solution.
+[07:54] So the graph consists of two things, nodes and edges.
+[07:58] Every node in this graph represents the pose of the robot at a certain point in time.
+[08:03] Again, it's typically a three or a six dimensional vector, depending if we are modeling a robot
+[08:09] in the 2D space or in 3D.
+[08:11] And then we have the edges, and the edges are kind of the relations between those poses.
+[08:16] So they tell me, oh, this pose should be related to the other pose in that certain way.
+[08:20] And this information can come from odometry information or from my sensor observation.
+[08:25] For example, performing scan matching.
+[08:28] So I can say the pose number 10 is related to pose number 11 by being one meter away.
+[08:36] And at the same point in time, you can say the pose number 10 can also be related to
+[08:41] pose number 20 in a certain distance.
+[08:44] And so this information is then being used in the optimization problem to formulate these
+[08:53] equations that are used for the constraints.
+[08:55] So every edge is connected to two poses and relates those two poses, either coming from
+[09:00] odometry information or from my sensor observation, such as ICP.
+[09:04] And in graph-based SLAM, we are building up that graph.
+[09:07] So we build up this full graph of poses and constraints between poses.
+[09:11] And then the goal is to change the location of the poses.
+[09:15] So we're basically shifting and rotating those poses in the pose graph around so that we
+[09:19] minimize the overall error or the squared error that is introduced by those constraints.
+[09:25] So those constraints can be conflicting.
+[09:26] For example, if I'm here and saying the next pose should be one meter away from that pose.
+[09:32] And then I'm driving around, revisiting the environment, and come back to a previously
+[09:35] seen location.
+[09:37] And then, based on this observation, which comes from relating those poses, this pose
+[09:44] should be shifted a little bit.
+[09:47] And then I have one constraint which says they should be a meter away and the other
+[09:51] one should be shifted in a certain way.
+[09:53] And this leads to a fact that those constraints are conflicting.
+[09:57] And I want to find the configuration of the nodes that minimizes the errors introduced
+[10:02] by the constraints.
+[10:05] So we just have also an example here how that looks in reality.
+[10:09] So if we have a robot driving through the environment, so this was a map built by Patrick
+[10:15] Pfaff.
+[10:16] And what you see here is a map built from a laser scanner, where a 2D laser scanner
+[10:22] moving through the environment, and this just encodes the odometry information.
+[10:25] So just estimating how the robot moved based on the revolution of the wheels.
+[10:28] And you can see, actually, this map is extremely messy.
+[10:31] You can't even deal with that.
+[10:33] So you can see these are always the same rooms mapped at different locations.
+[10:37] So odometry itself is typically not sufficient to build a good map.
+[10:41] But what we can do now, we can actually generate this pose graph in this map where we have
+[10:44] been and also relate all those constraints with each other.
+[10:48] So we get something like this.
+[10:50] So you see those lines over here which represent the poses and also represent the constraints.
+[10:55] So that seems, oh, this pose should actually be over here.
+[10:57] This pose should actually be over here.
+[10:59] This pose should actually be over there.
+[11:01] And so these are those constraints, and we now have a graph of all these constraints.
+[11:05] And now we want to find a new configuration of those nodes so that the error is minimized
+[11:10] so that those constraints are actually fulfilled as good as possible.
+[11:15] So we can, at that point in time, actually forget the map, which just was depicted in
+[11:19] the background.
+[11:20] And we are only interested in actually finding new configuration of those nodes because those
+[11:27] nodes correspond to the poses.
+[11:28] And once we have the poses, we can actually build a map just based on the corrected pose
+[11:34] information.
+[11:35] Again, mapping was easy once we know the poses.
+[11:38] So what the graph-based learning approach does, it takes this thing here as an input,
+[11:43] this graph structure, and performs a least square minimization so that it finds new configurations
+[11:48] of the poses that minimize the errors introduced by the constraints.
+[11:52] And this will lead then to a map that looks like this, where all the trajectories are
+[11:57] kind of now overlaid with each other, and the quadratic error introduced by those constraints
+[12:02] is minimized so that when I take this pose information and then render a map, just performing
+[12:08] basically mapping with non-posals, building an occupancy grid map, I will actually get
+[12:12] information which looks like this.
+[12:14] And this is now a consistent map of the environment, so you can see here also this room is always
+[12:19] at the same place and not spread all over the place.
+[12:22] And this process of turning this graph into this graph, this is what we are talking about,
+[12:29] performing the error minimization so to correct the trajectory of the platform that we then
+[12:33] can use this trajectory to build a map of the environment.
+[12:39] Okay, so I have to tell you that this is only one part of the SLAM problem.
+[12:44] This is what we typically call the backend or the optimization part of that.
+[12:48] In reality, of course, there is more involved in this if you want to build a real-world
+[12:53] SLAM system, because you need to turn your observations into constraints, and this is
+[12:58] something we typically refer to as the frontend.
+[13:00] So taking the raw sensor data and turning the sensor data into constraints is kind of
+[13:04] the frontend, and taking those constraints and optimizing the graph and returning the
+[13:08] corrected poses is what's often referred to as the backend.
+[13:12] And in reality, this is an interplay between those two.
+[13:15] So the frontend relates both with each other, then it's being optimized, then this optimized
+[13:20] map information is used to make new data stations.
+[13:22] So in reality, there is actually interplay between these frontend and backend thing.
+[13:28] But here, we are only looking into the backend parts, into the optimization part, and you
+[13:33] can envision the frontend part basically as the ICP algorithm that we've introduced.
+[13:37] ICP is typically used for laser-based SLAM systems as a frontend to generate those constraints,
+[13:43] and the constraint is here actually the relative transformation.
+[13:46] So the outcome of the ICP algorithm, this rotation matrix and this translation vector,
+[13:53] and they are basically forming a constraint together with some uncertainty information,
+[13:57] and there's a little bit more to that than just vanilla ICP in order to do that well.
+[14:01] But for the moment, you can imagine we are running an ICP based on laser scanner, for
+[14:07] example, which gives us the relative transformation between poses.
+[14:11] This is kind of this frontend part here, and we are using this raw data or this constraint
+[14:16] data in order to build the graph or to represent the graph and optimize that graph.
+[14:24] So the graph consists of nodes, so the individual triangles here, these blue triangles, every
+[14:30] of those triangles represents one node, X1, X2, X3, so there's X1, X2, X3, X4, X5, and
+[14:36] so on.
+[14:38] And so the overall graph represents all N nodes, represents X, and this is simply all
+[14:45] nodes put together or stacked on top of each other.
+[14:48] So each Xi is a pose of the robot at time Ti, so at a certain timestamp.
+[14:53] So we assume to have unique timestamps being here.
+[14:57] And if we have a constraint between two poses, from node Xi to node Xj, then this is a constraint
+[15:04] that can result from odometry information or from these virtual observations, and these
+[15:08] are those edges over here.
+[15:11] And we will now look a little bit into that, how we actually describe those edges, and
+[15:16] then once we have those edges and can interpret them, then we see how we can actually perform
+[15:22] the error minimization task using the idea of least squares, or in this case Gauss-Newton.
+[15:27] Okay, so an edge exists between two nodes if the robot moves from Xi to Xi plus one.
+[15:35] So there's now a consecutive edge, and this is an edge which can be generated from odometry
+[15:40] or also from incremental ICP, so matching the current skin against the next skin.
+[15:47] But for simplicity reasons, just assume right now it's odometry, so just by counting the
+[15:50] revolution of the wheels.
+[15:52] So we are here, the robot is currently here.
+[15:54] It moves forward, and then based on the odometry information, it can estimate where it should
+[16:00] be given the motion follows the kinematic model that the robot has about itself.
+[16:06] And this is basically the information, like a motion model that we're using.
+[16:12] So if you think about the previous lectures, this is basically counting the translational
+[16:18] velocity or the rotational velocity based on your steering, such as differential drive
+[16:22] or Ackermann steering, and that tells you how much you should have moved if everything
+[16:26] looks good.
+[16:27] And from probabilistic point of view, that's basically a mean estimate of where you have
+[16:31] been moving within the time difference from I to I plus one, and this typically comes
+[16:37] from odometry information.
+[16:39] So this is a transformation typically which tells us how Xi can be seen, or how Xi plus
+[16:47] one can be seen from Xi.
+[16:49] So this is a transformation, so how do you transfer one pose and the other pose?
+[16:53] So relative pose information.
+[16:56] An edge can also exist between two arbitrary poses, so not I and I plus one, but I and
+[17:02] J, where J is different from I plus one, and then we typically need to relate this information
+[17:09] with each other using the sensor data.
+[17:11] So as an example, so consider this now as a 2D illustration, so we have our robot at
+[17:16] Xi sitting over here, and this is the scene it is observing with the laser scanner, and
+[17:21] then at a position XJ it's here, and it's observing this part.
+[17:25] So by relating these black lines and this blue line, treating this as a scan, and overlaying
+[17:32] them with each other, we can actually generate kind of a virtual observation by saying we
+[17:37] can have an idea where XJ should be as seen from Xi, although we can't really see XJ,
+[17:44] we can't really see where the robot is in the future.
+[17:48] But by relating it to the environment that we are seeing from both locations, we can
+[17:53] actually generate something which we call a virtual measurement.
+[17:56] It's nothing else than the result of the iterative closest point algorithm in general.
+[18:02] So again, we see this kind of a treat, this is our reference frame, and by matching the
+[18:09] black line and the blue line, we are basically moving the blue one over here, and then if
+[18:15] we know where the blue one is, we also know where Xi is in this reference frame of XJ.
+[18:20] So by constructing this kind of virtual measurement through an alignment procedure such as ICP,
+[18:27] or if you think about vision, this could be competing with relative orientation, for example
+[18:32] you can use the five-point algorithm or the eight-point algorithm for image features,
+[18:36] but we are restricting ourselves here for the simplicity to ICP, then we would get this
+[18:41] type of alignment.
+[18:42] So you see here the black and the blue lines are aligned on top of each other, and this
+[18:46] allows us to relate the poses Xi and XJ with each other.
+[18:49] And then this transformation from Xi to XJ can then be seen as a virtual measurement
+[18:57] about the position XJ as it would be seen from Xi.
+[19:01] So if Xi could see the robot at XJ, it would be the pose of the robot relative to its own
+[19:07] pose, but as we can physically not see that, we do this through the relation of the environment.
+[19:13] And again, this is a full transformation between those two poses.
+[19:16] So it's not just kind of a distance vector or something like this, it's a full transformation
+[19:22] that we can transform the pose Xi to the pose XJ or the other way around.
+[19:29] So how do we encode those transformations?
+[19:32] We typically use things like homogeneous coordinates for doing this, or there are other ways in
+[19:38] which you can do this, but at least for formulating it and writing it down in here, I will be
+[19:42] using homogeneous coordinates because this is actually very easy to do.
+[19:46] So just as a reminder, homogeneous coordinates allow you to express or to chain transformations
+[19:54] like translations and rotation in a very elegant way.
+[19:58] And then everything which is here written in capitalized characters, you should see
+[20:01] as a transformation.
+[20:02] So this is kind of the transformation basically of the pose Xi and seen as a translation and
+[20:11] a rotation in a global reference frame.
+[20:14] So this is a homogeneous matrix.
+[20:16] This is also homogeneous matrix representing this pose Xi and XJ.
+[20:20] And if I have those matrices, I can here invert the matrix Xi and multiply the matrix Xi plus
+[20:27] one to it, then this is the relative transformation.
+[20:30] Where is Xi plus one as seen from Xi?
+[20:34] And the same holds here, Xi inverse XJ means the node, how the node I sees node J, so how
+[20:46] J would be seen from node I.
+[20:49] So just as a very short reminder in case you have forgotten about homogeneous coordinates,
+[20:54] just a few words how what that is, homogeneous coordinates are a different coordinate system
+[21:00] or coordinates which are typically used in projective geometry.
+[21:04] It has some nice advantages of being able, for example, to express points which are infinitively
+[21:09] far away in those things, but that's not kind of the reason why we are using it here in
+[21:13] the lecture.
+[21:14] We're using it here in the lecture because in this homogeneous coordinates, a single
+[21:17] matrix can represent all fine or even projective transformations.
+[21:23] That's attractive for us because we will be using here rotations and translations, so
+[21:30] rigid body transformations, which are a subset of those two transformations, through matrices.
+[21:35] And so that means we have a matrix that represents a translation and we have a matrix which represents
+[21:39] a rotation, and we can just multiply those matrices in order to change the transformation
+[21:44] after each other.
+[21:45] And that makes it very elegant in order to write it down, and this is one of the advantages
+[21:49] of homogeneous coordinates, that they typically simplify the mass, at least for us, when we
+[21:53] need to write that down.
+[21:55] So how does it work?
+[21:56] I just have a short example, and if you need more information about this, I recommend you
+[21:59] to watch my lecture on homogeneous coordinates.
+[22:02] But just as a very short reminder, if you want to represent the n-dimensional space
+[22:06] like the three-dimensional space for us, then homogeneous coordinates use one dimension
+[22:11] more, so n plus one-dimensional space.
+[22:13] So for us, it would be four dimensions for modeling the three-dimensional space.
+[22:17] And the vector in homogeneous coordinates, let's say x, y, that, is extended by a new
+[22:21] dimension x, y, that, and the next dimension, which is one in this example.
+[22:26] There's a mapping from the Euclidean space to homogeneous coordinates.
+[22:31] There's also backward mapping, which we say we have the four coordinates, x, y, z, w in
+[22:36] this example, and then we take the last dimension and divide all other dimensions by that last
+[22:42] dimension and then drop the last one.
+[22:44] So we go from a four-dimensional vector to a three-dimensional vector, dividing all the
+[22:48] elements by w.
+[22:49] And so it's kind of a form of normalization.
+[22:53] And if we do this, this forward-backward mapping, then we can actually express translations
+[22:58] in a rotation-elegant way.
+[23:00] So a translation can then be expressed in a four-dimensional matrix, which has ones
+[23:06] on the main diagonal.
+[23:07] Here, everything is zero, and those three dimensions are the translation x, translation
+[23:11] y, and translation z.
+[23:13] And the rotation can be expressed by a 3D rotation matrix, the standard rotation matrix
+[23:17] as you know them, here in this upper three-by-three block.
+[23:21] And so this is a zero vector, and this is also a zero vector and a one.
+[23:27] And so by having this rotation matrix in homogeneous coordinates and this translation in homogeneous
+[23:33] coordinates, we now can multiply this translation matrix and the rotation matrix with each other
+[23:38] and then have a translation and rotation expressed in one single matrix.
+[23:42] That's something you cannot do in the Euclidean space, but it's very, very elegant for writing
+[23:48] this down and chaining those transformations.
+[23:50] So if you go back, for example, something like this to express this in Euclidean coordinates
+[23:57] is much more difficult.
+[23:59] And here, it's very easy to see.
+[24:01] You take the poles of the transformation, which encodes xi, and you basically invert
+[24:08] it.
+[24:09] So by inverting this four-by-four matrix, you're actually inverting the transformation
+[24:13] and multiplying to that from the right-hand side xj, so what you can see then that this
+[24:18] is actually the node xi as it would be seen from the node xj.
+[24:24] So that's what we are using here.
+[24:27] In addition to this, our constraints are affected by noise because we have observations.
+[24:34] So for example, odometry is typically less accurate than using your sensor's information
+[24:39] if you think about a laser scanner, for example.
+[24:43] But even your laser scanner data is affected by noise.
+[24:46] And so the transformation that you're actually computing are not perfect.
+[24:50] And the information matrix omega ij is the information matrix related to the constraint
+[24:56] between the node i and the node j and encodes the uncertainty that stems from the observation.
+[25:01] So how much do we trust that information?
+[25:04] And we may have a sensor where this is the same for all constraints, but we may have
+[25:09] different types of sensors or different situations in which the sensor is more accurate in a
+[25:14] certain setup and less accurate in another setup, and we can actually use this information.
+[25:18] So the higher the value, the larger the values in this information matrix, the more information
+[25:21] we have, the smaller the uncertainty.
+[25:24] And the bigger it is, this omega or the values inside omega, the more this edge matters in
+[25:30] the optimization.
+[25:31] So if you remember back the least squares, how it worked, then this information matrix
+[25:35] is basically a weighting factor for your error.
+[25:39] So if you have a constraint which has an information matrix which is larger, which has a value
+[25:44] which is twice as large, it will count more twice as much inside the optimization.
+[25:52] So this edge information is actually important in order to take the uncertainty into account.
+[25:59] So then the question is how would you expect this matrix to look like if you compare scan
+[26:03] matching done with ICP to odometry information?
+[26:06] So which is more accurate or less accurate?
+[26:10] That's one relevant information you should be able to figure out.
+[26:14] The other thing which would be relevant if you think about ICP and you make this scan
+[26:17] alignment and you have a robot which drives along a very, very long corridor, and this
+[26:21] corridor is, let's say, very sparse of features.
+[26:25] It's just long walls.
+[26:27] How would this information matrix look like?
+[26:31] And thinking about those questions allows you a little bit to understand if you can
+[26:34] relate your observations and the information you can extract from your observations with
+[26:39] this graph construction here.
+[26:42] So in the first setup, related to the first question, your sensor information, at least
+[26:48] from a laser range scanner, is typically better than the odometry information that you have.
+[26:52] Again, it depends how much engineering you put into your odometry information or your
+[26:57] laser scan information and what you know about the environment, but at least for a
+[27:00] lot of, let's say, standard indoor mapping systems, you would actually trust your laser
+[27:04] scanner quite a bit more, so you expect the covariance matrices to be smaller.
+[27:09] That means the values in the information matrices to be bigger.
+[27:13] This may be different if you have a less accurate scanner or you have a lot of motion or movement
+[27:18] dynamics in the environment, but put a lot of engineering into getting your odometry
+[27:22] information right.
+[27:24] Similarly, having redundant systems, taking multiple vehicles into account, a very good
+[27:27] dynamics model, for example, in case of an autonomous vehicle, autonomous car, you can
+[27:32] invest quite some brainpower into your odometry system that you can trust odometry also more.
+[27:39] Regarding the second question, how would this information matrix look like or the corresponding
+[27:43] covariance matrix look like in a long featureless corridor?
+[27:47] So what does it mean?
+[27:48] A long featureless corridor means the robot can localize very precisely with respect to
+[27:51] its right and left-hand side because you see the walls of the corridor.
+[27:55] So you have a very small uncertainty with respect to your motion to the right and left-hand
+[27:58] side.
+[27:59] Or with respect to your orientation, given that you have very long walls, you can typically
+[28:03] align the scan very good with respect to a corridor.
+[28:06] So you shouldn't get much drift to the left and right-hand side.
+[28:09] But what actually is hard to estimate is where you're moving along that corridor.
+[28:13] So you have a very high uncertainty along the main axis of the corridor.
+[28:17] So you would expect to get a covariance matrix, which is very narrow to your right-hand side,
+[28:23] but very long and stretched along the main axis of your corridor.
+[28:26] And so if you inspect your covariance matrices of your graph, you can actually see something
+[28:34] about what information did the sensor actually tell you.
+[28:38] And this then is an important information how the uncertainty actually propagates in
+[28:43] the end through your graph through a least squares problem.
+[28:46] Because if you have very large uncertainties along certain dimensions, this will also lead
+[28:50] to a large uncertainty along this line.
+[28:53] Okay, so let's have a look to the postgraph and look to all the information that we have.
+[28:56] So what we see here is a very, very tiny postgraph.
+[28:59] We just have kind of two nodes over here, xi and xj.
+[29:04] So you can see this basically is cutting away everything else.
+[29:07] And what we have is we have a current configuration of the nodes.
+[29:11] And this is those two positions here, just let's say in the 2D plane, just to make it
+[29:17] easy to illustrate that here.
+[29:18] So this is, we think, this node sits over here and that node sits over there.
+[29:23] And there's a current configuration of the graph.
+[29:26] Now we have a constraint between those two because there's a common observation, for
+[29:31] example, from ICP.
+[29:33] And let's say this is what the observation looks like with the corresponding uncertainty
+[29:37] here illustrated through a covariance matrix.
+[29:40] So this is basically, this is the position where if I would sit in xi, would expect xj
+[29:48] to be.
+[29:49] And you can see here that there's actually a mismatch between what the observation tells
+[29:53] me and what the current graph configuration tells me.
+[29:56] So this is an error that we are computing, and this is the error that we actually want
+[30:02] to minimize, okay?
+[30:04] So this thing should be brought to zero over all constraints, of course.
+[30:10] So and this edge here is basically represented by the kind of the mean observation here encoded
+[30:17] as zij and an information matrix, which is here illustrated through the inverse of it,
+[30:22] through the covariance matrix.
+[30:25] And so this is the information we store in every graph.
+[30:28] So every observation will lead to such an edge.
+[30:32] And what we're actually trying to minimize, we want to shift the configuration of those
+[30:36] nodes in order to minimize this error.
+[30:39] So in this case, it means xj should actually move here in order to bring this error towards
+[30:45] zero.
+[30:46] And of course, the problem is it's not just one edge which is involved in this, otherwise
+[30:49] it would be easy to satisfy this constraint.
+[30:52] We have the goal of doing this for all our constraints.
+[30:57] So this was just kind of one example, but of course, the whole graph consists of those
+[31:00] constraints.
+[31:01] And what we want to do is we want to minimize the overall sum of that.
+[31:06] And this is where the least squares approach or the ideas of least squares actually kick
+[31:10] in.
+[31:11] So we can go back to our previous lecture and think, okay, this is now our squared error
+[31:17] function.
+[31:18] We have our error vector relating the constraint i and j with each other, the information matrix
+[31:24] and again, the error term, or we can kind of rewritten this in a short version where
+[31:30] we just put the vector x in here, the whole state vector.
+[31:34] So this was the way we were formulating this before in the previous lecture where we say
+[31:37] the error or the error vector here depends on the state variable x.
+[31:42] What is important now or the difference here in the SLAM problem, we can formulate it in
+[31:45] that way that we say not the whole vector x depends actually on this error term, but
+[31:50] only xi and xj.
+[31:53] That means only the node xi and node xj, so those two contribute to this individual error
+[31:59] term.
+[32:00] All the other state variables do not matter for that single constraint.
+[32:04] And this is something, an information that we will later on exploit in order to solve
+[32:07] the SLAM problem in a very efficient way or in an efficient way because we know that the
+[32:13] individual error terms only depend on a very small number of variables.
+[32:17] And that's something that we will exploit later on.
+[32:20] The first question we may look like, what does the state vector actually look like?
+[32:24] So you now want to sit down and actually implement our system.
+[32:27] How should that actually look like?
+[32:30] And what we need is our state vector x is simply the concatenation of the poses of the
+[32:39] graph.
+[32:40] So every vector, so one vector for every node of the graph, and we just kind of concatenate
+[32:47] them with each other.
+[32:48] So it gets a very, very, very long vector.
+[32:50] And it's always kind of x, y, theta, x, y, theta, x, y, theta, it's always the x of the
+[32:56] first node, the y of the first node, the orientation that the robot had when being there, and then
+[33:00] for the second node, x, y, theta, x, y, theta.
+[33:03] Or if you're doing a three-dimensional work, x, y, that, your pitch roll, for example,
+[33:08] or another representation on how we could represent the six-dimension degree of freedom
+[33:13] poses.
+[33:14] Okay, so we have that.
+[33:16] We know what the state vector looks like.
+[33:17] So next thing is let's look into the error function.
+[33:20] How do we relate those error functions with each other?
+[33:22] We said, yes, of course, those, the individual poses x, i, and x, j should pop up, and also
+[33:28] the observation should be taken into account.
+[33:31] So the result of the ICP approach should play a role in here.
+[33:36] And we can formulate a single constraint now in the following way.
+[33:39] So what do we see here?
+[33:41] So let's just look only first to this part over here.
+[33:45] So the first thing.
+[33:46] So at x, i inverse x, j.
+[33:48] So this is kind of how x, i sees x, j, or how x, j is seen if I would, if the center
+[33:56] of the coordinate system would be in x, i.
+[33:58] So you can think of seeing yourself standing in x, i, and then see where x, j actually
+[34:04] looks like.
+[34:05] So this is what this information provides, and it's directly very easily computed through
+[34:09] the homogeneous coordinates.
+[34:11] And then we have an observation.
+[34:12] This observation z tells me how x, i sees x, j.
+[34:17] This is a result of the ICP algorithm.
+[34:19] So the transformation that results from ICP, so the rotation matrix and translation vector.
+[34:24] This is this z.
+[34:25] And then I invert this z and multiply it here from the, to the configuration of the graph.
+[34:31] So the whole block here, you can see where is, what's the difference between the poses
+[34:38] with respect to the graph, and what's the difference of the poses with respect to the
+[34:42] measurement.
+[34:43] And so one is kind of, you can see this as kind of a forward transformation on what the
+[34:48] graph tells me, and then a backward transformation on what the observation tells me.
+[34:53] And then I need to look into the difference between where I started and where I end up,
+[34:56] and this is basically my error function.
+[34:59] So that's what actually happens in this part over here.
+[35:02] So the relative transformation according to the graph in one direction, and then the inverse
+[35:06] of the observation, so turning this around and going back in order to compute the difference
+[35:11] between them.
+[35:12] And then there's a function called t to v over here, a magic function.
+[35:17] T to v means transformation to vector, and v to t means vector to transformation.
+[35:22] So this is basically just a mapping between a vectorized representation vector, so x,
+[35:29] y, theta for example, and the transformation expressed in homogeneous coordinates.
+[35:35] So it's just kind of a forward-backward mapping from this three by three, or from this vector,
+[35:44] three by three homogeneous matrix into a three-dimensional vector with x, y, theta.
+[35:51] So that the transformation consisting of a two-dimensional translation vector and one
+[35:57] rotation angle encoded in a three by three matrix is put into a vector.
+[36:01] And because this here again is a transformation matrix, and we need to put it in vector form
+[36:07] in order to put into our least squares problem, and that's what this t to v stands for.
+[36:11] So this gives us here in this example, if we are doing this in the 2D plane, a three-dimensional
+[36:16] vector with x, y, and one orientation constraint.
+[36:21] Or we can express this also not just for a single constraint, but we could express the
+[36:25] same also for the whole state vector.
+[36:29] And then of course, only those components matter where there is actually an involvement.
+[36:36] And to also be cleared, what happens, when is the error of zero?
+[36:40] When does the error take a value of zero?
+[36:42] And this is exactly the case if my observation is the same than my relative graph configuration.
+[36:48] So if what the graph tells is exactly the same what my observation tells me, then this
+[36:53] equation holds if I would multiply the, and then you can actually see that if I would
+[36:59] multiply here z inverse from the left hand side, so the inverse observation, and this
+[37:03] term is the same, then this is the identity matrix.
+[37:06] So that means if the transformation of, going the transformation through the graph and backwards
+[37:12] through the inverse of the observation gives me the identity matrix, means there is no
+[37:16] transformation mismatch, and this would then give you the identity matrix would be mapped
+[37:21] through this function to zero, zero, zero.
+[37:23] So a zero error vector, okay?
+[37:27] So the only thing we need to specify is how do we get z, and this is something that our
+[37:33] ICP, that's the result of the ICP algorithm, just put into a homogeneous vector.
+[37:38] And these are just the poses in my post graph expressed in homogeneous coordinates.
+[37:44] And with this, we actually can look, okay, let's rebuild Gauss-Newton.
+[37:49] How did the overall error minimization procedure look like?
+[37:52] So the first thing we need to do, define the error function.
+[37:54] That's something that we just did.
+[37:56] What we then need to do, we need to linearize our error function, just because we need to
+[38:01] perform local linearizations, and then this leads to the quadratic form where we compute
+[38:05] the first derivative and set the first derivative to zero.
+[38:09] This gives us a system of linear equations.
+[38:13] We solve the system of linear equations.
+[38:14] We get the update of our state, and then we iterate this process, restarting here the
+[38:19] linearization until we have converged, as we discussed it in the lecture before.
+[38:25] So just as a short reminder, this was our error function, the original error function,
+[38:32] which we now need to linearize.
+[38:34] And again, if you think about this homogeneous transformation matrices, you may remember
+[38:39] in a rotation matrix, there are sine and cosine functions popping up.
+[38:43] These are nonlinear functions.
+[38:44] So you need to perform linearization and linearize that thing.
+[38:47] That's where you need to sit down with a piece of paper and actually try to perform this
+[38:51] linearization.
+[38:53] Or if you use another error minimization framework, you may have some systems to compute this
+[38:59] automatically or numerically for you, depending on how good your tools are, but otherwise
+[39:04] you have to do it by hand.
+[39:05] That means you need to compute a matrix.
+[39:08] This is your Jacobian matrix, and every element of the Jacobian matrix consists of the partial
+[39:12] derivatives of deriving your error function or the individual dimensions of your error
+[39:18] functions with respect to the individual dimensions of your state vector.
+[39:23] So you derive it in this case with respect to x1, x2, x3, and so on and so forth.
+[39:30] And here, we have to look a little bit into the details because how that looks like actually
+[39:35] has a very big impact on how efficiently we can actually solve the state estimation problem
+[39:42] later on.
+[39:43] So the first question we need to answer, does the error term depend on all state variables?
+[39:49] So again, this is an error term eij.
+[39:51] That means for one single observation.
+[39:55] And does this depend on all state variables, on the whole state vector?
+[40:00] It clearly depends on the state vector, but does it depend on all elements in there?
+[40:06] And within the SLAM problem, this is not the case because we said that this error term
+[40:11] only relates the two variables to which this edge is connected in our graph.
+[40:15] So there are just two poses, namely the pose with index i and the pose with index j on
+[40:21] which this actually depends on.
+[40:23] So no, this depends only on xi and xj, and this will play an important role because this
+[40:29] has an impact on the structure of the Jacobian that is involved in this.
+[40:37] You may think about this if you have a function which depends only on a small subset of variables.
+[40:43] If you then derive this function with respect to the variables, then it will have a lot
+[40:48] of zero elements, namely if a function doesn't depend on one variable and you derive with
+[40:55] respect to this variable, it will be zero.
+[40:58] And this is the key insight because this leads to the fact that the Jacobian will actually
+[41:04] be zero nearly everywhere except for the elements which are related to the variable xi and with
+[41:12] respect to the variables xj.
+[41:14] So if you think of, you have a whatever, 10,000 dimensional state vector, and you have a constraint
+[41:22] just between two poses, then only those two poses will be related with each other.
+[41:27] And the all other 10,000 minus six dimensions will actually be zero.
+[41:32] So your Jacobian will be a large vector which consists only of zeros and just has a very
+[41:37] small number of elements which are involved in here.
+[41:41] So the partial derivative in this Jacobian of the arrow function with respect to all
+[41:48] the parameters is basically you have here all your arrow vectors and your state variables
+[41:56] will be zero everywhere except of those blocks which are related to xi and those which are
+[42:01] related to xj.
+[42:02] So in this case, for example, if xi is in 2D plane, it's x, y, and theta, there will
+[42:08] be three elements here which are non-zero, three elements which are here that are non-zero,
+[42:13] and the rest will be completely zero.
+[42:15] So we just have two blocks of variables here, we call them aij, bij, which are non-zero,
+[42:22] and all the rest is zero.
+[42:25] So this is kind of a key insight because this leads to a sparse Jacobian which will also
+[42:29] have a big effect on our H matrix later on.
+[42:34] So Jacobian and sparsity.
+[42:38] If our arrow function depends only on the variables xi and xj, that means all other
+[42:43] elements, which are x1, x2, x3, x4, x5, and so on, which are not i and j, are zero.
+[42:50] And these are illustrated by these blue blocks over here.
+[42:53] So these are all the blocks which are zero, and we just have these small blocks which
+[42:57] are non-zero.
+[43:00] And this is kind of a key insight in here, that we have this huge Jacobian, everything
+[43:06] is zero in this Jacobian except those two blocks, and this is the key insight.
+[43:10] So it's one of the most important slides in this slide set, having this insight, because
+[43:15] this allows you to solve, let's say, real-world SLAM problems in an efficient manner.
+[43:23] Why is this the case?
+[43:24] Why is this so important?
+[43:26] This can be illustrated by the fact that the Jacobian has a key role for computing the
+[43:32] elements b and h, which I need to compute in order to solve my system of linear equations.
+[43:40] So my vector b and my matrix h consists of elements which involve the Jacobian.
+[43:46] So for the H matrix, very clearly you can see the Jacobian popping up twice here, and
+[43:51] also for the B matrix, you see the Jacobian being over here.
+[43:55] So as you will see, the sparse matrix in the Jacobian will also lead to a sparse matrix
+[44:01] H, and this is one of the key reasons why we can actually solve them in an efficient
+[44:08] manner.
+[44:09] And I want to illustrate that now to you through a small illustration.
+[44:13] So what you have here is this vector b.
+[44:17] So the vector b is a vector, and whatever thing which is shown in blue are zero elements,
+[44:25] everything which is shown in red are non-zero elements.
+[44:28] So I have this vector here, so the vector b is this vector, and it consists of my Jacobian
+[44:35] transposed, so now it's a very long, so these are the dimensions of my state vector.
+[44:40] This is my J, multiplied with an information matrix, in this case, for example, a three-by-three
+[44:46] information matrix, and then my three-dimensional error vector.
+[44:51] And this will lead, by multiplying this, to an error vector, which is zero everywhere
+[44:57] and has only non-zero elements at the blocks referring to xi and the blocks xj.
+[45:03] So for one constraint, this vector b is actually sparse.
+[45:10] And there are similar holds for my H matrix.
+[45:12] So in my H matrix, I see my Jacobian transposed here, my other Jacobian here, my information
+[45:18] matrix, and I can see, by multiplying those with each other, I will get a big matrix which
+[45:23] is basically zero everywhere, except of four blocks.
+[45:26] And these are the blocks ii, jj, ij, ji.
+[45:30] So these are the elements, so those are identical, and those three are different, so just those
+[45:38] two are identical.
+[45:40] And these are all the non-zero blocks.
+[45:42] Okay?
+[45:43] And this is for one constraint.
+[45:44] So one constraint filled with H matrix at four different blocks, and the b vector at
+[45:50] two different blocks.
+[45:52] So only at ii, jj, ij, ji, this matrix will be filled.
+[46:00] But this is for one single constraint.
+[46:02] And now we need to see what happens if we actually sum those elements up, so sum H up
+[46:07] and sum b up over all constraints that we have.
+[46:11] So if you take multiple of those vectors together, we will actually see that we get a fully dense
+[46:18] vector b.
+[46:19] So all elements of b will be filled, because all the nodes will have some constraints,
+[46:24] and so the whole vector will actually fill up.
+[46:26] It's however different for my H matrix.
+[46:28] So again, I have n squared elements in here, and always four for every constraint will
+[46:33] be filled.
+[46:34] So by adding all of them up, I will typically get a matrix which looks like this.
+[46:37] So I have direct constraints here on the diagonal, which are the constraints, and also the direct
+[46:43] off-diagonal blocks, because it relates how the current pose and next pose are connected
+[46:47] with each other.
+[46:49] And I have a couple of elements in the off-diagonal elements, which are basically my loop-closer
+[46:54] constraints.
+[46:55] So where a node xi is connected to a node xj, which are not sequential.
+[47:01] So this matrix can be seen as kind of an adjacency matrix of that graph, which tells you what
+[47:06] the connections in your graph actually are.
+[47:09] And the key thing is, this matrix is typically not dense.
+[47:12] It's typically a very sparse matrix, typically the larger the environment even the sparse
+[47:16] of this matrix gets.
+[47:18] It's quite clear from the intuition point of view, if you have for example a robot navigating
+[47:22] around, inspecting a big environment with hundreds of different rooms, inside the room
+[47:27] you only see the room, you never see another room from inside that room.
+[47:30] Only from the corridor you can see into a few rooms.
+[47:33] And so all the blocks, the places in the environment are very decoupled and can only be seen from
+[47:38] the same places and not from all places, can't see all other places.
+[47:43] And therefore, this leads to a very sparse matrix.
+[47:47] And this is one of the reasons that this matrix is sparse, why we can actually solve an even
+[47:53] potentially very, very large linear system in the end in an efficient way.
+[47:59] So the key thing in here is that each edge corresponds to this linear system and for
+[48:07] the vector b it looks like this, that we have two blocks which are non-zero, but by adding
+[48:14] all of them up in the end this will lead to a dense vector, but we need to build it up
+[48:21] by for every constraint adding in two places on two blocks of this vector new elements.
+[48:27] And for the H matrix, it's the same thing, I have this H matrix, everything is zero,
+[48:33] they are just four blocks which I need to fill in this matrix xi, in this matrix at
+[48:40] the positions i, i, jj, ij and ji.
+[48:46] And so this matrix H will be a sparse matrix.
+[48:50] So it makes sense to also represent it as a sparse matrix and depending how you do this
+[48:55] you can either use a mathematical toolbox which already provides you with sparse matrices
+[48:59] and then you don't really need to care about it or you have to implement it yourself and
+[49:03] then you need to make sure that you fill the corresponding elements in this block.
+[49:07] So again the key thing is an edge ij contributes only to the i-th and the j-th block of b and
+[49:14] the blocks ii, jj, ij, ji of H which leads to an overall sparse system and we can then
+[49:20] use actually sparse solvers to do this.
+[49:23] So there's a variant of Cholesky decomposition called sparse Cholesky decomposition which
+[49:27] is explicitly designed for sparse matrices and is much, much faster than the standard
+[49:32] Cholesky decomposition and also holds for other techniques.
+[49:35] There are optimizations of most of the algorithms for sparse matrices because a number of operations
+[49:40] which need to be done is much smaller and can be done in a much more efficient way and
+[49:45] this is kind of the reason why we are all able to solve this system in a reasonable
+[49:49] amount of time.
+[49:51] So you can also, if you want to build up these matrices on your own, again you have your
+[49:58] state vectors of your increments, you have your coefficient vectors of your b's and
+[50:02] then your normal equation matrix will consist of these small blocks and now we have kind
+[50:07] of this ha bar over here to represent the individual blocks of that system which is
+[50:13] built up and then you just need to make sure you fill for every constraint the right blocks
+[50:18] of your linear system.
+[50:20] So what you will do if you build your linear system manually by hand, for each constraint
+[50:26] you compute this error vector, for each constraint you compute the Jacobian but of course you
+[50:31] don't compute the Jacobian everywhere, only in the blocks where you know it is non-zero
+[50:34] so you only need to compute this aij and bij, the rest you don't have to touch because you
+[50:38] know it is zero anyhow and then you compute your vector b, the increments and add them
+[50:48] up at the corresponding correct locations bi and bj, so these are the corresponding
+[50:52] blocks in bi and bj where you need to add these small blocks on top of it and the same
+[50:59] holds for your normal equations.
+[51:02] So only compute those small blocks, so these are all low dimensional blocks, these small
+[51:07] ii, jj, ijji blocks and you just need to add those small blocks to your matrix.
+[51:16] So that means this is not an addition of a whole large matrix, it's just these small
+[51:21] blocks that you need to add at the correct locations.
+[51:24] So if you do this, if you build up the system on your own, you need to make sure you add
+[51:28] the constraints at the correct positions in your matrix.
+[51:31] But once you have that, you have your matrix actually built up and then you can run your
+[51:35] optimize function which then turns out to be very easy to say.
+[51:39] While you're not converged and the convergence can be whatever the size of your update, you
+[51:44] build your linear system, your matrix a and your matrix b exactly with what we have written
+[51:49] on the previous slide and then you run your sparse solver which should solve h times delta
+[51:56] x equals minus b and this you can use Cholesky decomposition as we have briefly sketched
+[52:01] last time but now you would use sparse variant of Cholesky decomposition but that's something
+[52:06] that happens to be very transparent to you if you use the corresponding sparse matrix
+[52:10] classes in your mathematical toolbox and then you can say my new configuration is my
+[52:16] old configuration plus my delta x so my update from the previous initial guess and then I'm
+[52:22] repeating this process while I'm converged just building the linear system, solving it,
+[52:29] updating the state vector, iterating until I'm done and then I come up with a new configuration
+[52:34] x which is now the new configuration of my graph which minimize the sum of the squared
+[52:41] errors of all constraints and this is then the result that you can use in order to build
+[52:46] the map of your environment. Just take the poses as they are, what is the best estimate you have
+[52:51] and then basically you run a mapping procedure based on those poses and build a map of the
+[52:56] environment. That's what's typically done so you correct the poses first and then use the poses for
+[53:02] your mapping algorithm which is not a SLAM algorithm anymore and then you're done. Okay,
+[53:10] at that point in time I want to show you a very trivial example. Typically I do that on the white
+[53:13] board but given that I don't have a white board here it is I just want to go through it anyhow
+[53:20] because you see a few things you may have not taken to account before. So this is a very very
+[53:25] trivial example that just consists of two nodes in a one-dimensional world so there's nothing that
+[53:30] can go wrong you would think of. So you see it we have a node xi and xj and we assume that there's
+[53:37] one observation about them saying x2 is a meter away from xi. Okay, so we have our state vector
+[53:45] consisting of x1 and x2 just have two constraints. We initialize them both with 0, 0. Let's say this
+[53:52] is our initial guess we assume we don't know anything about them we both put them into 0.
+[53:56] Okay, z1,2 is exactly our observation and the observation says the node 2 should be one meter
+[54:06] away from the node 1. So this is this z1 to our actual observation how far 2 is away from 1. Then
+[54:15] we have an information matrix over here which tells us how certain we are about that and then
+[54:21] we can use this to compute our error. So our error function is our actual observation in this case
+[54:27] minus our predicted observation. So our predicted observation is simply the distance between the
+[54:34] two nodes x2 minus x1. In this case initially this is 0 so we have our observation is 1 minus
+[54:42] 0 minus 0 because we initialize them in exactly the same way which gives me an error of 1. So my
+[54:48] error e12 is 1. Then I need to compute my Jacobian so I need to derive the corresponding error
+[54:56] function with respect to both variables and then of this error function and of course I get a
+[55:01] linear term with respect to x1 and x2 because if I need to I need to derive this equation here with
+[55:07] respect to x1 and x2 this will give me the values for x1 which is positive of course I have two
+[55:14] negative signs over here which get turned out to be positive and will be minus 1 with the
+[55:20] derivative with respect to x2 because this is a negative x2 term derived with respect to x2
+[55:26] leaves minus 1. Okay then I have my Jacobian and then I can compute my b vector so my b vector is
+[55:34] my error vector times my information matrix times my Jacobian so it will be a vector 2 and minus 2.
+[55:42] And I can build up my H matrix which is J transpose times omega times J which will give
+[55:50] me a matrix which looks like this and contains of minus 1s and 1s. Okay now I have my H and I have
+[55:57] my b now I can solve my system of linear equations so it means I need to in this simple example let's
+[56:03] say invert the matrix H and then add and multiply it with x and then I should get my update.
+[56:13] But now it turns out that I have a problem you know to invert the matrix it only works if the
+[56:18] matrix has a determinant which is non-zero right so but if I look to the determinant
+[56:25] its determinant here can be easily computed 2 by 2 is 4 minus minus 2 by minus 2 this is also 4 so
+[56:32] it's 4 minus 4 is 0 so as a result of this this matrix has a rank deficiency and actually can't
+[56:44] invert it so what went wrong what's the problem that we have here why isn't it working even for
+[56:49] this super trivial example and what turns out to be is that the constraint that we have here
+[56:58] is a relative constraint between the two nodes tells you how far is x2 away from x1
+[57:06] and so it only tells us something about the relative configuration between the two
+[57:10] it doesn't actually say us where one is actually and where two is in a global reference frame
+[57:16] so we basically miss the reference frames or something was called a god freedom that we have
+[57:22] and what we need to do is we need to fix one of those nodes so we need to say okay
+[57:26] let's take node number one and fix node number one to be zero for example or to be one or to be
+[57:31] two whatever and then we can we need to update our system to reflect to reflect that and then
+[57:41] we can actually solve that okay we can do this in a very easy way by saying enforcing a constraint
+[57:47] that the update on the first node should be zero so there should be no update in the first node
+[57:52] basically looks like a Gaussian distribution or constraint of a Gaussian distribution which
+[57:57] fixes the first node as the reference frame with a certain uncertainty it's like a prior node that
+[58:01] we had and we can add this prior node as a different as an additional constraint to our
+[58:06] h matrix which just imagine there's a one here and is zero everyone else but basically puts this
+[58:12] delta x to zero so no shift of the first node and if we do this then we can actually invert this
+[58:19] matrix because then it's not a rank deficiency anymore then this element is three we have
+[58:25] three times two is six minus four two so at the rank it has a determinant of two so that
+[58:31] looks actually good we can invert this matrix and then actually get an update which says
+[58:35] the node one should not be updated and then node two should be updated by one and then we have our
+[58:44] configuration zero and one which is the one that actually corresponds to the observation because
+[58:51] observation said we are one step away so this was again a very very simple example in order to do
+[58:57] this but the insight that we need to fix add a prior or fix a coordinate saying something that
+[59:04] we should not forget so we saw that this matrix is not full rank after we have added all the
+[59:11] constraints and even if you had more constraints we will suffer from the same problem always
+[59:17] because we basically haven't fixed the global reference frame this only changes if you have
+[59:21] an additional sensor like gps receiver for example which fixes a global reference frame
+[59:26] then this problem is automatically be solved and otherwise we need to set one of those nodes
+[59:31] as our reference frame for example so we may use the first or node number zero and add a prior
+[59:39] as a prior information say okay this should be zero zero zero or this should define my coordinate
+[59:43] system and we can do this by adding a constraint to pose number zero which could something like
+[59:51] this that post number zero should be the transformation means i have a prior node and
+[59:58] this prior node should be fixed at x zero so basically don't move x zero and do everything
+[1:00:04] else with respect to x zero that's one way we can actually do this and if you add this prior
+[1:00:10] information to it then we can actually run our least squares approach get a solution and build
+[1:00:14] a graph based on system and one example how this system is actually running in action you see over
+[1:00:20] here so this was also a video i've showed in one of the initial lectures you see a robot moving
+[1:00:25] around let me stop the video for a second what you see here in the zoomed in view is a small robot
+[1:00:30] the map it built so far in a local view in the current laser scan and here you see also the map
+[1:00:35] built so far so black obstacles white is free space and it's actually moving around through
+[1:00:39] the environment and just adding one after the other and what you will see in a in a few seconds
+[1:00:45] is that before okay let me check that here so the robot here comes back to a previously seen place
+[1:00:54] and what you can also see it's maybe a little bit hard to see in the video but if you would zoom in
+[1:00:59] you can see that there's a certain mismatch a small offset between the map built when the
+[1:01:05] robot was starting and the map built when the robot was actually driving back it's driving back
+[1:01:10] and you will see this map shaking in a second and this shaking is a result of this optimization
+[1:01:15] process because we get new observations and the the least squares abroad shifts the notes so that
+[1:01:21] it minimizes the error introduced by those observations and if i kind of restart and rerun
+[1:01:27] the video you will soon it you saw it shaking a little bit will happen now again when the robot
+[1:01:33] re-enters a map you see kind of the map shaking a little bit the more loop closes the half the
+[1:01:37] smaller this effect is because the corrections have already been taken out but whenever this
+[1:01:43] happens you actually see small corrections and the map is realigned and this is the result of
+[1:01:47] the visible result of the least squares approach that is actually running behind that so this is a
+[1:01:55] result of a full SLAM system which runs ICP registers one scans against the next scan
+[1:02:00] and builds up graph and also looks for loop closure so whenever the robot is kind of close
+[1:02:05] to a map it has been before there's basically an ICP trying running and see do we find actually
+[1:02:11] a good match and if so we add loop closer constraints to this and then you can actually
+[1:02:15] build a simple laser-based SLAM system like that this because kind of the basics of this approach
+[1:02:24] and now I want to go also a little bit into talking about a few things which may
+[1:02:29] are important for you which also are related to for example estimating the uncertainty and so on
+[1:02:34] so we assume that the values of certain variables may be known a priori so there may be some
+[1:02:43] information that we either want to impose to such a system or that we get additional information
+[1:02:49] where something should be fixed and should not move anymore so how do we actually do that that
+[1:02:54] we kind of fix a certain number of variables this is similar to the prior that we had we can add one
+[1:02:59] of those prior nodes for example saying hey you guy should actually be fixed here but the problem
+[1:03:04] is it's just a soft constraint it's not really a fix and what can happen is if you have other
+[1:03:09] constraints that they actually pull away this node and we cannot ensure that a certain variable has
+[1:03:13] to have a certain value but we want to be able to do this so we want to fix one variable as a result
+[1:03:19] of this this variable actually should not be optimized so it should actually disappear from
+[1:03:24] our linear system because if it's not in the linear system anymore there will be no update
+[1:03:29] on this variable and all the other variable actually should be constrained on that so we
+[1:03:38] kind of want to have it as a condition it's like a condition that given this node take this value
+[1:03:44] how does the rest actually look like and we can do this by actually constructing the full system
+[1:03:49] and then simply suppressing the rows in the column that correspond to this variable not to fix this
+[1:03:54] variable and then solve it in your system you can if you think about that okay why can we actually
+[1:03:59] do this why can we just kind of suppress the row in the column just take it out of this matrix
+[1:04:05] and solve and of course also from the x variable and the b
+[1:04:08] vector and then solve our system and then we actually fix the variables
+[1:04:12] this is a result why we can do this results from the conditioning of Gaussian distributions and
+[1:04:19] if you think about the information space you're in so when we studied the information filter
+[1:04:26] you may have seen that in the conditioning in information space means i can just take out
+[1:04:35] just cut out a part of my information matrix and just ignore the others this corresponds to
+[1:04:41] conditioning operation of the Gaussian distribution and our h matrix is an information matrix of our
+[1:04:50] overall problem of all the constraints taken together so by taking out cutting away let's say
+[1:04:58] a few rows and a few columns i'm basically conditioning the system on these that these
+[1:05:04] variables are fixed and cannot be moved and all others has to be constrained based on the current
+[1:05:10] variable that those system has and therefore i can actually do this i just can cut away
+[1:05:15] cut out the corresponding rows and columns from my h matrix solve it and this means i'm actually
+[1:05:22] fixing those variables that i've cut it out and this is something that you can actually use if
+[1:05:27] you want to constrain something the next thing i want to look into is actually the uncertainty
+[1:05:32] related to this so i told you right now that this h matrix is an information matrix for my overall
+[1:05:41] system so it provides me with information about the uncertainty of the overall estimate
+[1:05:47] up to the linearization point so given the linearization point given we are converged and
+[1:05:51] we are under the approximation of this linearized function this is an information matrix so
+[1:05:57] in order to obtain the uncertainty my covariance matrix i actually need to invert h and invert this
+[1:06:04] matrix and then i have a covariance matrix and this covariance matrix tells me something about
+[1:06:10] the uncertainty of those variables the only problem that we may need to take into account
+[1:06:15] that if we are inverting our matrix h we typically get a dense covariance matrix
+[1:06:19] so and inverting this matrix so we get a dense covariance matrix is a computationally costly
+[1:06:25] operation and as a result of this we may want to also do some tricks here only compute
+[1:06:30] parts of this uncertainty if we need it but if you need the uncertainty of the overall system
+[1:06:34] then that's typically the way to go again there are some approximations you can do because you're
+[1:06:40] typically only interested in the main diagonal blocks if you want to estimate the uncertainty
+[1:06:44] of all the other variables with respect to one and this this is there are special ways to do this
+[1:06:51] which are computationally more effective what you also need to take into account is relative
+[1:06:56] uncertainty so quite often especially if you look for loop closures you want to actually say what
+[1:07:01] is actually my relative uncertainty of my current pose with respect to a certain previous pose
+[1:07:07] so not you're not necessarily interested in a global reference frame but what is my
+[1:07:11] pose uncertainty relative to another pose in order to determine is this a possible loop closure yes
+[1:07:15] or no and the question is how can we do this how can we compute the relative uncertainty
+[1:07:21] between xi and xj and what we can solve this is that we actually compute the full matrix h
+[1:07:29] and then let's say we want to compute the uncertainty of xj given xi that means we can fix
+[1:07:35] xi and make xi kind of our reference frame and then say given that xi is the reference frame
+[1:07:41] what's the uncertainty of this xj with respect to this reference frame so we fix xi so we don't
+[1:07:49] optimize anymore we fix the variable by suppressing the rows and the columns corresponding
+[1:07:53] to xi and then we need to compute the theory the inverse of the whole matrix and then take out the
+[1:08:00] jj block from that matrix but again there are techniques we can do this more efficiently if
+[1:08:05] you're only interested in a subpart of this inverse you can there are ways for computing
+[1:08:10] only this block jj of your of this of the inverse of the matrix and then this block this inverse the
+[1:08:18] block jj of the inverse actually gives you the covariance matrix of xj with respect to xi being
+[1:08:25] fixed and this tells you your relative offset this is for example being used um when you build maps
+[1:08:31] so this is one of the examples the robot is currently here and computes the relative
+[1:08:35] uncertainty of all the nodes with respect to its current pose in order to check which other nodes
+[1:08:40] could be close to me so i may inspect them for loop closures and you see kind of the robot sits
+[1:08:45] over here and there's just a very small number of nodes which it actually needs to inspect because
+[1:08:50] for all the others the uncertainty is too small because it has already built a high quality map
+[1:08:57] so that it knows it doesn't need to look for loop closures to other places and that's one way where
+[1:09:03] this uncertainty information is important if you want to decide at which other positions you want
+[1:09:08] to check for loop closures and this actually brings me to the end of today so what we have
+[1:09:14] introduced here is kind of the back end part of the slam problem using least squares approach
+[1:09:20] of this graph based slam or even a special variant this post graph based slam problem
+[1:09:25] a post graph is again a graph which only contains the poses of the robot and doesn't take into
+[1:09:30] account landmark features as a general slam graph should actually do and we have discussed how we do
+[1:09:35] this how we can use the ideas of these squares in order to formulate that problem how we can actually
+[1:09:40] build up this matrix h and the vector b that are needed for solving the system and the key insight
+[1:09:46] in here was that h is a sparse matrix and if h is sparse we can actually solve that in an efficient
+[1:09:52] manner and so this is one of the key practical important insights in order to solve this even
+[1:09:59] for large systems having thousands ten thousands or millions of variables otherwise that would be
+[1:10:05] computationally not feasible at least not for building online systems and this idea of post
+[1:10:10] graphs is something that you find today in a large number of different slam systems also
+[1:10:14] partially localization systems today where the informations are used to build up this graph this
+[1:10:22] post graph online and then the graph is optimized sometimes only parts of the graph only the recent
+[1:10:27] history some in an approximated fashion some using hierarchical setups to save computational resources
+[1:10:34] in order to tackle online computations some approaches use smart outlier rejection techniques
+[1:10:40] to deal with unknown data association so there's a large number of variants that you may need to
+[1:10:44] take into account but the overall core part of this is actually very similar of those algorithms
+[1:10:50] to what i have presented here and there are also libraries out there such as g2o gtsem or seras are
+[1:10:56] the most popular three ones which can help you to perform those optimizations in an efficient way
+[1:11:02] but here in the course in the practicals we're actually trying to build that system completely
+[1:11:06] on our own so that you're actually able to get hands-on experience how to build such a system
+[1:11:11] and do the homework assignments and you can actually play around with your own
+[1:11:15] 2d slam system and build for example post graph based slam system so that you can put hands-on to
+[1:11:21] every part of the problem and are able to derive all the jacobians from by hand and at least for
+[1:11:28] the 2d case do this and in a very easy fashion so you can build your own slam system and understand
+[1:11:33] it from the core that's one of the things that will happen in the upcoming homework assignments
+[1:11:38] so thank you very much for your attention and i hope you got an idea on how graph based slam or
+[1:11:44] post graph based slam works and we will extend that in the future to more general post graphs
+[1:11:50] robust optimizations and other things thank you very much

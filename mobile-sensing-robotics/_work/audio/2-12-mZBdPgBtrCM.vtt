@@ -1,0 +1,1121 @@
+WEBVTT
+
+00:00.000 --> 00:07.240
+Hi, in this video I assume you know how post-graph based SLAM works and we now want to look into
+
+00:07.240 --> 00:12.240
+the question how we can use that in order to do graph based SLAM with landmarks.
+
+00:12.240 --> 00:18.080
+That means that our graph doesn't only contain pose nodes but they can also represent landmarks,
+
+00:18.080 --> 00:22.280
+so distinct points in the environment and how we can build a map of the environment
+
+00:22.280 --> 00:27.200
+that consists of those distinct points and localize our platform within such a map.
+
+00:27.200 --> 00:31.720
+So just a very brief recap on what post-graph SLAM was.
+
+00:31.720 --> 00:35.400
+So we had that vehicle, that mobile robot, that autonomous car that is driving around
+
+00:35.400 --> 00:39.900
+through the environment and after a while we always create so-called pose nodes here
+
+00:39.900 --> 00:43.880
+shown by those blue triangles.
+
+00:43.880 --> 00:48.720
+They describe the position of the platform at a certain point in time and those constraints
+
+00:48.720 --> 00:53.960
+are connected via uncertain constraints, so-called soft constraints.
+
+00:53.960 --> 00:58.240
+So we can generate those consecutive constraints but we can also generate constraints when
+
+00:58.240 --> 01:03.900
+the platform revisits a previously known place and we can generate those loop-closing constraints
+
+01:03.900 --> 01:06.580
+as we see them over here.
+
+01:06.580 --> 01:10.760
+And so the key idea of the post-graph was to have a graph where every node in the graph
+
+01:10.760 --> 01:15.680
+consists of a pose that the robot has been at a certain point in time during the mapping
+
+01:15.680 --> 01:20.840
+process and every edge in this graph represents the spatial constraints between those nodes.
+
+01:20.840 --> 01:26.860
+So it's typically a relative transformation, how one node can be transformed into a second
+
+01:26.860 --> 01:30.760
+node or relative constraints between them.
+
+01:30.760 --> 01:37.280
+And the overall idea of this post-graph-based SLAM is to find a configuration of those nodes
+
+01:37.280 --> 01:43.280
+in the graph that minimizes the error introduced by the constraints because those spatial constraints
+
+01:43.280 --> 01:45.340
+may act against each other.
+
+01:45.340 --> 01:50.360
+This results from sensor noise and also from maybe imperfect data associations.
+
+01:50.360 --> 01:53.360
+And so this was done with the so-called post-graph.
+
+01:53.360 --> 01:58.120
+So in this post-graph the vertices or nodes were always robot poses.
+
+01:58.120 --> 02:04.380
+So x, y and orientation theta for the 2D case or x, y, z and three rotational angles, your
+
+02:04.380 --> 02:07.940
+pitch roll for example, in the three-dimensional case.
+
+02:07.940 --> 02:12.840
+And in the post-graph we built the edges between those nodes through these virtual observations
+
+02:12.840 --> 02:18.000
+so by observing the environment from two different places or two different points in time and
+
+02:18.000 --> 02:22.320
+if we know that it's the same environment we can say something about the relative transformation
+
+02:22.320 --> 02:27.000
+between the two recording positions even if they happen at different points in time.
+
+02:27.000 --> 02:33.080
+That was the post-graph and we now know how we optimize such a post-graph so that we get
+
+02:33.080 --> 02:37.480
+a minimum error configuration using the tools of least squares.
+
+02:37.480 --> 02:42.740
+What we want to look into today is how can we do this if we don't have only post-nodes,
+
+02:42.740 --> 02:47.160
+we also want to represent landmarks, it means distinct points in the environment.
+
+02:47.280 --> 02:53.600
+We are not condensing this kind of local map information into this post-graph-like structure.
+
+02:53.600 --> 02:58.240
+So consider a landmark as some distinct point in the environment that we can recognize.
+
+02:58.240 --> 03:02.340
+So you have here this example of the mobile moving around and you have some landmarks
+
+03:02.340 --> 03:08.080
+or feature observations, you can see this as lighthouses as your landmarks and you're
+
+03:08.080 --> 03:12.000
+on a boat driving in a bay and you can see the different lighthouses and you want to
+
+03:12.000 --> 03:16.560
+build a map so localize where those lighthouses are and estimate your own pose.
+
+03:16.560 --> 03:21.000
+This is a traditional example for a landmark-based SLAM problem.
+
+03:21.000 --> 03:25.280
+You may not be on a boat, you can also do that by a vehicle driving through the environment.
+
+03:25.280 --> 03:30.640
+So what you see here is an aerial image of a very famous dataset, Victoria Park dataset
+
+03:30.640 --> 03:38.080
+recorded by the people at ACFR in Sydney several years back and in this dataset you see a lot
+
+03:38.080 --> 03:44.480
+of trees in this park and there was a laser scanner mounted on a vehicle tracking or estimating
+
+03:44.480 --> 03:50.400
+the trunks of the trees which served as landmarks or features generated from the scan and every
+
+03:50.400 --> 03:54.880
+feature corresponding to a landmark tree and then the task was to build a map of that environment.
+
+03:54.880 --> 03:59.880
+This was one of the datasets which has traditionally been used in the context of an EKF-based SLAM
+
+03:59.880 --> 04:05.360
+but of course can also be used here for a graph-based SLAM with landmarks.
+
+04:05.360 --> 04:10.720
+So what we can do now is we can add additional nodes to our graph and so that every of those
+
+04:10.720 --> 04:15.600
+landmarks, every of those tree trunks, becomes an own position in the map.
+
+04:15.600 --> 04:23.120
+So if we do this in the idea of the graph-based SLAM, not only having only poses, which is
+
+04:23.120 --> 04:29.040
+typically a position and an orientation, but we now have additional feature or landmark
+
+04:29.040 --> 04:30.520
+positions that we have.
+
+04:30.520 --> 04:34.560
+So this is given here by these black stars.
+
+04:34.560 --> 04:41.600
+So the difference now is that while the robot poses typically is a position and heading
+
+04:41.600 --> 04:47.480
+information, so x, y is a position and theta, the orientation of the platform, as a heading
+
+04:47.480 --> 04:52.640
+or in 3D corresponding x, y, that yawpitch role, the position of the features in the
+
+04:52.640 --> 04:56.720
+environment are typically just positions, so don't contain any orientation information.
+
+04:56.720 --> 05:00.360
+So it's just x, y or x, y is that.
+
+05:00.360 --> 05:08.720
+And so that's different because then we don't have the full 3D transformations with position
+
+05:08.720 --> 05:11.340
+and orientation information between those edges.
+
+05:11.340 --> 05:16.560
+So the edges between the robot poses and the edges between the robot pose and the landmark
+
+05:16.560 --> 05:18.280
+are different.
+
+05:18.280 --> 05:22.680
+And so we have different types of edges and different types of nodes now in our graph.
+
+05:22.680 --> 05:26.800
+So you can see this is a more complex graph where you have different types of nodes and
+
+05:26.800 --> 05:29.120
+different types of edges.
+
+05:29.120 --> 05:35.560
+So in this landmark graph for the SLAM problem, nodes can now represent two things, robot
+
+05:35.560 --> 05:40.360
+poses at different points in time and landmark locations, so positions.
+
+05:40.360 --> 05:45.360
+And the edges between those nodes can be landmark observations, that means they connect a robot
+
+05:45.360 --> 05:53.060
+pose with a landmark, meaning the robot has seen a landmark from that pose, or they can
+
+05:53.060 --> 05:59.080
+be odometry measurements, that means the traditional kind of consecutive links that we had already
+
+05:59.080 --> 06:03.560
+in our pose graph, so pose-to-pose constraint.
+
+06:03.560 --> 06:07.760
+So these odometry measurements are pose-to-pose constraints, could of course also be generated
+
+06:07.760 --> 06:13.880
+from scan matching of consecutive scans if your sensor allows for this.
+
+06:13.880 --> 06:19.360
+But what we're interested here are those landmark locations, so the observations of the robot
+
+06:19.360 --> 06:24.040
+at a certain point, seeing a landmark somewhere in the environment.
+
+06:24.040 --> 06:28.560
+And again, we can treat the minimization in graph-based SLAM very similar as we did
+
+06:28.560 --> 06:29.560
+it before.
+
+06:29.560 --> 06:33.560
+We want to find a new configuration of the nodes in the graph, and now the nodes are
+
+06:33.560 --> 06:41.200
+robot poses and landmark locations, so that the overall error is minimized that results
+
+06:41.200 --> 06:42.200
+from the constraints.
+
+06:42.200 --> 06:46.960
+So the kind of error function that is associated to all of those constraints is again summed
+
+06:46.960 --> 06:52.280
+up, squared error is computed, and then we want to find the configuration of the nodes
+
+06:52.280 --> 06:57.680
+that minimizes the errors introduced by the edges or by the constraints.
+
+06:57.680 --> 07:02.280
+So it's a very similar overall idea, the main difference in here is that the graph structure
+
+07:02.280 --> 07:03.280
+now looks different.
+
+07:03.280 --> 07:07.480
+So we don't have the pose graph, it's only poses and pose-to-pose constraints, we have
+
+07:07.480 --> 07:13.540
+robot poses and landmarks as nodes, and robot landmark observations or pose-to-pose constraints
+
+07:13.540 --> 07:16.760
+for example from odometry information.
+
+07:16.760 --> 07:23.080
+So as an example, if you have 2D landmarks, the landmark can be 2D xy point in the environment,
+
+07:23.080 --> 07:28.400
+two coordinates, and the relative observation can be the difference in the xy plane.
+
+07:28.400 --> 07:34.180
+Could be through a range in bearing observation or could be a sensor where this is converted
+
+07:34.180 --> 07:39.560
+already in a relative xy position, so delta x delta y from the current platform given
+
+07:39.560 --> 07:40.920
+its heading.
+
+07:40.920 --> 07:45.920
+And so the key thing is now how do such additional edges look like?
+
+07:45.920 --> 07:48.640
+This is something we haven't discussed so far.
+
+07:48.640 --> 07:53.640
+For the pose-to-pose constraints, we have the edges that we used in the post-graph-based
+
+07:53.640 --> 07:58.960
+SLAM, but now we have the additional edges, so in the next minutes I will just focus on
+
+07:58.960 --> 08:06.520
+how do those robot position or robot pose landmark constraints actually look like, assuming
+
+08:06.520 --> 08:11.960
+here we have a so-called xy sensor which can measure the xy location of the platform.
+
+08:11.960 --> 08:18.360
+So similar to the pose-graph-based SLAM, we have our expected observation, and this expected
+
+08:18.360 --> 08:23.400
+observation obviously depends on where is the robot in the environment, so this is now
+
+08:23.400 --> 08:29.580
+an xy theta vector, and the landmark location which is now just an xy vector.
+
+08:29.580 --> 08:36.280
+So be aware that these are different, of different dimensions, so the one is two-dimensional,
+
+08:36.280 --> 08:40.860
+the other one is three-dimensional, or in the 3D world it would be six degrees of freedom
+
+08:40.860 --> 08:43.640
+worth of three degrees of freedom.
+
+08:43.640 --> 08:46.400
+And so how is one translated into the other?
+
+08:46.400 --> 08:52.700
+So we can say this expected observation is basically given by taking the landmark location,
+
+08:52.700 --> 08:58.900
+subtracting the translation vector of the robot location, so the xy coordinate of this
+
+08:58.900 --> 09:06.540
+part, and then multiplying it with the transpose of the rotation matrix encoding the orientation
+
+09:06.540 --> 09:08.120
+of the robot's pose.
+
+09:08.120 --> 09:14.880
+And this is a way to generate this virtual observation.
+
+09:14.880 --> 09:22.280
+So this virtual observation here would then be a 2D vector, which is the outcome from
+
+09:22.280 --> 09:27.800
+that, which is the expected xy observation that the platform should see.
+
+09:27.800 --> 09:30.520
+So relative xy location.
+
+09:30.520 --> 09:36.080
+And this we can then use to directly derive the error function, so we can say my expected
+
+09:36.080 --> 09:40.800
+observation minus the actual observation that I obtained assuming I have this xy sensor,
+
+09:40.800 --> 09:48.480
+and then we just take this equation over here, put it, replace it with z hat ij, and put
+
+09:48.480 --> 09:53.180
+in this equation over here and subtract from this my actual observation.
+
+09:53.180 --> 09:54.180
+And that's it.
+
+09:54.180 --> 09:59.140
+So for the simple case of having an xy sensor which tells me where the landmark is in a
+
+09:59.140 --> 10:05.880
+relative xy coordinate frame given the robot's pose, this is how I can compute this observation.
+
+10:05.880 --> 10:07.800
+And obviously it depends on the sensor.
+
+10:07.800 --> 10:08.800
+Which sensor do I have?
+
+10:08.800 --> 10:12.660
+Do I have this type of xy sensor, yes or no?
+
+10:12.660 --> 10:15.900
+Another typical sensor that you may have, which provides actually less information than
+
+10:15.900 --> 10:21.080
+the xy sensor, is a bearing sensor, which just tells you in which direction you can
+
+10:21.080 --> 10:22.620
+actually see a landmark.
+
+10:22.620 --> 10:27.720
+So that's actually similar to a camera just in 2D where you can basically see you just
+
+10:27.720 --> 10:33.520
+have an image which just has one row, and basically the pixel lights up where you see
+
+10:33.520 --> 10:35.740
+a landmark in the kind of simplest case.
+
+10:35.740 --> 10:42.580
+So what you get is just a bearing, so just an angular observation that you have.
+
+10:42.580 --> 10:47.140
+So the landmark is still a 2D point in the environment because it still is a point somewhere
+
+10:47.140 --> 10:51.140
+in space, but now my observation is just a 2D observation.
+
+10:51.140 --> 10:55.760
+Basically what is the relative heading of the landmark with respect to the robot?
+
+10:55.760 --> 10:59.480
+So if I'm the robot, I'm looking forward, then a landmark being directly in front of
+
+10:59.480 --> 11:01.900
+me would give me an observation of zero.
+
+11:01.900 --> 11:08.700
+If I would for example be 10 degrees to the left, then I would get 10 degrees as my observation.
+
+11:08.700 --> 11:12.160
+We compute our predicted observation in order to estimate what the robot should see.
+
+11:12.160 --> 11:16.280
+We need to know where the robot is and where it's looking to, which is again stored here
+
+11:16.280 --> 11:20.980
+in xi, and we need to know where this 2D landmark is in the environment.
+
+11:20.980 --> 11:26.320
+So the landmark location is again a 2D vector shown over here, exactly the same as previously
+
+11:26.320 --> 11:28.100
+in the xy sensor.
+
+11:28.100 --> 11:33.260
+The only difference is that this function that had is now a one-dimensional function,
+
+11:33.260 --> 11:34.700
+not a two-dimensional function.
+
+11:34.700 --> 11:42.660
+So it has a 1D output just providing the angular component and not xy or delta xy as it was before.
+
+11:42.660 --> 11:46.740
+So how do we compute where the robot is and where it sees the landmark?
+
+11:46.740 --> 11:54.500
+So we can compute this by looking to the difference in the y-coordinate and the difference in the
+
+11:54.500 --> 12:01.460
+x-coordinate between the robot's location and the landmark, which is here given by xj
+
+12:01.460 --> 12:02.460
+minus ti.
+
+12:02.460 --> 12:06.980
+So this is again the transformation vector or translation vector resulting from the robot's
+
+12:06.980 --> 12:11.860
+pulse, and we are just taking the y-coordinate into account and the x-coordinate and computing
+
+12:11.860 --> 12:13.140
+the etan of that.
+
+12:13.140 --> 12:17.620
+So if you implement this, you would use of course the etan2 function in order to do this,
+
+12:17.620 --> 12:23.980
+in order to have all the quadrants done right, which tells you what is the angle between
+
+12:23.980 --> 12:29.140
+the robot's pulse with respect to the landmark in the global reference frame, and what we
+
+12:29.140 --> 12:33.900
+need to subtract from this is the orientation of the robot because there's obviously an
+
+12:33.900 --> 12:37.940
+observation which is done relative to the robot's current heading.
+
+12:37.940 --> 12:41.540
+So this is basically in the global coordinate frame and this turns it into the local coordinate
+
+12:41.540 --> 12:45.500
+frame because we need to see it as the robot would see it.
+
+12:45.500 --> 12:49.380
+So this is my expected observation function or my observation function which computes
+
+12:49.380 --> 12:54.580
+me the expected observation and from this I can then directly derive the error function
+
+12:54.580 --> 12:59.160
+because the error function was just the predicted measurement minus the actual measurement.
+
+12:59.160 --> 13:01.220
+So this is then straightforward.
+
+13:01.220 --> 13:07.140
+My error function for that bearing-only observation is what I'm predicting to see, which is this
+
+13:07.140 --> 13:10.140
+part over here, minus what I'm actually seeing.
+
+13:10.140 --> 13:14.260
+So what was the observation of this landmark j.
+
+13:14.260 --> 13:18.340
+And again this is a 1D function in this case.
+
+13:18.340 --> 13:24.380
+The XY sensor was a 2D function compared to the post-graph observation in 2D which
+
+13:24.380 --> 13:28.840
+was the 3D function that we get out of here.
+
+13:28.840 --> 13:35.420
+And this actually impacts the H matrix that we generate for this observation.
+
+13:35.420 --> 13:39.900
+Again this was computed by having the Jacobian transposed times the information matrix times
+
+13:39.900 --> 13:40.940
+the Jacobian.
+
+13:40.940 --> 13:43.700
+This gives me the element for this H matrix.
+
+13:43.700 --> 13:47.380
+So we need to look a little bit into the rank of this H matrix because this turns out to
+
+13:47.380 --> 13:50.000
+become important or is an important information.
+
+13:50.000 --> 13:57.900
+So the question is what is the rank of this Hij matrix for the 2D landmark post-constraint.
+
+13:57.900 --> 14:03.080
+If we have a matrix let's say A transposed A and when we compute the rank of this matrix
+
+14:03.080 --> 14:10.940
+A transposed A then this rank is equal to the rank of A transposed and the rank of A.
+
+14:10.940 --> 14:17.540
+And this is important because this matrix H is built up by taking the Jacobian transposed
+
+14:17.540 --> 14:22.660
+times the Jacobian of course with the information matrix in between but assuming the information
+
+14:22.660 --> 14:29.740
+matrix itself has full rank then the rank of this H matrix is basically determined by
+
+14:29.740 --> 14:32.580
+the rank of your Jacobian.
+
+14:32.580 --> 14:40.540
+And if you look to the blocks of this Jacobian this is at most a two by five matrix which
+
+14:40.540 --> 14:42.620
+is non-zero.
+
+14:42.620 --> 14:48.660
+So five for the parameters x, y, theta of the robot and x, y of the landmark and 2D
+
+14:48.660 --> 14:51.100
+because it provides you 2D information.
+
+14:51.100 --> 14:54.540
+So Hij can't have a rank more than two.
+
+14:54.540 --> 14:58.500
+So at maximum we can kind of fix two degrees of freedom in here.
+
+14:58.500 --> 15:06.620
+And if you look to the bearing only constraint and compute the H matrix then even more extreme
+
+15:06.620 --> 15:10.560
+you have a one by five matrix.
+
+15:10.560 --> 15:17.180
+So because you have one degree of freedom for the measurement and five non-zero elements
+
+15:17.180 --> 15:21.960
+for x, y, theta of the robot and x, y of the platform.
+
+15:21.960 --> 15:25.300
+So Hij in this case only a rank of one.
+
+15:25.300 --> 15:31.300
+And this has an impact on what information such a measurement can provide.
+
+15:31.300 --> 15:35.580
+And I want to show this with a small example saying where is the robot assuming we know
+
+15:35.580 --> 15:38.460
+where the landmark is and what now localize the robot.
+
+15:38.460 --> 15:43.540
+And let's see for the first example that it is an x, y observation.
+
+15:43.540 --> 15:47.460
+So the robot observed an x, y landmark and we have this relative x, y sensor.
+
+15:47.460 --> 15:52.700
+So if you have one single observation where can the robot be relative to that landmark?
+
+15:52.700 --> 15:56.960
+So assuming this black dot here is a landmark and assume we have a delta x, delta y sensor.
+
+15:56.960 --> 16:00.980
+So where can the robot actually be in the x, y plane?
+
+16:00.980 --> 16:04.580
+And it turns out that the robot can actually be at multiple places and would get the same
+
+16:04.580 --> 16:05.780
+observation.
+
+16:05.780 --> 16:10.700
+So the robot can basically be arranged in a circle around that landmark and the position
+
+16:10.700 --> 16:14.620
+of the circle then determines where the robot is actually looking to and will look like
+
+16:14.620 --> 16:15.620
+this.
+
+16:15.620 --> 16:19.540
+So the robot can be anywhere around that circle and if I fix the position on the circle it
+
+16:19.540 --> 16:21.300
+will tell me where the robot should look to.
+
+16:21.300 --> 16:28.100
+So for example if the landmark is directly in front of me then all these positions here,
+
+16:28.100 --> 16:32.060
+the right possible positions will point directly towards this landmark.
+
+16:32.060 --> 16:36.140
+So the landmark is right of me, this robot would look in this direction, this robot would
+
+16:36.140 --> 16:37.540
+look in this direction.
+
+16:37.540 --> 16:47.340
+So this rank 2 constraint allows me to fix two of the three parameters that determines
+
+16:47.340 --> 16:49.060
+my robot location.
+
+16:49.060 --> 16:54.180
+So I can be anywhere on that circle, it's a 1D solution space and the orientation is
+
+16:54.180 --> 16:57.100
+determined by where I am on that circle.
+
+16:57.100 --> 17:00.620
+And now we can look how does it look like if we have a bearing only observation.
+
+17:00.620 --> 17:05.380
+So exactly the same setup but now we only have one direction we look into.
+
+17:05.380 --> 17:11.380
+So this is our landmark location and I just know where the robots see the landmark relative
+
+17:11.380 --> 17:13.940
+to each other in terms of one rotational angle.
+
+17:13.940 --> 17:19.540
+In this case the robot can actually be anywhere in the 2D space and depending on the position
+
+17:19.540 --> 17:23.260
+of the 2D space we are actually fixing where the robot is looking to.
+
+17:23.260 --> 17:26.740
+So again if you think the landmarks directly in front of the robot but you have no idea
+
+17:26.740 --> 17:31.500
+how far it is away, the robot can be anywhere in the space and wherever it is it will point
+
+17:31.500 --> 17:32.820
+directly to the landmarks.
+
+17:32.820 --> 17:35.540
+So if it's sitting here the robot will be looking here, if the robot is here it will
+
+17:35.540 --> 17:37.020
+be looking over here.
+
+17:37.020 --> 17:41.140
+So just as a few examples these are possible locations and all the robots would look towards
+
+17:41.140 --> 17:42.420
+this landmark.
+
+17:42.420 --> 17:47.420
+So any space in the X, any position in the XY plane is possible and if you select the
+
+17:47.420 --> 17:53.480
+position then we actually fix the orientation of that platform.
+
+17:53.480 --> 18:00.760
+And so in this example the rank of this constraint is one, the one dimension of the Jacobian
+
+18:00.760 --> 18:03.560
+is just one dimensional, so rank one.
+
+18:03.560 --> 18:07.760
+We have three degrees of freedom that we need to fix for the robot pose so we need to have
+
+18:07.760 --> 18:13.240
+at least observations to kind of three landmarks in order to fix the robot pose.
+
+18:13.240 --> 18:16.900
+This is kind of the minimum that we actually need.
+
+18:16.900 --> 18:20.640
+So I hope this example, although this was basically fixed a landmark and estimating
+
+18:20.640 --> 18:25.680
+where the robot poses, has told you something that we need further information than one
+
+18:25.680 --> 18:35.160
+single observation in order to be able to deal with the optimization problem in the
+
+18:35.160 --> 18:37.760
+context of graph-based SLAM with landmarks.
+
+18:37.760 --> 18:40.880
+And the rank of the observation here plays an important role.
+
+18:40.880 --> 18:46.240
+So the rank of H of any matrix is always less or equal than the sum of the ranks of the
+
+18:46.240 --> 18:47.240
+individual constraints.
+
+18:47.840 --> 18:53.040
+And if you remember, H was built up by summing up the ranks of the individual constraints.
+
+18:53.040 --> 18:59.880
+So you will basically, the rank of H will be smaller or equal than the rank of the individual
+
+18:59.880 --> 19:00.880
+observations.
+
+19:00.880 --> 19:04.400
+So that means typically we need to have a large number of observations to actually make
+
+19:04.400 --> 19:07.880
+sure that H has its full rank.
+
+19:07.880 --> 19:09.360
+Why are we interested in full rank?
+
+19:09.360 --> 19:13.500
+Because only then we actually obtain a unique solution.
+
+19:13.500 --> 19:17.820
+So we want to have a full rank, otherwise we may not be able to fix all the parameters.
+
+19:17.820 --> 19:20.260
+You can see this, for example, within bearing-only observation.
+
+19:20.260 --> 19:25.840
+If you've seen one landmark only once from one location, you only know where this landmark
+
+19:25.840 --> 19:27.100
+lies on the line.
+
+19:27.100 --> 19:30.740
+And any position on this line is a valid solution to your problem.
+
+19:30.740 --> 19:32.100
+So this is not unique.
+
+19:32.100 --> 19:37.720
+So you can't determine this landmark location fully, only constrain it to a line.
+
+19:37.720 --> 19:45.120
+And this leads to the problem that we have of having these constraints that doesn't allow
+
+19:45.120 --> 19:53.400
+us to fully fix the system that we have in order to fully determine the solution.
+
+19:53.400 --> 19:57.360
+So a few questions.
+
+19:57.360 --> 20:03.300
+So if the rank of H is smaller or equal than the sum of the ranks of the individual constraints
+
+20:03.300 --> 20:09.300
+then we need to have a full rank in order to complete the unique solution.
+
+20:09.300 --> 20:16.940
+So how many 2D landmark observations do we need to resolve the robot's pose?
+
+20:16.940 --> 20:23.900
+And again, in order to fix a robot's pose, like what we had before, we need two observations,
+
+20:23.900 --> 20:25.620
+minimum of two landmarks.
+
+20:25.620 --> 20:31.180
+And if we are in the bearing-only case, we need to have three as a minimum, of course
+
+20:31.180 --> 20:33.160
+assuming we're living in a 2D plane.
+
+20:33.160 --> 20:40.360
+If we are in the 3D space, then we need to adapt that because we have six degrees of
+
+20:40.360 --> 20:41.360
+freedom to fix.
+
+20:41.360 --> 20:46.160
+But then depending on observations, we may have two orientation angles, for example,
+
+20:46.160 --> 20:49.980
+for the bearing-only case that we are fixing.
+
+20:49.980 --> 20:54.240
+Whatever we do in practice, we often end up with an underdetermined.
+
+20:54.240 --> 21:01.240
+So there's no guarantee for a full rank system, especially in this landmark-based situation
+
+21:01.240 --> 21:02.240
+that we have here.
+
+21:02.320 --> 21:04.840
+And landmarks may be observed, for example, only once.
+
+21:04.840 --> 21:09.020
+You might even have effects that the robot might have no odometry between two observations.
+
+21:09.020 --> 21:15.000
+If you have that case, you will suffer from this problem also in the pose graph.
+
+21:15.000 --> 21:19.280
+But if you always have odometry, then that should be okay in the pose graph point of
+
+21:19.280 --> 21:20.280
+view.
+
+21:20.280 --> 21:25.960
+But there's still something that you can do in order to deal with such systems.
+
+21:25.960 --> 21:34.520
+And this is by adding an additional damping factor to H that is multiplied with an identity
+
+21:34.520 --> 21:35.520
+matrix.
+
+21:35.520 --> 21:40.160
+So if you think about your original system was H times delta X equals minus B, that was
+
+21:40.160 --> 21:42.940
+a linear system that you wanted to solve.
+
+21:42.940 --> 21:49.520
+What you can do now is you can add an identity matrix to this matrix H plus a small scaling
+
+21:49.520 --> 21:51.280
+factor.
+
+21:51.280 --> 21:57.840
+So in this setup, you're very likely to have a full rank matrix because the identity matrix
+
+21:57.840 --> 21:59.240
+has full rank.
+
+21:59.240 --> 22:05.920
+And so by adding, let's say, a small scalar times this identity matrix, this is likely
+
+22:05.920 --> 22:08.680
+to have full rank.
+
+22:08.680 --> 22:14.960
+And if you make lambda small, you still have a full rank matrix and may not change the
+
+22:14.960 --> 22:15.960
+system too much.
+
+22:15.960 --> 22:24.120
+So again, if the lambda here gets very small, it doesn't mean that you have a well-conditioned
+
+22:24.120 --> 22:26.660
+system but at least it has full rank.
+
+22:26.660 --> 22:33.040
+And then you can actually solve this system and you may vary this parameter depending
+
+22:33.040 --> 22:35.640
+on the quality of your solution.
+
+22:35.640 --> 22:37.960
+So the question is what is the effect of doing this?
+
+22:37.960 --> 22:43.520
+The interesting thing is that what you do here is basically a combination of two approaches.
+
+22:43.520 --> 22:49.960
+So H delta X minus B is what we used from Gauss-Newton.
+
+22:49.960 --> 22:58.100
+But if you think about delta X equals minus B and you expand minus B, knowing that minus
+
+22:58.100 --> 23:04.720
+B is minus Jacobian transposed information matrix, the error, and minus the error is
+
+23:04.720 --> 23:09.880
+the residual, what this basically does, you multiply the residual with the information
+
+23:09.880 --> 23:10.880
+matrix.
+
+23:10.880 --> 23:15.520
+You multiply it based on the importance, and then you multiply it to the Jacobian transposed
+
+23:15.520 --> 23:25.000
+but basically maps the residual vector into the space of updates of your parameter in
+
+23:25.000 --> 23:26.580
+your parameter space.
+
+23:26.580 --> 23:30.840
+So it's a form of steepest descent that you're actually performing.
+
+23:30.840 --> 23:36.660
+So you can see that solving H plus lambda I delta X equals minus B is a combination
+
+23:36.660 --> 23:39.960
+of Gauss-Newton and a steepest descent approach.
+
+23:40.000 --> 23:47.040
+So you're basically combining both, and depending on the scale parameter here, you're saying
+
+23:47.040 --> 23:52.640
+how strong the steepest descent part of that actually is.
+
+23:52.640 --> 23:56.740
+And with this, this is what is called the Levenberg-Marquardt approach, you are actually
+
+23:56.740 --> 24:01.280
+able to deal with such systems which are underdetermined.
+
+24:01.280 --> 24:02.520
+So how does it work in practice?
+
+24:02.520 --> 24:07.440
+So you have an initial guess of your solution X, and then while you're not converged, you
+
+24:07.440 --> 24:13.120
+have an initial damping factor you start with, and then you build your linear system,
+
+24:13.120 --> 24:17.640
+compute H and B, compute your error vector, you store your error vector to monitor if
+
+24:17.640 --> 24:24.680
+your error increases or decreases, and how you change your damping parameter, and then
+
+24:24.680 --> 24:31.840
+you solve the sparse system H plus lambda I delta X equals minus B for some sparse solver
+
+24:31.840 --> 24:38.640
+that you're using, and then you get your delta X, you add your delta X to the solution,
+
+24:38.640 --> 24:46.600
+and then you check, is E smaller than the error of this new solution, and E is the error
+
+24:46.600 --> 24:48.540
+that we had before.
+
+24:48.540 --> 24:57.040
+If this is the case, then I say, okay, I still have improved my solution, so my, no, sorry,
+
+24:57.040 --> 25:01.200
+in this case, the error is increased because this was the previous error and this is a
+
+25:01.200 --> 25:03.200
+new error, so the new error is larger.
+
+25:03.200 --> 25:07.020
+If this is the case, I'm recovering my old poles and I'm actually increasing my damping
+
+25:07.020 --> 25:11.400
+factor, make the damping factor twice as large, and if that's not the case, if I decreased
+
+25:11.400 --> 25:16.320
+my error, then I'm actually reducing my damping factor, and then I restart this process.
+
+25:16.320 --> 25:22.360
+So what happens is whenever I can improve my solution, I'm actually reducing the damping
+
+25:22.360 --> 25:23.360
+factor.
+
+25:23.360 --> 25:27.820
+Whenever I increase my error, then I'm recovering the old poles and increasing my damping factor.
+
+25:27.820 --> 25:34.220
+So in order to come as close as possible to a solution that approximates H delta X equals
+
+25:34.220 --> 25:35.220
+minus B.
+
+25:35.220 --> 25:40.700
+And this is also an approach that you typically find when using a bundle adjustment solution.
+
+25:40.700 --> 25:47.540
+So bundle adjustment is basically SLAM based on images, so 3D reconstruction based on images,
+
+25:47.540 --> 25:51.660
+where you just have a collection of images and feature point that you observe from the
+
+25:51.660 --> 25:52.660
+environment.
+
+25:52.660 --> 25:56.300
+So bundle adjustment, for example, doesn't assume that you have odometry information,
+
+25:56.300 --> 26:01.740
+you just have an unordered set of images where you extract feature points, you assume to
+
+26:01.740 --> 26:05.120
+have correspondences between those feature points, and then you want to estimate the
+
+26:05.120 --> 26:09.100
+camera locations and the feature points in the environment in 3D.
+
+26:09.100 --> 26:14.900
+And what this approach typically does, it minimizes the reprojection error of the feature
+
+26:14.900 --> 26:16.660
+points into the 2D image plane.
+
+26:16.660 --> 26:20.600
+That means you estimate where your cameras are, you estimate where your 3D points are,
+
+26:20.600 --> 26:25.900
+you project the 3D points into the 2D image plane, and then look to the discrepancy between
+
+26:25.900 --> 26:31.900
+where the feature is measured or the point is measured and where the feature should be
+
+26:31.900 --> 26:35.480
+given this reprojection.
+
+26:35.480 --> 26:40.260
+And especially if you have no notation of odometry, you more frequently suffer from
+
+26:40.260 --> 26:43.900
+this underdetermined systems and need to address this in an appropriate way.
+
+26:43.900 --> 26:47.460
+You need to have enough observations of the same environment in order to have actually
+
+26:47.460 --> 26:52.060
+connected graphs, otherwise your graph actually breaks up into several places.
+
+26:52.060 --> 26:57.060
+And solutions to this problem exist since quite a long time, so let's say approximately
+
+26:57.060 --> 27:02.660
+the 1950s, and photogrammetry approaches have been developed for that.
+
+27:02.660 --> 27:10.100
+And you can see this as a special case of the graph-based SLAM problem with landmarks.
+
+27:10.100 --> 27:15.040
+In the graph-based SLAM, we typically incorporate more information to this, odometry information,
+
+27:15.040 --> 27:19.420
+some other additional information that you can include into this, but structurally they're
+
+27:19.420 --> 27:22.040
+actually very, very similar problems.
+
+27:22.040 --> 27:26.320
+So to sum that up, what we have discussed here is basically an extension from the postgraph-based
+
+27:26.320 --> 27:31.160
+SLAM approach towards general graph-based SLAM approach with landmarks.
+
+27:31.160 --> 27:35.480
+So this basically means we're taking our postgraph and extending it with two types of edges and
+
+27:35.480 --> 27:36.880
+two types of nodes.
+
+27:36.880 --> 27:42.720
+So one node for robot poses, one node for landmark locations, and then we also get two
+
+27:42.720 --> 27:52.040
+edges in, and these are the edges that matter for us in the optimization problem.
+
+27:52.040 --> 27:56.640
+Then we have talked about the rank of this H-matrix that matters and depends on the Jacobians,
+
+27:56.640 --> 28:03.080
+the dimensionality of the Jacobians, and in this landmark-based systems, you more frequently
+
+28:03.080 --> 28:08.520
+suffer from this underdetermined system so that typically not Gauss-Newton is used here,
+
+28:08.520 --> 28:13.520
+Levenberg-Markov, which is a combination of Gauss-Newton and steepest descent.
+
+28:13.520 --> 28:18.520
+And with this, I hope I've given you an idea on how you can actually exploit these graph-based
+
+28:18.520 --> 28:24.320
+ideas from postgraph that we have learned to general graphs which also contain landmarks.
+
+28:24.320 --> 28:26.360
+Thank you very much for your attention.
+

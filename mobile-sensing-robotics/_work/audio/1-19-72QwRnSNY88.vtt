@@ -1,0 +1,1775 @@
+WEBVTT
+
+00:00.000 --> 00:03.080
+So, welcome everyone to the lecture today.
+
+00:03.080 --> 00:08.540
+We want to continue looking into planning and look into one special form of planning,
+
+00:08.540 --> 00:10.780
+namely, planning under uncertainty.
+
+00:10.780 --> 00:16.300
+For that, we will investigate the Markov decision processes or in short, MDPs.
+
+00:16.300 --> 00:20.600
+So, this is relevant for you whenever you want to plan actions for
+
+00:20.600 --> 00:25.180
+an autonomous robot or autonomous system that should act on its own,
+
+00:25.180 --> 00:27.840
+but cannot be sure that the action that it
+
+00:27.840 --> 00:30.860
+selects are actually executed in the way it wants to be.
+
+00:30.860 --> 00:34.680
+So, whenever you have a system which says,
+
+00:34.680 --> 00:37.120
+let's say, go one meter per second forward,
+
+00:37.120 --> 00:39.300
+and it may not drive one meter per second forward,
+
+00:39.300 --> 00:41.160
+it may drive meter per second forward,
+
+00:41.160 --> 00:44.120
+but also steers a little bit to the right or to the left-hand side.
+
+00:44.120 --> 00:45.680
+If this can happen,
+
+00:45.680 --> 00:52.860
+then you need to take MDPs into account in order to plan how to plan under uncertainty,
+
+00:52.860 --> 00:54.940
+and that's kind of what MDPs are about.
+
+00:54.940 --> 00:59.420
+So, whenever you cannot guarantee that your actions are executed in the way you planned,
+
+00:59.420 --> 01:03.180
+you should actually not be using a standard planning algorithm such as A*,
+
+01:03.180 --> 01:05.920
+then you should actually use an MDP.
+
+01:05.920 --> 01:08.200
+The problem is that MDPs can be computationally
+
+01:08.200 --> 01:12.420
+costly or computationally more costly than, for example, the A*, algorithm.
+
+01:12.420 --> 01:16.560
+Therefore, a lot of planning systems out there today use A*,
+
+01:16.560 --> 01:20.920
+but what you actually would need to do is something like an MDP.
+
+01:20.920 --> 01:25.760
+So, again, MDP assumes uncertain motion execution,
+
+01:25.760 --> 01:30.480
+but we still assume that we can correctly sense the state of the world.
+
+01:30.480 --> 01:34.400
+So, we assume our knowledge about the world is correct,
+
+01:34.400 --> 01:36.200
+but we don't know,
+
+01:36.200 --> 01:39.760
+we can't guarantee that we execute everything in the way we want it to be.
+
+01:39.760 --> 01:41.120
+If both gets uncertain,
+
+01:41.120 --> 01:45.480
+then we would have a partially observable Markov decision process or POMDP,
+
+01:45.480 --> 01:49.240
+but that's something that we're not going to discuss here today.
+
+01:49.240 --> 01:54.480
+So, typically challenges in robot navigation are we need to calculate the optimal paths.
+
+01:54.480 --> 01:57.000
+The question, what does optimal mean?
+
+01:57.000 --> 02:00.600
+So, we have some cost function and we're going to come up with the optimal paths.
+
+02:00.600 --> 02:04.840
+First, can we actually guarantee that we find the optimal paths?
+
+02:04.840 --> 02:06.080
+The second thing is,
+
+02:06.080 --> 02:09.920
+is actually our notation of optimality actually what we want to have?
+
+02:09.920 --> 02:16.040
+So, if the underlying cost function actually leading to the behavior that we want the system to have.
+
+02:16.040 --> 02:18.400
+We have seen this already with the A*, algorithm.
+
+02:18.400 --> 02:23.120
+If, let's say, the shortest path is our criterion for optimality,
+
+02:23.120 --> 02:27.960
+it will actually lead to navigation behaviors where the robot goes really, really, really close to obstacles.
+
+02:27.960 --> 02:33.360
+And this can lead to a collision if something is not exactly the way we perceived it to be,
+
+02:33.360 --> 02:37.920
+or the system doesn't exactly execute what it's supposed to do.
+
+02:37.920 --> 02:41.080
+And therefore, this may not be actually the optimal path,
+
+02:41.080 --> 02:45.640
+although you're typically looking for navigating along the shortest paths.
+
+02:45.680 --> 02:49.040
+Other challenges are how to deal with unforeseen objects.
+
+02:49.040 --> 02:52.160
+So, if new objects pop up in the scene that the robot is not aware of,
+
+02:52.160 --> 02:55.160
+that's not in the robot's map, how to react to this?
+
+02:55.160 --> 02:58.280
+What should we even do if objects are moving around?
+
+02:58.280 --> 03:02.320
+How can we take the movement into account to predict how those objects behave
+
+03:02.320 --> 03:05.920
+and take those predictions into account in planning?
+
+03:05.920 --> 03:13.440
+Or, last but not least, how should we behave if we don't know if the system actually does what we want it to do?
+
+03:13.440 --> 03:15.920
+And that's what we are looking in here today,
+
+03:15.920 --> 03:22.400
+the MDP, Markov Decision Process, taking into account uncertainties in the motion execution.
+
+03:22.400 --> 03:28.120
+So that's the task that we are going to investigate here today.
+
+03:28.120 --> 03:32.480
+If you look to our layered architecture that we have discussed in the context of A*,
+
+03:32.480 --> 03:38.080
+we typically have a planning level where the planner runs at rather low frequency,
+
+03:38.080 --> 03:42.120
+let's say once every second or once every two seconds, for example.
+
+03:42.120 --> 03:46.680
+Then, we have typically a local planner or local collision avoidance system depending.
+
+03:46.680 --> 03:49.560
+So, this can be a local planner, it can be a collision avoidance system,
+
+03:49.560 --> 03:51.360
+the boundaries are rather fluent here,
+
+03:51.360 --> 03:54.800
+which runs at the high frequency, takes sensor data into account,
+
+03:54.800 --> 04:03.480
+and generates trajectories, either guide the robot on the shortest trajectory that comes from the planner here on top,
+
+04:03.480 --> 04:11.280
+or generates, let's say, swerves or other behaviors in order to kind of avoid an obstacle that is in front of the system.
+
+04:11.280 --> 04:19.000
+And then, on the lowest level, we have a controller that makes sure or tries to make sure that what we're actually sending to the system is actually being executed.
+
+04:19.000 --> 04:25.520
+And this cannot be guaranteed because of timing issues in terms of kinematic constraints,
+
+04:25.520 --> 04:29.640
+in the sense that we do not know all the, let's say, surface properties we are driving on,
+
+04:29.640 --> 04:32.360
+or not all properties of the robot itself.
+
+04:32.360 --> 04:34.520
+So, this will not be perfect.
+
+04:34.520 --> 04:39.400
+And today, we are dealing with the fact that this is actually not perfect.
+
+04:39.400 --> 04:44.560
+We do this on the planning level, that means we do this here in this planning level layer,
+
+04:44.560 --> 04:51.240
+that already the planner takes into account that whatever it tells the system down here may not be executed perfectly.
+
+04:51.240 --> 04:55.440
+So, let's take into account that what we do here is imperfect,
+
+04:55.440 --> 05:01.720
+and maybe generate trajectories, for example, that guide the system away from obstacles a little bit further.
+
+05:01.720 --> 05:07.360
+So, even if we take some uncertainty in the motion execution into account, this will not lead to collisions.
+
+05:07.360 --> 05:11.040
+And that's basically what the MDP system does.
+
+05:11.040 --> 05:13.560
+So, let's go with a very simplistic example.
+
+05:13.560 --> 05:17.520
+So, these are these typical small-scale AI examples.
+
+05:17.520 --> 05:22.960
+You have an agent or your robot that is acting in an environment, and we have here a starting location,
+
+05:22.960 --> 05:27.320
+these are all free cells, here's an obstacle, and here is a goal state,
+
+05:27.320 --> 05:30.040
+and here is a state where the system doesn't want to end up.
+
+05:30.040 --> 05:35.480
+So, the plus one is the state we want to be, the minus one is the state which we don't want, never want to reach,
+
+05:35.480 --> 05:42.200
+and this is where we start, and the question is, how do I actually reach this location down here?
+
+05:42.200 --> 05:46.600
+So, for a robot, this could be, this is a charging station where the robot can recharge itself,
+
+05:46.600 --> 05:51.680
+and this is a staircase, and if the robot falls down the staircase, the robot will be broken or will be dead.
+
+05:51.680 --> 05:56.480
+So, let's state that the system doesn't want to end up in.
+
+05:56.480 --> 06:00.360
+And so, the question is, how should the system now navigate in this world?
+
+06:00.360 --> 06:05.840
+Assume it can always go whatever, up, down, right or left, or north, south, east, west,
+
+06:05.840 --> 06:09.040
+and so the system can always navigate here through those cells,
+
+06:09.040 --> 06:13.320
+and it wants to go here, but it never wants to reach that state over here.
+
+06:13.320 --> 06:19.960
+So, if we do this in our traditional A-star planning world, then this is an easy problem.
+
+06:19.960 --> 06:23.160
+We can compute the shortest path in a very easy way,
+
+06:23.160 --> 06:29.880
+and this shortest path would guide the system here to the side, and then going up, up, and again to the right,
+
+06:29.880 --> 06:38.200
+so that the system ends up in the location where the charging station is, and can recharge its batteries, right?
+
+06:38.200 --> 06:42.760
+So, that's easy, that's something that we can do with A-star.
+
+06:42.760 --> 06:44.880
+So, the question is, why might this be problematic?
+
+06:44.880 --> 06:53.720
+Why this, may this be the shortest path, but not necessarily the best path that the system may execute?
+
+06:53.720 --> 06:57.560
+The reason for this, why this may be problematic, or is typically problematic in reality,
+
+06:57.560 --> 07:01.880
+is that actions are not executed with probability one.
+
+07:01.880 --> 07:06.040
+That means we have an imperfect or non-perfect action execution,
+
+07:06.040 --> 07:11.720
+so actions will only be executed in the right way with a certain probability, let's say 90%.
+
+07:11.720 --> 07:15.240
+90% of the cases the system exactly executes what I want to execute,
+
+07:15.240 --> 07:17.720
+and in 10% of the cases it does something else.
+
+07:17.720 --> 07:22.200
+This would be an example for such a transition model.
+
+07:22.200 --> 07:27.480
+And the question is then, given that we acknowledge the fact that our system is not perfect,
+
+07:27.480 --> 07:32.600
+what can we do on a planning level to take this imperfection into account?
+
+07:32.600 --> 07:36.840
+So, is there a way that we take into account that not everything we do is great,
+
+07:36.840 --> 07:39.480
+but in the end make better decisions?
+
+07:39.480 --> 07:44.680
+So, this is for example a mobile robot that doesn't always perform exactly the desired motion commands,
+
+07:44.680 --> 07:50.600
+so how can we actually realize a planning system which takes this into account?
+
+07:50.600 --> 07:52.120
+But we can also think it further.
+
+07:52.120 --> 07:57.080
+If you think of your sat-nav device that you are using in your car in order to navigate,
+
+07:57.080 --> 08:00.600
+it gives you a command and you as a human, you are the driver,
+
+08:00.600 --> 08:05.400
+and if the system says turn right on the next intersection and you're not turning right,
+
+08:05.400 --> 08:08.040
+then this is an imperfect motion execution,
+
+08:08.040 --> 08:12.120
+because you're not executing what the planning system tells you.
+
+08:12.120 --> 08:14.600
+So, the question would be from the sat-nav point of view,
+
+08:14.600 --> 08:19.240
+can the sat-nav do better motion instructions or road instructions for you,
+
+08:19.960 --> 08:25.880
+so that if you make errors and don't always execute what the system tells you to execute,
+
+08:25.880 --> 08:29.640
+so you still come up to the goal location on a good path?
+
+08:29.640 --> 08:31.160
+This is another example,
+
+08:31.160 --> 08:37.480
+and so it's a general decision-making setup for how to make decisions under uncertainty
+
+08:37.480 --> 08:39.400
+in your action execution,
+
+08:39.400 --> 08:41.320
+and this is relevant not only in robotics,
+
+08:41.320 --> 08:44.200
+it's also relevant in a lot of other disciplines and other fields,
+
+08:44.200 --> 08:49.320
+where you cannot guarantee that what you decide will actually be done in that way.
+
+08:49.320 --> 08:51.880
+So, whenever you do this decision-making under uncertainty,
+
+08:51.880 --> 08:57.880
+the lecture today will tell you on how to behave in an optimal way.
+
+08:58.840 --> 09:03.480
+Okay, let's start with a very simple example similar to what I've shown before.
+
+09:03.480 --> 09:07.400
+So, you are still in our simulated agent world,
+
+09:07.400 --> 09:09.720
+and the agent can select certain commands,
+
+09:09.720 --> 09:12.200
+but it doesn't execute those commands perfectly.
+
+09:12.200 --> 09:15.240
+So, let's say if the desired action is to go north or to go up,
+
+09:16.040 --> 09:19.080
+with 80% of the cases it actually executes this,
+
+09:19.080 --> 09:21.880
+and with 10% of the case it goes either left or right.
+
+09:22.600 --> 09:28.120
+So, 80% probability up, 10% to the left, and 10% to the right.
+
+09:28.120 --> 09:29.640
+So, assuming that this is our model,
+
+09:29.640 --> 09:32.840
+so in 80% of the cases exactly happens what we predict,
+
+09:32.840 --> 09:35.480
+in 10% of the cases I'm either turning left or right,
+
+09:35.480 --> 09:37.160
+and not go straight as I want it to be.
+
+09:38.360 --> 09:43.400
+So, this means again the intended action is executed with 80% probability,
+
+09:43.400 --> 09:47.640
+and with 10% probability I'm moving left, and with 10% probability I'm moving right,
+
+09:47.640 --> 09:51.320
+and let's say I assume if I drive into a wall I'm just bumped back from the wall.
+
+09:51.320 --> 09:54.520
+So, we don't get any penalty for bumping into a wall right now.
+
+09:55.080 --> 09:55.880
+Let's assume this.
+
+09:56.440 --> 09:59.080
+Okay, so we again have our A-star plan.
+
+09:59.080 --> 10:04.200
+That was a plan that A-star planned assuming perfect action execution.
+
+10:04.760 --> 10:10.760
+So, it will turn go right, go right, go up, go up, go right.
+
+10:10.760 --> 10:12.520
+So, this is what the system would do.
+
+10:13.800 --> 10:16.200
+Consider now that my action execution is not perfect.
+
+10:16.200 --> 10:19.320
+So, with a probability of 10% in each state,
+
+10:19.320 --> 10:24.840
+I would go 10% here, 10% here, 10% here, 10% here, 10% here, 10% here.
+
+10:24.840 --> 10:29.560
+So, this is my non-deterministic motion model that I'm taking into account.
+
+10:29.560 --> 10:32.280
+And the question, what happens if I do this?
+
+10:33.080 --> 10:38.600
+The problem is at some point in time you will actually end up here,
+
+10:38.600 --> 10:40.520
+because the system will go right, it will go up,
+
+10:41.080 --> 10:43.320
+when you give the go up command it will actually turn right,
+
+10:43.880 --> 10:47.320
+and then the robot will fall down the staircase and the robot will be dead.
+
+10:47.320 --> 10:50.200
+And that's a state that the robot doesn't want to be in.
+
+10:50.200 --> 10:53.480
+So, what can we do in order to prevent that situation?
+
+10:54.280 --> 10:57.560
+What we can do is we can choose another trajectory,
+
+10:57.560 --> 11:01.960
+which is longer and not optimal under the shortest path criterion,
+
+11:02.600 --> 11:08.680
+but which will reduce the probability that we actually end up on the staircase.
+
+11:09.240 --> 11:13.160
+So, we want to reduce the probability of not reaching the goal.
+
+11:13.320 --> 11:16.680
+How could we behave in order to end up here at that goal?
+
+11:16.680 --> 11:22.680
+So, we could not go right because it drives us close to the staircase.
+
+11:22.680 --> 11:26.360
+So, we take this detour around this obstacle because then we're on a trajectory
+
+11:26.360 --> 11:30.280
+which is less likely to fall down the staircase
+
+11:30.280 --> 11:32.360
+because we're keeping a distance to the staircase.
+
+11:33.080 --> 11:35.640
+And this can be seen as a more conservative strategy,
+
+11:36.280 --> 11:42.360
+a strategy which avoids the possibility of falling down the staircase and dying
+
+11:42.360 --> 11:46.520
+by paying a little bit more in terms of path lengths,
+
+11:46.520 --> 11:51.640
+but then increasing the probability of actually reaching my target location.
+
+11:51.640 --> 11:53.880
+And it's kind of the motivation for the MDPs,
+
+11:53.880 --> 11:56.920
+and this is actually the solution that an MDP can generate
+
+11:57.800 --> 12:01.560
+in order to make sure the system doesn't fall down the staircase
+
+12:01.560 --> 12:05.160
+but ends up at the charging station.
+
+12:05.240 --> 12:13.800
+Okay, so what obviously plays an important role in this is this so-called transition model.
+
+12:13.800 --> 12:18.760
+So, this definition of how the system executes the motion,
+
+12:18.760 --> 12:22.920
+what I said, 80%, we execute the motion, 10%, left 10%, right,
+
+12:23.800 --> 12:25.400
+of the case we do something else.
+
+12:25.400 --> 12:29.800
+And this can be more formally described by a probability distribution
+
+12:29.800 --> 12:34.920
+to reach the next state s prime given that we are in s and execute this action a.
+
+12:35.720 --> 12:42.840
+And if you think about the localization problem that we have investigated in this course before,
+
+12:42.840 --> 12:46.600
+then you see this is actually very similar to our probabilistic motion model,
+
+12:46.600 --> 12:50.200
+p of x t given x t minus 1 u t.
+
+12:51.560 --> 12:57.800
+x corresponds here to s, the state, and a corresponds here to the odometry u t,
+
+12:57.800 --> 12:59.160
+or the control u t.
+
+12:59.160 --> 13:01.960
+So this is nothing else than the probabilistic motion model
+
+13:01.960 --> 13:04.200
+that we have been discussing before.
+
+13:04.200 --> 13:09.960
+What the probability of ending up at s prime given we are in s and execute action a.
+
+13:10.680 --> 13:15.160
+The somehow difference in here is what we do here is typically happens in a discretized world,
+
+13:15.160 --> 13:16.840
+in a discretized state space,
+
+13:16.840 --> 13:20.760
+and before we often have a non-discretized state space,
+
+13:20.760 --> 13:23.800
+for example in the context of the Kalman filter or the particle filter,
+
+13:23.800 --> 13:28.360
+but it's kind of the same thing just living in a discretized world over here.
+
+13:28.360 --> 13:31.880
+And this is called a transition model in the notation of an MDP.
+
+13:32.760 --> 13:37.400
+And this notation, what we assume that this transition model has a Markov property,
+
+13:37.400 --> 13:43.240
+that's also something that we have assumed in probabilistic localization,
+
+13:43.240 --> 13:49.560
+and that is that the probability of ending up in s prime from s and a
+
+13:49.560 --> 13:52.520
+doesn't depend on states we have been in before s.
+
+13:52.520 --> 13:57.240
+So if we know where we are in at a certain point in time, the past doesn't matter anymore.
+
+13:57.240 --> 14:02.840
+It's basically knowing the current state renders the past independent from the future.
+
+14:02.840 --> 14:07.560
+And this is exactly what we are exploiting or a property that we're exploiting here,
+
+14:07.560 --> 14:10.600
+that the transition model only depends on the current state I'm in,
+
+14:10.600 --> 14:12.440
+and on the command I'm executing,
+
+14:12.440 --> 14:15.560
+and this tells me where I'm going to end up with,
+
+14:15.560 --> 14:18.600
+but the history, the past doesn't matter anymore.
+
+14:19.880 --> 14:22.920
+So this is what our constraints about the transition model.
+
+14:23.560 --> 14:25.880
+Now the question is, given we have that transition model,
+
+14:25.880 --> 14:29.320
+how do we specify that something is good or something is bad?
+
+14:29.320 --> 14:34.120
+So that reaching the charging station is good while reaching the staircase is bad.
+
+14:34.120 --> 14:37.720
+How can we actually encode this? How can we formulate this?
+
+14:37.720 --> 14:42.920
+And this is something that we are doing taking the so-called reward function into account.
+
+14:42.920 --> 14:47.880
+A reward is something that the agent gets if he reaches a certain state.
+
+14:47.880 --> 14:49.240
+So see this as a number.
+
+14:49.800 --> 14:53.000
+Let's say a positive number is good, a negative number is bad,
+
+14:53.000 --> 14:55.480
+and whenever you do something good you get a positive reward.
+
+14:55.480 --> 14:57.640
+Whenever you do something bad you get a negative reward.
+
+14:58.920 --> 15:03.320
+We are not defining this here necessarily in the general form,
+
+15:03.320 --> 15:07.480
+where in a state doing something leads you to a new state gives you a reward.
+
+15:07.480 --> 15:10.600
+We just boil down the reward that you get the reward in a certain state.
+
+15:10.600 --> 15:13.480
+So if you reach a certain state you get a positive or negative reward.
+
+15:13.480 --> 15:16.040
+But this doesn't change the overall problem,
+
+15:16.760 --> 15:19.560
+but for now we kind of keep this slightly more simple
+
+15:19.560 --> 15:21.640
+by saying the reward only depends on the state.
+
+15:21.640 --> 15:25.800
+So depending the state you're in you're getting a reward either good or bad.
+
+15:25.800 --> 15:29.480
+So if you, let's say, go to the staircase you will get a very big negative reward
+
+15:29.480 --> 15:31.640
+because it was bad you get punished for it.
+
+15:31.640 --> 15:36.280
+If you reach the charging station that was good you get a positive reward for that.
+
+15:36.280 --> 15:38.520
+Okay, so this is the reward function.
+
+15:38.520 --> 15:42.120
+The only constraint that we have that the reward function must be bounded.
+
+15:42.120 --> 15:46.440
+So it can't be infinitely large but it can take positive or negative numbers
+
+15:46.440 --> 15:50.520
+or it can also take the value of zero which basically means it doesn't change anything.
+
+15:51.720 --> 15:57.080
+Okay, let's have a look how we could actually specify the reward function in our example.
+
+15:57.080 --> 16:00.040
+So assume we have our simplified world over here with our agent
+
+16:00.680 --> 16:03.800
+and what we need to do we need to specify a reward for every state.
+
+16:03.800 --> 16:07.800
+So every state gets a value and if the system is in that state,
+
+16:07.800 --> 16:09.880
+the agent is in that state, it gets this reward.
+
+16:10.440 --> 16:13.000
+Okay, we said the charging station is plus one, that's good.
+
+16:13.000 --> 16:15.880
+The staircase is minus one, that's bad.
+
+16:16.760 --> 16:20.600
+But for all other states we're giving the system a small negative reward.
+
+16:21.320 --> 16:23.720
+Right, what does the small negative reward mean?
+
+16:23.720 --> 16:27.800
+That means if the system stays in the state it gets punished.
+
+16:27.800 --> 16:30.760
+So it doesn't get as much punished as falling down the staircase
+
+16:30.760 --> 16:33.720
+but you get kind of hit with a small whip, let's say it that way.
+
+16:33.720 --> 16:37.960
+So you can also formulate this like living in this environment is not enjoyable.
+
+16:37.960 --> 16:39.880
+The world sucks so to say.
+
+16:39.880 --> 16:43.320
+And you basically get punished for every second you're in that world.
+
+16:43.320 --> 16:44.920
+For every time you're in the state,
+
+16:45.640 --> 16:48.760
+if you think of you can let's say visit one state per second,
+
+16:48.760 --> 16:52.200
+then for every second you spent in this environment you get punished.
+
+16:53.000 --> 16:57.240
+And you do that in order to make the system achieve something.
+
+16:58.120 --> 17:00.920
+If you would keep the reward here at zero,
+
+17:01.640 --> 17:03.720
+the system would say, I don't need to do anything.
+
+17:03.720 --> 17:06.600
+Nothing will happen to me, nothing good, but also nothing bad.
+
+17:06.600 --> 17:09.080
+I don't age, I don't care about anything.
+
+17:09.080 --> 17:10.840
+This would be the zero reward.
+
+17:10.840 --> 17:12.440
+But this is something that we don't want to have.
+
+17:12.440 --> 17:15.240
+We don't want to generate a behavior where the system doesn't care
+
+17:15.240 --> 17:17.240
+on what it should do, it would just stay where it is.
+
+17:17.720 --> 17:22.840
+We want to, which takes infinite amount of time to maybe go to the goal,
+
+17:22.840 --> 17:26.840
+could circle around this obstacle forever until it reaches the state
+
+17:26.840 --> 17:28.920
+or always jumps forth and back between two states
+
+17:28.920 --> 17:30.520
+because it doesn't get punished for that.
+
+17:31.160 --> 17:33.240
+So we want to make it unpleasant for the robot.
+
+17:33.240 --> 17:38.360
+We want to give the robot, put it into a non enjoyable space
+
+17:38.360 --> 17:40.760
+because then the system wants to leave this space
+
+17:40.760 --> 17:43.160
+and get an incentive for moving away.
+
+17:43.160 --> 17:47.000
+And we achieve this by giving a very small negative reward.
+
+17:47.480 --> 17:50.040
+Your life sucks as long as you're in this world,
+
+17:50.040 --> 17:51.800
+but it will be great if you reach the goal.
+
+17:51.800 --> 17:54.200
+So you can formulate it like this.
+
+17:54.200 --> 17:56.280
+So this can be our reward function.
+
+17:56.280 --> 18:00.120
+And then with this reward function, we can actually make the system act.
+
+18:00.120 --> 18:03.080
+And depending on the ratio between those rewards,
+
+18:03.960 --> 18:06.120
+the system will behave differently.
+
+18:07.320 --> 18:09.720
+And now the question is, how can we define all that?
+
+18:09.720 --> 18:14.120
+How can we formally define an MDP or Markov decision process?
+
+18:14.680 --> 18:16.760
+So given a sequential decision problem,
+
+18:16.760 --> 18:19.560
+so a problem where we make one decision after each other,
+
+18:19.560 --> 18:21.240
+which is fully observable,
+
+18:21.240 --> 18:25.720
+that means we know at all points in time in which state the system is in.
+
+18:25.720 --> 18:27.320
+So we have no uncertainty about the state.
+
+18:27.320 --> 18:28.840
+It's kind of we have the perfect sensor.
+
+18:28.840 --> 18:29.960
+We know the state of the world.
+
+18:31.240 --> 18:32.600
+But it's a stochastic environment.
+
+18:32.600 --> 18:36.920
+That means we cannot control our actions perfectly.
+
+18:36.920 --> 18:39.640
+There's uncertainty going on and they're stochastic.
+
+18:39.640 --> 18:41.640
+But we have a Markovian transition model.
+
+18:42.280 --> 18:47.320
+Then we can define the MDP as consisting of five things, five components.
+
+18:47.320 --> 18:49.560
+The first thing is a set of states S.
+
+18:49.560 --> 18:50.600
+These are all the states.
+
+18:50.600 --> 18:53.000
+If I go back, these are all those states.
+
+18:53.000 --> 18:54.680
+This is my set of S.
+
+18:54.680 --> 18:58.120
+One, two, three, four, five, six, seven, eight, nine, ten, eleven.
+
+18:58.120 --> 19:01.000
+Eleven states have this simplified system.
+
+19:01.000 --> 19:07.000
+So my set of states would here be a set of eleven different states.
+
+19:07.720 --> 19:14.120
+Okay, I have eleven different states and I have a set of actions.
+
+19:14.120 --> 19:16.680
+And these actions are north, south, east, west.
+
+19:16.680 --> 19:18.520
+So I'll go up, down, right, left.
+
+19:18.520 --> 19:21.000
+These are basically the four actions I can execute.
+
+19:21.560 --> 19:23.880
+I have an initial state which is typically called a zero.
+
+19:23.880 --> 19:26.440
+This was my start state where the system starts.
+
+19:26.440 --> 19:30.680
+And then I have a transition model which we discussed and we have this reward function.
+
+19:30.680 --> 19:34.200
+And based on these quantities, the whole MDP is defined.
+
+19:34.760 --> 19:41.880
+And based on this information, I want to derive a behavior that tells me what the system should do
+
+19:41.880 --> 19:46.600
+to maximize the reward, to get the maximum out of it.
+
+19:47.800 --> 19:48.600
+And how can we do this?
+
+19:48.600 --> 19:50.120
+How can such a strategy look like?
+
+19:50.680 --> 19:53.240
+This strategy is something that we call a policy.
+
+19:54.040 --> 20:00.600
+So a solution to this MDP is a policy pi which tells you what to do at each point in time.
+
+20:00.600 --> 20:02.680
+It's like a manual for life.
+
+20:02.760 --> 20:05.720
+In whatever state you're in, the system will tell you do that.
+
+20:06.600 --> 20:09.960
+And so the policy is a function which maps from state to actions.
+
+20:09.960 --> 20:12.520
+Given you're in a state, the system tells you what to do.
+
+20:12.520 --> 20:14.760
+Again, it's like a manual for behavior.
+
+20:15.400 --> 20:22.600
+And if we have a policy that does a great job, then something we call the best job,
+
+20:22.600 --> 20:25.400
+we call the optimal policy, the optimal behavior.
+
+20:25.400 --> 20:27.480
+And that's obviously something that we want to have.
+
+20:27.480 --> 20:31.000
+And this is something we typically call pi star, so the best possible behavior.
+
+20:31.640 --> 20:33.800
+In practice, policies may not be optimal.
+
+20:33.800 --> 20:37.560
+They may suboptimal, like behaviors that we as humans do.
+
+20:37.560 --> 20:41.000
+Even if we know in which situation I should behave in which way.
+
+20:42.200 --> 20:43.000
+Sometimes we do this.
+
+20:43.000 --> 20:44.440
+Sometimes the outcome is not that great.
+
+20:45.400 --> 20:46.280
+Question, what should we do?
+
+20:47.000 --> 20:48.760
+The policy basically tells us what to do.
+
+20:48.760 --> 20:51.240
+And we can have a good policy, so we behave good.
+
+20:51.240 --> 20:54.440
+We come through life and reach our goals often.
+
+20:54.440 --> 20:59.640
+Or we have a shitty policy, which actually leads to suboptimal behavior
+
+20:59.720 --> 21:02.440
+and leads to the fact that we end up in a non-desirable state.
+
+21:03.080 --> 21:07.000
+So as you see in this decision-making process for robots, there are a lot of similarities
+
+21:07.000 --> 21:10.920
+that we as humans may experience in our life as well.
+
+21:10.920 --> 21:14.920
+So this policy is something which tells you what to do next given you're in a certain state.
+
+21:14.920 --> 21:17.880
+And there are policies which are worth and policies which are better.
+
+21:17.880 --> 21:20.360
+And we are seeking to find the optimal policy.
+
+21:20.360 --> 21:23.160
+So something that generates the optimal behavior,
+
+21:23.160 --> 21:25.640
+knowing that not everything we are executing
+
+21:26.280 --> 21:29.640
+actually happens and happens in the way we want it to be.
+
+21:29.640 --> 21:31.720
+That's what the policy is about.
+
+21:31.720 --> 21:33.720
+And we want to find the optimal policy.
+
+21:35.080 --> 21:40.040
+Okay, how would the policy for our environment actually look like?
+
+21:40.040 --> 21:42.920
+So again, here is our simplified environment.
+
+21:42.920 --> 21:47.800
+And these arrows here show us what to do, where to navigate.
+
+21:47.800 --> 21:49.560
+So when we are here, I should move left.
+
+21:49.560 --> 21:51.000
+When I'm here, I should move up.
+
+21:51.560 --> 21:55.400
+And this is the optimal policy for the example that I had before.
+
+21:55.400 --> 21:58.840
+So it was computed again in a way that this was a reward of positive one.
+
+21:58.840 --> 22:00.600
+This was a reward of negative one.
+
+22:00.600 --> 22:05.560
+And all other states have a negative reward of minus 0.04.
+
+22:05.560 --> 22:06.840
+So a small negative reward.
+
+22:07.400 --> 22:12.280
+As a result of this, the system will say, okay, let's go and go to the goal.
+
+22:12.280 --> 22:14.840
+Because if I'm staying in the same place, I get punished for it.
+
+22:16.280 --> 22:20.040
+And still, while moving here, I always get a small negative reward.
+
+22:20.040 --> 22:27.320
+But this small negative reward is so small that I'm not rushing to the goal as fast as possible.
+
+22:27.320 --> 22:30.280
+Because it's okay to get slightly punished.
+
+22:30.280 --> 22:33.880
+But then increasing the probability of ending up in the right state.
+
+22:33.880 --> 22:36.520
+Rather than falling down the staircase.
+
+22:37.080 --> 22:43.240
+And this combination of transition model, but especially rewards, has a strong impact on the behavior.
+
+22:43.240 --> 22:46.920
+So depending on the rewards we get, we get different behaviors.
+
+22:46.920 --> 22:52.680
+So we get a good behavior or a bad behavior or a desired and undesired behavior.
+
+22:52.680 --> 22:55.400
+But it really is defined by the rewards.
+
+22:55.400 --> 23:02.040
+And it's a tricky thing for us as designers to design a reward function that generates a behavior we actually want to have.
+
+23:02.040 --> 23:07.080
+So defining rewards is something which is tricky and is not an easy task.
+
+23:07.960 --> 23:11.000
+And we can see this by just kind of changing this reward function.
+
+23:11.000 --> 23:14.600
+So I'm not taking 0.4 and plus minus one all the time.
+
+23:14.600 --> 23:16.920
+Let's say we stick with this plus minus one.
+
+23:16.920 --> 23:22.360
+But what happens if we change this 0.04 to a different value?
+
+23:22.360 --> 23:30.520
+So these r's over here are values where we have generated, give a different reward for the states the system is in.
+
+23:30.520 --> 23:36.360
+So if the reward is minus two, that means in every state I get very badly punished.
+
+23:36.360 --> 23:39.080
+Even much worse than falling down the staircase.
+
+23:39.080 --> 23:43.000
+It's kind of, the world is so bad it's better to kill yourself than staying in your state.
+
+23:43.000 --> 23:50.920
+That would be kind of a reward that is a high negative reward where staying in your state is better than dying.
+
+23:50.920 --> 23:57.880
+Something which doesn't make sense in general, but we can mathematically formulate it, which would be done if we set r to minus two or even a larger value.
+
+23:57.880 --> 24:07.800
+So what the system does, it tries to as fast as possible reach one of these terminal states, either the charging station or the staircase, wherever I'm faster.
+
+24:07.800 --> 24:11.080
+So if I'm here, I'm of course jumping to the charging station.
+
+24:11.080 --> 24:21.400
+But if I'm here, given that the charging station reaching this charging station would take two actions where I get a negative reward for, it's better to kill myself and jump down the staircase.
+
+24:21.400 --> 24:26.120
+Not a good behavior in general, but that's what you do if you set up a shitty policy.
+
+24:26.120 --> 24:29.880
+Okay, what happens if we take our policy to minus 0.2?
+
+24:29.880 --> 24:39.000
+So we are still more punished for staying in the world compared to this minus 0.04 we had before.
+
+24:39.000 --> 24:53.960
+As a result of this, what happens, we are still trying to go to the charging station as quickly as possible so that I'm willing to take a higher risk and pass by closer at the staircase where the risk of falling down exists.
+
+24:53.960 --> 24:59.160
+But I mean, most of the time I'm good. 90% of the time I'm actually good and I'm reaching this state.
+
+24:59.160 --> 25:08.280
+So on average, I will do better if I'm taking a risk going close to a staircase in order to reach my charging state, my charging location.
+
+25:08.280 --> 25:13.000
+This happens if living in your environment is bad, you get risky.
+
+25:13.000 --> 25:20.040
+It's not as bad as you want to kill yourself, but it's bad and so you want to be risky and reach the goal as fast as possible.
+
+25:20.040 --> 25:32.280
+If we have a reward that is basically, even a negative reward that is kind of larger but close to zero of that state, it basically means our staying in the world doesn't really matter.
+
+25:32.280 --> 25:38.120
+It's okay, it's not super great, but I don't really care how long I stay in the world.
+
+25:38.120 --> 25:43.080
+This leads to behavior that is very similar to the original behavior that I had.
+
+25:43.080 --> 25:45.640
+Only two states have a different behavior, those two.
+
+25:45.640 --> 25:53.560
+And this means if I'm close to the staircase, just move in the opposite direction of the staircase because it will for sure prevent your falling down.
+
+25:53.560 --> 25:59.640
+If you are on the wall, you will be bumped back, but in 10% of the cases you will go left or right.
+
+25:59.640 --> 26:04.600
+So you will reach another state which is safe from the staircase in 10% of the cases.
+
+26:04.600 --> 26:14.440
+So you're basically running into the wall until you fall into a good state just to avoid falling down the staircase because this bumping into the wall is something which doesn't really hurt you.
+
+26:14.440 --> 26:21.320
+And then we can actually make something where we say let's make the reward positive, not even a zero reward, positive.
+
+26:21.320 --> 26:23.960
+That means staying in that world is great.
+
+26:23.960 --> 26:29.440
+I'm not aging, my life is great, there's nothing I should do to leave this world.
+
+26:29.440 --> 26:33.880
+I'm living in a perfect world, an unrealistic world but in a perfect world.
+
+26:33.880 --> 26:40.480
+So with a positive reward, the system never wants to reach a terminal state, it never wants to go to the charging station, it never wants to die of course.
+
+26:40.480 --> 26:50.640
+But it just says do whatever you want, just walk around, but just make sure you never reach a terminal state, never reach the goal, never reach death because living in this world is perfect.
+
+26:50.640 --> 27:00.360
+This is what happens if you get your system a positive reward because basically you actually have many policies which would achieve this goal.
+
+27:00.360 --> 27:05.680
+But as soon as it drags you away from the terminal states, you're all good.
+
+27:05.680 --> 27:16.200
+So the reward function dramatically defines behavior and it's something that doesn't only hold for autonomous systems or robots, even it holds for us as humans.
+
+27:16.200 --> 27:29.160
+Depending on our internal reward system, this impacts our behavior and depending on the reward system that we have, we will behave in a different way so that we generate an optimal or for us as close as optimal behavior.
+
+27:29.160 --> 27:36.080
+And if you want to change our behavior, we basically have to change our reward functions, so very similar between robots and humans.
+
+27:36.080 --> 27:46.960
+So the key insight here is the rewards impacts the policy, so rewards impacts behavior, your behavior as a human as well as the behavior that a mobile robot will show.
+
+27:46.960 --> 27:51.520
+The question is how do we actually generate those policies now?
+
+27:51.520 --> 27:56.120
+Before we think about the policy, we want to think about something which is called the utility of a state.
+
+27:56.120 --> 27:58.440
+So how good is a state?
+
+27:58.440 --> 28:09.360
+The state or the quality, so to say, or utility of a state is not only defined by the reward, it is the reward plus what I will get in the future if I'm entering the state.
+
+28:09.360 --> 28:15.840
+So what's the potential of this state, for example, reaching the goal and getting a higher positive reward?
+
+28:15.840 --> 28:19.480
+That is something that we refer to as the utility.
+
+28:19.480 --> 28:23.160
+So it's kind of the expected reward into the future.
+
+28:23.160 --> 28:31.120
+So if I'm in that state, what is the expected reward of that state in the future under a given policy?
+
+28:31.120 --> 28:43.480
+So if I say the utility of a state quantifies the benefit of that state to the overall task, and this is always defined based on a policy, because if you have a certain policy, a state may be good or a state may be bad.
+
+28:43.480 --> 28:47.720
+And this is defined by the utility, which depends on the policy and the state.
+
+28:47.720 --> 28:56.240
+So what I'm doing, I'm computing the expected reward that I will get in the future, it may take infinitely long.
+
+28:56.240 --> 29:01.960
+I'm basically summing up the reward that I get, given that I'm executing a policy and that I'm starting in my start state as zero.
+
+29:01.960 --> 29:08.480
+So I'm putting myself in the start state as zero, sorry, if my start state is S or the input in here.
+
+29:08.480 --> 29:15.400
+So I'm setting this as my start state and then computing the expected future reward.
+
+29:15.400 --> 29:17.960
+I'm basically summing up all rewards that I'm going to get.
+
+29:17.960 --> 29:27.880
+This tells me how good is that, what's the utility of that state under the policy I'm acting on, under my behavior, what's the utility of that state.
+
+29:27.880 --> 29:38.600
+So it basically encapsulates the potential rewards that I can get in the future if I'm starting in that state S.
+
+29:38.600 --> 29:49.400
+And we now want to dive a little bit into the math and see what happens with this definition of the reward function if you want to look into the utility of a state.
+
+29:49.400 --> 29:57.040
+So we can express this utility of a state as a function of its next state, of the successor states.
+
+29:57.040 --> 30:00.240
+So we start with exactly the same equation we had there before.
+
+30:00.240 --> 30:05.800
+And we can basically break up that sum into the sum of the state as zero, as one, as two, as three.
+
+30:05.800 --> 30:17.560
+And this is the kind of sequence of states that I'm actually visiting by executing the policy pi and starting in the state S, right?
+
+30:17.560 --> 30:25.840
+So if you start in the state S, that means we are getting the reward of the state S and there's no uncertainty involved in this.
+
+30:25.840 --> 30:34.480
+So the first thing I kind of do, I kind of break up the expectation, which is in the operator here, it's going to break up the sum.
+
+30:34.480 --> 30:39.360
+The expected reward of the first state and the expected reward of all the subsequent states.
+
+30:39.360 --> 30:44.920
+And again, I'm norming that state, I know the reward that I'm getting, so I don't need the expectation anymore.
+
+30:44.920 --> 30:51.240
+This is my reward of the initial state plus the expectation of all the future states I'm going to visit.
+
+30:51.240 --> 30:59.200
+So I'm basically saying, OK, it's the reward of where I am right now plus the reward that I'm getting in the future, right?
+
+30:59.200 --> 31:06.240
+And so this can be seen as the reward of the state and the utility of the successor state.
+
+31:06.240 --> 31:15.000
+OK, so if I have a sequence of states where I'm going to, this is my current state plus the policy of what happens next.
+
+31:15.000 --> 31:23.200
+So basically the utility of now is the reward of now plus the utility of the next state I'm actually ending in.
+
+31:23.200 --> 31:29.000
+OK, which brings me to the maximum or the optimal policy.
+
+31:29.000 --> 31:35.600
+So we're looking for the optimal policy that provides me the maximum expected utility over time.
+
+31:35.600 --> 31:44.160
+So the optimal policy is the one that gives me the maximum expected utility in the long run.
+
+31:44.160 --> 32:03.200
+So we always choose S so that if you execute an action A in the state S that maximizes the expected utility of S by having the reward of S and the future utility that I get from S prime, which is the result where I'm actually ending up.
+
+32:03.200 --> 32:15.200
+So I want to have the optimal policy for state S if the one which maximizes the argument which maximizes the expected utility.
+
+32:15.200 --> 32:18.800
+So this is the expectation taking over all policies.
+
+32:18.800 --> 32:28.120
+So I'm basically saying, given I'm in a state and I want to maximize the utility of that state, which policy should I take?
+
+32:28.120 --> 32:34.000
+So I'm iterating over all policy and just taking which of the policies is the best policy.
+
+32:34.000 --> 32:36.240
+And this is actually my optimal policy.
+
+32:36.240 --> 32:44.440
+I'm looking for the best actions to execute in a state so that the utility is maximized.
+
+32:44.440 --> 32:57.000
+OK, so now I can use the equation that I had before and substitute my utility of my policy in a state S or the formula we had given two slides ago.
+
+32:57.000 --> 33:11.480
+So my optimal policy is the argmax, so the best set of actions to execute for the expected utility of that state under the policy.
+
+33:11.480 --> 33:17.560
+We can replace this. This is the reward of S plus the utility of the suck sequence state.
+
+33:17.560 --> 33:26.720
+Again, I can actually break that up as an argmax of the expected reward in the state and the expected future utility.
+
+33:26.720 --> 33:30.520
+And this is nothing else. This is actually constant.
+
+33:30.520 --> 33:36.360
+So no matter which actions I'm executing, the reward of the state is the same because I'm already in that state.
+
+33:36.360 --> 33:40.720
+So the action only impacts what happens in the future. So this reward has no impact.
+
+33:40.720 --> 33:44.480
+It's a constant in this maximization problem. So I can actually drop that.
+
+33:44.480 --> 33:50.880
+So only this part remains. So the argmax of the expected future utility.
+
+33:50.880 --> 33:58.200
+And the utility of that next state, of this future state, is nothing else than all future states I may end up with.
+
+33:58.200 --> 34:11.760
+So I'm iterating over all possible states, compute the transition probability of actually ending up in the state as prime given I was in S and executed action A plus the utility of that state as prime.
+
+34:11.760 --> 34:20.840
+So what I'm doing, I'm saying the current state where I am doesn't matter for the argmax for selecting the best policy.
+
+34:20.840 --> 34:31.440
+And I'm checking in which states could I end up, how likely it is to end up in that state and multiply this probability with the utility of that future state and sum up over all of them.
+
+34:31.440 --> 34:35.200
+This is actually what happens over here.
+
+34:35.200 --> 34:41.960
+So I'm basically saying what are the potential outcomes of my actions and what are the utilities of all the states where I may end up with.
+
+34:41.960 --> 34:57.840
+And then I'm computing the function to maximize is then just the sum of all states, the utility of this state multiplied with the probability that this actually happens, that I'm actually ending up in this state as my successor state.
+
+35:00.520 --> 35:04.320
+And this brings me to something which is called the true policy.
+
+35:04.320 --> 35:10.640
+And the true policy of a state is obtained by the application of the optimal policy.
+
+35:10.640 --> 35:16.600
+So if I'm applying the optimal policy, my best possible behavior, this gives me then the true utility of a state.
+
+35:16.600 --> 35:24.880
+So how good is that state given that I can do an optimal behavior, so I can behave in the best possible way, how good it is to be in a state.
+
+35:24.880 --> 35:30.200
+That's what the true utility of a state is typically refined in.
+
+35:30.200 --> 35:37.040
+So this is kind of this U pi star, the optimal policy, but you also abbreviate this U of S.
+
+35:37.040 --> 35:39.320
+OK, so how does this now actually look like?
+
+35:39.320 --> 35:49.800
+So the utility of the state, and this is basically the same derivation step that we had done before, except as we are maximizing the function now and not the art max.
+
+35:49.800 --> 35:52.600
+So I'm not interested in the argument, I'm interested in the maximum value.
+
+35:53.880 --> 35:58.040
+I can again break up the utility at the reward and the utility of the future reward.
+
+35:59.560 --> 36:01.680
+Future utility, break that up into two parts.
+
+36:01.960 --> 36:03.480
+The expectation of the reward.
+
+36:03.840 --> 36:09.000
+Now since I'm maximizing, not computing the art max, only the max, that's the difference because I'm interested in the value.
+
+36:09.480 --> 36:11.360
+This is a constant, but a constant that matters.
+
+36:11.360 --> 36:24.960
+So it's R of S plus the maximum of the future utilities, and this is exactly the sum over how likely it is that I'm ending up in a state times the utility of that future state.
+
+36:25.960 --> 36:45.360
+So what happened, I have broken up the utility of a state, so the true utility of a state, into the reward of that state plus the expectation over the reward of the successor states, which can be computed by the sum over all states I'm ending up as a next step.
+
+36:45.840 --> 36:51.240
+The transition probability of ending up there times the true utility of that successor state.
+
+36:51.360 --> 36:53.160
+This is exactly what happens in here.
+
+36:54.160 --> 37:02.120
+And this equation here is something which is very famously known as the Balman equation, which provides me the true utility of a state.
+
+37:03.120 --> 37:25.960
+This work was done by Balman in the end of the 15th, 1957, I think, when he published a book, or he's one of the masters of dynamic programming, the book is actually called Dynamic Programming, where he provides this function for computing, for optimal decision making with this reward function and these utilities.
+
+37:25.960 --> 37:39.960
+And it assumes again that you can break up these steps in a certain way so that you kind of have a separable problem, but under this assumption it tells you the optimal utility of the state that you can then use for decision making.
+
+37:39.960 --> 37:53.960
+And what it shows is that there's a direct relationship between the state itself, this R S, and where I'm going to up, so its neighbours, its neighbouring states, those states which I can reach through carrying out a certain action.
+
+37:53.960 --> 38:05.960
+So the utility of a state is the immediate reward, so the kind of short-term reward that I get, and the long-term utility, the expected utility of the next state, given that I'm behaving in an optimal way.
+
+38:05.960 --> 38:12.960
+And we can compute this U S for all states. So for all states we can compute this utility.
+
+38:13.960 --> 38:18.960
+The question is how do we actually, how can we actually do this? How can we obtain those computations?
+
+38:18.960 --> 38:26.960
+Okay, let's have a look. So we have N states, so N possible states that are in, and N unknowns in terms of N of those rewards.
+
+38:26.960 --> 38:35.960
+So can we use just kind of our tools that we know from linear algebra in order to solve this system with N states and N unknowns?
+
+38:35.960 --> 38:40.960
+Unfortunately this is not the case and one of the reasons is this maximisation operator.
+
+38:40.960 --> 38:53.960
+It's a non-linear operator and it's an operator which is hard to optimise for and it clearly needs, it's a non-linear equation and therefore we go for an iterative approach.
+
+38:53.960 --> 39:01.960
+So we start with initial configuration and then update that and iterate until we converge into the right state.
+
+39:01.960 --> 39:16.960
+And this is something that Bellman has shown in this book, it's a classical dynamic programming example that we can use this iterative approach in order to compute the optimal utility for any state.
+
+39:16.960 --> 39:23.960
+So while doing this we have made an assumption on the way. This is the assumption of separability.
+
+39:23.960 --> 39:37.960
+This basically means that we cannot use all utility functions in here, they have to have a certain property and this is basically that I can actually break up this sequence of actions into a reward plus the utility of the remaining actions.
+
+39:37.960 --> 39:47.960
+So only if I can actually make the separation that if I'm in the current state as zero I can separate this state out and compute the reward plus the utility of the remaining state.
+
+39:47.960 --> 39:55.960
+So they kind of break this down in sequence. That means if I'm in a certain state where I have been before basically it doesn't matter anymore.
+
+39:55.960 --> 40:03.960
+So this decision making only holds for problems that have this kind of property.
+
+40:03.960 --> 40:10.960
+Another thing we typically do is we want to kind of discount our utility or our rewards over time.
+
+40:10.960 --> 40:19.960
+So in the computation of the utility of a policy we don't sum up the rewards as they are, we have a discount factor here for the reward.
+
+40:19.960 --> 40:25.960
+And the discount factor which says rewards that I'm getting later on the future count less than rewards that I'm getting right now.
+
+40:25.960 --> 40:29.960
+So it's more what I get right now is better than what I'm getting in the future.
+
+40:29.960 --> 40:35.960
+So if I get let's say 100 euros today is better than getting 100 euros in a year.
+
+40:35.960 --> 40:39.960
+So we are discounting the reward of this 100 euro over time.
+
+40:39.960 --> 40:54.960
+And we can do this here in order to say we want to optimize for a system which gets where the immediate rewards is more important than the rewards I'm getting in some far future.
+
+40:54.960 --> 40:58.960
+Of course if in some far future the reward is much bigger I'm still going for it.
+
+40:58.960 --> 41:01.960
+But I'm taking this discounting into account.
+
+41:01.960 --> 41:06.960
+So I have basically a discount factor in here that kind of reduces the reward over time.
+
+41:06.960 --> 41:20.960
+This is something that is typically done so that we don't optimize or don't spend too much time in states if we have around zero reward and kind of discount the reward the longer it takes me to actually achieve my goal.
+
+41:20.960 --> 41:27.960
+You can see this the more states I need to visit the longer it takes and I actually want to minimize this and do this as quickly as possible.
+
+41:28.960 --> 41:37.960
+Okay, if we take our example that we had before and compute the utility of the state, so the true utility, these will be the true utilities that we actually get.
+
+41:37.960 --> 41:50.960
+So the different states have different utilities and they have a high utility if they are close to the goal because if I'm in that state I can reach my goal location closer.
+
+41:50.960 --> 42:01.960
+It's better but if I'm for example close to a bad state I'm getting a substantially smaller reward but given that it's also close to the goal it's somewhere in between.
+
+42:01.960 --> 42:11.960
+But if you're kind of close to the goal a little bit further away from the negative reward from the bad state your utility will be substantially higher.
+
+42:11.960 --> 42:17.960
+And the question is how do I do this computation? How do I end up there when I reach this state?
+
+42:17.960 --> 42:20.960
+So what we do, what we said, we have this iterative computation.
+
+42:20.960 --> 42:29.960
+So we update our utility of a state by taking the reward of that state into account and the utility of the neighboring states.
+
+42:29.960 --> 42:42.960
+And we start basically with, we initialize our utilities, zero initialization, initialization doesn't really matter, it doesn't impact how fast the system converges but not on the result.
+
+42:42.960 --> 42:58.960
+And the key idea is that for utilities, so this is the iteration, in the new iteration is the reward in that state and then I'm maximizing over the sum of the transitions of the other utilities in the neighboring states at the previous iteration.
+
+42:58.960 --> 43:04.960
+So if you start for example with a zero utility, so all states have zero utility.
+
+43:04.960 --> 43:14.960
+In the first iteration this will all be zero, so all this term cancels out to zero and I'm just setting the reward as the utility for a state.
+
+43:14.960 --> 43:26.960
+And then after this we have the reward as initial state and then this part starts to play a role and you're updating this maximizing the future reward over time.
+
+43:26.960 --> 43:36.960
+And this approach will lead to an optimal solution, completing the optimal utility if your time goes towards infinity.
+
+43:36.960 --> 43:48.960
+Of course we typically don't have infinite time, we don't want to wait for an infinite amount of time to come up with a solution, so we are basically monitoring the utility and simply stop if the change in the utility is smaller than the threshold.
+
+43:48.960 --> 44:02.960
+So for example if the root mean square error here between the difference between subsequent states for all states is below a certain threshold, I'm actually stopping my operation or another criterion that I may use.
+
+44:02.960 --> 44:12.960
+And this algorithm which is sketched here is something which is famously known as the value iteration algorithm, which is the key algorithm in dynamic programming to solve the MDPs.
+
+44:12.960 --> 44:24.960
+And again we have the definition of all states and the discount factor, I'm starting setting all utilities to zero and then I'm basically iterating with this equation that we have shown over here.
+
+44:24.960 --> 44:42.960
+So updating the utility as a reward of the state plus the discount factor of the utility of the neighboring states and the time of the probability of ending up there, I'm maximizing for this and I'm repeating this until u and u prime are close enough.
+
+44:42.960 --> 44:56.960
+So basically when the utility between two iterations is close enough, and this close enough could be some distance function between the utilities, if the change is smaller than epsilon then you're actually aborting.
+
+44:56.960 --> 45:06.960
+And this is how value iteration is run. You can also make a small example, let's say we have a very simplified setup just for showing this here as the purpose of illustration.
+
+45:07.960 --> 45:22.960
+We use our same transition model as before, so with 80% we do what we want to do with 10% left right each and let's say this is the states that I have and this gives me the reward function, so reward 1, reward 10, reward 5, reward 1, reward minus 8.
+
+45:22.960 --> 45:31.960
+And the question is what is now the utility of this state in the center over here.
+
+45:32.960 --> 45:40.960
+So what I'm doing, I take the reward of that state, the reward is 1, and then I take the maximum of all actions that I can execute.
+
+45:40.960 --> 45:44.960
+So should I go left, should I go right, should I go up, should I go down?
+
+45:44.960 --> 45:55.960
+And what basically happens is if I go left, so if I'm in that state and I want to go left, I'm ending up with 10% probability here with 80% probability here and this 10% probability here.
+
+45:55.960 --> 46:11.960
+So this would be 0.1 times 1, so 0 times 1 times 1, 0 times 8, 80% probability times 5 is this utility, 0.1 times 10 is this utility, so this is what I would get for moving left.
+
+46:11.960 --> 46:31.960
+And do the same for up, right, and down, so that this simplifies to 1 plus the maximum of 5.1, 7.7, minus 5.3, and minus 0.5, so 7.7 would be the best thing, 1 plus 7.7 is 8.7, so this state would get a utility of 8.7.
+
+46:31.960 --> 46:37.960
+And then we're doing this for all states, repeating this process over and over and over again until convergence.
+
+46:38.960 --> 46:43.960
+And for example, for our simple example, this looks like this, so this is the utility for the different states.
+
+46:43.960 --> 46:51.960
+So this is state 1,1, this is 4,3, so 1,2,3,4 for the first number, and 1,2,3 for the second number.
+
+46:51.960 --> 46:58.960
+Then you can see how the utility of the state starting being initialized down here evolves over time until the states converge.
+
+46:58.960 --> 47:10.960
+So we can see here roughly after, whatever, something around 10 iterations or 12 iterations, the system would have converged here and come up with the optimal, or with the true utility of a state.
+
+47:10.960 --> 47:20.960
+And as a result of this, I have my optimal utility of a state, and then can easily from that extract the policy.
+
+47:21.960 --> 47:27.960
+So the value iteration finds the optimal solution for this Markov decision process.
+
+47:27.960 --> 47:32.960
+It will converge to a unique solution of the Bellman equation system.
+
+47:32.960 --> 47:39.960
+The initial values are arbitrary, that means, of course, the closer the values are to the true values, the faster they will converge.
+
+47:39.960 --> 47:44.960
+But if I have an infinite number of operations of iterations, I will converge to the solution anyhow.
+
+47:44.960 --> 47:50.960
+And what the value iteration does, it basically propagates the information through the state space through these local updates.
+
+47:50.960 --> 47:56.960
+And these local updates are given through the transition model and the utilities of the neighboring states.
+
+47:56.960 --> 48:04.960
+So with this, I'm getting the optimal utility for every state, so the true utility for every state.
+
+48:04.960 --> 48:08.960
+And what I then can do is I can compute the optimal policy directly out of this.
+
+48:08.960 --> 48:19.960
+Because if I know the true utility of a state, I just can walk into the neighboring state where I'm actually maximizing my true utility.
+
+48:19.960 --> 48:24.960
+And I do this by taking into account that my motion is uncertain.
+
+48:24.960 --> 48:32.960
+So if I say what should I do in a certain state, I'm just taking the action which maximizes this sum.
+
+48:32.960 --> 48:44.960
+So the probability of ending up of going whatever left in the utility of the state left plus the probability of going up and getting the utility of the state up and the probability of going right and getting the utility right.
+
+48:44.960 --> 48:50.960
+But this is then if I have these values over here, I just need to iterate only about overall actions I can execute.
+
+48:50.960 --> 48:53.960
+I'm basically computing what the utility of that action is.
+
+48:53.960 --> 48:58.960
+I'm taking the one which maximizes this activity.
+
+48:58.960 --> 49:02.960
+So I'm basically taking the best action under this function.
+
+49:02.960 --> 49:07.960
+And this gives me the optimal policy and thus the optimal behavior out of this.
+
+49:07.960 --> 49:09.960
+So a few notes on the utility and the reward.
+
+49:09.960 --> 49:14.960
+So it's important to note that reward and utilities are related quantities, but they are different.
+
+49:14.960 --> 49:17.960
+The reward R can be seen as a short-term reward.
+
+49:17.960 --> 49:21.960
+So what I'm getting if I'm in a state, the reward that the system gets.
+
+49:21.960 --> 49:24.960
+It's intermediate direct reward it gets in state S.
+
+49:24.960 --> 49:28.960
+The utility however is more something like a long-term reward.
+
+49:28.960 --> 49:30.960
+So how good is the state in the long run?
+
+49:30.960 --> 49:34.960
+If I'm traveling through this state, will it bring me closer to the goal?
+
+49:34.960 --> 49:40.960
+So the difference between what I get right now and an investment into the future.
+
+49:40.960 --> 49:42.960
+So short-term reward and long-term reward.
+
+49:42.960 --> 49:45.960
+And they need to be distinguished because we are interested in the long-term reward.
+
+49:45.960 --> 49:52.960
+If we don't want to wait too long, we take this discounting factor into account which reduces the utility of states where the reward comes towards the end.
+
+49:52.960 --> 49:59.960
+But typically I'm interested about the reward that I can accumulate on the way towards my final state.
+
+49:59.960 --> 50:04.960
+So what I presented here was a very basic introduction to Markov decision processes.
+
+50:04.960 --> 50:11.960
+And this is a technique that is used for decision making under uncertainty.
+
+50:11.960 --> 50:19.960
+So whenever you cannot guarantee that the actions you're executing will actually be executed the way you want them to be executed.
+
+50:19.960 --> 50:22.960
+Then you should take that into account when selecting your actions.
+
+50:22.960 --> 50:24.960
+And the MDP tells you how to do this.
+
+50:24.960 --> 50:30.960
+What the MDP assumes is that the world is fully observable, so you know the state of the system at all points in time.
+
+50:30.960 --> 50:36.960
+You have this separability property that we have before, our transition model is Markovian.
+
+50:36.960 --> 50:42.960
+So it follows the Markov property, something that we anyway assumed in this course nearly in all models.
+
+50:42.960 --> 50:51.960
+And then the MDP gives you the optimal solution through the value iteration by computing the utility of a state.
+
+50:51.960 --> 50:55.960
+And then once we have the utility, extract the policy out of this.
+
+50:55.960 --> 51:06.960
+There are also variants of this such as policy iteration and a large number of other techniques that you can apply in order to speed up the processes, take additional uncertainties into account and so on.
+
+51:06.960 --> 51:12.960
+But what I presented here are the basics of a Markov decision process and hope could explain you what they are useful for.
+
+51:12.960 --> 51:20.960
+As further reading, there is kind of the Russell and Norvig book on AI, A Modern Approach, one of the classical books.
+
+51:20.960 --> 51:24.960
+And you also find the Markov decision process in here.
+
+51:24.960 --> 51:31.960
+But also the probabilistic robotics book will give you an insight into MDPs and how they can be used in robot navigation.
+
+51:31.960 --> 51:33.960
+So with this, thank you very much for your attention.
+
+51:33.960 --> 51:35.960
+It was a pleasure to have you here. Thank you.
+

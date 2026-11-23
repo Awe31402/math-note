@@ -1,0 +1,591 @@
+[00:00] So, welcome everyone to the lecture today.
+[00:03] We want to continue looking into planning and look into one special form of planning,
+[00:08] namely, planning under uncertainty.
+[00:10] For that, we will investigate the Markov decision processes or in short, MDPs.
+[00:16] So, this is relevant for you whenever you want to plan actions for
+[00:20] an autonomous robot or autonomous system that should act on its own,
+[00:25] but cannot be sure that the action that it
+[00:27] selects are actually executed in the way it wants to be.
+[00:30] So, whenever you have a system which says,
+[00:34] let's say, go one meter per second forward,
+[00:37] and it may not drive one meter per second forward,
+[00:39] it may drive meter per second forward,
+[00:41] but also steers a little bit to the right or to the left-hand side.
+[00:44] If this can happen,
+[00:45] then you need to take MDPs into account in order to plan how to plan under uncertainty,
+[00:52] and that's kind of what MDPs are about.
+[00:54] So, whenever you cannot guarantee that your actions are executed in the way you planned,
+[00:59] you should actually not be using a standard planning algorithm such as A*,
+[01:03] then you should actually use an MDP.
+[01:05] The problem is that MDPs can be computationally
+[01:08] costly or computationally more costly than, for example, the A*, algorithm.
+[01:12] Therefore, a lot of planning systems out there today use A*,
+[01:16] but what you actually would need to do is something like an MDP.
+[01:20] So, again, MDP assumes uncertain motion execution,
+[01:25] but we still assume that we can correctly sense the state of the world.
+[01:30] So, we assume our knowledge about the world is correct,
+[01:34] but we don't know,
+[01:36] we can't guarantee that we execute everything in the way we want it to be.
+[01:39] If both gets uncertain,
+[01:41] then we would have a partially observable Markov decision process or POMDP,
+[01:45] but that's something that we're not going to discuss here today.
+[01:49] So, typically challenges in robot navigation are we need to calculate the optimal paths.
+[01:54] The question, what does optimal mean?
+[01:57] So, we have some cost function and we're going to come up with the optimal paths.
+[02:00] First, can we actually guarantee that we find the optimal paths?
+[02:04] The second thing is,
+[02:06] is actually our notation of optimality actually what we want to have?
+[02:09] So, if the underlying cost function actually leading to the behavior that we want the system to have.
+[02:16] We have seen this already with the A*, algorithm.
+[02:18] If, let's say, the shortest path is our criterion for optimality,
+[02:23] it will actually lead to navigation behaviors where the robot goes really, really, really close to obstacles.
+[02:27] And this can lead to a collision if something is not exactly the way we perceived it to be,
+[02:33] or the system doesn't exactly execute what it's supposed to do.
+[02:37] And therefore, this may not be actually the optimal path,
+[02:41] although you're typically looking for navigating along the shortest paths.
+[02:45] Other challenges are how to deal with unforeseen objects.
+[02:49] So, if new objects pop up in the scene that the robot is not aware of,
+[02:52] that's not in the robot's map, how to react to this?
+[02:55] What should we even do if objects are moving around?
+[02:58] How can we take the movement into account to predict how those objects behave
+[03:02] and take those predictions into account in planning?
+[03:05] Or, last but not least, how should we behave if we don't know if the system actually does what we want it to do?
+[03:13] And that's what we are looking in here today,
+[03:15] the MDP, Markov Decision Process, taking into account uncertainties in the motion execution.
+[03:22] So that's the task that we are going to investigate here today.
+[03:28] If you look to our layered architecture that we have discussed in the context of A*,
+[03:32] we typically have a planning level where the planner runs at rather low frequency,
+[03:38] let's say once every second or once every two seconds, for example.
+[03:42] Then, we have typically a local planner or local collision avoidance system depending.
+[03:46] So, this can be a local planner, it can be a collision avoidance system,
+[03:49] the boundaries are rather fluent here,
+[03:51] which runs at the high frequency, takes sensor data into account,
+[03:54] and generates trajectories, either guide the robot on the shortest trajectory that comes from the planner here on top,
+[04:03] or generates, let's say, swerves or other behaviors in order to kind of avoid an obstacle that is in front of the system.
+[04:11] And then, on the lowest level, we have a controller that makes sure or tries to make sure that what we're actually sending to the system is actually being executed.
+[04:19] And this cannot be guaranteed because of timing issues in terms of kinematic constraints,
+[04:25] in the sense that we do not know all the, let's say, surface properties we are driving on,
+[04:29] or not all properties of the robot itself.
+[04:32] So, this will not be perfect.
+[04:34] And today, we are dealing with the fact that this is actually not perfect.
+[04:39] We do this on the planning level, that means we do this here in this planning level layer,
+[04:44] that already the planner takes into account that whatever it tells the system down here may not be executed perfectly.
+[04:51] So, let's take into account that what we do here is imperfect,
+[04:55] and maybe generate trajectories, for example, that guide the system away from obstacles a little bit further.
+[05:01] So, even if we take some uncertainty in the motion execution into account, this will not lead to collisions.
+[05:07] And that's basically what the MDP system does.
+[05:11] So, let's go with a very simplistic example.
+[05:13] So, these are these typical small-scale AI examples.
+[05:17] You have an agent or your robot that is acting in an environment, and we have here a starting location,
+[05:22] these are all free cells, here's an obstacle, and here is a goal state,
+[05:27] and here is a state where the system doesn't want to end up.
+[05:30] So, the plus one is the state we want to be, the minus one is the state which we don't want, never want to reach,
+[05:35] and this is where we start, and the question is, how do I actually reach this location down here?
+[05:42] So, for a robot, this could be, this is a charging station where the robot can recharge itself,
+[05:46] and this is a staircase, and if the robot falls down the staircase, the robot will be broken or will be dead.
+[05:51] So, let's state that the system doesn't want to end up in.
+[05:56] And so, the question is, how should the system now navigate in this world?
+[06:00] Assume it can always go whatever, up, down, right or left, or north, south, east, west,
+[06:05] and so the system can always navigate here through those cells,
+[06:09] and it wants to go here, but it never wants to reach that state over here.
+[06:13] So, if we do this in our traditional A-star planning world, then this is an easy problem.
+[06:19] We can compute the shortest path in a very easy way,
+[06:23] and this shortest path would guide the system here to the side, and then going up, up, and again to the right,
+[06:29] so that the system ends up in the location where the charging station is, and can recharge its batteries, right?
+[06:38] So, that's easy, that's something that we can do with A-star.
+[06:42] So, the question is, why might this be problematic?
+[06:44] Why this, may this be the shortest path, but not necessarily the best path that the system may execute?
+[06:53] The reason for this, why this may be problematic, or is typically problematic in reality,
+[06:57] is that actions are not executed with probability one.
+[07:01] That means we have an imperfect or non-perfect action execution,
+[07:06] so actions will only be executed in the right way with a certain probability, let's say 90%.
+[07:11] 90% of the cases the system exactly executes what I want to execute,
+[07:15] and in 10% of the cases it does something else.
+[07:17] This would be an example for such a transition model.
+[07:22] And the question is then, given that we acknowledge the fact that our system is not perfect,
+[07:27] what can we do on a planning level to take this imperfection into account?
+[07:32] So, is there a way that we take into account that not everything we do is great,
+[07:36] but in the end make better decisions?
+[07:39] So, this is for example a mobile robot that doesn't always perform exactly the desired motion commands,
+[07:44] so how can we actually realize a planning system which takes this into account?
+[07:50] But we can also think it further.
+[07:52] If you think of your sat-nav device that you are using in your car in order to navigate,
+[07:57] it gives you a command and you as a human, you are the driver,
+[08:00] and if the system says turn right on the next intersection and you're not turning right,
+[08:05] then this is an imperfect motion execution,
+[08:08] because you're not executing what the planning system tells you.
+[08:12] So, the question would be from the sat-nav point of view,
+[08:14] can the sat-nav do better motion instructions or road instructions for you,
+[08:19] so that if you make errors and don't always execute what the system tells you to execute,
+[08:25] so you still come up to the goal location on a good path?
+[08:29] This is another example,
+[08:31] and so it's a general decision-making setup for how to make decisions under uncertainty
+[08:37] in your action execution,
+[08:39] and this is relevant not only in robotics,
+[08:41] it's also relevant in a lot of other disciplines and other fields,
+[08:44] where you cannot guarantee that what you decide will actually be done in that way.
+[08:49] So, whenever you do this decision-making under uncertainty,
+[08:51] the lecture today will tell you on how to behave in an optimal way.
+[08:58] Okay, let's start with a very simple example similar to what I've shown before.
+[09:03] So, you are still in our simulated agent world,
+[09:07] and the agent can select certain commands,
+[09:09] but it doesn't execute those commands perfectly.
+[09:12] So, let's say if the desired action is to go north or to go up,
+[09:16] with 80% of the cases it actually executes this,
+[09:19] and with 10% of the case it goes either left or right.
+[09:22] So, 80% probability up, 10% to the left, and 10% to the right.
+[09:28] So, assuming that this is our model,
+[09:29] so in 80% of the cases exactly happens what we predict,
+[09:32] in 10% of the cases I'm either turning left or right,
+[09:35] and not go straight as I want it to be.
+[09:38] So, this means again the intended action is executed with 80% probability,
+[09:43] and with 10% probability I'm moving left, and with 10% probability I'm moving right,
+[09:47] and let's say I assume if I drive into a wall I'm just bumped back from the wall.
+[09:51] So, we don't get any penalty for bumping into a wall right now.
+[09:55] Let's assume this.
+[09:56] Okay, so we again have our A-star plan.
+[09:59] That was a plan that A-star planned assuming perfect action execution.
+[10:04] So, it will turn go right, go right, go up, go up, go right.
+[10:10] So, this is what the system would do.
+[10:13] Consider now that my action execution is not perfect.
+[10:16] So, with a probability of 10% in each state,
+[10:19] I would go 10% here, 10% here, 10% here, 10% here, 10% here, 10% here.
+[10:24] So, this is my non-deterministic motion model that I'm taking into account.
+[10:29] And the question, what happens if I do this?
+[10:33] The problem is at some point in time you will actually end up here,
+[10:38] because the system will go right, it will go up,
+[10:41] when you give the go up command it will actually turn right,
+[10:43] and then the robot will fall down the staircase and the robot will be dead.
+[10:47] And that's a state that the robot doesn't want to be in.
+[10:50] So, what can we do in order to prevent that situation?
+[10:54] What we can do is we can choose another trajectory,
+[10:57] which is longer and not optimal under the shortest path criterion,
+[11:02] but which will reduce the probability that we actually end up on the staircase.
+[11:09] So, we want to reduce the probability of not reaching the goal.
+[11:13] How could we behave in order to end up here at that goal?
+[11:16] So, we could not go right because it drives us close to the staircase.
+[11:22] So, we take this detour around this obstacle because then we're on a trajectory
+[11:26] which is less likely to fall down the staircase
+[11:30] because we're keeping a distance to the staircase.
+[11:33] And this can be seen as a more conservative strategy,
+[11:36] a strategy which avoids the possibility of falling down the staircase and dying
+[11:42] by paying a little bit more in terms of path lengths,
+[11:46] but then increasing the probability of actually reaching my target location.
+[11:51] And it's kind of the motivation for the MDPs,
+[11:53] and this is actually the solution that an MDP can generate
+[11:57] in order to make sure the system doesn't fall down the staircase
+[12:01] but ends up at the charging station.
+[12:05] Okay, so what obviously plays an important role in this is this so-called transition model.
+[12:13] So, this definition of how the system executes the motion,
+[12:18] what I said, 80%, we execute the motion, 10%, left 10%, right,
+[12:23] of the case we do something else.
+[12:25] And this can be more formally described by a probability distribution
+[12:29] to reach the next state s prime given that we are in s and execute this action a.
+[12:35] And if you think about the localization problem that we have investigated in this course before,
+[12:42] then you see this is actually very similar to our probabilistic motion model,
+[12:46] p of x t given x t minus 1 u t.
+[12:51] x corresponds here to s, the state, and a corresponds here to the odometry u t,
+[12:57] or the control u t.
+[12:59] So this is nothing else than the probabilistic motion model
+[13:01] that we have been discussing before.
+[13:04] What the probability of ending up at s prime given we are in s and execute action a.
+[13:10] The somehow difference in here is what we do here is typically happens in a discretized world,
+[13:15] in a discretized state space,
+[13:16] and before we often have a non-discretized state space,
+[13:20] for example in the context of the Kalman filter or the particle filter,
+[13:23] but it's kind of the same thing just living in a discretized world over here.
+[13:28] And this is called a transition model in the notation of an MDP.
+[13:32] And this notation, what we assume that this transition model has a Markov property,
+[13:37] that's also something that we have assumed in probabilistic localization,
+[13:43] and that is that the probability of ending up in s prime from s and a
+[13:49] doesn't depend on states we have been in before s.
+[13:52] So if we know where we are in at a certain point in time, the past doesn't matter anymore.
+[13:57] It's basically knowing the current state renders the past independent from the future.
+[14:02] And this is exactly what we are exploiting or a property that we're exploiting here,
+[14:07] that the transition model only depends on the current state I'm in,
+[14:10] and on the command I'm executing,
+[14:12] and this tells me where I'm going to end up with,
+[14:15] but the history, the past doesn't matter anymore.
+[14:19] So this is what our constraints about the transition model.
+[14:23] Now the question is, given we have that transition model,
+[14:25] how do we specify that something is good or something is bad?
+[14:29] So that reaching the charging station is good while reaching the staircase is bad.
+[14:34] How can we actually encode this? How can we formulate this?
+[14:37] And this is something that we are doing taking the so-called reward function into account.
+[14:42] A reward is something that the agent gets if he reaches a certain state.
+[14:47] So see this as a number.
+[14:49] Let's say a positive number is good, a negative number is bad,
+[14:53] and whenever you do something good you get a positive reward.
+[14:55] Whenever you do something bad you get a negative reward.
+[14:58] We are not defining this here necessarily in the general form,
+[15:03] where in a state doing something leads you to a new state gives you a reward.
+[15:07] We just boil down the reward that you get the reward in a certain state.
+[15:10] So if you reach a certain state you get a positive or negative reward.
+[15:13] But this doesn't change the overall problem,
+[15:16] but for now we kind of keep this slightly more simple
+[15:19] by saying the reward only depends on the state.
+[15:21] So depending the state you're in you're getting a reward either good or bad.
+[15:25] So if you, let's say, go to the staircase you will get a very big negative reward
+[15:29] because it was bad you get punished for it.
+[15:31] If you reach the charging station that was good you get a positive reward for that.
+[15:36] Okay, so this is the reward function.
+[15:38] The only constraint that we have that the reward function must be bounded.
+[15:42] So it can't be infinitely large but it can take positive or negative numbers
+[15:46] or it can also take the value of zero which basically means it doesn't change anything.
+[15:51] Okay, let's have a look how we could actually specify the reward function in our example.
+[15:57] So assume we have our simplified world over here with our agent
+[16:00] and what we need to do we need to specify a reward for every state.
+[16:03] So every state gets a value and if the system is in that state,
+[16:07] the agent is in that state, it gets this reward.
+[16:10] Okay, we said the charging station is plus one, that's good.
+[16:13] The staircase is minus one, that's bad.
+[16:16] But for all other states we're giving the system a small negative reward.
+[16:21] Right, what does the small negative reward mean?
+[16:23] That means if the system stays in the state it gets punished.
+[16:27] So it doesn't get as much punished as falling down the staircase
+[16:30] but you get kind of hit with a small whip, let's say it that way.
+[16:33] So you can also formulate this like living in this environment is not enjoyable.
+[16:37] The world sucks so to say.
+[16:39] And you basically get punished for every second you're in that world.
+[16:43] For every time you're in the state,
+[16:45] if you think of you can let's say visit one state per second,
+[16:48] then for every second you spent in this environment you get punished.
+[16:53] And you do that in order to make the system achieve something.
+[16:58] If you would keep the reward here at zero,
+[17:01] the system would say, I don't need to do anything.
+[17:03] Nothing will happen to me, nothing good, but also nothing bad.
+[17:06] I don't age, I don't care about anything.
+[17:09] This would be the zero reward.
+[17:10] But this is something that we don't want to have.
+[17:12] We don't want to generate a behavior where the system doesn't care
+[17:15] on what it should do, it would just stay where it is.
+[17:17] We want to, which takes infinite amount of time to maybe go to the goal,
+[17:22] could circle around this obstacle forever until it reaches the state
+[17:26] or always jumps forth and back between two states
+[17:28] because it doesn't get punished for that.
+[17:31] So we want to make it unpleasant for the robot.
+[17:33] We want to give the robot, put it into a non enjoyable space
+[17:38] because then the system wants to leave this space
+[17:40] and get an incentive for moving away.
+[17:43] And we achieve this by giving a very small negative reward.
+[17:47] Your life sucks as long as you're in this world,
+[17:50] but it will be great if you reach the goal.
+[17:51] So you can formulate it like this.
+[17:54] So this can be our reward function.
+[17:56] And then with this reward function, we can actually make the system act.
+[18:00] And depending on the ratio between those rewards,
+[18:03] the system will behave differently.
+[18:07] And now the question is, how can we define all that?
+[18:09] How can we formally define an MDP or Markov decision process?
+[18:14] So given a sequential decision problem,
+[18:16] so a problem where we make one decision after each other,
+[18:19] which is fully observable,
+[18:21] that means we know at all points in time in which state the system is in.
+[18:25] So we have no uncertainty about the state.
+[18:27] It's kind of we have the perfect sensor.
+[18:28] We know the state of the world.
+[18:31] But it's a stochastic environment.
+[18:32] That means we cannot control our actions perfectly.
+[18:36] There's uncertainty going on and they're stochastic.
+[18:39] But we have a Markovian transition model.
+[18:42] Then we can define the MDP as consisting of five things, five components.
+[18:47] The first thing is a set of states S.
+[18:49] These are all the states.
+[18:50] If I go back, these are all those states.
+[18:53] This is my set of S.
+[18:54] One, two, three, four, five, six, seven, eight, nine, ten, eleven.
+[18:58] Eleven states have this simplified system.
+[19:01] So my set of states would here be a set of eleven different states.
+[19:07] Okay, I have eleven different states and I have a set of actions.
+[19:14] And these actions are north, south, east, west.
+[19:16] So I'll go up, down, right, left.
+[19:18] These are basically the four actions I can execute.
+[19:21] I have an initial state which is typically called a zero.
+[19:23] This was my start state where the system starts.
+[19:26] And then I have a transition model which we discussed and we have this reward function.
+[19:30] And based on these quantities, the whole MDP is defined.
+[19:34] And based on this information, I want to derive a behavior that tells me what the system should do
+[19:41] to maximize the reward, to get the maximum out of it.
+[19:47] And how can we do this?
+[19:48] How can such a strategy look like?
+[19:50] This strategy is something that we call a policy.
+[19:54] So a solution to this MDP is a policy pi which tells you what to do at each point in time.
+[20:00] It's like a manual for life.
+[20:02] In whatever state you're in, the system will tell you do that.
+[20:06] And so the policy is a function which maps from state to actions.
+[20:09] Given you're in a state, the system tells you what to do.
+[20:12] Again, it's like a manual for behavior.
+[20:15] And if we have a policy that does a great job, then something we call the best job,
+[20:22] we call the optimal policy, the optimal behavior.
+[20:25] And that's obviously something that we want to have.
+[20:27] And this is something we typically call pi star, so the best possible behavior.
+[20:31] In practice, policies may not be optimal.
+[20:33] They may suboptimal, like behaviors that we as humans do.
+[20:37] Even if we know in which situation I should behave in which way.
+[20:42] Sometimes we do this.
+[20:43] Sometimes the outcome is not that great.
+[20:45] Question, what should we do?
+[20:47] The policy basically tells us what to do.
+[20:48] And we can have a good policy, so we behave good.
+[20:51] We come through life and reach our goals often.
+[20:54] Or we have a shitty policy, which actually leads to suboptimal behavior
+[20:59] and leads to the fact that we end up in a non-desirable state.
+[21:03] So as you see in this decision-making process for robots, there are a lot of similarities
+[21:07] that we as humans may experience in our life as well.
+[21:10] So this policy is something which tells you what to do next given you're in a certain state.
+[21:14] And there are policies which are worth and policies which are better.
+[21:17] And we are seeking to find the optimal policy.
+[21:20] So something that generates the optimal behavior,
+[21:23] knowing that not everything we are executing
+[21:26] actually happens and happens in the way we want it to be.
+[21:29] That's what the policy is about.
+[21:31] And we want to find the optimal policy.
+[21:35] Okay, how would the policy for our environment actually look like?
+[21:40] So again, here is our simplified environment.
+[21:42] And these arrows here show us what to do, where to navigate.
+[21:47] So when we are here, I should move left.
+[21:49] When I'm here, I should move up.
+[21:51] And this is the optimal policy for the example that I had before.
+[21:55] So it was computed again in a way that this was a reward of positive one.
+[21:58] This was a reward of negative one.
+[22:00] And all other states have a negative reward of minus 0.04.
+[22:05] So a small negative reward.
+[22:07] As a result of this, the system will say, okay, let's go and go to the goal.
+[22:12] Because if I'm staying in the same place, I get punished for it.
+[22:16] And still, while moving here, I always get a small negative reward.
+[22:20] But this small negative reward is so small that I'm not rushing to the goal as fast as possible.
+[22:27] Because it's okay to get slightly punished.
+[22:30] But then increasing the probability of ending up in the right state.
+[22:33] Rather than falling down the staircase.
+[22:37] And this combination of transition model, but especially rewards, has a strong impact on the behavior.
+[22:43] So depending on the rewards we get, we get different behaviors.
+[22:46] So we get a good behavior or a bad behavior or a desired and undesired behavior.
+[22:52] But it really is defined by the rewards.
+[22:55] And it's a tricky thing for us as designers to design a reward function that generates a behavior we actually want to have.
+[23:02] So defining rewards is something which is tricky and is not an easy task.
+[23:07] And we can see this by just kind of changing this reward function.
+[23:11] So I'm not taking 0.4 and plus minus one all the time.
+[23:14] Let's say we stick with this plus minus one.
+[23:16] But what happens if we change this 0.04 to a different value?
+[23:22] So these r's over here are values where we have generated, give a different reward for the states the system is in.
+[23:30] So if the reward is minus two, that means in every state I get very badly punished.
+[23:36] Even much worse than falling down the staircase.
+[23:39] It's kind of, the world is so bad it's better to kill yourself than staying in your state.
+[23:43] That would be kind of a reward that is a high negative reward where staying in your state is better than dying.
+[23:50] Something which doesn't make sense in general, but we can mathematically formulate it, which would be done if we set r to minus two or even a larger value.
+[23:57] So what the system does, it tries to as fast as possible reach one of these terminal states, either the charging station or the staircase, wherever I'm faster.
+[24:07] So if I'm here, I'm of course jumping to the charging station.
+[24:11] But if I'm here, given that the charging station reaching this charging station would take two actions where I get a negative reward for, it's better to kill myself and jump down the staircase.
+[24:21] Not a good behavior in general, but that's what you do if you set up a shitty policy.
+[24:26] Okay, what happens if we take our policy to minus 0.2?
+[24:29] So we are still more punished for staying in the world compared to this minus 0.04 we had before.
+[24:39] As a result of this, what happens, we are still trying to go to the charging station as quickly as possible so that I'm willing to take a higher risk and pass by closer at the staircase where the risk of falling down exists.
+[24:53] But I mean, most of the time I'm good. 90% of the time I'm actually good and I'm reaching this state.
+[24:59] So on average, I will do better if I'm taking a risk going close to a staircase in order to reach my charging state, my charging location.
+[25:08] This happens if living in your environment is bad, you get risky.
+[25:13] It's not as bad as you want to kill yourself, but it's bad and so you want to be risky and reach the goal as fast as possible.
+[25:20] If we have a reward that is basically, even a negative reward that is kind of larger but close to zero of that state, it basically means our staying in the world doesn't really matter.
+[25:32] It's okay, it's not super great, but I don't really care how long I stay in the world.
+[25:38] This leads to behavior that is very similar to the original behavior that I had.
+[25:43] Only two states have a different behavior, those two.
+[25:45] And this means if I'm close to the staircase, just move in the opposite direction of the staircase because it will for sure prevent your falling down.
+[25:53] If you are on the wall, you will be bumped back, but in 10% of the cases you will go left or right.
+[25:59] So you will reach another state which is safe from the staircase in 10% of the cases.
+[26:04] So you're basically running into the wall until you fall into a good state just to avoid falling down the staircase because this bumping into the wall is something which doesn't really hurt you.
+[26:14] And then we can actually make something where we say let's make the reward positive, not even a zero reward, positive.
+[26:21] That means staying in that world is great.
+[26:23] I'm not aging, my life is great, there's nothing I should do to leave this world.
+[26:29] I'm living in a perfect world, an unrealistic world but in a perfect world.
+[26:33] So with a positive reward, the system never wants to reach a terminal state, it never wants to go to the charging station, it never wants to die of course.
+[26:40] But it just says do whatever you want, just walk around, but just make sure you never reach a terminal state, never reach the goal, never reach death because living in this world is perfect.
+[26:50] This is what happens if you get your system a positive reward because basically you actually have many policies which would achieve this goal.
+[27:00] But as soon as it drags you away from the terminal states, you're all good.
+[27:05] So the reward function dramatically defines behavior and it's something that doesn't only hold for autonomous systems or robots, even it holds for us as humans.
+[27:16] Depending on our internal reward system, this impacts our behavior and depending on the reward system that we have, we will behave in a different way so that we generate an optimal or for us as close as optimal behavior.
+[27:29] And if you want to change our behavior, we basically have to change our reward functions, so very similar between robots and humans.
+[27:36] So the key insight here is the rewards impacts the policy, so rewards impacts behavior, your behavior as a human as well as the behavior that a mobile robot will show.
+[27:46] The question is how do we actually generate those policies now?
+[27:51] Before we think about the policy, we want to think about something which is called the utility of a state.
+[27:56] So how good is a state?
+[27:58] The state or the quality, so to say, or utility of a state is not only defined by the reward, it is the reward plus what I will get in the future if I'm entering the state.
+[28:09] So what's the potential of this state, for example, reaching the goal and getting a higher positive reward?
+[28:15] That is something that we refer to as the utility.
+[28:19] So it's kind of the expected reward into the future.
+[28:23] So if I'm in that state, what is the expected reward of that state in the future under a given policy?
+[28:31] So if I say the utility of a state quantifies the benefit of that state to the overall task, and this is always defined based on a policy, because if you have a certain policy, a state may be good or a state may be bad.
+[28:43] And this is defined by the utility, which depends on the policy and the state.
+[28:47] So what I'm doing, I'm computing the expected reward that I will get in the future, it may take infinitely long.
+[28:56] I'm basically summing up the reward that I get, given that I'm executing a policy and that I'm starting in my start state as zero.
+[29:01] So I'm putting myself in the start state as zero, sorry, if my start state is S or the input in here.
+[29:08] So I'm setting this as my start state and then computing the expected future reward.
+[29:15] I'm basically summing up all rewards that I'm going to get.
+[29:17] This tells me how good is that, what's the utility of that state under the policy I'm acting on, under my behavior, what's the utility of that state.
+[29:27] So it basically encapsulates the potential rewards that I can get in the future if I'm starting in that state S.
+[29:38] And we now want to dive a little bit into the math and see what happens with this definition of the reward function if you want to look into the utility of a state.
+[29:49] So we can express this utility of a state as a function of its next state, of the successor states.
+[29:57] So we start with exactly the same equation we had there before.
+[30:00] And we can basically break up that sum into the sum of the state as zero, as one, as two, as three.
+[30:05] And this is the kind of sequence of states that I'm actually visiting by executing the policy pi and starting in the state S, right?
+[30:17] So if you start in the state S, that means we are getting the reward of the state S and there's no uncertainty involved in this.
+[30:25] So the first thing I kind of do, I kind of break up the expectation, which is in the operator here, it's going to break up the sum.
+[30:34] The expected reward of the first state and the expected reward of all the subsequent states.
+[30:39] And again, I'm norming that state, I know the reward that I'm getting, so I don't need the expectation anymore.
+[30:44] This is my reward of the initial state plus the expectation of all the future states I'm going to visit.
+[30:51] So I'm basically saying, OK, it's the reward of where I am right now plus the reward that I'm getting in the future, right?
+[30:59] And so this can be seen as the reward of the state and the utility of the successor state.
+[31:06] OK, so if I have a sequence of states where I'm going to, this is my current state plus the policy of what happens next.
+[31:15] So basically the utility of now is the reward of now plus the utility of the next state I'm actually ending in.
+[31:23] OK, which brings me to the maximum or the optimal policy.
+[31:29] So we're looking for the optimal policy that provides me the maximum expected utility over time.
+[31:35] So the optimal policy is the one that gives me the maximum expected utility in the long run.
+[31:44] So we always choose S so that if you execute an action A in the state S that maximizes the expected utility of S by having the reward of S and the future utility that I get from S prime, which is the result where I'm actually ending up.
+[32:03] So I want to have the optimal policy for state S if the one which maximizes the argument which maximizes the expected utility.
+[32:15] So this is the expectation taking over all policies.
+[32:18] So I'm basically saying, given I'm in a state and I want to maximize the utility of that state, which policy should I take?
+[32:28] So I'm iterating over all policy and just taking which of the policies is the best policy.
+[32:34] And this is actually my optimal policy.
+[32:36] I'm looking for the best actions to execute in a state so that the utility is maximized.
+[32:44] OK, so now I can use the equation that I had before and substitute my utility of my policy in a state S or the formula we had given two slides ago.
+[32:57] So my optimal policy is the argmax, so the best set of actions to execute for the expected utility of that state under the policy.
+[33:11] We can replace this. This is the reward of S plus the utility of the suck sequence state.
+[33:17] Again, I can actually break that up as an argmax of the expected reward in the state and the expected future utility.
+[33:26] And this is nothing else. This is actually constant.
+[33:30] So no matter which actions I'm executing, the reward of the state is the same because I'm already in that state.
+[33:36] So the action only impacts what happens in the future. So this reward has no impact.
+[33:40] It's a constant in this maximization problem. So I can actually drop that.
+[33:44] So only this part remains. So the argmax of the expected future utility.
+[33:50] And the utility of that next state, of this future state, is nothing else than all future states I may end up with.
+[33:58] So I'm iterating over all possible states, compute the transition probability of actually ending up in the state as prime given I was in S and executed action A plus the utility of that state as prime.
+[34:11] So what I'm doing, I'm saying the current state where I am doesn't matter for the argmax for selecting the best policy.
+[34:20] And I'm checking in which states could I end up, how likely it is to end up in that state and multiply this probability with the utility of that future state and sum up over all of them.
+[34:31] This is actually what happens over here.
+[34:35] So I'm basically saying what are the potential outcomes of my actions and what are the utilities of all the states where I may end up with.
+[34:41] And then I'm computing the function to maximize is then just the sum of all states, the utility of this state multiplied with the probability that this actually happens, that I'm actually ending up in this state as my successor state.
+[35:00] And this brings me to something which is called the true policy.
+[35:04] And the true policy of a state is obtained by the application of the optimal policy.
+[35:10] So if I'm applying the optimal policy, my best possible behavior, this gives me then the true utility of a state.
+[35:16] So how good is that state given that I can do an optimal behavior, so I can behave in the best possible way, how good it is to be in a state.
+[35:24] That's what the true utility of a state is typically refined in.
+[35:30] So this is kind of this U pi star, the optimal policy, but you also abbreviate this U of S.
+[35:37] OK, so how does this now actually look like?
+[35:39] So the utility of the state, and this is basically the same derivation step that we had done before, except as we are maximizing the function now and not the art max.
+[35:49] So I'm not interested in the argument, I'm interested in the maximum value.
+[35:53] I can again break up the utility at the reward and the utility of the future reward.
+[35:59] Future utility, break that up into two parts.
+[36:01] The expectation of the reward.
+[36:03] Now since I'm maximizing, not computing the art max, only the max, that's the difference because I'm interested in the value.
+[36:09] This is a constant, but a constant that matters.
+[36:11] So it's R of S plus the maximum of the future utilities, and this is exactly the sum over how likely it is that I'm ending up in a state times the utility of that future state.
+[36:25] So what happened, I have broken up the utility of a state, so the true utility of a state, into the reward of that state plus the expectation over the reward of the successor states, which can be computed by the sum over all states I'm ending up as a next step.
+[36:45] The transition probability of ending up there times the true utility of that successor state.
+[36:51] This is exactly what happens in here.
+[36:54] And this equation here is something which is very famously known as the Balman equation, which provides me the true utility of a state.
+[37:03] This work was done by Balman in the end of the 15th, 1957, I think, when he published a book, or he's one of the masters of dynamic programming, the book is actually called Dynamic Programming, where he provides this function for computing, for optimal decision making with this reward function and these utilities.
+[37:25] And it assumes again that you can break up these steps in a certain way so that you kind of have a separable problem, but under this assumption it tells you the optimal utility of the state that you can then use for decision making.
+[37:39] And what it shows is that there's a direct relationship between the state itself, this R S, and where I'm going to up, so its neighbours, its neighbouring states, those states which I can reach through carrying out a certain action.
+[37:53] So the utility of a state is the immediate reward, so the kind of short-term reward that I get, and the long-term utility, the expected utility of the next state, given that I'm behaving in an optimal way.
+[38:05] And we can compute this U S for all states. So for all states we can compute this utility.
+[38:13] The question is how do we actually, how can we actually do this? How can we obtain those computations?
+[38:18] Okay, let's have a look. So we have N states, so N possible states that are in, and N unknowns in terms of N of those rewards.
+[38:26] So can we use just kind of our tools that we know from linear algebra in order to solve this system with N states and N unknowns?
+[38:35] Unfortunately this is not the case and one of the reasons is this maximisation operator.
+[38:40] It's a non-linear operator and it's an operator which is hard to optimise for and it clearly needs, it's a non-linear equation and therefore we go for an iterative approach.
+[38:53] So we start with initial configuration and then update that and iterate until we converge into the right state.
+[39:01] And this is something that Bellman has shown in this book, it's a classical dynamic programming example that we can use this iterative approach in order to compute the optimal utility for any state.
+[39:16] So while doing this we have made an assumption on the way. This is the assumption of separability.
+[39:23] This basically means that we cannot use all utility functions in here, they have to have a certain property and this is basically that I can actually break up this sequence of actions into a reward plus the utility of the remaining actions.
+[39:37] So only if I can actually make the separation that if I'm in the current state as zero I can separate this state out and compute the reward plus the utility of the remaining state.
+[39:47] So they kind of break this down in sequence. That means if I'm in a certain state where I have been before basically it doesn't matter anymore.
+[39:55] So this decision making only holds for problems that have this kind of property.
+[40:03] Another thing we typically do is we want to kind of discount our utility or our rewards over time.
+[40:10] So in the computation of the utility of a policy we don't sum up the rewards as they are, we have a discount factor here for the reward.
+[40:19] And the discount factor which says rewards that I'm getting later on the future count less than rewards that I'm getting right now.
+[40:25] So it's more what I get right now is better than what I'm getting in the future.
+[40:29] So if I get let's say 100 euros today is better than getting 100 euros in a year.
+[40:35] So we are discounting the reward of this 100 euro over time.
+[40:39] And we can do this here in order to say we want to optimize for a system which gets where the immediate rewards is more important than the rewards I'm getting in some far future.
+[40:54] Of course if in some far future the reward is much bigger I'm still going for it.
+[40:58] But I'm taking this discounting into account.
+[41:01] So I have basically a discount factor in here that kind of reduces the reward over time.
+[41:06] This is something that is typically done so that we don't optimize or don't spend too much time in states if we have around zero reward and kind of discount the reward the longer it takes me to actually achieve my goal.
+[41:20] You can see this the more states I need to visit the longer it takes and I actually want to minimize this and do this as quickly as possible.
+[41:28] Okay, if we take our example that we had before and compute the utility of the state, so the true utility, these will be the true utilities that we actually get.
+[41:37] So the different states have different utilities and they have a high utility if they are close to the goal because if I'm in that state I can reach my goal location closer.
+[41:50] It's better but if I'm for example close to a bad state I'm getting a substantially smaller reward but given that it's also close to the goal it's somewhere in between.
+[42:01] But if you're kind of close to the goal a little bit further away from the negative reward from the bad state your utility will be substantially higher.
+[42:11] And the question is how do I do this computation? How do I end up there when I reach this state?
+[42:17] So what we do, what we said, we have this iterative computation.
+[42:20] So we update our utility of a state by taking the reward of that state into account and the utility of the neighboring states.
+[42:29] And we start basically with, we initialize our utilities, zero initialization, initialization doesn't really matter, it doesn't impact how fast the system converges but not on the result.
+[42:42] And the key idea is that for utilities, so this is the iteration, in the new iteration is the reward in that state and then I'm maximizing over the sum of the transitions of the other utilities in the neighboring states at the previous iteration.
+[42:58] So if you start for example with a zero utility, so all states have zero utility.
+[43:04] In the first iteration this will all be zero, so all this term cancels out to zero and I'm just setting the reward as the utility for a state.
+[43:14] And then after this we have the reward as initial state and then this part starts to play a role and you're updating this maximizing the future reward over time.
+[43:26] And this approach will lead to an optimal solution, completing the optimal utility if your time goes towards infinity.
+[43:36] Of course we typically don't have infinite time, we don't want to wait for an infinite amount of time to come up with a solution, so we are basically monitoring the utility and simply stop if the change in the utility is smaller than the threshold.
+[43:48] So for example if the root mean square error here between the difference between subsequent states for all states is below a certain threshold, I'm actually stopping my operation or another criterion that I may use.
+[44:02] And this algorithm which is sketched here is something which is famously known as the value iteration algorithm, which is the key algorithm in dynamic programming to solve the MDPs.
+[44:12] And again we have the definition of all states and the discount factor, I'm starting setting all utilities to zero and then I'm basically iterating with this equation that we have shown over here.
+[44:24] So updating the utility as a reward of the state plus the discount factor of the utility of the neighboring states and the time of the probability of ending up there, I'm maximizing for this and I'm repeating this until u and u prime are close enough.
+[44:42] So basically when the utility between two iterations is close enough, and this close enough could be some distance function between the utilities, if the change is smaller than epsilon then you're actually aborting.
+[44:56] And this is how value iteration is run. You can also make a small example, let's say we have a very simplified setup just for showing this here as the purpose of illustration.
+[45:07] We use our same transition model as before, so with 80% we do what we want to do with 10% left right each and let's say this is the states that I have and this gives me the reward function, so reward 1, reward 10, reward 5, reward 1, reward minus 8.
+[45:22] And the question is what is now the utility of this state in the center over here.
+[45:32] So what I'm doing, I take the reward of that state, the reward is 1, and then I take the maximum of all actions that I can execute.
+[45:40] So should I go left, should I go right, should I go up, should I go down?
+[45:44] And what basically happens is if I go left, so if I'm in that state and I want to go left, I'm ending up with 10% probability here with 80% probability here and this 10% probability here.
+[45:55] So this would be 0.1 times 1, so 0 times 1 times 1, 0 times 8, 80% probability times 5 is this utility, 0.1 times 10 is this utility, so this is what I would get for moving left.
+[46:11] And do the same for up, right, and down, so that this simplifies to 1 plus the maximum of 5.1, 7.7, minus 5.3, and minus 0.5, so 7.7 would be the best thing, 1 plus 7.7 is 8.7, so this state would get a utility of 8.7.
+[46:31] And then we're doing this for all states, repeating this process over and over and over again until convergence.
+[46:38] And for example, for our simple example, this looks like this, so this is the utility for the different states.
+[46:43] So this is state 1,1, this is 4,3, so 1,2,3,4 for the first number, and 1,2,3 for the second number.
+[46:51] Then you can see how the utility of the state starting being initialized down here evolves over time until the states converge.
+[46:58] So we can see here roughly after, whatever, something around 10 iterations or 12 iterations, the system would have converged here and come up with the optimal, or with the true utility of a state.
+[47:10] And as a result of this, I have my optimal utility of a state, and then can easily from that extract the policy.
+[47:21] So the value iteration finds the optimal solution for this Markov decision process.
+[47:27] It will converge to a unique solution of the Bellman equation system.
+[47:32] The initial values are arbitrary, that means, of course, the closer the values are to the true values, the faster they will converge.
+[47:39] But if I have an infinite number of operations of iterations, I will converge to the solution anyhow.
+[47:44] And what the value iteration does, it basically propagates the information through the state space through these local updates.
+[47:50] And these local updates are given through the transition model and the utilities of the neighboring states.
+[47:56] So with this, I'm getting the optimal utility for every state, so the true utility for every state.
+[48:04] And what I then can do is I can compute the optimal policy directly out of this.
+[48:08] Because if I know the true utility of a state, I just can walk into the neighboring state where I'm actually maximizing my true utility.
+[48:19] And I do this by taking into account that my motion is uncertain.
+[48:24] So if I say what should I do in a certain state, I'm just taking the action which maximizes this sum.
+[48:32] So the probability of ending up of going whatever left in the utility of the state left plus the probability of going up and getting the utility of the state up and the probability of going right and getting the utility right.
+[48:44] But this is then if I have these values over here, I just need to iterate only about overall actions I can execute.
+[48:50] I'm basically computing what the utility of that action is.
+[48:53] I'm taking the one which maximizes this activity.
+[48:58] So I'm basically taking the best action under this function.
+[49:02] And this gives me the optimal policy and thus the optimal behavior out of this.
+[49:07] So a few notes on the utility and the reward.
+[49:09] So it's important to note that reward and utilities are related quantities, but they are different.
+[49:14] The reward R can be seen as a short-term reward.
+[49:17] So what I'm getting if I'm in a state, the reward that the system gets.
+[49:21] It's intermediate direct reward it gets in state S.
+[49:24] The utility however is more something like a long-term reward.
+[49:28] So how good is the state in the long run?
+[49:30] If I'm traveling through this state, will it bring me closer to the goal?
+[49:34] So the difference between what I get right now and an investment into the future.
+[49:40] So short-term reward and long-term reward.
+[49:42] And they need to be distinguished because we are interested in the long-term reward.
+[49:45] If we don't want to wait too long, we take this discounting factor into account which reduces the utility of states where the reward comes towards the end.
+[49:52] But typically I'm interested about the reward that I can accumulate on the way towards my final state.
+[49:59] So what I presented here was a very basic introduction to Markov decision processes.
+[50:04] And this is a technique that is used for decision making under uncertainty.
+[50:11] So whenever you cannot guarantee that the actions you're executing will actually be executed the way you want them to be executed.
+[50:19] Then you should take that into account when selecting your actions.
+[50:22] And the MDP tells you how to do this.
+[50:24] What the MDP assumes is that the world is fully observable, so you know the state of the system at all points in time.
+[50:30] You have this separability property that we have before, our transition model is Markovian.
+[50:36] So it follows the Markov property, something that we anyway assumed in this course nearly in all models.
+[50:42] And then the MDP gives you the optimal solution through the value iteration by computing the utility of a state.
+[50:51] And then once we have the utility, extract the policy out of this.
+[50:55] There are also variants of this such as policy iteration and a large number of other techniques that you can apply in order to speed up the processes, take additional uncertainties into account and so on.
+[51:06] But what I presented here are the basics of a Markov decision process and hope could explain you what they are useful for.
+[51:12] As further reading, there is kind of the Russell and Norvig book on AI, A Modern Approach, one of the classical books.
+[51:20] And you also find the Markov decision process in here.
+[51:24] But also the probabilistic robotics book will give you an insight into MDPs and how they can be used in robot navigation.
+[51:31] So with this, thank you very much for your attention.
+[51:33] It was a pleasure to have you here. Thank you.

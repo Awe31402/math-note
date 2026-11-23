@@ -1,0 +1,2750 @@
+WEBVTT
+
+00:00.000 --> 00:02.400
+Okay, welcome everyone.
+
+00:02.400 --> 00:05.560
+In today's lecture, we'll look into aspects of robot control.
+
+00:05.560 --> 00:10.400
+So this means at different levels of our autonomous robot, there are different kinds of controls
+
+00:10.400 --> 00:11.400
+needed.
+
+00:11.400 --> 00:14.600
+So at the trajectory level, we need to ensure that we are following the trajectory.
+
+00:14.600 --> 00:18.360
+At the position level, we need to ensure that we reach the point on the trajectory that
+
+00:18.360 --> 00:19.580
+we want.
+
+00:19.580 --> 00:23.000
+And even at a motor level, we need certain controls.
+
+00:23.000 --> 00:26.440
+And we look at all these aspects at these different levels.
+
+00:26.440 --> 00:31.880
+What we'll also look into is the popular controller called as the PID control, which is Proportional
+
+00:31.880 --> 00:33.720
+Integrative and Derivative Control.
+
+00:33.720 --> 00:39.080
+So this is a concept coming from the feedback control kind of controllers, and we'll see
+
+00:39.080 --> 00:46.200
+how we can use these PID controls for realizing the task of driving our robot along the desired
+
+00:46.200 --> 00:47.500
+trajectory.
+
+00:47.500 --> 00:52.600
+And finally, we'll also see some more advanced methods which are out there, which can give
+
+00:52.600 --> 00:55.200
+us some specific performance if you're looking for them.
+
+00:55.200 --> 01:00.320
+For example, if we want our system to be robust to, let's say, noise in our measurements,
+
+01:00.320 --> 01:05.360
+to noise in our state estimation and so on, we would need some specific kind of algorithms.
+
+01:05.360 --> 01:10.280
+If we want it to be failsafe, so for example, some part fails and we want it still to work,
+
+01:10.280 --> 01:15.060
+we'll also look at these kind of algorithms later on towards the end of the lecture.
+
+01:15.060 --> 01:19.940
+So before I get started, I just want to show you a rough control architecture that one
+
+01:19.940 --> 01:23.860
+sees when you have an autonomous robot in question.
+
+01:23.860 --> 01:29.580
+So what you see here in the gray box here, you could say this is the thinking part or
+
+01:29.580 --> 01:33.380
+the representation that the robot has of the world.
+
+01:33.380 --> 01:37.420
+And what we've seen in the other lectures are techniques, for example, to create a map
+
+01:37.420 --> 01:39.740
+of the environment using a sensor.
+
+01:39.740 --> 01:44.340
+So this could be a laser scanner, and you go around your room and create a map.
+
+01:44.340 --> 01:48.260
+So this is one aspect of, let's say, the representation of the world.
+
+01:48.260 --> 01:50.920
+And then you have the modules doing localization.
+
+01:50.920 --> 01:56.480
+So given this map, can we figure out where we are using then again some other sensors,
+
+01:56.480 --> 02:00.160
+for example, like laser scanner or GPS, et cetera.
+
+02:00.160 --> 02:05.520
+So all this forms, so these parts we've seen in the other lecture, and these, so to say,
+
+02:05.520 --> 02:08.120
+form the representation of the robot.
+
+02:08.120 --> 02:13.360
+And the way the robot usually interacts with the world, so the world here, is usually through
+
+02:13.360 --> 02:14.800
+the actuators.
+
+02:14.800 --> 02:18.660
+So if you have a mobile robot, these actuators could be wheels.
+
+02:18.660 --> 02:23.020
+So you have some motors attached to the wheels, which cause the movement and allow your platform
+
+02:23.020 --> 02:24.460
+to move in the environment.
+
+02:24.460 --> 02:30.340
+Whereas on the other end, if you want to perceive how you actually move, you equip your robot
+
+02:30.340 --> 02:31.700
+with some kind of sensors.
+
+02:31.700 --> 02:37.720
+So this could be wheel encoders, this could be GPS devices, laser scanners, whatever.
+
+02:37.720 --> 02:42.860
+So you have a representation of the world and yourself, so the thing in the gray box
+
+02:42.860 --> 02:43.860
+here.
+
+02:43.860 --> 02:48.420
+Then you have a way to actually move in the physical world using your actuators, so the
+
+02:49.180 --> 02:55.220
+And you have a way to actually sense what movement that you actually made.
+
+02:55.220 --> 03:00.980
+And using these three structures here, or three ideas, you can control the robot to
+
+03:00.980 --> 03:04.300
+go along a particular trajectory, for example.
+
+03:04.300 --> 03:10.060
+And the task that we will be specifically focusing in this lecture is what sits on this
+
+03:10.060 --> 03:12.740
+side of this graph here.
+
+03:12.740 --> 03:15.900
+So what we will look is three levels of control.
+
+03:15.900 --> 03:20.340
+At the lowest level, we'll first see how to actually control the motor itself.
+
+03:20.340 --> 03:25.020
+So if you want the motor to rotate at a particular speed, so in this case, let's say we talk
+
+03:25.020 --> 03:27.420
+about an autonomous car.
+
+03:27.420 --> 03:31.300
+This would mean that you would need to control the speed that you move at, and this would
+
+03:31.300 --> 03:35.620
+in turn mean that you would need to control the motors that you have.
+
+03:35.620 --> 03:39.880
+Then one level up would be to do some kind of a position control.
+
+03:39.880 --> 03:42.700
+This means that you want to reach a particular position in the environment.
+
+03:42.700 --> 03:46.540
+So there's some task you need to complete, and for this you need to go to a particular
+
+03:46.540 --> 03:47.540
+position.
+
+03:47.540 --> 03:50.220
+And we have some control at this level.
+
+03:50.220 --> 03:54.540
+And then finally, the higher level control would be a trajectory level control.
+
+03:54.540 --> 04:01.180
+So think of a situation where you have a map, and you have to go from your current position
+
+04:01.180 --> 04:07.020
+to a particular position, a destination position, and this would be, let's say your planning
+
+04:07.020 --> 04:09.340
+algorithm gives this plan.
+
+04:09.340 --> 04:13.500
+Then from this plan, you can generate some trajectories, so how to actually reach this
+
+04:13.500 --> 04:15.740
+position in a smooth manner.
+
+04:15.740 --> 04:21.060
+And once you have that, so how do you actually link all these three levels of control to
+
+04:21.060 --> 04:23.020
+achieve your task?
+
+04:23.020 --> 04:29.580
+And primarily, we will look at these three tasks today, and we'll always give the example
+
+04:29.580 --> 04:35.380
+of a mobile robot, say an autonomous car in an urban environment.
+
+04:35.380 --> 04:40.660
+But the idea kind of remains the same, whether it's a drone, a flying robot, or whether it's
+
+04:40.660 --> 04:41.660
+a humanoid.
+
+04:41.660 --> 04:45.340
+So this structure usually remains the same, and sometimes in the literature you would
+
+04:45.340 --> 04:50.440
+find that this structure is also called as the think, act, and sense paradigm.
+
+04:50.440 --> 04:55.500
+So this is the thinking part, this is the acting part, and this is the sensing part.
+
+04:55.500 --> 05:00.580
+So this was a motivation for where really the control fits in the overall autonomous
+
+05:00.580 --> 05:07.020
+system architecture, so to say, and to motivate why we really need to solve this task.
+
+05:07.020 --> 05:11.460
+So let's start at the lowest level, so at the level of the motor control.
+
+05:11.460 --> 05:16.500
+And for this, I give a really simple example, the example of a DC motor.
+
+05:16.500 --> 05:20.840
+So I guess most of you probably have seen this kind of motor in your school, or probably
+
+05:20.840 --> 05:23.040
+you even have built one.
+
+05:23.040 --> 05:25.340
+The idea, for example, here is quite simple.
+
+05:25.340 --> 05:33.140
+So you have two magnets, shown here by the north and the south pole, and the main idea
+
+05:33.140 --> 05:39.100
+here is when you have some electricity, some current flowing through a magnetic field,
+
+05:39.100 --> 05:44.560
+this particular wire which carries your current will experience some force.
+
+05:44.560 --> 05:50.340
+And that exactly happens here, so this is the diagram for a simple DC motor.
+
+05:50.340 --> 05:56.060
+So what you see here in gold here is basically some brushes which then connect to a coil
+
+05:56.060 --> 05:59.100
+which is going inside your magnetic field.
+
+05:59.100 --> 06:04.880
+And then what one does is to connect these wires to a battery, then we complete the circuit,
+
+06:04.880 --> 06:08.620
+and there is a current flowing through the coil.
+
+06:08.620 --> 06:13.180
+As we have the permanent magnets here, so we have a north and a south pole, so we have
+
+06:13.180 --> 06:17.540
+some magnetic field in this direction, and we have an electric field in the perpendicular
+
+06:17.540 --> 06:18.600
+direction.
+
+06:18.600 --> 06:25.080
+What this then does is to create a force on this shaft, moving it 180 degrees.
+
+06:25.080 --> 06:30.880
+So this way we have converted our electrical energy, so from the battery power, into mechanical
+
+06:30.880 --> 06:32.700
+energy of rotation.
+
+06:32.700 --> 06:38.040
+So you could also think of a motor as a transducer which converts one kind of energy into another
+
+06:38.040 --> 06:39.360
+kind of energy.
+
+06:39.360 --> 06:46.100
+So I give just these details to tell you that when we design a controller, it really goes
+
+06:46.100 --> 06:51.180
+down to quite a low level of understanding how the actuators work themselves.
+
+06:51.180 --> 06:54.340
+And in this case it's a simple DC motor.
+
+06:54.340 --> 06:57.580
+So now we have the actuator, which is basically a DC motor.
+
+06:57.580 --> 07:01.300
+The next question in terms of control is how can I control this?
+
+07:01.300 --> 07:06.260
+So for example for a motor, I would like it to move at a certain speed, so I would like
+
+07:06.260 --> 07:11.660
+to rotate it let's say 50 times per second if I want to go at a particular speed, then
+
+07:11.660 --> 07:15.640
+I would like to go at 100 rotations per second if I want to go faster.
+
+07:15.640 --> 07:18.560
+And the question is how can I actually control this?
+
+07:18.560 --> 07:22.260
+And for the DC motor this happens to be quite straightforward.
+
+07:22.260 --> 07:27.540
+So for the DC motor, essentially the idea is the more power you give, the more electricity
+
+07:27.540 --> 07:30.220
+you put in, the faster the thing would rotate.
+
+07:30.220 --> 07:37.280
+So the force on the coil here is directly proportional to the current that it's carrying.
+
+07:37.280 --> 07:43.800
+And therefore one way to actually do it is what is also called as pulse width modulation.
+
+07:43.800 --> 07:51.320
+So what you see here is a pulse, and here for example, usually the 0 volt is called
+
+07:51.320 --> 07:55.000
+the off state and the 5 volt is the on state.
+
+07:55.000 --> 08:00.980
+And at the extreme, if we keep it on for the entire duration of the pulse, this could correspond
+
+08:00.980 --> 08:04.680
+to the maximum speed at which the motor can rotate.
+
+08:04.680 --> 08:09.280
+And therefore to control the motor, so if you want to go at just let's say one fourth
+
+08:09.280 --> 08:13.840
+the speed, we would keep this signal on only for one fourth of the time.
+
+08:13.840 --> 08:18.160
+So there's a direct proportionality between the duty cycle, so the amount of time for
+
+08:18.160 --> 08:25.720
+which your current is on or the power is on, versus the overall period of the signal.
+
+08:25.720 --> 08:30.420
+So this way of control is called as pulse width modulation, and it's one of the most
+
+08:30.420 --> 08:34.140
+popular ways to control the DC motor.
+
+08:34.140 --> 08:39.340
+And basically you can buy chips like these which actually do this for you.
+
+08:39.340 --> 08:43.760
+So in this case actually there are four of these controllers, so you can control four
+
+08:43.760 --> 08:46.100
+such motors using a chip like this.
+
+08:46.100 --> 08:52.420
+So this is all the hobby, robotics, or even most of the professional ones would have some
+
+08:52.420 --> 08:58.580
+board like this which would then control the speed at which you can rotate the motors.
+
+08:58.580 --> 09:05.180
+So in an ideal world if our motors were perfect, if what we ask it to perform it does, then
+
+09:05.180 --> 09:06.180
+we are done.
+
+09:06.180 --> 09:10.140
+So we don't need any more theories, so to say.
+
+09:10.140 --> 09:15.600
+But in practice what we see is that such open loop controls in the sense what I just said,
+
+09:15.600 --> 09:22.300
+so you ask the motor to let's say rotate at 50 revolutions per second, 50 rotations per
+
+09:22.300 --> 09:23.300
+second.
+
+09:23.300 --> 09:28.940
+It might give you just 48, or it might give you 52, because some things are not calibrated
+
+09:28.940 --> 09:34.880
+well, maybe you don't have a direct relationship between the current that you give to the rotations
+
+09:34.880 --> 09:38.980
+that you give which is perfect, so there's some things which are imperfect there.
+
+09:38.980 --> 09:42.600
+And this kind of control is also called as an open loop control in the sense that you
+
+09:42.600 --> 09:47.540
+give a command, the controller executes it, and you have no knowledge what happens.
+
+09:47.540 --> 09:50.720
+So here comes this idea of a feedback control.
+
+09:50.720 --> 09:55.600
+So usually most systems what they do is that you have the controller to which you give
+
+09:55.600 --> 10:00.360
+the desired value, so in this case this desired value could be the number of rotations per
+
+10:00.360 --> 10:01.360
+minute.
+
+10:01.360 --> 10:06.480
+So say you want 50 rotations per minute, then you give your control, you ask this guy to
+
+10:06.480 --> 10:11.520
+produce certain electricity, it does this, and then moves the system.
+
+10:11.520 --> 10:16.080
+So once you move the system, then you can observe this movement through a sensor.
+
+10:16.080 --> 10:19.200
+So in case of a motor this is usually an encoder.
+
+10:19.200 --> 10:23.560
+You can attach to the shaft of the motor some kind of an encoder and this tells you how
+
+10:23.560 --> 10:26.680
+many revolutions that you actually made.
+
+10:26.680 --> 10:32.200
+So now for example like I said before, you observe that you have only made 48 revolutions.
+
+10:32.200 --> 10:36.120
+And you can take this different signal between what you want and between what you actually
+
+10:36.120 --> 10:37.120
+observe.
+
+10:37.120 --> 10:43.200
+So let's say 50 minus 48 which is 2, so you are missing 2 more rotations per minute.
+
+10:43.200 --> 10:47.880
+And then this signal, the controller should be smart enough such that it takes this error
+
+10:47.880 --> 10:53.720
+signal, so this 2 revolutions per minute signal, and then generate more power so to
+
+10:53.720 --> 10:59.200
+say to compensate for the fact that you are not moving as fast as you think.
+
+10:59.200 --> 11:05.360
+So in general this kind of scheme is called as a feedback control where you also sense
+
+11:05.360 --> 11:13.920
+actually how the system is evolving and use this information to recompute your controls.
+
+11:13.920 --> 11:19.880
+So in a way this is a smarter way than let's say an open loop controller where you can
+
+11:19.880 --> 11:22.760
+have much more noise.
+
+11:22.760 --> 11:28.240
+And actually this idea is not something new, and this problem is something which we solve
+
+11:28.240 --> 11:30.680
+every day in our shower in the morning.
+
+11:30.680 --> 11:37.080
+So if you think of this feedback example, so let's say I like to have my shower at 35
+
+11:37.080 --> 11:42.760
+degrees, and when I enter the shower the water is at 30 degrees.
+
+11:42.760 --> 11:51.080
+So to say 35 is my desired state, 30 degrees is my current state of the water.
+
+11:51.080 --> 11:55.440
+Then the control that I have for the shower is this knob here, so you can move it left
+
+11:55.440 --> 12:00.560
+or right, you can rotate it left or right, and then this adds let's say more cold water
+
+12:00.560 --> 12:05.440
+or more hot water to actually change the water temperature.
+
+12:05.440 --> 12:10.240
+Then you stand under the shower and then in this case you feel the water fall on you and
+
+12:10.240 --> 12:14.400
+then you could say your skin, so to say, is the sensor which tells you okay, is this
+
+12:14.400 --> 12:19.920
+warm enough, is this too hot, is this too cold, and then you use this information, so
+
+12:19.920 --> 12:25.200
+what your skin tells you or what your body tells you, and then you say okay you have
+
+12:25.200 --> 12:32.280
+an idea of okay now the water seems to be 32 instead of 30 and it's still not 35 so
+
+12:32.280 --> 12:37.080
+I still need to move the lever more to the left because left here let's say adds more
+
+12:37.080 --> 12:38.160
+hot water.
+
+12:38.160 --> 12:44.120
+So this is a problem that we solve every day and it's the same with the robot control
+
+12:44.120 --> 12:45.120
+as well.
+
+12:45.120 --> 12:49.640
+So we want the signal to reach or we want the system to reach a particular state and
+
+12:49.640 --> 12:53.720
+we keep observing what the state is or at least what the measurable part of the state
+
+12:53.720 --> 12:57.760
+is and use it to drive our system.
+
+12:57.760 --> 13:03.480
+So if you want to see kind of the same system more mathematically this is what we show here.
+
+13:03.480 --> 13:09.760
+So the controller is usually defined as a function of your error function, so you have
+
+13:09.760 --> 13:11.320
+your error signal.
+
+13:11.320 --> 13:16.560
+So the input to the controller is an error signal which is basically the desired value
+
+13:16.560 --> 13:19.980
+for your state minus what you actually measure.
+
+13:19.980 --> 13:24.880
+So if your desired value is X test and what you measure is Zt it's a difference of this.
+
+13:24.880 --> 13:31.440
+So technically it might also happen that the value that you measure may not be the entire
+
+13:31.440 --> 13:32.440
+state.
+
+13:32.440 --> 13:37.560
+So for example of a 2D robot for example let's say your 2D robot has the state is defined
+
+13:37.560 --> 13:40.360
+by your XY position in the orientation.
+
+13:40.360 --> 13:44.640
+However you have a sensor say like the GPS sensor which only gives you the position and
+
+13:44.640 --> 13:46.600
+no orientation information.
+
+13:46.600 --> 13:51.540
+This means that your sensor cannot observe the orientation of the robot.
+
+13:51.540 --> 13:55.740
+So no matter what orientation it is in you don't really see it.
+
+13:55.740 --> 14:00.960
+In our examples we will see a simple case where we say that we observe all the states.
+
+14:00.960 --> 14:05.320
+However in practice this is something we should remember that not all the states that
+
+14:05.320 --> 14:08.360
+you want to track may be observable.
+
+14:08.360 --> 14:13.240
+So we saw the controller so the goal of this lecture is actually to design this guy such
+
+14:13.240 --> 14:19.080
+that given an error signal it produces a UT which is a control to your system.
+
+14:19.080 --> 14:24.200
+So this could be how fast your motor moves or go to a certain position in the environment
+
+14:24.200 --> 14:27.140
+and along the trajectory and so on.
+
+14:27.140 --> 14:30.200
+And then we have a system definition.
+
+14:30.200 --> 14:33.260
+Usually we have a model of how the system evolves.
+
+14:33.260 --> 14:38.000
+So in this case for example usually we model them in a linear way.
+
+14:38.000 --> 14:43.800
+So the system at time t depends on what the system state or what the state is at time
+
+14:43.800 --> 14:48.100
+t minus 1 plus some controls that you give to it.
+
+14:48.100 --> 14:51.960
+So this is a very simple simplified formula here.
+
+14:51.960 --> 14:56.620
+In principle you could have more nonlinear functions which map your current state to
+
+14:56.620 --> 14:57.820
+the future state.
+
+14:57.820 --> 15:01.060
+In this case let's say this works well for the shower case where you say the current
+
+15:01.060 --> 15:06.980
+temperature of the water is the previous temperature plus the amount of let's say the new hot water
+
+15:06.980 --> 15:08.320
+that you add in.
+
+15:08.320 --> 15:12.580
+And so for such a system this is good enough but for many mobile robotic systems we'll
+
+15:12.580 --> 15:16.460
+see that we'll need something more complicated.
+
+15:16.460 --> 15:22.780
+And what we should also consider that this system we don't always know perfectly so it's
+
+15:22.780 --> 15:25.580
+our assumption how this system works.
+
+15:25.580 --> 15:31.060
+So there's some simplifications we make just for modeling purposes and this also causes
+
+15:31.060 --> 15:34.540
+some error in our estimation problem.
+
+15:34.540 --> 15:38.980
+So in the sense that we predict our system to be in a particular place but this might
+
+15:38.980 --> 15:43.600
+not be the case because our model is too simplistic.
+
+15:43.600 --> 15:47.480
+So this is a rough block diagram for all the problems that we'll see essentially they're
+
+15:47.480 --> 15:50.480
+of this kind today.
+
+15:50.480 --> 15:53.280
+And let's say we want to design the simplest controller.
+
+15:53.280 --> 15:57.340
+So what would be one of the simplest controller that we could design?
+
+15:57.340 --> 16:03.760
+Say this let's say we start with what is called as the proportional control in which the idea
+
+16:03.760 --> 16:12.780
+is just that your control law so ut is just a proportion so it's a constant times your
+
+16:12.780 --> 16:13.860
+error signal.
+
+16:13.860 --> 16:18.920
+So what this says is that if your error is high give a high input if your error is low
+
+16:18.920 --> 16:26.220
+give a lower input multiplied by some constant so do I want to take some map directly the
+
+16:26.220 --> 16:33.220
+whole error as the control or do I want to do let's say 10% of it so I could have k as
+
+16:33.220 --> 16:39.300
+0.1 then this would mean take the error and just apply 0.1 of it and so on.
+
+16:39.300 --> 16:45.020
+So let's see basically let's see the example for the shower and see how this proportional
+
+16:45.020 --> 16:49.120
+control would work in different cases that could happen in reality.
+
+16:49.120 --> 16:55.440
+So this is the most ideal case here we take a kp as 1 so essentially our control law ut
+
+16:55.440 --> 16:59.120
+is nothing but one times the error function.
+
+16:59.120 --> 17:05.680
+So what you will see here also in the upcoming slides are basically two measurements one
+
+17:05.680 --> 17:10.160
+on the top here is the temperature so this is the actual state of the water or the temperature
+
+17:10.160 --> 17:15.260
+of the water that you are taking the shower in and on the bottom you see the control.
+
+17:15.260 --> 17:22.300
+So this control here we say this is basically the number of degrees in terms of temperature
+
+17:22.300 --> 17:28.780
+and not in terms of angles so let's say we map our handle so let's say if we move it
+
+17:28.780 --> 17:35.980
+half way around this represents whatever 5 degrees more heat adding more heat to the
+
+17:35.980 --> 17:41.120
+water and if we move it completely it would be 10 degrees and something like this.
+
+17:41.120 --> 17:48.600
+So we start at time t equal to 0 water here it shows 25 degrees and we want to reach a
+
+17:48.600 --> 17:53.920
+desired position of 35 degrees.
+
+17:53.920 --> 18:00.640
+Then what we do is we apply this control law so it says u is k times et and k is 1 so the
+
+18:00.640 --> 18:06.800
+error is basically 10 degrees we are at 25 we want to be at 35 the error is 10 and therefore
+
+18:06.800 --> 18:12.740
+our control would be applied 10 degrees more heat to the water and this is what we see
+
+18:12.740 --> 18:18.900
+so in one second we apply 10 degrees we reach our desired temperature.
+
+18:18.900 --> 18:24.700
+So here in the z you see what we actually observe in this case let's say we are able
+
+18:24.700 --> 18:29.380
+to observe the temperature which means this blue line is what we actually observe using
+
+18:29.380 --> 18:35.280
+a sensor whereas the red is actually the true temperature itself in practice we wouldn't
+
+18:35.280 --> 18:41.320
+know this so this is some state internal to the world and we can only estimate it we don't
+
+18:41.320 --> 18:47.160
+know it but in these graphs that you would see we assume to know this just to compare
+
+18:47.160 --> 18:50.880
+our measurements to what the actual state is.
+
+18:50.880 --> 18:55.480
+In this perfect ideal case no noise nothing this is perfect you apply one control you
+
+18:55.480 --> 19:00.880
+reach the state you want and it's done but you know from your experience in the shower
+
+19:00.880 --> 19:04.620
+that this is never the case you can't just move your handle once and you're happy with
+
+19:04.620 --> 19:09.580
+the water right why is this so one of the things is that there is certain amount of
+
+19:09.580 --> 19:16.100
+noise in the system you think that moving the handle by a certain amount should increase
+
+19:16.100 --> 19:20.460
+the water temperature by certain amount but there's always some noise so maybe there's
+
+19:20.460 --> 19:27.000
+some noise in the way the water is being mixed maybe there's some delay in the time
+
+19:27.000 --> 19:33.640
+between when you actually mix it and when it happens so one of these effects is the
+
+19:33.640 --> 19:38.900
+noise part and then maybe also it depends on your sensor so maybe you actually detect
+
+19:38.900 --> 19:44.820
+that the water is hotter or colder a bit later or you also detect it with some error so to
+
+19:44.820 --> 19:49.840
+say what I want to convey here that you can have system or measurement error so you can
+
+19:49.840 --> 19:55.660
+have errors in your model of how the thing works or you could also have some errors in
+
+19:55.660 --> 20:00.280
+your sensors and these are the two kinds of errors that you need to take care of and let's
+
+20:00.280 --> 20:07.180
+see what happens for example in the same case like before but now we have say noise in our
+
+20:07.180 --> 20:12.620
+measurements in this case so it could have been also in the system but we just show here
+
+20:12.620 --> 20:18.620
+on the measurements so basically this blue line here you see here has some noise and
+
+20:18.640 --> 20:25.360
+what does this do then so for example you start again at 0 you want to go to 35 and
+
+20:25.360 --> 20:31.600
+then you apply certain amount of different certain control but then you cross this 35
+
+20:31.600 --> 20:37.160
+because let's say your sensor has some error and you didn't actually detect it to be 35
+
+20:37.160 --> 20:42.740
+and at each time basically since there is some error in your measurement here you would
+
+20:42.740 --> 20:47.560
+never actually reach the 35 but always be a little bit up or down and you will always
+
+20:47.580 --> 20:53.700
+try to make this correction and what this would mean in terms of the control would mean
+
+20:53.700 --> 20:58.340
+that you would keep moving your handle or you would keep controlling to actually get
+
+20:58.340 --> 21:02.060
+the nice temperature that you want and this is not something that you would like in a
+
+21:02.060 --> 21:06.900
+shower you want to quickly adjust the water and then enjoy the shower and not really move
+
+21:06.900 --> 21:13.020
+your handle the whole time that you are standing there right so one of the ways to actually
+
+21:13.040 --> 21:17.400
+deal with this noise so if you have noise in your system so which is almost all the
+
+21:17.400 --> 21:24.400
+times in a real world system is to actually play around with the gain Kp and so the things
+
+21:24.440 --> 21:29.560
+that we have in our hand or the parameters that are there is ideally we would like to
+
+21:29.560 --> 21:35.880
+reach to our desired position as fast as we can and once we reach there we don't want
+
+21:35.880 --> 21:42.320
+to give any more extra controls but it's not an ideal world and one of the ways to actually
+
+21:42.340 --> 21:48.340
+trade off between these two things is by setting different gains and in particular a lower
+
+21:48.340 --> 21:55.340
+gain helps in case of in case there is some noise so for example again here the blue line
+
+21:55.820 --> 22:01.580
+shows the noisy measurements of the temperature however if we now apply only 15 percent of
+
+22:01.580 --> 22:08.020
+that error the error in terms or the amount of change that we will do to the system is
+
+22:08.020 --> 22:14.480
+also 15 times lower and therefore our state red here won't go up and down as much as we
+
+22:14.480 --> 22:20.360
+saw before so now the state moves much more smoothly the trade-off of course here is that
+
+22:20.360 --> 22:25.720
+now you require whatever let's say 25 seconds to reach roughly your temperature versus you
+
+22:25.720 --> 22:29.720
+reach your temperature roughly I don't know in couple of seconds so there's a trade-off
+
+22:29.720 --> 22:35.800
+between how much control you need to give and the time you require to reach this particular
+
+22:35.800 --> 22:42.680
+state and often this depends on our application so for example in this case maybe it's okay if you
+
+22:42.680 --> 22:48.600
+still have to wait for 20 seconds for the water to be at the temperature that we want and we are
+
+22:48.600 --> 22:53.320
+happy with a lower gain to do this of course it depends on the application sometimes you want
+
+22:53.320 --> 23:00.120
+the system to arrive very quickly then you would need something more okay and we can see the
+
+23:00.120 --> 23:06.800
+opposite and so what would happen if we have gains which are more than one and this is definitely
+
+23:06.800 --> 23:14.680
+one should definitely avoid this in most real cases this is because if you have a gain which
+
+23:14.680 --> 23:21.120
+is more than one you would always kind of magnify the error that's there in the system so if you have
+
+23:21.120 --> 23:27.600
+a certain error in measurement which is say few degrees or five degrees then every time you
+
+23:27.600 --> 23:32.920
+multiply this error by two and you could end up in an unstable system where in this case you would
+
+23:32.920 --> 23:38.760
+probably burn with your water reaching at hundred degrees so it's usually recommended not to use a
+
+23:38.760 --> 23:45.280
+gain which is more than one especially in systems that's affected by noise right and what you should
+
+23:45.280 --> 23:51.280
+also not do is to apply the error in the negative or in the opposite direction so in some of the
+
+23:51.280 --> 23:56.920
+programming assignments before we have seen if you let's say if you flip the sign of the error
+
+23:56.920 --> 24:02.880
+then you would end up in situations which you don't want to for example in this case it's a
+
+24:02.880 --> 24:07.480
+simulated case or it's a theoretical case so to say so here what you do is that you want you are
+
+24:07.480 --> 24:13.040
+whatever 25 you want to go to 35 however instead of applying a correction of 10 you apply a
+
+24:13.040 --> 24:19.000
+correction of minus 10 so you're always going away from the from the desired position and what I just
+
+24:19.000 --> 24:24.360
+show here is basically at some point there is a limit to your system so this is defined by the
+
+24:24.400 --> 24:30.920
+physics of the of the world itself so in this case for example you can't go below let's say
+
+24:30.920 --> 24:36.600
+minus 272 which is the absolute zero right so the message here too is to say that there is a limit
+
+24:36.600 --> 24:42.840
+on the system which is defined by the physics so you can't drive your system to whatever position
+
+24:42.840 --> 24:47.680
+that you desire there is some certain limits that exist due to the environment in which you work and
+
+24:47.800 --> 24:56.640
+there are also certain limits which come from the side of your control so for example in the handle
+
+24:56.640 --> 25:01.800
+case you can only move your handle so much so you can't move it infinitely fast or infinitely
+
+25:01.800 --> 25:08.320
+aware right so infinitely hot and this often leads to the situation of what is called saturation so
+
+25:08.320 --> 25:15.240
+this means that suppose the maximum you are your heater is able to add say in a second is say if
+
+25:15.640 --> 25:21.560
+five degrees per second even if your desired temperature for example you are at 25 you want
+
+25:21.560 --> 25:27.480
+to go to 35 since the maximum capacity the you the maximum control that you could give is five
+
+25:27.480 --> 25:32.720
+degrees per second there is no way that you could reach your desired position immediately so there
+
+25:32.720 --> 25:38.240
+will be some delay and this comes due to the limits on your control so you have both limits
+
+25:38.240 --> 25:44.880
+on the system equation so how the system evolves but you also have limits on your control based on
+
+25:45.160 --> 25:50.600
+the system as well and often you would see that we end up in situations of saturation because we
+
+25:50.600 --> 25:57.600
+don't have enough power so to say to to reach the desired state immediately okay there's another so
+
+25:57.600 --> 26:02.600
+they have seen what happens in case of noise and the other problem that usually happens in real
+
+26:02.600 --> 26:09.680
+system are what what is caused due to delays so this would mean that I ask to give a particular
+
+26:09.680 --> 26:16.440
+control but there is some delay in the system what happens then and here we look at a situation in
+
+26:16.440 --> 26:22.760
+which there is some delay so again what we see here the red one is the true state or the true
+
+26:22.760 --> 26:28.360
+temperature of the water whereas the blue one is the measurement so in this case we say that the
+
+26:28.360 --> 26:34.960
+delay exists in the measurement process so if the water is at whatever 25 we only detect that it's
+
+26:34.960 --> 26:39.920
+25 after a few seconds so this is a delay in our sensor system typically this delay can happen
+
+26:39.920 --> 26:45.040
+also in the in the let's say in the control process so when hot water is mixing with the
+
+26:45.040 --> 26:49.880
+cold one there could be some delay there but just for the purposes of this explanation we say there
+
+26:49.880 --> 26:57.280
+is some delay in how we measure this what this then means is that for example at this point of
+
+26:57.280 --> 27:03.320
+time when the actual temperature of the water has already reached our desired temperature since our
+
+27:03.320 --> 27:08.840
+measurements are delayed we still think that the temperature is 25 however the actual temperature
+
+27:08.840 --> 27:14.360
+temperature of the water is 35 because we have a delay in our measurement system this means that
+
+27:14.360 --> 27:19.240
+since to the controller the controller only knows the error signal which is computed from what it
+
+27:19.240 --> 27:24.600
+measures and so the controller still thinks okay I need to increase the temperature by 10 more
+
+27:24.600 --> 27:31.760
+degrees and so we would still give some control here where we shouldn't have given any and what
+
+27:31.800 --> 27:37.320
+this means is that in practice we actually overshoot the 35 degrees that that we want
+
+27:37.320 --> 27:44.440
+and we always end up doing this because we are always kind of behind the actual system and this
+
+27:44.440 --> 27:50.560
+results in both overshooting so we go above the the required temperature but also we go around
+
+27:50.560 --> 27:58.360
+our desired temperature because we are always kind of behind behind the thing and if today so
+
+27:58.360 --> 28:03.040
+when we talk about these delays there is a term called as dead time which is often used in the
+
+28:03.040 --> 28:09.080
+literature and this dead time like I said could come either due to the system so how the system
+
+28:09.080 --> 28:15.920
+is evolving or it could also come to the because of the sensor but in practice from the controller
+
+28:15.920 --> 28:21.520
+point of view if we sit here it doesn't really care it doesn't it cannot distinguish between
+
+28:21.520 --> 28:27.560
+the delay coming from the system or the sensors because all it sees is the error signal and it
+
+28:27.560 --> 28:31.400
+sees okay there is some error signal but it's coming with some delay so in this case for example
+
+28:31.400 --> 28:36.360
+there's one second delay in the system half a second delay in the sensor basically for the
+
+28:36.360 --> 28:42.240
+controller point of view it's getting a view of the state which is one and a half seconds ago
+
+28:42.240 --> 28:49.840
+rather than now so you'll often hear this term of dead time when talking about real systems and when
+
+28:49.840 --> 28:55.200
+you talk about what are the parameters which your controller should be able to take care of and in
+
+28:55.200 --> 28:59.960
+the literature actually one of the the the standard ways of dealing with this is through
+
+28:59.960 --> 29:05.840
+what is called as the Smith predictor this is an approach to kind of take into account that you
+
+29:05.840 --> 29:12.080
+have delays in your system and then how to correct it and the way the Smith predictor works is you
+
+29:12.080 --> 29:17.720
+have a real system but then you also have a virtual system or a fake system which you can
+
+29:17.720 --> 29:24.680
+use to predict how the system moves so for example for now just consider this lower portion of of the
+
+29:24.680 --> 29:31.040
+diagram here so you have the controller which controls the UT and gives this UT to the system
+
+29:31.040 --> 29:36.520
+which which is the real system so this system has some delay but you could also think that you give
+
+29:36.520 --> 29:43.240
+this control to some some model of your system so this is this doesn't really exist in reality but
+
+29:43.240 --> 29:49.440
+it's just an a mental image of your model so model of how your system evolves so what you can do is
+
+29:49.440 --> 29:56.160
+that since you know that your system has delay one way to do is is that you just rely on your
+
+29:56.160 --> 30:01.520
+virtual model and then since the virtual model has no delay you can just use the output from
+
+30:01.520 --> 30:08.280
+your virtual model as your in as as the input to your controller so you are detached to the real
+
+30:08.280 --> 30:13.600
+world you just look into your mental image or your model and then you do the control this is often
+
+30:13.600 --> 30:18.480
+not good enough because to come up with a delay-free model which is really exact is
+
+30:18.520 --> 30:23.560
+challenging especially for real-world situations let's say this this geezer or this heater which
+
+30:23.560 --> 30:29.920
+mixes it's quite difficult to come up with this this exact model so what usually one does is you
+
+30:29.920 --> 30:36.480
+still use measurements from your real system so this is ZT here you observe your system which has
+
+30:36.480 --> 30:43.280
+delay you take some measurements but then what you also do is you take your virtual measurements
+
+30:43.280 --> 30:49.080
+that you have and then you pass it through a delay model and this delay model in the simplest sense
+
+30:49.080 --> 30:55.680
+could be let's say just an array which stores all your values for the last let's say five seconds
+
+30:55.680 --> 31:01.560
+and then what you could do is that you do several empirical analysis and you figure out okay on
+
+31:01.560 --> 31:07.600
+average my system seems to have a delay of two seconds then you look up in this array and you
+
+31:07.600 --> 31:13.760
+take the value which is two seconds two seconds before and then you use that value as the correct
+
+31:13.760 --> 31:19.600
+value because you know or you guess that this is how much the delay is and then you use that signal
+
+31:19.600 --> 31:24.640
+to feed back into the controller so you took both the actual measurements into account and you took
+
+31:24.640 --> 31:30.800
+an idea of you took the measurements from your virtual model with some delay estimations that's
+
+31:30.800 --> 31:37.440
+there but like I said so here you need quite good system models and also a good delay model because
+
+31:37.440 --> 31:43.200
+if the delay model is very bad then your prediction might not be that better so this is one of the
+
+31:43.200 --> 31:50.560
+classical methods that's used to deal with the delays in the system and let's see how this works
+
+31:50.560 --> 31:55.520
+let's say in the perfect in the ideal case when we have a perfect model of the delay we know okay
+
+31:55.520 --> 32:03.200
+I have a system delay or a dead time of 1.5 seconds and I have this information then I can
+
+32:03.200 --> 32:10.000
+perfectly track my desired state so the red one again is the desired state and the
+
+32:10.000 --> 32:17.920
+blue one is what I measure and since I can perfectly store these values then I move
+
+32:17.920 --> 32:23.920
+back in terms of the dead time and I can get a performance like this ideally this is not I mean
+
+32:23.920 --> 32:29.440
+or in practically this is not the case so you would either overestimate the delay or underestimate
+
+32:29.440 --> 32:35.760
+the delay in practice and this is what we could see so the case which is kind of a bit bad is the
+
+32:35.760 --> 32:42.320
+overestimated case so say the actual dead time is one and a half seconds and you or you estimate
+
+32:42.320 --> 32:48.480
+this dead time to be two seconds this turns out that you will end up in oscillations like this
+
+32:48.480 --> 32:55.920
+is similar to the case where we saw we are always kind of lagging behind the actual
+
+32:55.920 --> 33:01.680
+state and this results in these oscillations and you would like to avoid these oscillations
+
+33:01.680 --> 33:07.520
+in general so one of the things that's usually recommended is to underestimate the delay so
+
+33:08.160 --> 33:13.600
+in the sense that although you are lagging behind the actual measurements at least you are not or
+
+33:13.600 --> 33:18.560
+you are not having these kind of oscillations that you had when you overestimated these things
+
+33:18.560 --> 33:22.640
+so in this case actually you're not lagging behind you are in front of the actual state
+
+33:22.640 --> 33:27.440
+and you are applying more control than than that is actually necessary and this results in this
+
+33:27.440 --> 33:34.560
+oscillation behavior so the recommendation usually is to underestimate the delay so if you think
+
+33:34.560 --> 33:38.800
+that the delay is whatever two seconds from your measurements maybe you would like to underestimate
+
+33:38.800 --> 33:45.440
+a bit the the trade-off here is that you would of course reach your state a bit later rather than
+
+33:45.440 --> 33:50.560
+earlier if you had the correct knowledge but at least you're not oscillating and for many systems
+
+33:50.560 --> 33:55.920
+it's more important that you don't you're stable so you don't oscillate a lot but it's okay if you
+
+33:55.920 --> 34:03.040
+actually reach this state slowly right so basically we have seen a simple a very simple controller
+
+34:03.040 --> 34:08.400
+what is called as the proportional control and we've seen kind of how it behaves if there is
+
+34:08.400 --> 34:15.520
+noise if there is delays and a couple of kind of hints or ideas how to deal when you have these
+
+34:15.520 --> 34:22.400
+situations which will happen in most real cases now we move to one step further on our hierarchy
+
+34:22.400 --> 34:28.400
+of control so what we saw now you could say we use this ideas for motors as well so i explained it
+
+34:28.400 --> 34:32.880
+with the shower example but the idea is exactly the same with the motors you want the motors to
+
+34:32.880 --> 34:38.000
+rotate at a particular rotation speed and then you'll have all these problems with the noise
+
+34:38.000 --> 34:44.560
+with the delay etc and all the ideas that we saw will help us get a good control over the motor
+
+34:44.560 --> 34:50.880
+speed rotation the next task that we'll look up is is what we call as the position control here
+
+34:51.520 --> 34:57.760
+we can take the example of an autonomous car for example which is shown here and the goal would be
+
+34:57.760 --> 35:04.560
+in this case to drive this robot to this goal position and reach there and stop there basically
+
+35:04.560 --> 35:10.720
+and essentially the control problem is always the same so how do i generate the signal u so what
+
+35:10.720 --> 35:17.040
+should i tell my car such that it actually reaches this position and in this case it stops there so
+
+35:17.040 --> 35:22.960
+we just want to reach the goal position and nothing more and so the first thing we need to understand
+
+35:22.960 --> 35:29.040
+is the kinematics of the of the motion itself so there's a very simplified version so we now kind
+
+35:29.040 --> 35:35.520
+of collapse our whole car as a point mass this is not a reality but works quite well for objects
+
+35:35.520 --> 35:42.880
+or for cars let's say when they're moving quite slowly and we have whatever our position and we
+
+35:42.880 --> 35:51.280
+have a velocity for our robot and the simplest model is as following so my new position would
+
+35:51.280 --> 35:59.280
+be my position at time t minus one plus my velocity times delta t so whatever the physics
+
+35:59.280 --> 36:05.200
+equation we know from our school right so s is equals to u plus at so in this case actually there
+
+36:05.200 --> 36:10.320
+is no acceleration either so this is just velocity so no accelerations are considered here here so
+
+36:10.320 --> 36:15.760
+actually it's even simpler so the new state is just the old plus the velocity times the times the
+
+36:15.760 --> 36:21.840
+delta t so here for the for these figures we'll consider delta t to be one which means that we'll
+
+36:21.840 --> 36:28.720
+apply this velocity for one second at each time just to make the analysis easier and what we see
+
+36:28.720 --> 36:34.960
+here is a steady state position for example in this case we start at let's say x equals to zero
+
+36:35.440 --> 36:41.440
+let's consider a super simple example in 1d we are at x equals to zero and we want to reach x
+
+36:41.440 --> 36:48.720
+equals to one and in the no control state so to say when we apply zero velocity to our car it
+
+36:48.720 --> 36:54.240
+will stay there forever so no surprises here but we want to do something more right so we want to
+
+36:54.240 --> 37:01.360
+figure out what is the u that we apply at each instant such that we reach this position of one
+
+37:01.360 --> 37:08.800
+and stay there right let's apply the idea that we saw now right so we we saw how a proportional
+
+37:08.800 --> 37:15.600
+control works for the motor control case but would it work for the case of our car
+
+37:16.160 --> 37:20.160
+and it so happens that it doesn't and there's a particular reason for this so
+
+37:20.160 --> 37:24.720
+again what you see here in the red is the true state so this is the true position of our
+
+37:25.440 --> 37:32.320
+point mass of a car and the blue is the the in this case yeah in this case the blue
+
+37:32.320 --> 37:37.840
+would be the derivative so it's not the estimated one but rather it's the velocity of the car so
+
+37:37.840 --> 37:43.280
+slightly different things than before so the red is our position and the blue is the velocity of
+
+37:43.280 --> 37:49.200
+the car because these are the two states which define the motion of the car but on the on the
+
+37:49.200 --> 37:55.360
+bottom is again controls and i'll explain what these different colors means for now this green
+
+37:55.360 --> 38:02.000
+part is the the proportional control so the control basically is computed using your desired
+
+38:02.000 --> 38:08.000
+position which is let's say one minus your current position when you start let's say zero so this is
+
+38:08.000 --> 38:12.960
+the error signal which you use to compute your proportional control so this is what the green
+
+38:12.960 --> 38:19.040
+here shows the proportional control you're giving but actually what happens here is you want to
+
+38:19.040 --> 38:25.680
+reach one and you want to stop there but as you give some control you your car reaches the
+
+38:25.680 --> 38:32.000
+position one but then due to the due to the velocity that it has so it's not reaching here
+
+38:32.000 --> 38:37.120
+with the velocity of zero it's you're you're keeping adding some velocity and then it it has
+
+38:37.120 --> 38:42.000
+some non-zero velocity here and so it can't come to a stop instantaneously or it doesn't know how
+
+38:42.000 --> 38:47.520
+to come to stop instantaneously so you would overshoot and then once you would overshoot then
+
+38:47.520 --> 38:52.080
+you would detect okay i'm farther than where i should have been and then you compute the
+
+38:52.080 --> 38:56.640
+control in the or you compute the error in the opposite direction now and then you keep having
+
+38:56.640 --> 39:02.160
+this oscillatory behavior because you're always reaching your desired position with certain speed
+
+39:02.160 --> 39:06.960
+which your proportional control has no knowledge of so this guy just knows what your current
+
+39:06.960 --> 39:11.920
+position is and where you want to be but it has no knowledge of this kinematics so to say which
+
+39:11.920 --> 39:17.200
+tells you at what speed you are in so the immediate idea would be okay then we should
+
+39:17.760 --> 39:24.560
+have a control which also knows about the velocity and this is often sometimes called as often called
+
+39:24.560 --> 39:29.920
+as pd control which means proportional and derivative control and in the the derivative
+
+39:29.920 --> 39:35.280
+part in our example maps to the velocities right so you have the proportional control which is the
+
+39:35.280 --> 39:40.480
+difference between your desired state and your current state and you have a derivative part
+
+39:40.480 --> 39:45.200
+which is the difference between between your desired velocity so in our case we just want
+
+39:45.200 --> 39:52.320
+to reach one the position one with zero velocity so the desired velocity in this example is zero
+
+39:52.320 --> 39:59.120
+but in typically it could be any desired velocity and your xt dot is your current velocity right so
+
+39:59.120 --> 40:04.560
+now we have two terms and when you add these two guys up it's called as pd control in the
+
+40:04.560 --> 40:11.600
+literature and now corresponding to each of these terms you have you have the proportionality
+
+40:11.600 --> 40:17.440
+constants and basically this is what we see here so when we apply this control which is
+
+40:17.440 --> 40:24.080
+given by this equation here what we see here is that as the as the robot as the point mass reaches
+
+40:24.080 --> 40:30.480
+one we said we see that the velocity also goes down and therefore the we are able to smoothly
+
+40:30.480 --> 40:37.360
+reach one and with a velocity of zero this results in in our control space so to say
+
+40:37.360 --> 40:44.000
+two signals one signal coming from the position error and one signal coming from the velocity
+
+40:44.000 --> 40:52.000
+error and when we see here what we show in green is the combined combined control that we give to
+
+40:52.000 --> 40:58.480
+the point mass whereas in red we show the proportional error and in this light blue we
+
+40:58.480 --> 41:03.520
+show the error due to the derivative terms so the come the thing that goes to the robot itself
+
+41:03.520 --> 41:08.800
+is the green part here but it has two components one coming from the position and one coming from
+
+41:08.800 --> 41:15.120
+the from the velocity error so this idea it's also one of the most common kind of controllers used to
+
+41:15.680 --> 41:23.760
+used to move objects to a certain state right again we can ask the question what happens if
+
+41:23.760 --> 41:29.280
+the gains are high because we have these two terms kp and kd which we would need to set
+
+41:29.840 --> 41:36.720
+and the question is what happens if we set them to high and again so what we would see is something
+
+41:36.720 --> 41:44.720
+like this if we have gains which are too high we would exceed our reference positions because
+
+41:44.720 --> 41:51.120
+let's say if the kp is too high we make a movement which is too fast and we are not able to stop
+
+41:51.760 --> 41:58.160
+when we want to and this would read this would give us situation where we would overshoot so
+
+41:58.160 --> 42:02.960
+ideally when you design control systems these are some terms that you take into account so you
+
+42:02.960 --> 42:08.800
+want to be to reduce this overshoot value and you want to reduce oscillations in general
+
+42:09.840 --> 42:15.440
+on the other end if you have too little gain this would mean that you would reach your state too
+
+42:15.440 --> 42:23.680
+slowly so again there's this trade-off between how much overshoot your system is able to accept
+
+42:23.680 --> 42:29.120
+versus how fast your system is able to reach to the desired position so we could play basically
+
+42:29.120 --> 42:36.880
+with the kp's and kd's in this sense to obtain a desired characteristics for our controller or
+
+42:36.880 --> 42:46.960
+desired performance for the controller right then there's other errors that can happen in
+
+42:47.600 --> 42:52.880
+a real system so these are what are called as systematic biases so if we again take the
+
+42:52.880 --> 42:58.880
+example of the robot such a systematic bias for example can come say if you have a wheeled robot
+
+42:58.880 --> 43:04.320
+and the two wheels are not of the same size so you fill in more air in one of them and less in the
+
+43:04.320 --> 43:11.040
+other one or just due to the weight distribution on the robot it ends up that your robot has a
+
+43:11.040 --> 43:16.640
+dominant direction so it always turns left or it always turns right so there is some systematic
+
+43:16.640 --> 43:22.720
+error which your kinematics or which your velocities do not capture in that case what
+
+43:22.720 --> 43:29.680
+would happen is that although you would kind of yeah you wouldn't reach your desired state
+
+43:29.680 --> 43:35.120
+you would be kind of at a constant offset with the state and this comes from this systematic
+
+43:35.120 --> 43:42.400
+bias so calibration errors errors in modeling errors in different kind of assumptions that we
+
+43:42.400 --> 43:49.120
+make can happen that you you think that you should have been in the you should have reached your
+
+43:49.120 --> 43:54.000
+desired state but you end up at a constant offset or some offset away from your desired state and
+
+43:54.000 --> 44:00.880
+this comes from these these kind of systematic bias errors and the way one usually solves for
+
+44:00.880 --> 44:06.080
+this is to come up with this third term which here is in the middle so the integral term here
+
+44:07.280 --> 44:13.120
+so we saw this part before and we add this new term which is the integral term what this guy
+
+44:13.120 --> 44:19.040
+says is basically compute the differences between your desired state and the current state and add
+
+44:19.040 --> 44:25.840
+them up over all of the time so what this would do in this in this diagram here it would add up
+
+44:25.840 --> 44:33.600
+all these these so the area between this to desired and the current state and then use this
+
+44:33.600 --> 44:40.160
+to actually add to the to the control so if you have some of these errors then you would still
+
+44:40.160 --> 44:46.560
+generate some control so even if you're even if there is no control coming from this part you
+
+44:46.560 --> 44:52.160
+would still have some control coming from this part to actually keep the system to the desired
+
+44:52.160 --> 44:57.120
+state so you could think of when for example in the in the steady state case where for example you
+
+44:57.120 --> 45:02.720
+reach your desired position and you reach also with the desired velocity but due to the systematic
+
+45:02.720 --> 45:07.920
+error at every instant the tendency of the robot would be to get away because there is some error
+
+45:07.920 --> 45:12.720
+in there and at that time this term will come into play because as soon as you move away from your
+
+45:12.720 --> 45:19.120
+desired input you would see okay i am accumulating some error because i'm not close to my desired
+
+45:19.120 --> 45:24.960
+place and this would create some controls so this way we can reach our system we can reach the
+
+45:24.960 --> 45:29.920
+position using the proportional part we can reach there with the correct velocity with the derivative
+
+45:29.920 --> 45:36.080
+part and we can take care of the systematic biases with the with the integral part right
+
+45:37.040 --> 45:42.240
+again here is shown the same example for the systematic error so the systematic error in
+
+45:42.240 --> 45:49.040
+this case let's say is this much and what happens is you integrate the area under the curve from
+
+45:49.040 --> 45:54.800
+this because the equation what this essentially turns out to is nothing but from zero to t
+
+45:54.800 --> 46:00.160
+integrate the area under the curve and this would mean that you would integrate this area under the
+
+46:00.160 --> 46:06.480
+curve here and you would use this value to make to ensure that you push the system back to your
+
+46:07.440 --> 46:12.720
+back to your desired state even if there is some systematic error so same like what we
+
+46:12.720 --> 46:18.000
+saw before the only thing that we need to be careful here so it's quite good for steady
+
+46:18.000 --> 46:22.240
+state systems so if you if you are close to your studies your desired position and then you have
+
+46:22.960 --> 46:29.040
+some small errors from this it's quite good but it could be dangerous through what is called as
+
+46:29.040 --> 46:36.640
+the wind-up effects so one of this one of the ways you could think of this is let's say your
+
+46:37.280 --> 46:44.160
+you measure your system so let's say your state is evolving in a particular way but your measurement
+
+46:44.160 --> 46:49.920
+of this state evolution is wrong so a concrete example would be let's say you have a robot which
+
+46:49.920 --> 46:56.800
+is stuck in a hole you are giving it control so the wheels are moving and so your encoders are
+
+46:56.800 --> 47:01.360
+saying that the wheels are moving and you expect the system to be in some other place however in
+
+47:01.360 --> 47:05.840
+practice in the real world your state has not changed because you're stuck so this means that
+
+47:05.840 --> 47:12.640
+there is a huge difference between where you think you are and what you are what where you
+
+47:12.640 --> 47:18.320
+actually are and this would mean that you would come up with a huge value for these for this
+
+47:19.520 --> 47:24.320
+integral term here because you keep on adding this error and then let's say at one moment you come
+
+47:24.320 --> 47:30.000
+out of the of the hole and you have a huge velocity and this would jump make the robot jump
+
+47:30.000 --> 47:36.720
+so one way that people often manage this is instead of integrating it over the entire
+
+47:36.720 --> 47:41.920
+time for which you run you have a small window so you say okay i am able to correct my systematic
+
+47:41.920 --> 47:48.000
+errors by just considering the last five seconds of my of my path so you could do okay i take these
+
+47:48.000 --> 47:52.720
+last five seconds and then i only compute this error over the last five seconds so at least
+
+47:52.720 --> 47:59.120
+there is a upper limit on the amount of control you give due to this for due to this particular
+
+47:59.120 --> 48:04.800
+term it won't be so high that you can end up in situations you don't want to and there are
+
+48:04.800 --> 48:10.880
+other situations in which you can end up with wind-up effects for example you you give a
+
+48:10.880 --> 48:16.880
+particular control but the actuators are not able to reach this particular control so there's a
+
+48:16.880 --> 48:21.680
+mismatch between the control that you ask the actuators to give was this what it's actually
+
+48:21.680 --> 48:27.680
+giving and this can also result in in a in a difference that accumulates over time and
+
+48:27.680 --> 48:33.600
+results in the fact that you're not reaching your desired positions so we'll see an example
+
+48:34.480 --> 48:42.720
+now so basically in this video we will see kind of an application or a demonstration of these
+
+48:42.720 --> 48:49.200
+three different terms the p and the i and the d in a very kind of classroom like example where
+
+48:49.200 --> 48:55.760
+we attach an indicator to a motor so as you see here so the goal would be to
+
+48:55.760 --> 49:02.880
+bring this particular stick at the center of the of the measurements here right so
+
+49:04.080 --> 49:09.600
+what we will see is to first we see the proportional control with a proportional gain
+
+49:09.600 --> 49:16.720
+of 200 and we see that we have a certain amount of overshoot so instead of just stopping here we go
+
+49:16.720 --> 49:22.800
+further further than we expected so this is because we are not using any derivative terms
+
+49:22.800 --> 49:27.280
+so we are reaching the position but we are reaching with some velocity and crossing over
+
+49:27.280 --> 49:33.920
+the thing again if we see even with a higher a higher gain we would see that yeah we are
+
+49:33.920 --> 49:37.680
+passing over but we are also having more oscillations because the gain is even more
+
+49:37.680 --> 49:43.440
+higher and so if we try even more higher gain then we will see lots more oscillations so just
+
+49:43.440 --> 49:48.880
+increasing the kp more and more won't help so now what we do is to add some derivative parts as
+
+49:48.880 --> 49:54.080
+well so we have some proportional parts and some derivative parts so which make sure that we come
+
+49:54.080 --> 49:59.680
+more closely to the to the desired position so here we are already quite close to our desired
+
+49:59.680 --> 50:07.120
+state but we see that we still have some amount of steady state error so we now try with a
+
+50:07.120 --> 50:12.800
+proportional or sorry an integral term as well to compensate for this for this
+
+50:13.920 --> 50:22.560
+for the for this small steady state error that we have and when we combine all of these three
+
+50:22.560 --> 50:27.040
+we would have expected this to work immediately but we still have the problem coming from the
+
+50:27.040 --> 50:31.520
+wind-up effect so in this case what's happening is the control that we are giving to the motor
+
+50:31.520 --> 50:36.800
+we are asking of the motor is not being followed immediately so we need to write something called
+
+50:36.800 --> 50:42.720
+as the anti-wind-up code which basically limits the the maximum movement that the motor can give
+
+50:42.720 --> 50:49.440
+and when we have now all the three parts the i the p the d and the i plus the anti-wind-up code
+
+50:49.440 --> 50:56.560
+we end up in situations where we are able to come quite close to the center okay so just to give you
+
+50:56.560 --> 51:01.440
+a quick summary what we saw is a PID controller so this consists of three parts a proportional
+
+51:01.440 --> 51:08.080
+part a derivative part and an integral part and you can combine all these three gains so to say
+
+51:08.080 --> 51:13.600
+to develop a controller which will give the the performance that you desire so if you want
+
+51:13.600 --> 51:20.000
+your system to reach your goal fast we use a higher kp whereas if you want to reach and
+
+51:20.000 --> 51:25.200
+make sure that there isn't too much oscillation over the or too much overshoot over the desired
+
+51:25.200 --> 51:30.480
+state then we also give some importance to the derivative part and similarly if we have some
+
+51:30.480 --> 51:36.560
+systematic bias in the system then we should use the integral term and it's quite
+
+51:38.080 --> 51:44.400
+so it takes some effort to figure out these correct gains often this is done by trial and
+
+51:44.400 --> 51:48.160
+error methods but there are also some methods which actually tell you how to come up with
+
+51:48.160 --> 51:54.080
+reasonable approximations or reasonable values for these values for these gains
+
+51:55.040 --> 52:00.160
+okay now we have seen two things motor control at the lowest level position control at let's say
+
+52:00.160 --> 52:08.080
+the mid level and now we move on to the trajectory control where we would like to now move a car
+
+52:09.200 --> 52:14.080
+as you see here along a particular trajectory so we just don't want to go to a position and stop
+
+52:14.080 --> 52:19.120
+but we want to actually move smoothly along a trajectory so you can think of this also as
+
+52:19.120 --> 52:25.280
+also as an advanced position control in the sense that you just don't go to every point and stop but
+
+52:25.280 --> 52:29.760
+rather you go to a point with a particular velocity and continue from there on so in the
+
+52:29.760 --> 52:35.040
+end what we would like to end up is having a control so some use to this car such that it's
+
+52:35.040 --> 52:42.080
+able to track this path smoothly so how this path comes depends on let's say your planning algorithm
+
+52:42.080 --> 52:47.120
+so you have some environment and then you let's say use the a star algorithm or some other
+
+52:47.120 --> 52:52.960
+algorithm to come up with a path which will which you want to follow now we'll only consider
+
+52:53.600 --> 52:59.360
+we assume that we know this path and how should we actually generate the use to track this path
+
+53:00.560 --> 53:05.520
+and often you would see this following control architecture which is used in realistic
+
+53:06.400 --> 53:13.120
+situations so i now show here for a car like a system but in principle you can adapt it for
+
+53:13.120 --> 53:18.800
+any other kind of system so a drone or a humanoid or so on so at the top most part exists the
+
+53:18.800 --> 53:23.920
+perception so this means use your sensors to compute a map of the environment and then also
+
+53:23.920 --> 53:30.880
+perceive which are drivable areas etc once you have this then the next thing is what is called
+
+53:30.880 --> 53:36.640
+as the motion planning which would mean that you should come up with a path so a part path like
+
+53:36.640 --> 53:43.040
+this and then when you want to track the trajectory you don't just want let's say the xy positions of
+
+53:43.040 --> 53:48.640
+the path we also want to have a particular velocity for each point on this path so this
+
+53:48.640 --> 53:53.360
+would allow the fact that you don't stop and go every time but you can move smoothly along your
+
+53:54.000 --> 53:56.800
+along your path and this part is often called as motion planning
+
+53:58.080 --> 54:02.240
+and this would be the input to our control thing what we actually want to develop
+
+54:02.240 --> 54:09.040
+and often in in for a for a car case or in the case of an urban car this control is broken into
+
+54:09.040 --> 54:14.960
+two paths what is often called the longitudinal control and lateral control so what this means
+
+54:14.960 --> 54:20.160
+longitudinal means along the direction of motion so this usually means you want to control the
+
+54:20.160 --> 54:26.160
+linear velocity of the of your car and this would be controlled by your longitudinal controller
+
+54:26.160 --> 54:30.960
+whereas the lateral controller will make sure that you are close to the path that you want to
+
+54:30.960 --> 54:36.000
+follow so you're not too far away in terms of the distance perpendicular from it so technically
+
+54:36.000 --> 54:43.840
+speaking these parts are not or these two portions of the state are not isolated so if you
+
+54:43.840 --> 54:50.320
+change your linear velocity a little bit and it also affects the distance from the path that you
+
+54:50.320 --> 54:55.120
+are so the perpendicular distance from the path that you are but in practice to simplify the
+
+54:55.120 --> 55:02.960
+problem people usually break your control problem into smaller more more more easy to develop
+
+55:02.960 --> 55:07.280
+controllers so instead of having one controller which does both longitudinal and lateral
+
+55:07.280 --> 55:14.000
+corrections we just break this up although this is a slightly less correct so to say because
+
+55:14.720 --> 55:19.520
+controlling this might affect the lateral parameters which you are not taking into account
+
+55:19.520 --> 55:25.920
+and so on but in practice if you do this fast enough so to say then this works out and this is
+
+55:25.920 --> 55:32.480
+how we will see how how we do it in this example and then once you have this control this basically
+
+55:32.560 --> 55:36.880
+goes to the actuation so in our case for the longitudinal control we want to control the
+
+55:36.880 --> 55:42.880
+velocity this means that we will either press the gas or press the yeah the acceleration or break
+
+55:42.880 --> 55:48.640
+so we can even either put more power or less power whereas the actuation for the lateral one would be
+
+55:48.640 --> 55:53.360
+through your steering so you move your steering in order to decrease your let's say the distance
+
+55:53.360 --> 55:58.160
+away from your tracking so this is a typical architecture that you would see for a autonomous
+
+55:58.160 --> 56:03.680
+car kind of system where you want to track a particular trajectory so let's see the first step
+
+56:03.680 --> 56:09.120
+again so the first step would be the trajectory generation so this red line would be the thing
+
+56:09.120 --> 56:14.560
+that would be given by your planning algorithm and then once you have this red line there are
+
+56:14.560 --> 56:20.720
+multiple ways from which you could come out with a nice or a useful trajectory so one the simplest
+
+56:20.720 --> 56:26.480
+idea is you just sample uniformly on this trajectory let's say every five meters and you
+
+56:26.480 --> 56:32.880
+end up with something like this it's good enough for many cases sometimes say if you're moving at
+
+56:32.880 --> 56:38.240
+faster speeds usually the troublesome areas are where you have large curvatures so when you have
+
+56:38.240 --> 56:45.680
+large curvatures you need to steer harder so to say and it helps if you have more points or more
+
+56:45.680 --> 56:52.560
+points on the trajectory in places where the the the control needs to be higher and what one uses
+
+56:52.560 --> 56:58.880
+usually or very commonly is the curvature so if you have a high curvature you can sample
+
+56:58.880 --> 57:02.480
+more points in the place where there is high curvature in order to ensure a more smooth
+
+57:03.680 --> 57:10.240
+smooth movement and there are several other ideas to do this but these are the two basic ones
+
+57:10.240 --> 57:18.480
+which often yield very good results for for fairly let's say medium speed control right
+
+57:19.280 --> 57:26.320
+the next thing to consider now is to consider the the the kinematics that comes from the from the
+
+57:27.840 --> 57:33.920
+from the car restrictions so to say so for example here we consider the ackermann's
+
+57:33.920 --> 57:39.760
+steering drive so we've seen in the in this lecture for locomotion basically how we derive
+
+57:39.760 --> 57:46.320
+these equations so delta here is the steering angle which is the angle that you see here for
+
+57:46.560 --> 57:53.520
+the virtual wheel and the idea that we have here is that we have one instantaneous center of
+
+57:53.520 --> 57:58.880
+rotation so all the wheels that you have so the left and the right as well as this virtual wheel
+
+57:58.880 --> 58:04.880
+that we have must pass pass through this one point so the idea here is that you have one point of
+
+58:04.880 --> 58:11.440
+rotation about which your whole car rotates and what this ensures is that all of your wheels are
+
+58:11.440 --> 58:16.560
+always rolling so there is no skidding in your system and this is something that we would want
+
+58:16.560 --> 58:20.560
+so when the system is rolling there's less friction with the ground everything is moving
+
+58:20.560 --> 58:28.080
+freely and we can also estimate so to say how our system is evolving quite well and we have seen
+
+58:28.080 --> 58:32.880
+these equations also before and what we would want to make sure is that we when we develop a
+
+58:32.880 --> 58:40.320
+controller we want to ensure that these criteria are met so we want to make sure that our our
+
+58:40.320 --> 58:48.720
+steering is in such a way that we have this instantaneous center of rotation so just to
+
+58:49.360 --> 58:54.560
+give a small short summary so basically in this case we would have a state which would be the x y
+
+58:54.560 --> 58:59.840
+and theta so the position the orientation as well as the steering angle so in this case we also want
+
+58:59.840 --> 59:05.200
+to control the steering angle and our controls here would be this longitudinal and lateral
+
+59:05.200 --> 59:09.680
+control in terms of the longitudinal control this would be the forward velocity that we
+
+59:09.680 --> 59:15.360
+have for our vehicle and in terms of the lateral control this would be the rate at which we change
+
+59:15.360 --> 59:20.560
+the steering so this delta dot is the rate at which we move the steering so these are
+
+59:20.560 --> 59:27.920
+the controls that we want and we want to generate such controls which obey this constraint so we
+
+59:27.920 --> 59:33.360
+want this steering angle to be this tan inverse t by r which will ensure that we have this
+
+59:33.360 --> 59:40.240
+one point of rotation to ensure smooth movement right then we also have some restrictions on our
+
+59:40.240 --> 59:46.480
+control there's only so fast our car can go so we have a maximum velocity that we can give so
+
+59:46.480 --> 59:54.960
+there's only so much gas that we can give and we have a limit also on how much we can steer so we
+
+59:54.960 --> 01:00:00.480
+can't steer infinitely there's a maximum amount which we can steer so all these all these let's
+
+01:00:00.480 --> 01:00:05.280
+say restrictions or constraints should be considered by the controller in order to generate
+
+01:00:05.280 --> 01:00:11.840
+a u so which means that a forward velocity and a steering rate which lies within this valid regions
+
+01:00:11.840 --> 01:00:18.880
+and follows the kinematics which will ensure smooth rolling right so like i said we solve
+
+01:00:18.880 --> 01:00:22.960
+this control problem separately we solve the longitudinal problem and we solve the lateral
+
+01:00:22.960 --> 01:00:29.760
+problem separately so in the longitudinal case let's say we motion planning generates this
+
+01:00:29.760 --> 01:00:35.920
+particular trajectory which means that over time we want to have these different velocity profiles
+
+01:00:35.920 --> 01:00:41.200
+so this is quite similar to the PID control problem that we saw here so we have a reference
+
+01:00:41.200 --> 01:00:47.440
+trajectory here and we have a some velocity that we want to give to our car and so basically we can
+
+01:00:47.440 --> 01:00:53.680
+solve this problem exactly the same way we did using a PID controller so your v is your desired
+
+01:00:53.680 --> 01:00:59.440
+state and this v reference oh sorry the v is the state you want to control the forward velocity
+
+01:00:59.440 --> 01:01:04.640
+and v reference is the velocity which you want it to to move here of course the v reference is
+
+01:01:04.640 --> 01:01:10.160
+changing over time before the example we saw it was constant but it doesn't matter so it's just
+
+01:01:10.160 --> 01:01:16.960
+that at each point you have a particular reference and this changes at each point so the PID would
+
+01:01:16.960 --> 01:01:22.480
+of always compute the error which is with respect to the current reference point and you can reach
+
+01:01:22.480 --> 01:01:28.800
+this desired state technically you can also do the same for your lateral control so for example
+
+01:01:28.800 --> 01:01:35.840
+if you say this if if you think this red line is the path that you want to want to traverse you
+
+01:01:35.840 --> 01:01:41.120
+can say okay and this is let's this is a simplified version of the car that we saw here just to
+
+01:01:42.000 --> 01:01:48.720
+just to make this figure a bit simple you can also always say okay I compute my angle with respect
+
+01:01:48.720 --> 01:01:53.600
+to the current path so let's say I take the nearest point on the path I compute the angle
+
+01:01:53.600 --> 01:01:59.520
+with the the angle between my heading and the path tangent and I could say okay I will develop
+
+01:01:59.520 --> 01:02:04.720
+a PID controller which will make sure that this error comes to zero so I always go along the
+
+01:02:04.720 --> 01:02:11.760
+tangent of the path this is a reasonable controller however in practice this gives no importance to
+
+01:02:11.760 --> 01:02:17.360
+the kinematics or the or the or the restraints that we had before the constraint that comes from
+
+01:02:18.320 --> 01:02:24.000
+on the steering angle so if we don't ensure that the steering angle has this constraint this would
+
+01:02:24.000 --> 01:02:29.360
+mean that we would skid and therefore often in practice what one does for lateral control
+
+01:02:29.360 --> 01:02:35.120
+is instead of just using a PID controller you also want to use the kinematics or the constraints that
+
+01:02:35.120 --> 01:02:40.960
+that you have for your vehicle and in this case we come out with a law which looks like this so
+
+01:02:41.200 --> 01:02:48.800
+which basically says set your steering angle as the tan inverse of this particular value here
+
+01:02:48.800 --> 01:02:55.040
+and this way what you would ensure is that you would move along a circular arc and move and
+
+01:02:55.040 --> 01:03:02.320
+intersect your your desired path at a particular distance also called as the look ahead distance
+
+01:03:02.320 --> 01:03:09.440
+ld so this would not immediately try to enter your or get close to your project desired trajectory
+
+01:03:09.440 --> 01:03:14.400
+but it would follow a smooth circular trajectory to do this so we're not going to how exactly we
+
+01:03:14.400 --> 01:03:18.560
+came out with this formula so you could figure this out actually with a little bit of geometry
+
+01:03:18.560 --> 01:03:24.000
+so actually treat this as an exercise and you would to derive these equations and the hint
+
+01:03:24.000 --> 01:03:29.840
+would be you have to apply some kind of sign the law of science to get this from the geometric
+
+01:03:29.840 --> 01:03:37.920
+relationship so anyways the message is that you now by applying this formula you
+
+01:03:39.920 --> 01:03:45.680
+give some importance or you basically follow the the constraint that was obtained using
+
+01:03:45.680 --> 01:03:51.200
+this ICC constraints that you have always rolling along some point so this way you could do your
+
+01:03:51.200 --> 01:03:56.240
+lateral control right so we did the longitudinal control using a PID controller and the lateral
+
+01:03:56.240 --> 01:04:02.560
+controller set in a way such that you obey the kinematics of the of the robot so let's actually
+
+01:04:02.560 --> 01:04:09.360
+now see a small video where we see this in action so some students from MIT here actually implemented
+
+01:04:09.360 --> 01:04:16.160
+this on a small small sized i don't know an RC car and what you see here is the map of the
+
+01:04:16.160 --> 01:04:22.480
+environment and the goal is to follow this white path that you see here right as you can see it's
+
+01:04:22.480 --> 01:04:28.560
+not the most smooth controller that you that you have ever seen as you see large oscillations this
+
+01:04:28.560 --> 01:04:38.400
+means that they would need to do some more tuning of their p d and i gains however overall you see
+
+01:04:38.400 --> 01:04:44.080
+that the the that the robot is moving quite fast and is able to track the position that you have
+
+01:04:44.080 --> 01:04:49.760
+again here you have a longitudinal control controlling the speed of the robot and the
+
+01:04:49.760 --> 01:04:54.720
+lateral control which is controlling so to say the distance from the from the actual path
+
+01:04:56.160 --> 01:05:01.600
+okay with this i would like to actually talk just about some gives just some information
+
+01:05:01.600 --> 01:05:06.400
+introduce you to this term called as the cascaded control so we saw these the these three different
+
+01:05:06.400 --> 01:05:10.960
+controls we saw the motor control we saw the position control and the trajectory controller
+
+01:05:10.960 --> 01:05:17.440
+and in practice what one does is you do you do each of these controls but you do them at
+
+01:05:17.440 --> 01:05:23.440
+slightly different frequencies and this both comes from the application point of view in the
+
+01:05:23.440 --> 01:05:29.040
+sense that for the motors you need to control it many times per second to ensure that it reaches
+
+01:05:29.040 --> 01:05:33.920
+the position that you want so typically you control the motors let's say a thousand hertz so
+
+01:05:33.920 --> 01:05:41.040
+every yeah thousand times every second you ensure that your motor reaches your your desired velocity
+
+01:05:41.040 --> 01:05:47.120
+and then you do a slightly lower control on your position base so you say 10 times every second
+
+01:05:47.120 --> 01:05:52.000
+make sure that you are updating the position control whereas on the top level the trajectory
+
+01:05:52.000 --> 01:05:58.240
+control maybe you do it only once every 10 seconds so you compute a new trajectory every
+
+01:05:58.240 --> 01:06:01.680
+every 10 seconds so the trajectory you have the reference trajectory you have is good enough for
+
+01:06:01.680 --> 01:06:08.240
+10 seconds so what this also ensures is that for the for the control layer which is on top of the
+
+01:06:08.240 --> 01:06:15.360
+bottom one it almost ensures as if there is no controller below it you have a constant velocity
+
+01:06:15.360 --> 01:06:21.280
+so if you think of here since this guy is setting the velocities for the motor thousand times a
+
+01:06:21.280 --> 01:06:27.680
+second with respect to the position control you can assume that the velocity is been set
+
+01:06:27.680 --> 01:06:32.080
+quite constant for the time in which you are doing the position control so this makes the
+
+01:06:32.080 --> 01:06:38.080
+assumptions easier and also makes the overall scheme work so the same at as we go each layer
+
+01:06:38.080 --> 01:06:44.000
+above we can safely assume that because of the high frequency of the control below we would
+
+01:06:44.000 --> 01:06:51.680
+actually reach the state that we expect the system to reach right with this I would also like to kind
+
+01:06:51.680 --> 01:06:58.880
+of just say a couple of words about the design goals so we've seen the controller a PID controller
+
+01:06:58.880 --> 01:07:04.400
+and we have seen like we want to not overshoot too much so this would be something like accuracy
+
+01:07:04.400 --> 01:07:09.520
+we want to be close to our tracking signal we don't want to go too far away from the signal
+
+01:07:10.160 --> 01:07:17.040
+then we also want the controllers to be safe so we don't want to to generate some control that
+
+01:07:17.040 --> 01:07:22.960
+could cause some harm either to the robot itself or to the environment so limit the maximum controls
+
+01:07:22.960 --> 01:07:28.080
+that are there then we would like ideally to have controllers which are robust to noise
+
+01:07:28.080 --> 01:07:32.880
+right so even if there is noise in the in the system predictions or in the measurements we
+
+01:07:32.880 --> 01:07:39.120
+still want our control to be meaningful to drive to our desired location then we want the controller
+
+01:07:39.120 --> 01:07:43.440
+to reach our desired location as fast as we want and this is what is computed using usually the
+
+01:07:43.440 --> 01:07:49.360
+response time and so all these are quite important goals and also something like maintenance so
+
+01:07:49.360 --> 01:07:55.200
+in the sense that when you create new or when you create a controller maybe over the years different
+
+01:07:55.200 --> 01:08:01.200
+people actually manage these systems and it should be easy for them to let's say tune these
+
+01:08:01.840 --> 01:08:07.520
+control parameters so that they can so that the robot for example can be used over long periods
+
+01:08:07.520 --> 01:08:15.360
+of time or even to transfer them to a new system so if your new robot comes up your controller
+
+01:08:15.360 --> 01:08:20.880
+should also be easy to transfer to this new robot itself and there are several other application
+
+01:08:20.880 --> 01:08:25.680
+specific goals but whenever you sit to design a controller these are some of let's say the top
+
+01:08:25.680 --> 01:08:31.280
+five things that should come up to your mind okay how accurate is my thing how safe is my controller
+
+01:08:31.280 --> 01:08:37.360
+is it robust enough to the noise that i expect to be how fast can i reach my desired state etc
+
+01:08:38.400 --> 01:08:43.840
+okay with these different parameters in mind we then go to the last portion of this lecture where
+
+01:08:43.840 --> 01:08:48.320
+we'll look at some of the advanced control techniques so we'll not go really into deep
+
+01:08:48.320 --> 01:08:54.240
+into each one of them i just want to give you a rough idea of what these control techniques deal
+
+01:08:54.240 --> 01:09:00.480
+with and i hope this encourages you to go and search in the literature how they work or where
+
+01:09:00.480 --> 01:09:05.840
+they can be useful and so on so to start off with the the top two that you see here the optimal
+
+01:09:05.840 --> 01:09:10.560
+control and a quadratic linear controller are basically techniques which treat your
+
+01:09:11.360 --> 01:09:17.440
+computation of control as an optimization problem so they basically would come out with an objective
+
+01:09:17.440 --> 01:09:23.120
+function saying okay this is the objective that we want to reduce so let's say the distance to the
+
+01:09:23.120 --> 01:09:28.240
+to the desired state the controls etc and they would come out with they will solve this
+
+01:09:28.240 --> 01:09:31.920
+optimization problem and the solution of the optimization problem would be the control that
+
+01:09:31.920 --> 01:09:37.440
+you would apply and we'll see a little bit more about how these work then there's an entire range
+
+01:09:37.440 --> 01:09:42.400
+of techniques for robust control which basically is okay i know that there are certain errors in
+
+01:09:42.400 --> 01:09:47.600
+my measurements i know that there are certain errors in my system prediction and so on how can
+
+01:09:47.600 --> 01:09:54.720
+i design a controller which at least let's say given a particular magnitude of my error ensures
+
+01:09:54.720 --> 01:10:00.800
+that my control is still correct or it can still drive my system to the required or the desired
+
+01:10:00.800 --> 01:10:07.200
+signal for the desired yeah and then the fourth one that we see here is what's called as an
+
+01:10:07.200 --> 01:10:14.000
+adaptive control and what happens often is that as the system evolves some of the system parameters
+
+01:10:14.000 --> 01:10:20.320
+itself might change so the system changes over time this means that your controller should adapt
+
+01:10:20.320 --> 01:10:26.320
+to the to these changes and so there are techniques which also try to estimate the system parameters
+
+01:10:26.320 --> 01:10:32.240
+as you go over time in order to actually ensure that your controller is still up to date and can
+
+01:10:32.240 --> 01:10:38.800
+can be used currently or at that instant and then there's a lot of work also in what is called as
+
+01:10:38.800 --> 01:10:44.320
+the failsafe control which means that in the worst case scenario if something happens can you still
+
+01:10:44.320 --> 01:10:49.680
+ensure that your system degrades smoothly rather than you know crashing into the wall or falling
+
+01:10:49.680 --> 01:10:55.840
+off from the sky can you can you design controllers which will ensure that even in the case for
+
+01:10:55.840 --> 01:11:01.600
+example I know an engine of the aircraft for example is lost you still have some control over
+
+01:11:01.600 --> 01:11:06.880
+the system so can you ensure such systems and finally we'll also see a little bit about learning
+
+01:11:06.880 --> 01:11:13.680
+based control where we see for example multiple examples of how vehicles are being controlled
+
+01:11:13.680 --> 01:11:20.720
+or how drones are being controlled and use this as examples to figure out a new control loss so to
+
+01:11:20.720 --> 01:11:26.720
+and there are many more techniques to do control these are some that I would just show you a little
+
+01:11:26.720 --> 01:11:34.160
+bit about so as I told you before optimum control basically poses your control problem as an
+
+01:11:34.160 --> 01:11:40.400
+optimization problem and the way it does is to come out with an objective function to measure
+
+01:11:40.400 --> 01:11:45.440
+the performance you have some performance for your controller and you want to to measure this
+
+01:11:45.440 --> 01:11:50.720
+one so usually the questions that one can ask in order to define such an objective would be
+
+01:11:51.680 --> 01:11:56.080
+what is a good performance and this could be like we want that controller which minimizes
+
+01:11:56.080 --> 01:12:01.520
+the error so the distance to the desired signal we want that controller which for example minimizes
+
+01:12:01.520 --> 01:12:06.240
+the amount of control so you don't want to steer too much or you don't want to move your handle
+
+01:12:06.240 --> 01:12:13.280
+too much so give me that control which minimizes this kind of movement and you can have this in
+
+01:12:13.280 --> 01:12:18.720
+different combinations so how much are you ready to give in terms of the error to the desired
+
+01:12:18.720 --> 01:12:24.320
+system versus how much are you ready to use your control so these are the different questions that
+
+01:12:24.320 --> 01:12:32.320
+you can ask and a particular case of this optimal control is what is called as the LQR or the linear
+
+01:12:32.320 --> 01:12:39.120
+quadratic regulator and this gives you the optimal solution given certain conditions so if your
+
+01:12:39.200 --> 01:12:44.320
+system is linear like you see here so if the system that you are trying to control has these
+
+01:12:44.320 --> 01:12:50.880
+properties and you construct and you construct a quadratic loss function which is shown as here
+
+01:12:51.840 --> 01:12:58.000
+then you can come out so there's a closed form solution for the best possible control that you
+
+01:12:58.000 --> 01:13:04.000
+would give to the system so the way that you construct this cost function is you have two parts
+
+01:13:04.960 --> 01:13:10.560
+one part depends on the error vector so this xk here actually represents the difference between
+
+01:13:10.560 --> 01:13:16.240
+your current state to the desired state and you weight them using some matrix Q so basically
+
+01:13:17.040 --> 01:13:24.480
+you say okay the error is so much important to me or it's I weight that importance using the Q
+
+01:13:25.040 --> 01:13:30.480
+and I have also some error so the objective function also depends on my control
+
+01:13:31.040 --> 01:13:36.800
+right and this is weighted through R what one can do is by varying this Q and R you can also
+
+01:13:37.440 --> 01:13:42.800
+relatively do you want to be really close to the desired signal or you want to make sure that you
+
+01:13:42.800 --> 01:13:48.480
+don't apply too many controls so do you want to be resource efficient or you want to be accurate
+
+01:13:48.480 --> 01:13:56.720
+so you can basically do this kind of weighting using these Q and R's and you can also control
+
+01:13:56.720 --> 01:14:02.640
+to the level of parts of the systems for example here let's say you have a 2d robot and you have x
+
+01:14:02.640 --> 01:14:09.440
+y and theta by choosing the Q such that you have high weights for the position and lower weight
+
+01:14:09.440 --> 01:14:14.880
+for the orientation you can also make your controller give a controller which gives more
+
+01:14:14.880 --> 01:14:20.240
+importance or which makes sure that you reach your position with a lot more importance than
+
+01:14:20.240 --> 01:14:25.200
+the orientation so you get all these kinds of different tweaks that you often want in your
+
+01:14:25.200 --> 01:14:31.680
+real system and the nice part is that if you have a system which moves like this the solution is
+
+01:14:31.680 --> 01:14:37.680
+closed form and is the optimal one so there is no better solution than this but you know often in
+
+01:14:37.680 --> 01:14:43.280
+the real case this is not the case so most of the systems that you would like to control would be
+
+01:14:43.280 --> 01:14:49.520
+non-linear and especially the case with vehicles drones etc these are very non-linear systems and
+
+01:14:50.400 --> 01:14:57.120
+one way like we saw in many of the other lectures we deal with this using linearization so we take
+
+01:14:57.120 --> 01:15:01.680
+our non-linear system and if we can convert it into this linear system then we can apply again
+
+01:15:01.680 --> 01:15:08.000
+this LQR idea to get the optimal control of course here it's an approximation so the the actual
+
+01:15:08.000 --> 01:15:13.920
+solution is not the most optimal one but it works quite well if the linearizations are or the
+
+01:15:13.920 --> 01:15:21.120
+non-linearities are small this another way which is often used in practice is what's called as this
+
+01:15:21.120 --> 01:15:27.360
+MPC controller so this MPC controller also stands for model predictive controller and what you do
+
+01:15:27.360 --> 01:15:33.120
+here is that you keep the non-linearities as it is and instead of solving these equations for the
+
+01:15:33.120 --> 01:15:39.440
+entire or the complete optimal problems you take a small window say a window of five seconds and for
+
+01:15:39.440 --> 01:15:44.480
+this five seconds through your computations through making many computations you can actually
+
+01:15:45.200 --> 01:15:50.720
+compute the minimum of this non-linear function as well so the reason you are able to do this is
+
+01:15:50.720 --> 01:15:56.560
+only because if a small window there are only so many possibilities that you can have and given
+
+01:15:56.560 --> 01:16:02.480
+today's quite fast computing or computers so to say we're actually able to numerically find the
+
+01:16:03.120 --> 01:16:08.560
+the minima in this short window and actually there's a really nice example where this MPC
+
+01:16:08.560 --> 01:16:14.000
+controller has been used for controlling this car which is making really a very
+
+01:16:15.520 --> 01:16:21.280
+dynamic movement so it will make really fast circles around this stuff and then try to make
+
+01:16:21.280 --> 01:16:27.440
+an H-shaped thing so as you can see this is a very non-linear motion it's definitely not rolling so
+
+01:16:27.440 --> 01:16:32.720
+you can see a lot of skidding in there so typically to control such systems it's really
+
+01:16:32.720 --> 01:16:38.000
+difficult to ride the dynamics however if you if you take in this non-linear approach then you're
+
+01:16:38.000 --> 01:16:44.640
+able to do controls like this which are really difficult to automate even for a person this would
+
+01:16:44.640 --> 01:16:49.760
+be really difficult and to come out with methods which actually are able to to do such control is
+
+01:16:49.760 --> 01:16:58.800
+really cool okay so that was a really nice example to see how to use non-linear control to actually
+
+01:16:58.800 --> 01:17:04.560
+make really cool movements and the next topic we have here is the adaptive control here the
+
+01:17:04.560 --> 01:17:11.360
+main idea is that the system can change over time and you would like to estimate these changes
+
+01:17:11.360 --> 01:17:17.600
+in addition to just computing a control law and a classical example here is the case of an airplane
+
+01:17:17.600 --> 01:17:23.600
+so as the airplane flies it consumes more fuel and this means that the weight of the airplane itself
+
+01:17:23.600 --> 01:17:28.800
+is changing this then would mean that the dynamics of the the airplane is changing so if the weight
+
+01:17:28.800 --> 01:17:33.760
+is lighter the way it moves in the air is different than from when it's heavier and so on and
+
+01:17:34.560 --> 01:17:40.640
+adaptive control methods are those which actually try to also estimate these changes or at least
+
+01:17:40.640 --> 01:17:45.920
+adapt their control to these changes that are happening so here i don't mention any particular
+
+01:17:45.920 --> 01:17:52.240
+approach but the idea is to to to take into account that you will have some system parameters
+
+01:17:52.240 --> 01:17:58.480
+which might be changing over time or which are uncertain over time the next idea that we see here
+
+01:17:58.480 --> 01:18:04.080
+is of robust control so here the thing is in most real situations we have an idea that okay there
+
+01:18:04.080 --> 01:18:09.840
+will be noise but we also have an idea of okay this is the maximum noise that i that i expect
+
+01:18:09.840 --> 01:18:15.200
+for this particular application so i know i'm giving some velocity to my car i say okay the
+
+01:18:15.200 --> 01:18:20.560
+velocity i give is maybe plus or minus 10 percent to the one that i give and so on so if we have
+
+01:18:20.560 --> 01:18:27.120
+this knowledge of the noise then can we use this in order to come out with some some controls which
+
+01:18:27.120 --> 01:18:32.240
+despite this noise are able to give some guarantees on the performance so it says okay
+
+01:18:32.240 --> 01:18:38.960
+i guarantee that if my noise on the sensors is less than this threshold then the error
+
+01:18:38.960 --> 01:18:43.920
+that i will give has certain properties so it won't be more than let's say two meters or something
+
+01:18:43.920 --> 01:18:48.240
+like this so there are some techniques which actually provide these guarantees in the presence
+
+01:18:48.240 --> 01:18:55.600
+of of noise and the the distinguish the the let's say the the difference from the adaptive thing is
+
+01:18:55.600 --> 01:19:00.720
+usually in the robust control you don't really consider the adaptive nature of those of the
+
+01:19:00.720 --> 01:19:06.480
+parameters of the system itself but more to deal with the noise so i mean you could use both robust
+
+01:19:06.480 --> 01:19:12.320
+and adaptive systems for the same same kind of control problem but it's just what kind of makes
+
+01:19:12.320 --> 01:19:21.760
+it different from the adaptive one and finally we see some learning based approaches so this
+
+01:19:21.760 --> 01:19:26.560
+is the system that we have been trying or this is the the the graph that we have which we are trying
+
+01:19:26.560 --> 01:19:32.400
+to control so we're trying to control the system and we measure something from the system and
+
+01:19:32.400 --> 01:19:38.080
+compute the controllers based on the error signals like we saw before right and usually we need some
+
+01:19:38.080 --> 01:19:44.400
+kind of model for our system to predict how the model is going to happen and often for cases such
+
+01:19:44.400 --> 01:19:50.560
+as the one let's say the car drifting in the in the parking lot we saw we actually to model the
+
+01:19:50.560 --> 01:19:56.480
+dynamics of such systems is really difficult and what the idea with the learning based control is
+
+01:19:56.480 --> 01:20:03.600
+that instead of actually modeling the dynamics can we just look at many of such examples that
+
+01:20:03.600 --> 01:20:08.880
+that we can find let's say i know we put a camera in front of a car and watch these cars skidding
+
+01:20:08.880 --> 01:20:14.640
+can we actually just use these examples to learn something about the about how the system itself
+
+01:20:14.640 --> 01:20:19.760
+is so you could do learning at the system level to find out how the system is evolving or you could
+
+01:20:19.760 --> 01:20:24.800
+also learn something at the controller level in the sense that okay you watch a human operator
+
+01:20:24.800 --> 01:20:30.160
+doing 100 demonstrations and then given these demonstrations can i come out with a controller
+
+01:20:30.160 --> 01:20:35.440
+so this is what usually the learning based approaches tend to do so we'll see an example
+
+01:20:35.440 --> 01:20:42.960
+here for actually a quadrocopter where it has basically some markers on top of it through which
+
+01:20:42.960 --> 01:20:48.320
+it can figure out how it has actually moved so in this case it wants to move go around this
+
+01:20:48.320 --> 01:20:54.000
+trajectory however the controller gives some trajectory which is not that good then because
+
+01:20:54.000 --> 01:21:00.480
+it can because it knows or it gets this feedback of the trajectory it followed before it uses this
+
+01:21:00.480 --> 01:21:05.600
+feedback to improve its controller and over time we will see that it gets more closer and closer
+
+01:21:05.600 --> 01:21:13.680
+to the desired trajectory so it takes its previous performance of previous into account and
+
+01:21:13.680 --> 01:21:19.120
+then adapts its parameters in order to come out with something that's better so similarly
+
+01:21:19.120 --> 01:21:26.000
+you see a bit more complex trajectory with an s where it learns this over time here's a nice
+
+01:21:26.000 --> 01:21:32.320
+example where where basically some external disturbance is being had so we switch on the fan
+
+01:21:32.320 --> 01:21:39.520
+here and the initially the quadrocopter doesn't know about this thing but by observing its motion
+
+01:21:39.520 --> 01:21:43.760
+it's able to figure out okay there seems to be some external force and i need to compensate
+
+01:21:43.760 --> 01:21:49.600
+for such forces so learning with demonstrations is one of the ways to to do it or learning with
+
+01:21:49.600 --> 01:21:56.800
+seeing you in this case it's learning from your past experiences itself and another way where one
+
+01:21:56.800 --> 01:22:05.360
+could infuse this learning into the controller is from simulations so in this case this car would
+
+01:22:05.360 --> 01:22:11.440
+make a quite a difficult maneuver so it will try to parallel park while it's moving back so it will
+
+01:22:11.440 --> 01:22:17.120
+try to parallel park in here and this is something usually really difficult to model in terms of its
+
+01:22:17.120 --> 01:22:26.480
+dynamics so what they did is here is to to basically simulate this kind of parking in a
+
+01:22:26.480 --> 01:22:34.320
+simulator and then they then also use some physics based system so they for the for the for the for
+
+01:22:34.320 --> 01:22:39.360
+the region where you go straight the dynamics is easy so you can use the physics but then they
+
+01:22:39.360 --> 01:22:47.120
+combine it with this kind of examples coming from simulation to do the more complex task of let's
+
+01:22:47.120 --> 01:22:53.280
+say parallel parking while going backwards right so now we see the same thing actually running on
+
+01:22:53.280 --> 01:22:58.720
+the real robot where we now see that this of it is coming backwards and make this really cool turn
+
+01:22:58.720 --> 01:23:02.560
+so what has happened here is that we've used both the knowledge from the physics simulator
+
+01:23:02.560 --> 01:23:06.720
+but as well as some demonstrations from some examples that were given previously
+
+01:23:06.800 --> 01:23:12.320
+in order to achieve this rather difficult task here we'll see a really interesting
+
+01:23:12.320 --> 01:23:18.720
+example of fail safe control so what you would see here is that as the robot flies up one of
+
+01:23:18.720 --> 01:23:25.840
+the propellers is made to come out and the idea is that even when the propeller comes out we should
+
+01:23:25.840 --> 01:23:33.280
+not just fall from the sky but rather have a more degraded perform so rather degrade smoothly so
+
+01:23:33.280 --> 01:23:39.760
+what you would see here is that it recognizes that one of the wings has broken and then smoothly
+
+01:23:39.760 --> 01:23:46.480
+comes down rather than falling down from the sky as if it didn't have this knowledge so these kind
+
+01:23:46.480 --> 01:23:51.360
+of control laws are also or control techniques are called as fail-safe controls where you would still
+
+01:23:51.360 --> 01:23:58.000
+want to give some kind of minimum performance even if you have some kind of catastrophic
+
+01:23:58.000 --> 01:24:04.720
+failure in your system again with this i reached the final slide of the summary of our lecture
+
+01:24:04.720 --> 01:24:09.680
+so we have seen the low level control and how motors work at the beginning then we have seen
+
+01:24:09.680 --> 01:24:15.760
+how to use the feedback control let's say in the example of a shower but also to see to understand
+
+01:24:15.760 --> 01:24:22.080
+this idea of how to use the measurements from the sensor to drive the system to the to the place
+
+01:24:22.080 --> 01:24:27.280
+that we want or to the desired signal and we have seen the idea of a PID controller and how we can
+
+01:24:27.280 --> 01:24:35.680
+use this to do position controlling and we have seen an example where we come out with a scheme
+
+01:24:35.680 --> 01:24:41.280
+in order to make our robot follow a particular path which is the common task in let's say
+
+01:24:41.280 --> 01:24:47.760
+autonomous navigation and finally we just saw very broadly some of the advanced control methods which
+
+01:24:47.760 --> 01:24:55.920
+are used for obtaining more performance or better performance in cases where we have noise or we
+
+01:24:55.920 --> 01:25:01.920
+have adapting or we have changing parameters etc and we have seen let's say how we can use
+
+01:25:01.920 --> 01:25:05.920
+learning or previous experiences to actually also learn some controllers
+
+01:25:06.720 --> 01:25:11.440
+so here i would like to acknowledge these sources so some of these materials has been from these
+
+01:25:11.440 --> 01:25:16.240
+different sources and if you're interested i would also recommend you to go through them
+
+01:25:16.880 --> 01:25:20.640
+to have a different explanation or also to see into different topics
+
+01:25:20.640 --> 01:25:25.120
+what they cover there and with that i thank you for your attention
+

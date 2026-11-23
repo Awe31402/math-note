@@ -1,0 +1,469 @@
+[00:00] Hello, in this lecture today I want to continue to talk about postgraphs and
+[00:04] look into one variant of postgraph-based SLAM which is an hierarchical approach.
+[00:09] So the key idea is to not use a standard postgraph but a hierarchical version of
+[00:14] it which has certain advantages especially if it comes to online mapping
+[00:18] and the goal of saving computational resources. The reason for this is that
+[00:23] the hierarchical postgraph is kind of a simpler problem than the original
+[00:26] postgraph problem or an approximation of the original problem that can be
+[00:30] solved in a more efficient manner. Before we start with that let's very briefly
+[00:35] recap what postgraph SLAM was about. So the idea was to represent the problem in
+[00:40] the form of a graph and this graph consists of nodes and of edges and every
+[00:46] node represents a pose, typically a pose of the robot. So this can be in the 2D
+[00:51] plane x, y and an orientation theta and if you're in the 3D world that would be
+[00:57] x, y, z and three rotational angles your pitch and roll for example. So the robot
+[01:02] moved through the environment which we can see here so the blue triangles are
+[01:06] poses of the robots at a certain point in time and those small arrows over here
+[01:11] represent those constraints or soft constraints and those soft constraints
+[01:16] give us some information how those poses should be separate from each other. So
+[01:21] they describe a transformation between those two poses. They are inherently
+[01:25] uncertain and they typically stem from observations or from odometry
+[01:29] measurements and while the robot is moving through the environment it
+[01:32] creates new poses, creates constraints between those poses and whenever the
+[01:37] system re-enters a previously known area so it closes a loop we add additional
+[01:41] constraints also between non- successive poses. And the overall SLAM problem is
+[01:48] represented through this graph and we typically use a least squares formulation
+[01:52] in order to find a new configuration of the nodes in this graph that minimizes
+[01:57] the squared error introduced by the constraints. So in some in post graph
+[02:01] based SLAM we have a graph that represents a problem and the important
+[02:05] thing in the post graph is that every node is a pose. General SLAM graph may
+[02:10] also have other entities such as landmarks for example but here we are
+[02:13] looking just into post graphs. So a node in this graph corresponds to the
+[02:17] position of the robot at a specific point in time and an edge which
+[02:21] typically connects always not always typically it connects always two poses
+[02:26] represents a spatial constraint between them and the spatial constraint result
+[02:32] for a measurement or from odometry information. And the goal of graph based
+[02:36] SLAM is now to first build up that graph and then find a configuration of the
+[02:42] graph that means a configuration of those nodes so that the overall error
+[02:48] from the constraints is minimized and we are typically looking here into
+[02:53] squared errors or some robust variants of this. And this is a so-called back-end
+[02:57] part of the SLAM problem. The front-end part takes a sense information builds up
+[03:02] that graph and the back-end performs the optimization or error minimization that
+[03:06] is involved in here. So there are two parts in this the graph constructions
+[03:11] which is the front-end and the graph optimization which is the back-end and
+[03:14] but it's important to note that there's actually interplay between them so
+[03:18] because you typically generate these constraints and data associations in the
+[03:22] front-end which generate new edges and then the post graph optimization will
+[03:28] actually find a better configuration of those nodes so a configuration that is
+[03:32] closer to reality. And so then the front-end gets this update but if the front-end
+[03:39] has actually a better map it's also likely they will make better data
+[03:43] associations so it can exploit the steps of the optimization in order to make
+[03:47] better data associations. With better data associations we will get better maps and
+[03:50] so it's a cycle which has the potential to improve the map and improve the data
+[03:55] association at the same point in time. As a result of that we typically need
+[03:59] intermediate poses so it's often not enough to just collect all the data and
+[04:03] then run everything the optimization only once in the end. Typically we are
+[04:08] interested in actually running this optimization in an online fashion and
+[04:12] always provide the platform or the robot or the autonomous car with the best
+[04:16] possible map at the current point in time. And this is kind of the standard
+[04:20] graph based SLIME problem so far. And so the idea of a hierarchical pose graph is
+[04:25] now to generate a simplified version of that graph which has a smaller number of
+[04:30] nodes in the smaller number of edges but which is a good approximation of the
+[04:33] original problem. So by solving the simpler problem we actually have results
+[04:37] faster and maybe even in situations where we have a smaller number of local
+[04:42] minima and can perform a better optimization here. So you can envision the
+[04:46] hierarchical pose graph in the following way. Let's say we have your nodes which
+[04:50] sit on a sphere so it's very easy to visualize and also very easy to see if
+[04:55] the map is consistent or not. You can see this is a robot basically traveling all
+[04:58] over the world. And then this could be the bottom layer so the original pose
+[05:02] graph this is still encoded in the hierarchical pose graph. And then at a
+[05:06] first layer I could simply have a much smaller number of nodes. Let's say one
+[05:10] node in this pose graph represents 10 or 15 nodes in the lower pose graph. Then I
+[05:16] can even go a step further and make another abstraction layer where say no
+[05:19] one node over here actually represents a local area in here which again resembles
+[05:23] let's say 100 or 1000 different nodes. And then I can take this of course
+[05:27] further and further until I basically have a single node. And the idea is that
+[05:33] optimizing this graph for example should be faster and easier than optimizing
+[05:37] this graph or this graph. So quite often it may be sufficient to just optimize on
+[05:41] that higher level to get the kind of global topology solved and then use this
+[05:47] for example for solving our data cessation problem. And the key insight in
+[05:50] here is actually that we do not need to optimize the whole graph whenever we
+[05:54] obtain one single new observation. This can be needed in case of a large loop
+[05:58] closure that all nodes are actually affected but that's actually very
+[06:01] seldomly the case. So much more often we have the situation that we add a new node
+[06:06] but we actually do not need to change a lot of the graph configuration because
+[06:10] this single new observation has very little impact on the other parts. And the
+[06:15] same thing is that for performing loop closure we typically do not need to have
+[06:19] the perfect map where everything is perfectly aligned. We just need to have a
+[06:23] good idea about the topology of the scene and maybe locally consistent maps.
+[06:27] So for loop closures let's say we have a robot which drives around the
+[06:32] environment. Let's say it starts here and drives along this trajectory so it will
+[06:35] actually generate this prose graph as it can be illustrated over here. So the
+[06:39] robot is now over there and now says okay where do I need to check for loop
+[06:43] closures. So nodes in the graph that I may need to inspect in order to see if
+[06:48] we actually find a loop closure. And for that we need to have a rough idea about
+[06:52] two things. First what the world looks like. So what's the overall topology of
+[06:56] the scene. And we also want to have information about the uncertainty of the
+[07:00] involved nodes. So the robot may need to know given this is the center of the
+[07:05] reference frame what's my uncertainty right now so they can see which nodes
+[07:09] are actually overlapping with my for example lips illustrated by the
+[07:14] covariance matrix like this one over here. That's the uncertainty of the robot
+[07:18] then let's say the three sigma bounds for example then the robot may only need
+[07:22] to inspect those three poses over here to cover 99% of the probability mass of
+[07:27] possible locations where it is and doesn't need to check with the whole
+[07:30] graph structure. So if the robot would need to verify loop closure or look for
+[07:35] loop closures looking only on these red nodes or among those red nodes is
+[07:39] actually a smart way to do it. It first will be much faster because if a smaller
+[07:44] number of nodes inspect and it will also reduce the number of data
+[07:47] association mistakes you're potentially doing. Because it could be the case that
+[07:51] we have another area where the robot has been let's say example this node over
+[07:54] here which looks very similar to its current node and so there's a potential
+[07:58] of making a data association mistake just because the world looks similar in
+[08:02] two different places. And as a result of it constraining the search into the
+[08:07] area where the robot could actually be from the uncertainty propagation through
+[08:12] the graph is actually a smart idea. So the hierarchical approach tries to
+[08:17] provide an intermediate solution or temporary or approximate solution let's
+[08:23] say of the original post graph problem so that we can actually answer those
+[08:26] questions over here. And that's what it is all about. So the insight is for
+[08:31] finding new closures we typically don't need a perfect map we just need to know
+[08:35] the topology of the scene and also for navigation tasks for example the robot
+[08:42] always often just needs to know the rough topology of the scene and maybe a
+[08:47] more accurate local map but this is actually a very local thing in its local
+[08:50] surrounding let's say the next 10, 20, 30, 40, 50 meters maybe in its surrounding
+[08:55] once of a good map but if the map outside that area is slightly
+[08:59] inconsistent or not perfect it actually doesn't really matter that much in most
+[09:02] tasks. So the key idea of this hierarchical approach is to perform an
+[09:06] approximation of the original post graph and correct only let's say the core
+[09:10] structure or the overall topology of the scene and not every single node in the
+[09:15] post graph. And this also exploits several other effects that we can
+[09:19] observe in these robotic problems the first thing is the robot is not
+[09:24] jumping around through the environment cannot be teleported to other locations
+[09:27] typically everything the robot does is very local so by optimizing only its
+[09:32] local map it is typically in that area where it is and will have a good map of
+[09:39] the environment and we just need to have a rough idea about the topology in order
+[09:43] to check for loop closures. And the second thing which is important we
+[09:46] typically have sensors which have limited range so a laser range finder
+[09:49] just sees in its local surrounding let's say 30 meters around the robot so we
+[09:54] don't the the number of nodes it may impact just by observing the same part
+[09:59] of the environment is actually limited by the sensor range so we don't need to
+[10:02] inspect the whole world in order to get everything right. So let me explain you
+[10:07] now very informally first how this idea of the hierarchical post graph actually
+[10:12] works. So let's say we have an input post graph and this is kind of the full
+[10:16] dense post graph that we have and it's a structure which for example looks like
+[10:20] this. So the first thing we want to do we want to actually group nodes together
+[10:24] and form kind of let's say local areas in this post graph and I just illustrated
+[10:30] this here we just have some groups shown by these dotted circles and the idea is
+[10:36] now that we can of put nodes together and in that graph and they can have seen
+[10:42] as a local map or local area and the key ideas in the end to represent to
+[10:47] treat those local areas as kind of small local maps and don't change the map in
+[10:52] between but just keep it at the kind of a rigid map and we can there different
+[10:56] ways how we can form those groups this can be very simple criteria such as
+[11:00] whenever the robot traveled more than 50 meters we just create a new local
+[11:04] submap we may have smarter ideas if we can determine for example intersections
+[11:09] in an environment we may break it down within intersections or any other
+[11:13] technique we want to use but my experience is often a very simple
+[11:17] threshold like we have moved more than 20 meters or something like this is a
+[11:21] very good starting point it's very easy to implement easy to debug it's very
+[11:26] small number of side effects and performs pretty good so there's no
+[11:29] reason typically to do something substantially more complicated what we
+[11:34] then do for all of those groups we actually select one representative node
+[11:38] here shown in red so every of those red nodes I say okay you are the node which
+[11:43] now represents the local map so we can see this as the other elements in this
+[11:48] local map depend on that map so the idea later on will be if I move this red node
+[11:53] the other nodes should actually move with it so we can see this as a
+[11:57] representative and those representatives are now the nodes which we can take to
+[12:02] the next level one level up the hierarchy so in the next upper level of
+[12:06] the hierarchy we will basically forget about the green nodes over here and only
+[12:11] consider the red nodes that we have and only the red nodes kind of are the next
+[12:16] level of the hierarchy so I can just kind of take that up now and then it
+[12:20] would actually look like this note that the connections if I go back so if two
+[12:26] groups are connected because the elements of their group are connected
+[12:30] this edge also should be connected by a level like this edge over here so this
+[12:34] is now a simplified version of this original graph a more sparser version a
+[12:39] version which has less nodes and less edges and now we need to work on this on
+[12:47] this upper level so what's important on this upper level first the edges of on
+[12:52] this upper level should reflect the connectivity of the groups of the nodes
+[12:57] so if two groups of nodes are connected with each other also their
+[13:02] representatives should be connected on the upper level and what we now need to
+[13:06] do is we need to actually find the parameters of those nodes especially
+[13:10] those edges, nodes is easy edges is more complicated, of this higher level why
+[13:15] isn't our nodes easy because those nodes on this higher level are exactly the
+[13:20] representatives I've chosen in the lower level so it's exactly the same entity so
+[13:24] there's nothing I need to do about it I need to however invest a little bit of
+[13:29] brainpower in how to compute those edges on the higher level because the
+[13:32] edges itself do not directly exist at least and then I created the next level
+[13:38] of my post graph and I can of course repeat this process in a recursive
+[13:42] fashion so now I can again group nodes and raise them up again to the next
+[13:47] level so I can recursively repeat the process depending on how many
+[13:51] hierarchies I want to have depending on how large my problem is and now consider
+[13:56] we are in one of those higher levels and now we want to perform an
+[13:58] optimization on this higher level which has a smaller number of nodes and
+[14:01] therefore should be much faster to execute so we are in this upper level
+[14:07] and now we could be optimized this upper level completely so let's say we perform
+[14:11] our optimization and this is the result of our optimization process so now what
+[14:17] happens we actually move the representative nodes or for the lower
+[14:20] level so we optimized all nodes on the higher level every node on the higher
+[14:24] level is a representative node on the lower level and so we are basically
+[14:28] shifting the representative nodes in those groups on the lower level as well
+[14:33] and the question is what are we going to do with the other elements of the group
+[14:37] and here the idea is the following that if you look for example to this group
+[14:41] over here let's say this is a current robot position we take those nodes which
+[14:46] were have been originally connected to this representative node and move it in
+[14:50] exactly the same way then the the nodes on the higher level or we can use other
+[14:57] strategies if you are thinking about local navigation we may only take the
+[15:02] nodes where the robot currently is and optimize the group downwards taking this
+[15:06] into account maybe ignore the rest on the lower level so there are different
+[15:10] variants of what I can do and how I can actually perform this this form of
+[15:15] relaxed optimization but at some point in time I may want to go down to a lower
+[15:20] level and then I have the ability to kind of shift the representative nodes
+[15:25] shift the connected node in the group as well which will lead to some
+[15:28] inconsistencies but this is something I can then fix and still have an easier to
+[15:33] solve problem on that lower level so a few words about the construction of this
+[15:38] hierarchy how does it work so the first thing you may want to look and take into
+[15:41] account is when should we actually create a new group how should that happen
+[15:45] and again as I said before typically a very simple threshold based decision
+[15:50] does a really good job so whenever the robot traveled for let's say 20 meters
+[15:55] or something like this other options could be that if you have some
+[15:59] additional knowledge some additional information maybe some topology
+[16:02] information you may exploit that but often my experience is that not really
+[16:06] needed and when you're creating you know a new group because you finished your
+[16:10] first group you select one of the nodes as a representative it can be simply the
+[16:13] first one can be the one which is close to the center of mass could be the one
+[16:17] which has the highest number of edges for now we just keep the first take the
+[16:22] first one but there are other options that you can do as well and the next
+[16:27] question is when we optimize in the higher level when and how should
+[16:32] actually information be propagated downwards the how we will explain and
+[16:36] the when the easiest answer to the when is when your map gets inconsistent so if
+[16:41] the optimization of the higher level changes a node substantially so
+[16:45] substantially shifts a node then it's a pretty pretty good indicator that
+[16:49] something in local map in these local groups will change similarly strongly
+[16:54] and then we may propagate this information downwards if you just move
+[16:57] the top node by a few millimeters often we don't care and we can just say there
+[17:01] will be some minor inconsistencies on the lower level but the effect is
+[17:05] actually really small so nothing that I actually need to do right now and then
+[17:10] the key questions are how are we actually constructing these edges on the
+[17:13] higher level in the graph so sparsified graph and how actually should we
+[17:18] propagate the information downwards and that's something that we will now
+[17:21] discuss in the next couple of minutes so how do we construct the edge and how to
+[17:26] propagate information downwards okay so let's go how do we do the edges so what
+[17:34] we have if you want to create an action on a higher level we basically have two
+[17:38] groups of connected nodes so consider our initial example these were kind of
+[17:42] these two groups of nodes both have a representative nodes here shown in red
+[17:47] and then what we want to do is we want to turn this problem into that simplified
+[17:51] problem in the higher level we have the representative nodes stay the same and
+[17:55] we want to create this edge so the question is how can we fuse all the
+[17:59] information which is stored in that group to be stored in this edge that
+[18:05] here and again we cannot add all this information so this is often
+[18:09] approximation what we are actually doing here so how to compute this
+[18:13] virtual observation that which relates the two poses in terms of a mean and a
+[18:17] information matrix associated to this so that I still have a post graph on that
+[18:22] higher level with the appropriate edge representing that problem okay how do we
+[18:27] do that the first thing we do we kind of take those two groups out of the
+[18:31] optimization problem and turn them into a small own optimization problem so I'm
+[18:36] basically taking all those nodes in here and ignore all the rest which was
+[18:39] there and perform an optimization just of these two groups so I'm optimizing
+[18:44] these two groups what what does it mean what the result of that the result of
+[18:48] that is the optimal solution assuming only those two groups exists and nothing
+[18:53] else okay so that means we have an all local configuration of these two of all
+[19:02] the elements of all the nodes in this small group so that we can then derive a
+[19:07] virtual measurement from that so the observation about the relative
+[19:11] transformation between two poses is then directly given by the configurations of
+[19:18] the nodes in this optimized subset so I perform the optimization the subset of
+[19:24] nodes and the resulting solution directly allows me to compute the
+[19:30] configuration XA and XB how I call them now and then XA and XB the relative
+[19:35] transformation between them directly gives me the mean constraint my Z in
+[19:40] addition to this I want to have uncertainty information I want to have
+[19:43] the information matrix associated to this constraint because I need to know
+[19:47] how much information is stored in there and again that's something that we can
+[19:51] do as well giving what we have learned in the past about post graphs basically
+[19:55] computing an uncertainty of a node with respect to another one so let's say we
+[20:02] want to compute that we say assume this one to be fixed so what's the
+[20:06] uncertainty to go from A to B so we can do is we fix in the small optimization
+[20:12] problem this node so we take that node out invert our H matrix and then take
+[20:18] out the corresponding block that represents the node XB and invert the
+[20:26] small part so this was the end of the previous lecture on post graphs the one
+[20:31] or two slides explaining how we are computing this uncertainties so what we
+[20:35] are doing is we are the the information matrix about the edge from A to B can be
+[20:43] obtained by taking the original H matrix taking out this node inverting it
+[20:49] that means I get the covariance matrix of the overall problem I take out the
+[20:55] block BB this is the the block which represents the uncertainty of this node
+[20:59] and with respect to this one and then I invert the whole thing again or to get
+[21:03] the information matrix so by two inversions basically of two small
+[21:08] problems only involving the edges on that in those groups and the nodes in
+[21:13] those groups we actually obtain the edge parameters so just by inversion
+[21:22] operations but on small matrices I'm actually able to obtain the information
+[21:28] about the uncertainty that is represent between those two representative nodes
+[21:33] based on the group information or the nodes stored in those groups so it's
+[21:38] kind of the first part done and the second question we had to answer is how
+[21:42] to actually propagate information downwards when we are optimizing on a
+[21:45] high level how to bring this information down to the next lower level and so the
+[21:52] things we are optimizing on a higher level and all of those so this is let's
+[21:58] say this example over here just taking out two representatives now let's say
+[22:03] they have moved they have moved a little bit further away or closer to each other
+[22:07] depending on the optimization and the question is how do we bring this
+[22:10] information downwards and now we exploit the fact that a representative means on
+[22:17] a higher level means it's exactly the same node on the higher level as well as
+[22:21] on the lower level so it's it's actually the same entity so by moving the
+[22:26] elements on the higher level we automatically move them on the lower
+[22:30] level but this only holds for the representative nodes this doesn't
+[22:33] necessarily or by default holds for the other elements node in the group but we
+[22:39] said the representative node should actually represent the whole group so
+[22:43] what we're doing is we're actually shifting all elements in this group in
+[22:47] exactly the same way so if for example this constraints tells me those nodes
+[22:52] should move a meter closer to each other and they move towards each other one
+[22:57] meter and what we are doing is we're just basically taking all the nodes in
+[23:01] the individual groups and move them exactly in the same way also shift by
+[23:05] one meter so they are moving closer together of course this will lead to
+[23:09] some inconsistencies over here so for example in this example the nodes had a
+[23:13] certain spacing and now they kind of shifted closer to each other so there's
+[23:17] a mistake so to say which happens over there an additional error is introduced
+[23:22] but this is something that we do not care at the moment because typically
+[23:26] those updates are small and if those updates are small this may lead to a
+[23:31] small inconsistency here in our map but often doesn't lead to a very serious
+[23:37] issue however we can change we can check how large this update was if there was a
+[23:43] substantial update you can say okay there's more work which needs to be done
+[23:48] in this area let's simply go down to the lower level and optimize this part on
+[23:52] the lower level as well or optimize the graph on the lower level because
+[23:55] obviously there must have been changes which affect a large number of nodes in
+[23:59] the graph and we basically propagate this information recursively downwards
+[24:03] until there's either we reach the lowest level or there the change introduced by
+[24:10] the move of the representative nodes was very small and in this way we optimize
+[24:15] propagate the information downwards as long as we need it and we may have some
+[24:19] constraint of it whatever whenever a node moves less than three centimeters I
+[24:23] don't really mind about that anymore because let's say obviously application
+[24:28] specific but let's say three meter shouldn't affect my local map so far and
+[24:33] then I say I'm fine not having the perfect map okay so and then we are done
+[24:39] already so we introduced this idea of a rack to the post graph just be explained
+[24:44] how we built the post graph we know how to optimize a certain level standard
+[24:48] post graph slam and then we explained how to propagate the information
+[24:52] downwards and that's actually all we need to know in order to build such a
+[24:55] system a few notes if you want to build the best possible map what should we do
+[25:02] then because it seems to be still an approximation we obtain the best
+[25:05] possible map if we in the end optimize on the lowest level because if you run
+[25:09] our optimization on the lowest level we are basically solving the original post
+[25:13] graph problem of course in this case we may not have served saved a lot of
+[25:18] computational resources because we're solving the original problem but at
+[25:21] least we're able to do that if you want to have the best possible map and it
+[25:25] actually turns out if you run these algorithms that it actually has a
+[25:28] positive effect to use this hierarchical structure even if you do an offline
+[25:32] processing I'm not really interested in online processing the reason is that if
+[25:38] you go up to a higher level you have an approximation of the original post graph
+[25:42] but an easier to optimize problem and you're optimizing a smaller number of
+[25:46] nodes and shifting all the other nodes in an approximate fashion in a similar
+[25:50] way than those representatives that you're optimizing and it typically is
+[25:55] the effect that this is much much faster to perform these operations and the all
+[26:00] the nodes come closer to their final location more quickly and then if you
+[26:05] then propagate this information downwards you kind of have a better
+[26:08] initial guess for the optimizations on the lower level so that even if you're
+[26:12] solving the original problem you typically need a smaller number of
+[26:15] iterations overall in order to optimize your maps on the lower level and so even
+[26:19] if it sounds a little bit counterintuitive initially it can
+[26:23] actually be advantages at least if you have suboptimal initial gases so if your
+[26:30] initial guess is already very good the the gain is very small but often you
+[26:36] actually converge quite quickly to the right solution even if you are far away
+[26:41] from the initial guess and what you typically need for this is just
+[26:44] basically one path up the tree and one path down the tree. I also brought you a
+[26:48] few examples to illustrate you how that looks like in practice so what you see
+[26:52] here is a picture of the Stanford parking garage that was an image and
+[26:58] also the the corresponding data set recorded by Sebastian Sprantz team early
+[27:03] in 2005-6 maybe and during this time Drew Campbell was involved in this and
+[27:09] building a map of the parking garage with the vehicle and then we use this
+[27:15] data to illustrate how we can actually build a map of the environment so this
+[27:19] is the map built by a post graph here even a color drivable and
+[27:24] non-traversable areas and what I want to show you is how this optimization works
+[27:28] on different levels so here we used two or three level three levels I think and
+[27:33] I show the level number zero and the level number one and you see how the
+[27:37] post graph builds up on this level zero which is the original post graph and on
+[27:41] this level one which represents the approximation of that of that post graph
+[27:46] so what you see here so this is the original post graph you see how the
+[27:52] graph is built up and you see here just an approximation of the original graph
+[27:56] where you see the representatives how there was no driving up in this parking
+[28:01] garage on the higher levels and we can see here how with a much smaller number
+[28:07] of nodes we obtain an approximation of the original problem and all the
+[28:11] optimizations can actually be carried out here on this on this level number
+[28:16] two and the information will propagate downwards to this level number one so
+[28:20] that by optimizing this problem a substantially smaller number of nodes
+[28:24] need to be considered in the optimization problem and I typically
+[28:27] have a faster optimization and come more quickly to my result another example
+[28:35] from indoor data set the Intel research lab data set recorded by the group of
+[28:40] data Fox in Seattle and what you can see here again two levels the red and the
+[28:46] blue level red is the original post graph and blue is a post graph on the
+[28:49] higher level and what you can see here the robot move traverses through the
+[28:52] same environment over and over again and we can see how the post graph here is
+[28:57] built up and you can again see that the blue structure has a smaller number of
+[29:01] nodes and often simpler connections in the edges because they are basically
+[29:05] representing what happens on the lower level and as a result of this we get a
+[29:10] simplified version of the post graph and this example only perform the
+[29:13] optimization on the on the higher level shift the nodes on the lower level in
+[29:18] the appropriate way you see sometimes very small shaking post graphs when some
+[29:23] optimizations are carried out but all in all the optimizations are only carried
+[29:28] out on the higher levels and only in the end propagated downwards so if I
+[29:32] turn this in the end into a final map we get the typical Intel research lab
+[29:36] results that you can see that you can see over here of course what happens on
+[29:44] the higher level is an approximation of what happens on the lower level and we
+[29:47] need to ask ourselves how good is our approximation the one on the higher
+[29:52] level there are approximations because with a smaller number of nodes we do
+[29:57] this rigid body transformations but also the edges that we are actually
+[30:00] creating are an approximation because they depend on the current linearization
+[30:06] that we have that we had in our original problem when we were building up the
+[30:12] higher levels of the hierarchy so we need to take into account that they are
+[30:16] some approximations that happen in there and for that what we what we can do is
+[30:20] we can actually check the original post graph problem and the record post graph
+[30:25] problem compute the uncertainties on the different levels and then compare
+[30:29] the covariance matrices and see basically the area of overlap or the
+[30:33] amount of probability mass that is covered by one probability by one
+[30:37] uncertainty ellipse and it's not covered by the other one and we can see so the
+[30:41] critical part in here is actually this information over here this is the
+[30:45] percentage of probability mass which is not covered by the approximation on the
+[30:50] higher level so where you're basically overly confident and this varies in
+[30:53] probability mass something between zero point zero one percent and let's say
+[30:57] three percent depends a little bit on the problem so these are kind of just
+[31:01] rough numbers so these are situations where on the higher level we think that
+[31:06] the covariance matrix is actually too small it doesn't cover the problem
+[31:09] really well and luckily those numbers are very small because these are
+[31:13] situations where I may miss a loop clause or may reject something not
+[31:18] considering it although in the original problem it was possible and then there
+[31:23] is the other thing is kind of how much what's the the uncertainty ellipses
+[31:27] which are too large on the higher level so it's in higher uncertainty than I
+[31:30] actually have in reality and here the values go up to 25% so some covariance
+[31:35] matrix may be 25% bigger than the the ones which I would get on the lowest
+[31:41] level so I have an higher uncertainty on the higher levels but that's typically
+[31:45] still okay so I may need to check a few more notes when I'm looking for loop
+[31:48] closures but at least I don't miss some so this is something which is kind of
+[31:52] less critical from the point of view and for this Intel data set we can
+[31:56] actually make this comparison so there's examples these are kind of the three
+[32:01] sigma ellipses which are shown over here and you can actually see kind of the
+[32:05] red one are the actual solution the correct solution and then you see what
+[32:08] level one mistake does here shown in green and what level blue does here in
+[32:12] big and sometimes you have mistakes where they are too large by up to 10%
+[32:15] but typically the probability math that you do not cover here is more in the
+[32:20] order of 0.1% in this example that means still keep in mind that is an
+[32:25] approximation of the original problem but an approximation that you can solve
+[32:29] much faster and often you actually get better results with this approach
+[32:33] because you have a better initial guess and can especially in situations where
+[32:37] you have a very bad initial guess to obtain a better results using this
+[32:42] hierarchical ideas so to conclude what the hierarchical post graph do they
+[32:47] provide an approximation of the original problem but one which can
+[32:50] typically solve quite quickly it supports an efficient data cessation
+[32:54] looking for loop closures we only need to inspect a much smaller number of
+[32:58] nodes and can make can make the decision which nodes to inspect much faster as if
+[33:02] you would run the original problem it's actually designed for online mapping so
+[33:06] to support this interplay of the front and the back end so of data's making
+[33:11] data stations and optimizations not provide not with the intention of
+[33:14] always providing the best possible map but providing a map which is good enough
+[33:18] to make all the decisions that the mapping robot needs to do and the also
+[33:23] the the notes on the higher level you can also see them as kind of a simplified
+[33:27] version of a slam problem and they also have other advantages so what you can do
+[33:31] for example if you combine slam and planning you could use this post graph
+[33:36] generated on an higher level which still contains the connectivity information so
+[33:41] the topology of the scene to actually plan path on a course level how to move
+[33:47] from a place a to a place B in a very efficient manner because you have this
+[33:51] hierarchical post graph and that's something which can speed up your
+[33:54] planning processes if you want to drive an autonomous robot from one place to
+[33:59] another place but automatically being able to go up the
+[34:02] hierarchy plan the higher level and then go down it's very similar to planning if
+[34:07] you go with your car on a highway and you see the highway is the higher level
+[34:10] and the small roads at the lower levels you basically plan a path to the next
+[34:15] highway m entry you entered you drive on the highway then you drive on the
+[34:20] highway and you exit the highway at a certain point and planning on the
+[34:23] highway is much simpler and planning the city is more complicated it's a very
+[34:27] good analogy to that and something like this you can also do with this
+[34:31] hierarchical post graphs in an effective way for combining slam for example was
+[34:36] planning so there are several advantages of these hierarchical post graphs not
+[34:40] only for the slam problem itself but also for other robotics tasks that you
+[34:44] may want to do and again if you want to learn more about this there's an
+[34:48] open-source implementation of the pro original approach called hot man and you
+[34:53] can find that resource online which tells you in more detail with all the
+[34:57] derivations how to build up this hierarchical post graph so that you're
+[35:01] actually able to realize such a system on your own but this I think thank you
+[35:05] very much for attention and looking forward to see you soon when we talk
+[35:09] more about graph based slam approaches thank you very much

@@ -1,0 +1,1253 @@
+WEBVTT
+
+00:00.000 --> 00:05.120
+So in the next part we want to look into the recursive base filter and provide an
+
+00:05.120 --> 00:10.680
+introduction in how to derive the basic base filter framework for recursive
+
+00:10.680 --> 00:14.600
+state estimation. So again recursive state estimation, what does that mean?
+
+00:14.600 --> 00:19.680
+State estimation, so without the word recursive, means that we want to estimate
+
+00:19.680 --> 00:25.000
+the state of a system. For example, where is a robot in the environment? Where is a
+
+00:25.000 --> 00:28.800
+certain object located? I want to estimate it to be based on sensor
+
+00:28.800 --> 00:32.200
+information and also often based on control commands and things that change
+
+00:32.200 --> 00:37.760
+things. And recursive means here that we want to update our belief, where for
+
+00:37.760 --> 00:41.580
+example which state the system is currently in, based on new observations
+
+00:41.580 --> 00:46.640
+that come in, reusing the previous distribution that we had and updating
+
+00:46.640 --> 00:49.760
+the distribution based on the new information. And this will turn into a
+
+00:49.760 --> 00:54.200
+recursive formula. Recursion is something that you probably know from your basic
+
+00:54.200 --> 00:58.080
+programming education where you basically reuse your previous result and just
+
+00:58.080 --> 01:03.300
+update it based on the new information that is available. So again what is state
+
+01:03.300 --> 01:07.240
+estimation? State estimation can be described by this probability
+
+01:07.240 --> 01:11.800
+distribution and it says I want to estimate the state of the system X at
+
+01:11.800 --> 01:18.840
+time T given all my control commands and my observations. So this is the
+
+01:18.840 --> 01:25.160
+state of my system at time T, for example the position of the robot at a certain
+
+01:25.160 --> 01:32.240
+point in time. And we do this estimation given, so we have our observations always
+
+01:32.240 --> 01:36.720
+referred to as Z and my control commands for all the history for all the
+
+01:36.720 --> 01:40.520
+past. So I started at one point in time, this was the first time step and then I
+
+01:40.520 --> 01:43.880
+have them all up to time T and have this sequence of observations and this
+
+01:43.880 --> 01:48.280
+sequence of control commands and I want to estimate where am I right now for
+
+01:48.280 --> 01:52.280
+example. What's the state of the system? And that's what state estimation is
+
+01:52.280 --> 01:56.600
+about. And the recursive part of it comes into the game when I said okay I
+
+01:56.600 --> 02:03.000
+want to estimate P of X T, I want to change this posterior here so that will
+
+02:03.000 --> 02:11.800
+be say P of X T given the rest is something where P of X T minus 1 pops up
+
+02:11.800 --> 02:16.860
+again. So that I can base my state estimation about what's the state of the
+
+02:16.860 --> 02:21.800
+system at time T based on the belief I had about the system at time T minus 1.
+
+02:21.800 --> 02:27.200
+And of course the estimate about T times, the estimate about the
+
+02:27.200 --> 02:31.280
+distribution up to T minus 1 then also only uses the observations and controls
+
+02:31.280 --> 02:34.760
+up to T minus 1. And then I kind of get new observation, get a new control and I
+
+02:34.760 --> 02:39.920
+advance the belief that I had to the belief at the next point in time. We can
+
+02:39.920 --> 02:45.960
+start as an illustration with an example from the probabilistic robotics book of
+
+02:45.960 --> 02:50.680
+Sebastian Thun, Wolfram Bogart and Dita Fox. It's a very prominent example that
+
+02:50.680 --> 02:53.720
+you've also seen this course a few times. You basically have a robot that
+
+02:53.720 --> 02:57.800
+lives in a one-dimensional world, just has this X dimension, it has no idea
+
+02:57.800 --> 03:01.640
+where it is and the only thing it can sense is actually a door. So if it stands
+
+03:01.640 --> 03:05.040
+in front of the door it sends it will say door, otherwise it will say no door,
+
+03:05.040 --> 03:10.560
+door, no door. That's the only thing that the system can do. So we will react to
+
+03:10.560 --> 03:14.600
+door events basically. And so in the beginning the system has no idea where
+
+03:14.600 --> 03:18.320
+it is so it's basically a uniform distribution so this is a belief. The
+
+03:18.360 --> 03:22.400
+belief of X is basically this distribution at before P of XT given the
+
+03:22.400 --> 03:27.440
+control commands and the observations. And now let's say it stands in
+
+03:27.440 --> 03:31.280
+front of the door and the sensor shouts door. Okay where am I? If I have no idea
+
+03:31.280 --> 03:37.160
+where am I? I only know my sensor said door and I have a map of the environment
+
+03:37.160 --> 03:40.640
+which from which I know that there are three doors. They would say oh I'm either
+
+03:40.640 --> 03:45.520
+here or here or here, right? Yeah that's okay, that's a pretty good estimate but
+
+03:45.520 --> 03:48.200
+it could also be the case that my sensor made a mistake, right? So it's
+
+03:48.200 --> 03:51.840
+still possible that I'm somewhere else but it's of course more likely to be in
+
+03:51.840 --> 03:58.240
+front of a door. So what we can do is then we can use our observation and the
+
+03:58.240 --> 04:02.860
+observation model will tell me just based on the information that the sensor
+
+04:02.860 --> 04:08.360
+shouted door I'm either here or here or here or maybe somewhere else but it was
+
+04:08.360 --> 04:13.400
+a smaller probability. So I can basically update that belief into a new belief
+
+04:13.440 --> 04:18.240
+which now encodes this information. I turn from the uniform distribution to
+
+04:18.240 --> 04:22.920
+this belief that it incorporated one observation. And then the system
+
+04:22.920 --> 04:26.000
+basically moved through the environment. So after intercooperating the sensor
+
+04:26.000 --> 04:32.440
+information the robot drove let's say a meter forward for example. And then we
+
+04:32.440 --> 04:37.360
+can see that the system moved forward so the robot moved from here to here but what
+
+04:37.360 --> 04:40.000
+we can also see is that then the probability distribution should move
+
+04:40.000 --> 04:43.200
+with it, right? Because if I was in front of a door I need to shift this
+
+04:43.200 --> 04:47.600
+probability mass also a meter forward. I could shift it exactly a meter forward
+
+04:47.600 --> 04:51.240
+if I would perfectly know that the platform would exactly drive one meter
+
+04:51.240 --> 04:55.080
+forward. But often that's not the case. You know you said drive a meter forward
+
+04:55.080 --> 05:01.160
+and the system drives a meter and five centimeters forward or it only drives 95
+
+05:01.160 --> 05:05.640
+centimeters forward or 99 centimeters or a meter 20. You don't know. So there's
+
+05:05.640 --> 05:09.080
+some uncertainty in the motion and this leads to the fact that this probability
+
+05:09.240 --> 05:13.400
+distribution kind of smears out. It gets wider this distribution. So the peaks are
+
+05:13.400 --> 05:18.600
+not as peaked anymore. They get flatter and distribute probability mass over a
+
+05:18.600 --> 05:23.800
+larger area in state space and therefore this distribution gets flatter. But then
+
+05:23.800 --> 05:27.840
+the system gets a new observation in. The robot again shouts door or the sensor
+
+05:27.840 --> 05:32.640
+shouts against door and again if I don't know anything where I am no prior
+
+05:32.640 --> 05:36.240
+knowledge and just know that the sensor shouted door I would have accepted the
+
+05:36.240 --> 05:40.600
+same distribution at before. But now I need to combine this distribution with
+
+05:40.600 --> 05:44.240
+this distribution over here and this leads to effect where there's an overlap
+
+05:44.240 --> 05:48.720
+in the poles between the two peaks. This will give me the highest peak and a few
+
+05:48.720 --> 05:52.840
+other peaks here as well and those other peaks basically mean I was right once
+
+05:52.840 --> 05:58.880
+but wrong the second time or the other way around. So as a result of this we
+
+05:58.880 --> 06:02.920
+will have this distribution and if you kind of move again further forward we
+
+06:02.920 --> 06:07.240
+will have this distribution over here. And this is basically advancing the
+
+06:07.240 --> 06:11.080
+belief from one state to the next state using just the current sensor information
+
+06:11.080 --> 06:14.680
+and just the current motion control command is something which we refer to
+
+06:14.680 --> 06:19.600
+as recursive state estimation and that's what we want to solve. We want to first solve
+
+06:19.600 --> 06:24.120
+it just in the form of a mathematical framework so deriving the equations that
+
+06:24.120 --> 06:30.120
+tell us what do we need to do in order to estimate this recursive belief. So
+
+06:30.120 --> 06:34.960
+again we start with this one that's what one estimate P of XT so where are
+
+06:34.960 --> 06:38.440
+we right now given all the observations from the past and the control commands
+
+06:38.440 --> 06:42.200
+from the past. So in this example before these were the two motion commands and
+
+06:42.200 --> 06:46.200
+the two observations I had from that platform and now one estimate where am I
+
+06:46.200 --> 06:50.440
+where where am I given that I have no idea where was before and that's where
+
+06:50.440 --> 06:55.320
+we're going to head to now. Okay so we start by saying we're interested about
+
+06:55.320 --> 07:00.760
+the belief of the system where it is at time T and this is nothing else as the
+
+07:00.760 --> 07:05.600
+state estimation equation or the definition of the of the probability
+
+07:05.600 --> 07:10.880
+distribution that is my belief so where am I right now given all the
+
+07:10.880 --> 07:13.880
+observations and all the control commands so this is the definition of
+
+07:13.880 --> 07:17.680
+the belief and what you see here everything which is readily underlined
+
+07:17.680 --> 07:23.220
+is the part which has changed in this derivation. Okay so next thing we're
+
+07:23.220 --> 07:26.820
+going to do we want to split up or we want to modify this distribution here to
+
+07:26.820 --> 07:31.540
+simplify it for us and one way to simplify this is to apply Bayes rule
+
+07:31.540 --> 07:36.740
+remember thing that we did just a few minutes ago in the previous lecture on
+
+07:36.740 --> 07:43.140
+probability theory we looked into Bayes rule so Bayes rule allows me to swap
+
+07:43.140 --> 07:47.180
+certain elements in here between what's written in front of the given sign what's
+
+07:47.180 --> 07:51.300
+written behind the given sign given some background knowledge so what we do now
+
+07:51.300 --> 07:58.180
+is we want to swap is ZT and XT so the variable ZT so the last observation and
+
+07:58.180 --> 08:02.540
+the current state of the system we just want to swap them turn them around that
+
+08:02.540 --> 08:08.980
+means Z 1 to T minus 1 and all the U's count as background knowledge and so we
+
+08:08.980 --> 08:15.500
+apply Bayes rule in order to swap those over here so what we do is we kind of
+
+08:15.500 --> 08:22.660
+swap ZT and XT so XT and ZT we are going to swap so this is normalization
+
+08:22.660 --> 08:27.460
+constant over here which encodes the evidence so divided by the the lower
+
+08:27.460 --> 08:31.700
+part of that equation that we defined in Bayes rule which is nothing else in a
+
+08:31.700 --> 08:36.220
+normalization constant so I can just write as a constant here okay so what
+
+08:36.220 --> 08:40.460
+has happened over here so in this in this first part of Bayes rule so this is
+
+08:40.460 --> 08:46.660
+first part in the second part here ZT and XT have been swapped okay so they
+
+08:46.660 --> 08:51.400
+here we swap those two the rest state the same and then we have the second
+
+08:51.400 --> 08:54.540
+part where everything is in there except the verb which is now here sitting in
+
+08:54.540 --> 09:00.700
+front so everything else is in there but not ZT so this is P of XT given Z 1 to T
+
+09:00.700 --> 09:05.580
+minus 1 E 1 to T so the plain vanilla application of Bayes rule nothing else
+
+09:05.580 --> 09:12.660
+has happened here okay and now what I'm doing I want to modify this part over
+
+09:12.660 --> 09:21.140
+here what I'm doing is is given I know where the system is right now given the
+
+09:21.140 --> 09:26.260
+state of the world given XT so I know where I am what's the probability of
+
+09:26.260 --> 09:32.940
+observing something of saying that they I'm in front of the door also given all
+
+09:32.940 --> 09:36.980
+the past observation the past control commands and here is something that we
+
+09:36.980 --> 09:40.700
+assume we make an assumption is called the Markov assumption the Markov
+
+09:40.700 --> 09:45.500
+assumption tells me or says that given I know the state of the system what
+
+09:45.500 --> 09:48.940
+happened in the past is decoupled from the future or independent of the future
+
+09:48.940 --> 09:55.020
+so that means given I know the state given I know where I am all the past
+
+09:55.020 --> 09:59.100
+control commands how I see it in the past and the past observations they
+
+09:59.100 --> 10:02.820
+don't tell me anything about I'm going what I'm going to observe right now or
+
+10:02.820 --> 10:08.780
+in the future okay so this means all this part over here this is at 1 to T
+
+10:08.780 --> 10:15.580
+minus 1 you want to T doesn't help me to estimate P of the likelihood of the
+
+10:15.580 --> 10:20.020
+observation so I can ignore them I can drop that because there's an independence
+
+10:20.020 --> 10:25.100
+this term and this term are conditionally independent given XT that's
+
+10:25.100 --> 10:29.060
+what it said here and this is what the Markov assumption does so through the
+
+10:29.060 --> 10:33.780
+Markov assumption this simplifies to P of Z T given XT so it basically says
+
+10:33.780 --> 10:38.700
+what's the likelihood of an observation given I know the state of the world and
+
+10:38.700 --> 10:42.060
+this comes in through the Markov assumption the next thing we want to do
+
+10:42.060 --> 10:45.740
+is we want to modify this part of the equation here so this is what we're
+
+10:45.740 --> 10:49.360
+going to change now and what we are going to do here what we're going to do
+
+10:49.360 --> 10:55.540
+here is we apply the law of total probability so in you know with the law
+
+10:55.540 --> 10:59.500
+of total probability applying it we can add a new variable we can introduce a
+
+10:59.500 --> 11:04.740
+new variable to the system that we are integrating over and we introduce the
+
+11:04.740 --> 11:10.220
+verbal XT minus 1 why are we going to do this because we want to end up getting a
+
+11:10.220 --> 11:15.340
+recursive equation so an equation where we can move from XT to XT minus 1
+
+11:15.340 --> 11:19.140
+therefore we introduce a new variable right now through the law of total
+
+11:19.140 --> 11:23.740
+probability that tells me where was a system at the previous point in time so
+
+11:23.740 --> 11:31.100
+not various right now where was it before so we just apply we just add P of
+
+11:31.100 --> 11:36.860
+XT minus 1 in here after the given sign and then times P of XT and integrate
+
+11:36.860 --> 11:42.140
+over P of XT minus 1 okay so this is what the result of a law of total
+
+11:42.140 --> 11:46.980
+probability looks like so the expression gets a bit more complex but there's no
+
+11:46.980 --> 11:50.620
+black magic behind it's just the plain vanilla application of the law of total
+
+11:50.620 --> 11:56.500
+probability so I added this new variable XT minus 1 so it sits this is
+
+11:56.500 --> 12:00.620
+the same distribution of what's written here just I added this XT minus 1 and
+
+12:00.620 --> 12:05.500
+then I have to also write the P of XT minus 1 given the previous background
+
+12:05.500 --> 12:09.900
+knowledge that I have and integrate over XT minus 1 so I'm integrating basically
+
+12:09.900 --> 12:15.420
+over all possible states where I've been before so the thing is where am I right
+
+12:15.420 --> 12:20.980
+now given all the old observations and all the motion commands basically you
+
+12:20.980 --> 12:26.420
+can boil down to where am I right now given I know we have been the previous
+
+12:26.420 --> 12:31.980
+point in time times how likely that actually was there and then integrating
+
+12:31.980 --> 12:36.020
+about all previous states so I'm basically integrating over all possible
+
+12:36.020 --> 12:40.540
+previous states and estimate given that I was there how likely it is that I'm
+
+12:40.540 --> 12:45.740
+now in the state where I am or where I want to be at the P of XT so we're
+
+12:45.740 --> 12:51.020
+adding this additional variable to kind of breaking down this chain of previous
+
+12:51.020 --> 12:56.860
+states and add just the the last most previous most recent state to it through
+
+12:56.860 --> 13:00.340
+this law of total probability but integrating over it so that we don't
+
+13:00.340 --> 13:07.300
+change the overall probability distribution okay and then we're going
+
+13:07.300 --> 13:11.700
+to simplify this expression over here so what's written here it's P of XT so
+
+13:11.700 --> 13:15.540
+we probability where I am right now given I know where I've been before
+
+13:15.540 --> 13:21.660
+given all old observations which happen up to that time XT minus 1 and all the
+
+13:21.660 --> 13:26.060
+old control commands plus a new control command so given I know where I've been
+
+13:26.060 --> 13:29.500
+in the past in the previous time step whatever I've seen before really doesn't
+
+13:29.500 --> 13:32.540
+matter anymore right it's again a Markov assumption whatever
+
+13:32.540 --> 13:35.380
+happened in the past I don't care where I know if I know where I am right now
+
+13:35.380 --> 13:41.140
+the only thing which still matters is UT because UT tells me how do I evolve
+
+13:41.140 --> 13:44.740
+from T minus 1 to T so this is still valuable information it's basically the
+
+13:44.740 --> 13:48.840
+last motion command that I've executed to the platform but whatever however I
+
+13:48.840 --> 13:52.500
+steered before is irrelevant if I know where I've been at the last point in
+
+13:52.500 --> 14:00.980
+time so this equation simplifies to P of XT given XT minus 1 and UT and all the
+
+14:00.980 --> 14:05.140
+observations and all the motion commands between the time step 1 and T
+
+14:05.140 --> 14:10.100
+minus 1 don't matter anymore so we can eliminate them so as a result of this
+
+14:10.100 --> 14:15.180
+this simplifies to this expression over here just using this Markov assumption
+
+14:15.180 --> 14:19.540
+basically knowing where we've been in the previous point in time helps me to
+
+14:19.540 --> 14:24.340
+ignore everything which happened before and then the last thing we need to
+
+14:24.340 --> 14:28.160
+optimize or to change is this expression over here so what do we have here we
+
+14:28.160 --> 14:33.060
+have the probability we have been in the previous point in time given all
+
+14:33.060 --> 14:37.600
+observations up to the previous point in time and all control commands up to the
+
+14:37.600 --> 14:42.560
+previous point in time plus UT plus the last control command so basically the
+
+14:42.560 --> 14:46.480
+same distribution that we started with here except that we have one further
+
+14:46.480 --> 14:51.240
+motion command so I know what I've steered which motion I execute in the
+
+14:51.240 --> 14:56.640
+system and what I'm doing right now I'm making an independence assumption or an
+
+14:56.640 --> 15:01.480
+independence assumption I'm assuming it doesn't mean it's true I just assume
+
+15:01.480 --> 15:09.120
+that the motion command I'm executing in the future doesn't help me to estimate
+
+15:09.120 --> 15:14.080
+where I am right now okay so assuming I want to estimate where I'm right now
+
+15:14.080 --> 15:18.200
+here in that position where I am and I know that in the future I will I will go
+
+15:18.200 --> 15:23.540
+20 centimeters forward something like this doesn't help me to estimate where I
+
+15:23.540 --> 15:28.900
+am right now you would say probably not because what I'm executing in the future
+
+15:28.900 --> 15:34.180
+shouldn't help me to estimate where I am right now if you think like this it
+
+15:34.180 --> 15:37.500
+holds for most of the cases you cannot ever construct situation where this is
+
+15:37.500 --> 15:41.460
+wrong so if I would be standing in front of a wall and you can assume that I have
+
+15:41.460 --> 15:44.740
+let's say a collision avoidance system running if I'm a robot and I'm standing
+
+15:44.740 --> 15:48.420
+in front of the wall is very unlike that will actually bump into the wall so if
+
+15:48.420 --> 15:52.580
+I'm here and I'm saying go 20 meters 20 centimeters forward I would bump into
+
+15:52.620 --> 15:56.540
+that wall so it's unlikely that the system would have executed this motion
+
+15:56.540 --> 16:00.460
+command if I would stand so close to the wall so there are certain situations
+
+16:00.460 --> 16:06.380
+where this independence assumption of ignoring UT does not hold but most of
+
+16:06.380 --> 16:11.100
+the cases it's a reasonable assumption so what I'm doing here I'm simply
+
+16:11.100 --> 16:17.740
+ignoring the latest motion command that has been executed I'm just ignoring it
+
+16:17.740 --> 16:23.340
+okay I'm losing information here but you can argue that quite often this
+
+16:23.340 --> 16:27.740
+information is not very useful but there are corner cases where it could matter
+
+16:27.740 --> 16:32.420
+but we are ignoring it something that we assume independence not true it's not a
+
+16:32.420 --> 16:36.500
+true independence it's assumed independence so if our model breaks
+
+16:36.500 --> 16:41.340
+they're not good in state estimation revisiting the assumptions that we made
+
+16:41.340 --> 16:46.700
+is a good idea but our model makes this assumption now and then we can look to
+
+16:46.700 --> 16:53.540
+this last term over here P of XT minus 1 given Z from 1 to T minus 1 and you
+
+16:53.540 --> 16:59.140
+from 1 to T minus 1 this is exactly the initial belief that I had except that I
+
+16:59.140 --> 17:06.460
+replaced T minus 1 by T or T to T minus 1 so and this is now my recursive my
+
+17:06.460 --> 17:12.060
+recursion so I reduced the estimate of where I am right now to the estimate
+
+17:12.060 --> 17:17.780
+where I've been before plus some updates which only depend on the current
+
+17:17.780 --> 17:22.060
+control command and the current observation so I can put in the belief
+
+17:22.060 --> 17:29.140
+this is a belief XT minus 1 to make this recursion explicit over here okay so
+
+17:29.140 --> 17:33.340
+it's just a replacement it's nothing there's no assumption nothing in there
+
+17:33.340 --> 17:37.540
+it's just the recursive term that I put in there and that's basically the
+
+17:37.540 --> 17:41.380
+complete derivation of the recursive base filter so we have started from here
+
+17:41.380 --> 17:47.060
+from the belief at time T we reduced it to the belief at time T minus 1 plus
+
+17:47.060 --> 17:51.940
+some updates taking to count the most recent motion command and taking to
+
+17:51.940 --> 17:56.940
+count the most recent observation and this is one of the key derivations and a
+
+17:56.940 --> 18:01.900
+lot of state estimation techniques rely on this derivation so if you think about
+
+18:01.900 --> 18:06.020
+the Kalman filter or the extended Kalman filter or unsaturated Kalman filter or
+
+18:06.020 --> 18:10.060
+into a particle filter or a histogram filter or other recursive filtering
+
+18:10.060 --> 18:14.820
+tank that you know already or that you will get to know they all rely on this
+
+18:14.820 --> 18:21.660
+mathematical framework okay so it's the very basic derivation of the base filter
+
+18:21.660 --> 18:26.820
+from the beginning to the end and it's clear also now which assumption we have
+
+18:26.820 --> 18:29.940
+made so if we have applied base rule that's not an assumption everything good
+
+18:29.940 --> 18:36.780
+we made a Markov assumption that is an assumption that the past doesn't impact
+
+18:36.780 --> 18:40.380
+the future given I know the state in between if I wouldn't know the state in
+
+18:40.380 --> 18:43.620
+between that would clearly be a dependency but given that I know the
+
+18:43.620 --> 18:47.300
+state of where the system in is in right now the past is independent from the
+
+18:47.300 --> 18:53.860
+future and we have done this twice once for our first model over here which will
+
+18:53.860 --> 18:58.500
+lead to something we call the observation model and here in there
+
+18:58.500 --> 19:05.460
+something we call the the motion model the control the control model and what
+
+19:05.460 --> 19:08.420
+we have used we haven't used an independence assumption assuming that a
+
+19:08.420 --> 19:13.620
+future motion command doesn't help me in the estimating the state of the past and
+
+19:13.620 --> 19:16.940
+this was kind of the last step that we have done in here these are the three
+
+19:16.940 --> 19:21.340
+assumption that we have made when we have been deriving the general base
+
+19:21.340 --> 19:23.860
+filter framework and these are the assumption that the base filter does
+
+19:23.860 --> 19:28.740
+under these assumptions there have been no simplifications in here of course
+
+19:28.740 --> 19:31.860
+depending on the realization that you do for the base filter so if you use
+
+19:31.900 --> 19:35.980
+Gaussian distributions to represent those probability distributions then you
+
+19:35.980 --> 19:41.540
+start making assumptions or kind of make your model less general because you
+
+19:41.540 --> 19:44.820
+reduce everything to a Gaussian distribution for example but then you
+
+19:44.820 --> 19:47.940
+may be able to solve this very efficiently and if your assumption is a
+
+19:47.940 --> 19:52.460
+Gaussian or close to a Gaussian that's maybe a good idea to do but so far this
+
+19:52.460 --> 19:57.380
+was really the general derivation without making assumption about what
+
+19:57.380 --> 20:01.780
+kind of models we are using or what kind of of probability distributions we are
+
+20:01.780 --> 20:07.140
+taking into account here quite often the literature you find that the base
+
+20:07.140 --> 20:12.740
+filter is broken up into scores called a prediction step in a correction step and
+
+20:12.740 --> 20:18.340
+so this is our final equation that we have this part over here the last part
+
+20:18.340 --> 20:22.900
+with the integral is typically called the prediction step and the this second
+
+20:22.900 --> 20:26.180
+part over here is called the correction step why prediction and correction
+
+20:26.180 --> 20:30.660
+because what this part does it take the previous belief and advances the
+
+20:30.700 --> 20:35.060
+previous believe based on the control command so based on for example which
+
+20:35.060 --> 20:38.860
+steering command I've executed it estimates where it could be predicts
+
+20:38.860 --> 20:43.340
+where the system will be in the future so it's a prediction step and then we
+
+20:43.340 --> 20:48.460
+will get an observation in the new state and this observation is used to correct
+
+20:48.460 --> 20:51.980
+potential mistakes that we have made in the prediction so we take our
+
+20:51.980 --> 20:55.580
+observation to count in order to perform a correction of my prediction and
+
+20:55.580 --> 21:00.500
+therefore this is called the correction step so if you have a bar over here this
+
+21:00.500 --> 21:03.420
+is to be notation for the predicted belief the predicted belief if the
+
+21:03.420 --> 21:10.020
+belief that we only use the the motion model to advance the state and the
+
+21:10.020 --> 21:16.100
+correction step then multiplies this predicted belief with the with our
+
+21:16.100 --> 21:20.700
+observation model and then this and a normalizer and this end leads me to the
+
+21:20.700 --> 21:25.540
+correct step where I take into account that the sensor observation may tell me
+
+21:25.540 --> 21:30.820
+something different than the prediction step and often we find in these space
+
+21:30.820 --> 21:35.380
+filter formulations an alternating prediction correction prediction
+
+21:35.380 --> 21:39.260
+correction prediction correction step and in every time step I basically
+
+21:39.260 --> 21:43.420
+perform a prediction and a correction motion and observation motion
+
+21:43.420 --> 21:47.860
+observation and always advance the belief estimating in which state the
+
+21:47.860 --> 21:53.180
+system is and in the prediction step we use something we so called the motion
+
+21:53.180 --> 21:59.100
+model which is P of XT given XT minus one and UT and we have our correction
+
+21:59.100 --> 22:02.340
+our correction step which uses a so-called observation model sometimes
+
+22:02.340 --> 22:05.460
+also called measurement model or sensor model depending on the community you're
+
+22:05.460 --> 22:09.580
+in I will most of the time use the word observation model in here which is the
+
+22:09.580 --> 22:14.780
+likelihood of obtaining the observation that I got given I know the state so if
+
+22:14.780 --> 22:18.700
+I assume that I know which state I am how likely is actually to observe what
+
+22:18.700 --> 22:22.820
+I'm observing and that's the question that we typically have to answer in this
+
+22:22.820 --> 22:29.460
+setup and up to this point this was the general derivation of the basic base
+
+22:29.460 --> 22:35.020
+filter if you want to implement your base filter you need to do certain
+
+22:35.020 --> 22:38.820
+things or what you need to do is you need to specify your motion model and
+
+22:38.820 --> 22:42.580
+your observation model how do they actually look like how does my belief
+
+22:42.580 --> 22:45.900
+look like how do I represent this belief if this is a Gaussian if there's a sum
+
+22:45.900 --> 22:49.500
+of Gaussian this is an arbitrary probability distribution this will have
+
+22:49.500 --> 22:55.340
+an impact on how those things look like also how do I describe how I advance
+
+22:55.340 --> 23:00.020
+from time t minus 1 to T is this a linear model is this a nonlinear model
+
+23:00.020 --> 23:04.740
+what do I know about the system is it a car there no I have a steering wheel and
+
+23:04.740 --> 23:09.580
+gas pedal that I can can push and this will constrain the motion I'm going I
+
+23:09.580 --> 23:13.380
+can't move sight words with a car for example these are all constrained that I
+
+23:13.380 --> 23:17.580
+can take into account need to integrate into my motion observation model in
+
+23:17.580 --> 23:21.700
+order to perform state estimation in an efficient manner so the important thing
+
+23:21.700 --> 23:25.740
+to note in here is that there's a large number of different realizations of this
+
+23:25.740 --> 23:29.500
+base filter so the base filter is just a framework for recursive state estimation
+
+23:29.500 --> 23:33.660
+and there are different realizations which are out there and they depend
+
+23:33.660 --> 23:37.420
+based on the assumptions that you make again linear versus nonlinear models for
+
+23:37.420 --> 23:41.700
+example for describing the motion or for describing the observations can we
+
+23:41.700 --> 23:44.900
+assume Gaussian distributions or do we want to represent arbitrary
+
+23:44.900 --> 23:49.060
+distributions do we need to be able to handle uniform distributions for example
+
+23:49.060 --> 23:52.660
+initially when we don't know in which state the system is in that's something
+
+23:52.660 --> 23:56.140
+which can it's tricky to do with a Gaussian distribution do we need to
+
+23:56.140 --> 24:01.540
+represent multiple modes multiple hypotheses about the state do we want to
+
+24:01.540 --> 24:05.260
+represent the probability distribution in parametric form and non parametric
+
+24:05.260 --> 24:08.780
+form these are all design decisions that I have to make and they have an impact
+
+24:08.780 --> 24:12.860
+on how this filter actually looks like they are different popular filters which
+
+24:12.860 --> 24:16.220
+are out there Kalman filter and extended Kalman filters they typically
+
+24:16.220 --> 24:20.740
+use Gaussian distributions for all our distributions and a linear model for the
+
+24:20.740 --> 24:24.540
+Kalman filter or linearized models for the extended Kalman filter which
+
+24:24.540 --> 24:27.720
+basically performs a Taylor linearization or Taylor approximation
+
+24:27.720 --> 24:33.580
+of the nonlinear function and this is a very popular filter that you find very
+
+24:33.580 --> 24:38.380
+often literature particle filters are an alternative representation and turn to
+
+24:38.380 --> 24:42.700
+realization of the base filter they have the advantage that they allow for
+
+24:42.700 --> 24:46.540
+for leaving the Gaussian world so you don't assume that everything is Gaussian
+
+24:46.540 --> 24:51.140
+anymore you can represent arbitrary probability distributions this come that
+
+24:51.140 --> 24:55.340
+it cost at a computational cost in the memory cost but allows you to for
+
+24:55.340 --> 24:58.500
+example represent multimodal distributions in a very elegant way and
+
+24:58.500 --> 25:04.060
+but can handle basically arbitrary models at least for the motion model as
+
+25:04.060 --> 25:08.700
+long as we can sample from those models and can point by evaluate our
+
+25:08.700 --> 25:12.980
+observation models then we can use actually arbitrary models are not
+
+25:12.980 --> 25:17.660
+constrained to linear or close to linear models just to give you a very brief
+
+25:17.660 --> 25:21.740
+idea how such a motion model observation model looks like I just want to give you
+
+25:21.740 --> 25:26.020
+two very simplistic examples without going into the details just to give you
+
+25:26.020 --> 25:29.620
+kind of visual understanding and how that could look like later on the course
+
+25:29.620 --> 25:33.940
+we will explicitly look into observation models and into motion models so for if
+
+25:33.940 --> 25:38.100
+for today I just want to show you one short example one instance how that
+
+25:38.100 --> 25:43.580
+could look like so motion model is this part over here was this part over here
+
+25:43.580 --> 25:48.660
+so where am I right now given I know where I've been before and given I know
+
+25:48.660 --> 25:52.920
+which motion command has been executed how does it look like and we can
+
+25:52.920 --> 25:56.900
+represent it or illustrate this in this form over here so what do you see here
+
+25:56.900 --> 26:00.980
+is an illustration of a robot so kind of a circular robot it's looking over here
+
+26:00.980 --> 26:08.340
+at the point in time t xt minus 1 and next point in time it's looking over
+
+26:08.340 --> 26:12.580
+here so the system has actually been driving around over here or assumed to
+
+26:12.580 --> 26:16.260
+have been driven over here that's what the motion command tells the system and
+
+26:16.260 --> 26:19.860
+the question is where am I right now where am I actually and then it turns
+
+26:19.860 --> 26:23.260
+out I get this probably distribution this gray yeah so the darker the values
+
+26:23.260 --> 26:27.180
+the higher the probability we can see this as an experiment let's say I put
+
+26:27.180 --> 26:31.100
+the robot in a certain state and I execute the same motion command let's
+
+26:31.100 --> 26:34.940
+say 300 times then I get these 300 different dots of where the system
+
+26:34.940 --> 26:39.780
+actually ends up with ends up and so these are the outcomes can see these
+
+26:39.780 --> 26:43.940
+outcomes of experiments and they represent the probability distribution
+
+26:43.940 --> 26:50.300
+or an approximation of the probability distribution where I am after executing
+
+26:50.300 --> 26:53.820
+this command knowing where I've been before and these are different
+
+26:53.820 --> 26:58.660
+parameters for those models for example in this case the system has a very high
+
+26:58.660 --> 27:03.180
+uncertainty in the angular movement but can very precisely estimate how far it
+
+27:03.180 --> 27:07.700
+has traveled so in this case you the uncertainty in this direction is very
+
+27:07.700 --> 27:12.340
+small but has is very large in the angular component here's the other way
+
+27:12.340 --> 27:17.900
+around a higher uncertainty along the forward motion direction but of a
+
+27:17.900 --> 27:21.780
+smaller uncertainty with respect to the angular components you can basically see
+
+27:21.780 --> 27:25.420
+this based on this kind of its idea of experiments of repeating the experiment
+
+27:25.420 --> 27:28.780
+and seeing where the system ends up and this is something which we typically
+
+27:28.780 --> 27:31.980
+call a banana shape distribution so it's kind of this because the shape of a
+
+27:31.980 --> 27:35.340
+banana which describes the motion and this is a traditional so-called
+
+27:35.340 --> 27:38.740
+odometry based motion model where you count the revolution of the wheels of
+
+27:38.740 --> 27:42.780
+your platform and see where are you going to end up and this is an example
+
+27:42.780 --> 27:49.340
+how this model looks like so how P of XT given XT minus one and UT actually looks
+
+27:49.340 --> 27:54.340
+like these are just illustrations of this effect for the observation model we
+
+27:54.340 --> 27:59.020
+can do something different again a very small simple example as simple as
+
+27:59.020 --> 28:03.100
+possible just to give you a visual idea on how that could look like so consider
+
+28:03.100 --> 28:07.020
+we have a sensor let's say let's take my laser pointer over here that you see
+
+28:07.020 --> 28:10.940
+here and consider this as a measurement device so it measures the distance to
+
+28:10.940 --> 28:14.140
+the closest obstacle so whatever somewhere over here you see the laser
+
+28:14.140 --> 28:19.340
+pointer this is the it measures this distance assuming this so it says
+
+28:19.340 --> 28:26.700
+whatever 40 centimeters 35 centimeters 50 centimeters but this measurement is
+
+28:26.700 --> 28:32.660
+affected by noise it's not perfect maybe it's 50 centimeters but in reality or
+
+28:32.660 --> 28:37.620
+then the system says it's 48 centimeters or in reality it's 60 centimeters away
+
+28:37.620 --> 28:42.340
+and the system tells it's 62 centimeters away so how often does it happen that
+
+28:42.340 --> 28:46.460
+I'm off and how far am I off and this is something which I can for example
+
+28:46.460 --> 28:51.060
+represent with a Gaussian distribution representing Gaussian measurement noise
+
+28:51.060 --> 28:55.160
+which is actually a not too bad approximation if at least when the
+
+28:55.160 --> 29:01.100
+outlier free case so if you have a range sensor the robot sits here and here is
+
+29:01.100 --> 29:06.220
+an obstacle what's the probability of range measurement that I get and maybe I
+
+29:06.220 --> 29:09.940
+assume this is a Gaussian distribution so it's very unlikely to measure a
+
+29:09.940 --> 29:13.940
+meter if my object is 50 centimeters away and it's also very unlikely to
+
+29:13.940 --> 29:18.460
+measure 10 centimeters if the object is 50 centimeters away so 50 centimeters is
+
+29:18.460 --> 29:23.100
+very likely to measure and 49 is also quite possible 51 as well but the
+
+29:23.100 --> 29:26.580
+further I move away from the actual distance the smaller the probability
+
+29:26.580 --> 29:31.500
+gets and this is an example for a simple observation model for range sensor with
+
+29:31.500 --> 29:37.040
+Gaussian noise of a single ray range reading in this most simple case just to
+
+29:37.040 --> 29:40.480
+give you an idea how's that such a model could look like so by using such a
+
+29:40.480 --> 29:44.480
+motion model and such an observation model I can actually estimate positions
+
+29:44.480 --> 29:49.000
+where a system is in the world and perform localization tasks and that's
+
+29:49.000 --> 29:53.240
+something that we will gradually work towards in this course first we look
+
+29:53.240 --> 29:58.880
+into maps and we'll look into how to describe motion and then go deeper into
+
+29:58.880 --> 30:02.000
+those models until we reach that point in time we can actually localize the
+
+30:02.000 --> 30:06.320
+platform but this is kind of the the guideline where will we actually will
+
+30:06.320 --> 30:13.120
+move to which also brings me to the end of the lecture today so we have seen the
+
+30:13.120 --> 30:17.280
+first part that probabilities are important in order to estimate a lot of
+
+30:17.280 --> 30:21.280
+state estimation problems and their key tool that we are going to use we have
+
+30:21.280 --> 30:24.640
+derived the base filter framework which is a technique for recursive state
+
+30:24.640 --> 30:30.240
+estimation and allows me to estimate probability distributions taking into
+
+30:30.240 --> 30:35.760
+account the previous belief that I had plus the new observations and the new
+
+30:35.760 --> 30:39.920
+control commands and there are different ways how we can realize the
+
+30:39.920 --> 30:43.160
+base filter so base filter was a general framework and then there are concrete
+
+30:43.160 --> 30:47.440
+realizations such as the extended Kalman filter or the particle filter and we
+
+30:47.440 --> 30:52.160
+will dive into the details of these filtering techniques in the future here
+
+30:52.160 --> 30:57.380
+in this course if you implement such a base filter you need to specify what
+
+30:57.380 --> 31:01.440
+kind of distributions are you looking into what kind of models do you have you
+
+31:01.440 --> 31:05.360
+have to specify your observation model and your motion model as the central
+
+31:05.360 --> 31:08.640
+models in the base filter which you need to specify as well as how the
+
+31:08.640 --> 31:12.600
+probability distributions look like so that's important if you want to actually
+
+31:12.600 --> 31:17.360
+implement it and build such a filter as a concrete instantiation of this general
+
+31:17.360 --> 31:21.760
+framework that we have presented over here so if you want to dive a bit more
+
+31:21.760 --> 31:25.480
+into into that and want to read a bit more about it I can recommend the
+
+31:25.480 --> 31:30.720
+probabilistic robotics book chapter 2.1 and 2.2 basically is repetition of this
+
+31:30.720 --> 31:35.560
+probability primer that I have talked about and the chapter 2.3 is an
+
+31:35.560 --> 31:39.480
+introduction to the base filter using a similar notation that I have used here
+
+31:39.480 --> 31:43.360
+so it should be actually straightforward and if you want to dive more into the
+
+31:43.360 --> 31:47.840
+detail and read again what I have presented over here so that's it from my
+
+31:47.840 --> 31:51.240
+side for today thank you very much for your attention and I hope you enjoyed
+
+31:51.240 --> 31:56.300
+this starting part into the course and get an idea on how state estimation at
+
+31:56.300 --> 32:01.060
+least works on a general concept and we will make that more
+
+32:01.060 --> 32:06.140
+concrete in the near future thank you very much for your attention
+

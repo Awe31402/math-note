@@ -1,0 +1,452 @@
+[00:00] So welcome to the second part on this course on visual features, where we want to talk about descriptors.
+[00:06] So in part one, we looked into key points. So what is a key point and how to compute a key point, basically a locally distinct point in an image.
+[00:14] And today we want to look into the question, how can you describe such a key point or to be more precise, the local surrounding of that key point that allows us to distinguish key points later on.
+[00:24] And we look into three different approaches for that. The first one is SIFT, the scale invariant feature transform, which is kind of the gold standard today for computing features in the traditional way.
+[00:35] And then in addition to that, we look into BRIEF and ORP, which are two so-called binary features, which gained quite some popularity over the last years, especially in the context of the simultaneous localization mapping problem.
+[00:47] One reason for that is that they can be computed very efficiently.
+[00:51] So again, why do we need that? What is this all about? We often want to reduce our image to a certain number of distinct points in the scene.
+[01:01] And you can see here this image cluttered with a large number of points, and these are points for which I want to do certain tasks, such as performing a 3D reconstruction.
+[01:11] I may not be able to do this for all pixels in the image because I'm missing correspondences or these are simply too many data points.
+[01:18] So I may want to do this for a subset of those points only. And that's what those feature points are useful for.
+[01:24] An alternative is if I want to find correspondences between images, for example, to estimate where an image has been taken with respect to another one.
+[01:32] This was this example over here where I have two times the same object, but taking it from different viewpoints, also at different points in time.
+[01:40] And I want to compute where was the location of the camera in the second image with respect to the first image.
+[01:46] For this, I need to find a certain number of correspondences, that means points in the environment that I can see in both images.
+[01:54] And I need to know which pixel in image number one corresponds to which pixel number two.
+[01:59] And that's what those feature points are useful for.
+[02:02] And today we want to talk about how I can actually describe those individual feature points so that, let's say, these two points, which are the same in reality, will have a similar description so they can actually match between them.
+[02:14] Again, visual features consist of two parts, key points and descriptors.
+[02:19] The key point is basically the location in the image.
+[02:22] So how do we get a good point that is locally distinct that we can find it again, even on a slightly changing conditions?
+[02:28] That's something that we addressed in part number one.
+[02:30] And today we want to look into the feature descriptor, which is basically a vector which summarized the local structure or the local surrounding of a key point or of any point.
+[02:41] So that means I can give a pixel location to my algorithm and the descriptor should tell me how does this point look like, how can we actually describe that locally.
+[02:53] So in the end, coming back to our example, if this is a key point, the techniques we discussed in the last lecture will tell us how to spot that that is a good point.
+[03:02] What we're going to do this time today is to compute this feature descriptor.
+[03:07] So this F over here, which is a vector of numbers typically, and describes the local surroundings so that if I want to compare features or key points, I can do this by comparing the descriptor vector.
+[03:19] That's kind of the key idea behind that.
+[03:22] So we now how to spot key points. Now let's describe them.
+[03:26] We'll start with SIFT, the scaling variant feature transform, a technique which is out there since quite a while, approximately 20 years.
+[03:34] And it's kind of the gold standard still today for providing high quality feature outputs.
+[03:40] And then we look into two binary features, which can have the advantage that they can be computed very efficiently.
+[03:47] Over the last few years, there also has been a tendency to learn features.
+[03:51] So it's not manually designed features like those over here, which are basically manually designed.
+[03:56] But that's something that we're not going to address here in that course.
+[03:59] So we rely on the traditional hand-designed features such as SIFT, BRI, FORB.
+[04:05] So just as a short reminder, SIFT uses the difference of Gaussian's approach.
+[04:09] So the thing that we have discussed here at the last part of the previous course.
+[04:15] And so I give a very, very brief recap on how the difference of Gaussian works in one minute or so.
+[04:21] And then we dive into the scaling variant feature transform.
+[04:25] So the key idea of the difference of Gaussian was to generate multiple versions of the image, which are differently smoothed, so differently blurred.
+[04:34] And you start with the initial one, which is not blurred, then an image, the same image, which is a bit blurred, then the same image, even more blurred, and so on and so forth.
+[04:43] And then we compute differences between those blurred images, and that's what we call the difference of Gaussians.
+[04:49] And then try to find maxima or minima in this difference of Gaussian representation with respect to their neighboring location in XY space, but also in scale space, so in the amount of smoothing that we have.
+[05:08] And then combine this with some maxima suppression to get rid of edges, and then we're able to report those locally distinct points as my key points.
+[05:16] So again, I, for example, my differently smoothed images here, always two pairs, I compute the difference of Gaussian representation.
+[05:23] I do this for the image itself, but I also do this for differently scaled versions of the image.
+[05:29] So I scale down my image in an image pyramid and repeat this process, and then I'm looking over this difference of Gaussians and look for points which are locally distinct, stand out, either as maxima or minima, so extrema.
+[05:42] So they can find this point, compare it to all its neighbors, and if it stands out and do some extrema suppression, then I say this is my key point.
+[05:50] So that's what we have, this is the operation which gives me this point here.
+[05:54] And now, let's do, get the descriptor.
+[05:57] Why is the descriptor important? Because we want to use this descriptor value in order to compare different key points in different images.
+[06:06] So that I can actually make the data station and say this point over here actually corresponds to this point over here, or this point over here actually corresponds to this point over here.
+[06:15] And I want to do this by just using this vector.
+[06:19] So I want to do this basically only using this vector f.
+[06:24] Just by comparing this vector f from the key points, pairwise with each other, I want to say that's the one, this is the one with a similar f, or where this f is small, that's a good correspondence.
+[06:36] And that's what mainly those feature descriptors are used for.
+[06:41] You can also use it for semantic interpretation tasks, for example, for some learning approaches, object detection.
+[06:49] But in this course here, we focus on the geometric reconstruction part, so we use it here in order to find corresponding points.
+[06:57] And again, how this f is computed, there's a whole zoo of ways in how to do this.
+[07:02] Just to list you a small of them of popular features, things like the scale variant feature transform, what we are discussing here today, also serve is a variant of sift, which is faster to compute.
+[07:14] We have different orientation histograms, this can be involved, binary features, which have different properties like rotational variants or scale.
+[07:24] So there's a large number of different approaches I can do.
+[07:26] This list can be extended further and further.
+[07:29] And I want to look here into three of them, sift, because it's kind of still the gold standard today, and then two popular binary features.
+[07:40] These are features which don't have a vector that contains a floating point numbers that we've seen it before, but which are just short binary strings.
+[07:48] And they are very fast to compute, and therefore have some advantages, especially for real-time applications.
+[07:54] But now, let's start with sift.
+[07:57] So sift stands for scale invariant feature transform, and it is a descriptor that is invariant under image translations.
+[08:06] So that means if I take the image and shift my pixels a little bit to the right, so all pixels, I will still get the same descriptor.
+[08:13] It is also rotation invariant.
+[08:15] So if I rotate my image, I want to get the same descriptor describing this point, and it should be scale invariant.
+[08:23] That means if I scale my image, I want to get the same or at least a similar feature descriptor.
+[08:28] Why is this important?
+[08:30] This is important if I take an image from a further distance or a picture of the same object, but from a further distance, I want to still be able to compute the same or very similar feature points, same if I kind of rotate my camera.
+[08:43] The scale invariant feature transform is also partially invariant under illumination changes.
+[08:48] It works on gradients, so as long as I get similar gradients, so even if the absolute intensity value is different, but if the gradients are similar, I get similar results.
+[08:58] And also to some degree, under a fine transformation of 3D projections, which is of course important if I project my 3D objects to 2D world, which is something that I do if I have my camera and choose a different viewpoint, so we have this projective transformation, and sifts are partially invariant to that.
+[09:15] So if you change your viewpoint a little bit, you still get good results if you, whatever, move your viewpoint substantially and change the orientation of your camera by 60 degrees or something like this.
+[09:25] Sift also is likely to fail.
+[09:29] But given these properties, that it's rotation variant, translation variant, scale invariant, and partially invariant under projective transformation illumination changes, make them very popular feature for 3D reconstruction tasks.
+[09:41] Because of course, I still want to be able to, let's say, identify the same room, even if I'm in a slightly different location or the illumination has changed slightly, and I still want to be able to recognize the same place, for example, and therefore sift features are a good choice for these type of applications.
+[09:57] So how does a sift feature actually look like?
+[10:00] We have distinguished here kind of three things, what we use to describe the feature.
+[10:04] So these are kind of four variables here, and the first one, p, is the position in the image, so the pixel location.
+[10:10] So it's an xy location where the feature is located in my image.
+[10:16] So this is something that my key point actually provides me.
+[10:20] Then, I have s here is the scale, and this is also information about at which scale the feature should be computed.
+[10:27] This is where the extrema is in this difference of Gaussian approach.
+[10:30] So depending on which scale I got the maximum response, that's kind of the scale that is stored in here.
+[10:37] And then I have an orientation r, which basically tells me what's the main orientation of this kind of local neighborhood of this point.
+[10:48] And this is basically computed by taking a small region or rectangular region around the key point,
+[10:55] and then computing the gradients, similar, for example, as a Sobel operator, as we have discussed it in the previous lecture,
+[11:02] and then building a histogram from the orientation and taking basically the peak with some noise reduction,
+[11:07] but basically taking the peak as the main orientation, and this is kind of the orientation of the key point.
+[11:13] And then we have this f, and this is kind of where the magic is in there.
+[11:17] This is this descriptor, typically a 128-dimensional descriptor of floating point numbers generated from the local surrounding,
+[11:25] from the information that is stored in the patch around the image.
+[11:29] And this patch is computed aligned with this orientation, so the orientation basically gives the first axis,
+[11:36] and then we have a rectangular patch around it, and then compute, again, histograms of gradients in this local area,
+[11:45] and this gives us our feature descriptor.
+[11:48] So the first three, location, scale, and orientation, are view-dependent quantities,
+[11:54] and the 128-dimensional descriptor is actually independent, or mainly independent from the viewpoint.
+[12:01] So that means if I want to look for correspondences between two images, then I would use this independent part,
+[12:08] or mainly independent part for making correspondences, and if I do some operations which are related to the size or where the object is,
+[12:15] then I can look into these third three parameters.
+[12:19] So, again, from the process, I get my input image, like this beautiful picture of some houses in Italy,
+[12:26] and then I can compute my keypoints. These are the points from the difference of Gaussians,
+[12:31] and you may see, at least on the larger circles, some small error sitting over here.
+[12:36] This gives us the orientation, so the main direction.
+[12:39] And then, depending on the scale, we actually compute a local patch around that keypoint,
+[12:45] and the size of this keypoint, of this local patch, depends on the scale of that keypoint.
+[12:50] And so, for some of them, we have larger grids around, because I got the response on a different scale than those small ones over here.
+[13:00] What you can see is, you can see those different grids over here, and they are aligned with the orientation that I computed from this keypoint.
+[13:07] And then, this gives me the orientation, and then I compute, basically, on this patch, histograms.
+[13:14] And that's what I will be talking about for the next couple of minutes,
+[13:17] how to actually turn these kind of local grids into a feature descriptor.
+[13:23] So, how are we going to do this?
+[13:26] We compute image gradients in a local area.
+[13:30] So, that means, if this is the point where we compute our descriptor,
+[13:35] we basically separate the local patches in a lot of small local regions,
+[13:42] and then, in all of those local regions, I compute gradients.
+[13:47] And then, I compute histograms of those gradients.
+[13:50] So, in each of these regions, over here, I'm going to see how many errors I have pointing upwards,
+[13:56] how many errors I have pointing in a 45-degree direction, in a 90-degree direction, and so on and so forth.
+[14:01] So, typically discretized into eight different orientations, we basically build those histograms.
+[14:09] So, this is an illustration of this histogram.
+[14:11] This shows the kind of discretized orientations that I computed here of the gradients,
+[14:19] and the length of this vector shows the magnitude.
+[14:21] So, I simply add up the different gradients.
+[14:24] And so, this is kind of an histogram of orientations,
+[14:28] and this histogram of orientations then will describe me.
+[14:33] So, the individual bins of this histogram will then describe me my feature vector.
+[14:37] So, let's illustrate how that works.
+[14:39] So, I have my local keypoint, I determine its size, and I also determine its orientation.
+[14:46] And so, this orientation now is looking in this direction over here.
+[14:49] So, what I'm doing, I'm selecting my local patch, given that orientation over here.
+[14:55] So, this is basically a rotated pixel of a local region in the size of 16 by 16 pixels.
+[15:02] So, this is kind of my local region, and all the computations will be done based on these local regions.
+[15:07] So, what I do, I break this one down in again 16 regions, so 4 by 4,
+[15:14] and then compute the gradients between all these small areas.
+[15:20] So, I have 4 by 4 areas here where I compute gradients, here, here, here.
+[15:25] So, 16 times these 4 by 4 areas.
+[15:29] And then, all of those areas, I turn into an own small orientation histogram.
+[15:36] So, let's say I pick out this region and compute a histogram with eight bins,
+[15:41] and it's discretized into 45 degrees, and basically sums up the gradients that point in this direction.
+[15:50] So, let's say I take this region over here and then turn this into a histogram.
+[15:54] So, how many gradients point in this direction? How many gradients point in this direction?
+[15:57] How many gradients point upwards? How many in this direction? How many in that direction?
+[16:01] And so on and so forth.
+[16:02] This gives me the counts of this histogram over here.
+[16:05] So, I have eight bins, and they have floating point values over here showing the distribution of those histograms.
+[16:12] And, of course, I can do this, I do this for all these regions.
+[16:15] 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16.
+[16:20] So, I get 16 of those histograms, each of them having eight bins.
+[16:24] So, what I do, I take those histograms and just concatenate them, one next to each other.
+[16:29] So, this will give me 1, 2, 3, 4, 5, 6, 7, 8.
+[16:33] Again, I'm 16, so I haven't drawn that much here.
+[16:36] 16 histograms with eight bins each.
+[16:39] So, you can see this basically as one very long concatenated histogram, or one concatenated feature vector.
+[16:47] And this is, these numbers here, are then my floating point values that describe me my feature vector f.
+[16:54] So, this is f.
+[16:56] So, to summarize this, we are just basically computing gradients, breaking the local region up into small local regions,
+[17:04] compute distributions of the gradients, of the orientations, in the form of histograms, and then concatenate them with each other.
+[17:12] So, again, the overall process, we take an image, let's say this local region, we compute this keypoint,
+[17:21] the local area, the image gradient, the histograms, and then stack them into a 180-dimension vector.
+[17:27] And that's all what SIFT is about.
+[17:30] So, if you need to implement SIFT on your own, you will find out that the SIFT features that you're generating are probably different from those that the original implementation does.
+[17:40] This is because for doing all of this and all the binning, there are a lot of parameters involved that you may tweak,
+[17:45] and so you won't get the absolute values, but the key idea is actually not too hard to do.
+[17:52] So, we're just basically computing histograms of gradients.
+[17:56] So, then in sum, for having SIFT done, we get the keypoint via the difference of Gaussian approach,
+[18:02] and then the descriptor via the gradient histograms that we concatenate into a vector, and this gives me my vector f.
+[18:12] So, what I now have for every keypoint, I have a descriptor vector.
+[18:17] Great.
+[18:18] Next question is how to actually match them.
+[18:20] So, if I have this pair of images and I extracted my SIFT features, let's say these are all those circles that you see over here,
+[18:26] how do I actually make the correspondences?
+[18:28] How do I say that this one actually corresponds to this one?
+[18:31] And this we do exactly just by comparing these f-vectors.
+[18:35] So, I take the vector f of this feature and can compare it to all other f-vectors of all the other features,
+[18:43] and then I take the one which fits the best, for example.
+[18:46] So, based on this descriptor difference, I may find correspondences here between those points.
+[18:53] Some of these correspondences may be correct, here just illustrated by the red lines, but some of them are actually wrong, like those red ones over here.
+[19:02] And you may get an idea why this is the case.
+[19:04] If you look to these local patterns here on this church, so this facade, they actually have repetitive structures.
+[19:11] If you have repetitive structures, you will get very, very similar feature descriptors, even at different places.
+[19:16] So, it can happen that this leads to a wrong data association because I just have two structures which are not identical but look identical,
+[19:26] and therefore will be matched by the feature descriptor.
+[19:29] So, we need to have ways for dealing with ambiguities in data association,
+[19:34] and we need to have tools for eliminating certain number of data associations,
+[19:40] those which are not the correct ones, because they will not be correct all the time just by comparing this feature vector.
+[19:46] However, there's something we can do in the first step, and this is kind of a so-called ratio test.
+[19:52] So, this is kind of a three-step procedure to eliminate some of the potentially wrong measures.
+[19:58] And it especially looks into the situation where I want to see if we have ambiguities.
+[20:03] And I say it's better to not find correspondences if there's a certain probability that they are actually the wrong ones.
+[20:11] So, it's better to commit on a smaller number of data associations and make sure those data associations are correct.
+[20:16] This is especially important for 3D reconstruction tasks where outliers can substantially impact your state estimation problems.
+[20:24] And therefore, the ratio test also proposed in the original paper on Sif-Balur proposes this procedure.
+[20:30] So, what we do is we actually, if we have a descriptor queue for which we want to find the other image, the best matching features,
+[20:39] we do a comparison with all the neighbors and find the two best matching ones, the two closest descriptors.
+[20:46] Let's call them P1 and P2, and this is just done based on the Euclidean distance d between the feature vector of q and the feature vector of P1 and P2.
+[20:57] And then the first thing is we test if the best match, let it be, for example, P1 in this example, should be smaller or larger than a certain threshold.
+[21:10] If the distance is larger than a certain threshold, let me say this is too bad of a match, I'm not taking that into account.
+[21:16] But if it's smaller than a certain threshold, then I'm taking it into account.
+[21:20] And then I just say what is the ratio between the best match and the second best match.
+[21:26] So I can actually compute the ratio of the difference between kind of what the best match and what is the second best match.
+[21:34] And if this is a value which is close to one, that basically means that the best and the second best one have more or less the same distance.
+[21:40] That means there's a high ambiguity.
+[21:43] So if the second best match has at least twice the Euclidean distance compared to the best match, then I can say it's actually substantially different.
+[21:54] And so the ratio test simply rejects all of them where this value is larger than 0.5.
+[22:01] So only for those where the first best match is at least half of the distance of the second best match, those are the ones we accept because we say then they're not really locally distinct.
+[22:12] This substantially reduces the number of outliers that we have.
+[22:15] For example, this outlier that was here in the facade is not there anymore, but still for some others where, for example, certain objects are occluded and can't be found in the other image, we still will suffer from this problem.
+[22:29] So the outlier test works quite well, but it's not perfect.
+[22:33] So we will always have outliers that will remain in our data associations.
+[22:38] So as a result of this, we need to treat outliers in an extra way.
+[22:43] One way to do this is if you use this for SLAM, for example, is using robust kernels or other robustification techniques, as we have discussed them in the context of graph-based SLAM, to deal with that.
+[22:56] But you may also have other techniques such as RANSAC-based procedures for getting rid of data associations or getting rid of wrong data associations or data association mistakes.
+[23:07] So the assumption is still you have a large number of good data associations, but a few of them may be wrong and you need to verify them if you want to do accurate 3D reconstruction that's kind of unavoidable.
+[23:22] With this, I'm the end of the parts on SIFT, and I now want to change to another descriptor the binary descriptors.
+[23:28] And the key goal of those binary descriptors is we want to do that fast.
+[23:33] So SIFT is fine if you have enough computation resources and online operations doesn't really matter.
+[23:39] We are fine with SIFT.
+[23:40] We can actually use SIFT quite well.
+[23:41] If we are looking for online applications where real-time plays a role, where we want to compute features, let's say, on a mobile device at a frame rate of the camera, let's say, 30 times per second, then the SIFT features are typically not the way to go.
+[23:55] There are high-speed variants of SIFT using GPU optimizations, but this may even be something that we don't really want on our mobile platform speakers.
+[24:03] They take too many resources.
+[24:05] So especially for resource constraint systems, binary descriptors are an attractive alternative.
+[24:12] So again, SIFT is again the gold standard, but SIFT is expensive to compute.
+[24:16] SIFT additionally has patenting issues, although I think I just read yesterday that from this month on the patent actually has been expired.
+[24:26] So you can now use SIFT in your commercial applications as well.
+[24:32] But so far it had patenting constraints, and so you couldn't really use it.
+[24:37] And this was also one of the reasons why people were looking into alternative descriptors.
+[24:41] And in the second part of this lecture today, I want to look into binary descriptors.
+[24:47] And these are descriptors which are not vectors or floating-point numbers.
+[24:51] It's just a short, small binary string with the goal of being very easy and quickly to compute and also being very fast and easy to compare.
+[25:01] So just very small, compact, attractive descriptors.
+[25:05] They may not be as expressive as SIFT.
+[25:08] For example, not computing the histograms of gradients in such a nice way.
+[25:13] They are easier to do, but if they have a similar or slightly worse matching performance, but only require a very small fraction of the computational resources, this can be very attractive for a large number of online applications.
+[25:27] So what is the key idea of those binary descriptors?
+[25:31] The key idea of those binary descriptors is actually a fairly simple strategy.
+[25:35] The first thing, similar to before, we select a patch around a keypoint.
+[25:39] So given that we have a keypoint, let's say, Shita Massey Corner, and then we just take a local region around this point, let's say a 30 by 30 pixel region or whatever it is that I'm selecting.
+[25:52] And then what I'm doing, I'm just selecting pairs of those pixels.
+[25:56] So I'm just selecting, I can do it in a random fashion or in a deterministic fashion, select pairs of pixels in this patch.
+[26:04] So let's say one pixel to the left and three pixels up, this from the center.
+[26:09] This is one possible potential pair.
+[26:11] What I'm then doing, I'm just comparing all those pairs that I computed based on the intensity in the image.
+[26:19] And I'm just making a very simple comparison, just saying, is the intensity of the pixel number one, so sample number one, smaller than the intensity of the pixel number two?
+[26:31] If it is smaller, I return a binary one, and otherwise I return a binary zero.
+[26:36] So that means every pair of pixels gives me one bit, one zero or one number.
+[26:45] What I'm then doing, I'm simply concatenating a list of those b's of those bits.
+[26:51] So if I want to do 256 comparisons, I just take 256 pairs, make that comparison, and we'll get a string of 256 zeros and ones.
+[27:04] So it's a fairly simple strategy. Select a patch, select pairs, compare pairs with a larger or smaller criterion, and just concatenate the binary output values, so zeros or ones.
+[27:18] So just as a small example, consider we have this three by three image, and this is my number 123456789, which refers to the pixels, so that's pixel one, pixel two, pixel three, and so on and so forth.
+[27:31] Just use this index for describing pairs.
+[27:34] So I have a set of pairs related. Five one means pixel five against pixel one, or five nine means pixel five against pixel nine.
+[27:44] Four six is pixel four against pixel six.
+[27:47] Eight two is compare pixel eight against pixel two, and three seven is compare pixel three against pixel seven.
+[27:55] And just do this comparison and see if the first, the intensity of the first pixel is smaller than the intensity of the second pixel.
+[28:03] If so, I return a one, otherwise I return a zero.
+[28:05] So pixel number five is the first pixel.
+[28:08] If this value is smaller than this value, again, darker values are smaller values, though this is not the case.
+[28:14] So this one is not smaller than this one.
+[28:16] So the result would be a zero, so the test would be b equals to zero.
+[28:21] Let's check the second one. Five versus nine. Five versus nine.
+[28:24] So nine has a darker color, so it should also be a zero.
+[28:27] Four compared to six. Again, six is a darker pixel, so it would also be a zero.
+[28:33] Eight versus two. Okay, now eight is darker than two. The first pixel is darker than the second pixel.
+[28:39] So this gives me a binary string of one, and we have three versus seven.
+[28:44] So this should be a zero because three is not smaller, no, sorry, three is smaller than seven because this is a light gray and this is white, so it should also be a one.
+[28:53] Exactly, we have that one.
+[28:55] So as a result, our bit string for this small image region would be zero, zero, zero, one, one.
+[29:02] And this is a small binary descriptor.
+[29:06] And that's all what those binary descriptors are basically about.
+[29:09] There's a certain strategy how the pairs are picked.
+[29:12] Then the simple test is executed, and this test is turned into a bit string.
+[29:18] So what are the advantages of this approach?
+[29:20] It's a very compact descriptor.
+[29:22] So instead of saving floating point numbers, for example, as I would need to do for SIFT, I can just store an individual bit for every pair.
+[29:31] So as a result of this, I may have 256 bits for describing a whole local region.
+[29:39] It's just a few number of bits and basically the number of pairs I select gives me the number of bits that I have.
+[29:44] It's fast to compute, so the only thing I need to do is just compare intensity values.
+[29:50] So compare two numbers with each other, something I can do very quickly in a computer.
+[29:54] And I can also very easily and quickly compute distances between those descriptors just by computing the so-called Hamming distance, which is just kind of an XOR operation on the bit string level.
+[30:05] So something that your processor can do very quickly.
+[30:08] And then basically summing up the number of ones, counting the number of ones which appear up in that string.
+[30:13] And this basically gives me a distance, which is basically the number of bits where those two bit strings differ.
+[30:20] And something that I can very, very easily compute in a very efficient way.
+[30:24] That's kind of the whole idea of those binary descriptors.
+[30:27] So it's a very simplistic approach.
+[30:29] And of course you now can define different strategies on how to compute those pairs.
+[30:34] And maybe doing some smart things on doing some rotations of your patches before in order to deal with changes in the orientation.
+[30:42] But the overall idea is actually very simple that those binary descriptors actually execute.
+[30:46] Select a local region, select pairs, compare pairs, turn them into bit strings.
+[30:52] That's basically it.
+[30:54] So the different binary descriptors which are out there basically differ on the strategy how they select their pairs.
+[31:02] Some other small differences, but the main difference is how do they select the pairs.
+[31:07] The important thing to note is if you design a new binary descriptor, you need to have a strategy for selecting the pairs.
+[31:13] But this strategy for selecting the pairs should be determined once and then should be fixed.
+[31:18] You're not allowed to change that from one image to another because otherwise you wouldn't get comparable bit strings.
+[31:24] So the key thing is you need to use the same pairs all the time.
+[31:28] So if you design a new binary descriptor, you can take a random order or any order that you like.
+[31:34] But then you need to freeze it, fix it, and use this forever because otherwise you would be unable to compare images with each other.
+[31:43] Because you would simply take different pairs of pixels and so you would get a completely different result in terms of the comparisons.
+[31:51] And you need to also maintain the same order in which the pixels are tested.
+[31:54] Otherwise it would correspond to basically swapping bits and then the results are anyway meaningless for doing comparisons.
+[32:01] So you need to stick on the pairs and you need to stick to an order, determine it once, and then go with that one.
+[32:09] That's basically what I said.
+[32:11] And now let's have a look how some popular approaches do that.
+[32:14] So BRIEF is one popular technique.
+[32:16] Binary, robust, independent, and elementary features.
+[32:19] First proposed 10 years.
+[32:22] For now it was one of the first binary descriptors, or at least one of the first binary descriptors which made these approaches popular.
+[32:29] It's a 256-bit descriptor.
+[32:32] So I have 256 different pairs and I can take every pair, make the comparison, turn that into a 0 or 1, and so I have a 256-bit string.
+[32:46] And with the approach comes different strategies for geometrically determining which pairs to have.
+[32:52] So you have different strategies you can test and then make comparison how good or how bad it is.
+[32:57] And again, if you have noise, you may want to do some smoothing on your image in order to deal with the noise.
+[33:02] So in a perfectly noise-free world, no smoothing is needed.
+[33:05] But if you're living in a realistic world, you will smooth your image.
+[33:08] So how are the pairs computed now for BRIEF?
+[33:11] There are five strategies which you can find the original work.
+[33:15] And so this is kind of the region where the local neighborhood of those points and these lines here just indicate the pair.
+[33:26] So this line means compare this one with this one.
+[33:29] And this line here means compare this element with this element.
+[33:33] And these are just kind of those pairs.
+[33:35] And they are generated with different strategies.
+[33:37] Some seem rather random, some seem less random.
+[33:40] So let's see how they have been generated.
+[33:42] So we start with the first until the fifth one.
+[33:45] The first strategy was just uniform random sampling.
+[33:48] So again, this was a uniform random sampling strategy.
+[33:53] The second strategy here was actually a Gaussian sampling.
+[33:56] So I'm basically drawing points from a Gaussian distribution centered in the middle.
+[34:01] So it's more likely to get points in the middle rather than in the outside area.
+[34:05] So I'm focusing kind of to the center of the key point.
+[34:08] The third strategy is basically the first point is drawn from a Gaussian distribution.
+[34:14] And so globally, similar, same as here.
+[34:17] But then the second point is drawn with a Gaussian distribution centered around the initial location.
+[34:23] So that means the distance to the second partner is closer or depends on the first partner that I've drawn.
+[34:30] There are things that can draw points on a certain polar grid.
+[34:34] Or then only draw one set of points on the polar grid and keep the other one always a central point.
+[34:39] And these are different strategies that you can take.
+[34:42] But the important thing is you need to commit to one.
+[34:44] So just go for one and then commit with it.
+[34:46] So here's again a list on how the strategies look like.
+[34:49] Uniform sampling, Gaussian sampling for both, Gaussian sampling for the first and sampling the second one dependent on the first with the Gaussian around it.
+[34:56] Discrete location on a coarse polar grid.
+[34:59] Or taking one point as S0 and S2, all locations from this polar grid.
+[35:06] What you then can do is you can just see, okay, let's see which strategy is better.
+[35:09] Take a large number of images where you have pairs, where you know how points correspond.
+[35:18] For example, from another descriptor where you sift, where you then removed all the outliers.
+[35:23] So you have your key points and then you can compute local neighborhoods and compare them.
+[35:27] And you can do this for different data sets.
+[35:31] You can look to the recognition rate.
+[35:33] And then it turns out these are always kind of this strategy one, strategy two, three, four, five.
+[35:38] And you can see they are all performing more or less the same except the strategy five.
+[35:43] So this was the non-random one which was actually this one on the grid.
+[35:46] So that doesn't work that well.
+[35:48] But all the rest works reasonably well.
+[35:51] For example, G2 is, there's a blue one over here, is a good strategy to go ahead with and compute your strategy.
+[36:00] And again, you select one, commit to it, and that's your Brisk approach.
+[36:04] That's how the Brisk features actually work.
+[36:07] And again, very compact, easy to compute, easy to compare.
+[36:12] That's what you actually want to have for your system.
+[36:15] They, however, have one disadvantage.
+[36:18] If you rotate your image, you will actually get a different descriptor.
+[36:25] So if you have your camera and you rotate your camera a bit, then the pairs will fall into different pixels and your descriptor changes substantially.
+[36:33] And that's something which is not that nice for a lot of 3D reconstruction tasks where you have a platform moving through the environment and seeing objects from different viewpoints.
+[36:43] And as a result of this, the ORB features have been proposed.
+[36:47] They're oriented fast, rotated, brief.
+[36:50] So which is an extension or can be seen as an extension of the brief feature that adds a rotational component or rotational way for dealing with the different rotations that your camera might generate.
+[37:04] So it basically compensates for the rotation in your image.
+[37:07] And there are also other strategies involved in ORB in order to learn optimal strategies for sampling those pairs.
+[37:15] But again, in the end, you need to commit to one strategy, but it's a strategy which is not randomly generated, but actually learned based on data.
+[37:23] So first look to the rotation compensation.
+[37:26] How do we actually look into the, how can we fix the orientation?
+[37:32] And this is basically done by computing the image moments.
+[37:35] Again, the image moments are defined this way.
+[37:38] So you're basically iterating over your image x, y, and take x to the power of p, y to the power of q, times the intensity value of x and y, and p, q are your indices here of your moment that you have.
+[37:52] And with these moments, you can describe certain properties of your image.
+[37:56] So you can compute, for example, the center of mass of your image.
+[37:59] It's kind of the moment one, zero divided by the moment zero, zero, which is basically means x times the intensity value divided by the sum of intensity values, which basically gives you the center of mass in the x direction.
+[38:14] You can do the same for y.
+[38:16] So with this operation, you can compute the center of mass.
+[38:20] And you can also compute the, if you treat this as a value space, compute the cross-covariance matrix, you can actually compute the covariance matrix of the spread of the data points away from the center of mass.
+[38:35] Then you can use the etan functions and the moment zero, one, one, zero, and this actually gives you the main orientation that you have.
+[38:44] So in this example, if this is a zero line, this would give you this orientation, which is the main orientation of your figure.
+[38:52] And that's already the trick that is done.
+[38:54] So you compute the main orientation of your local figure and then simply perform a rotation around that point, around the center of mass, and compute kind of a transformed variance of your sample point.
+[39:10] So that means the way you compute the pairs, you basically first compute the main orientation and then do everything relative to that rotating point.
+[39:19] That's basically the key trick.
+[39:21] So that means it's nothing else. You're basically rotating the samples, but this is equivalent to actually rotating the image or the local image itself.
+[39:28] So you get a new pair, so S again is the position where you are, which is a transformation matrix computed from the center of mass and the orientation computed from the image.
+[39:44] So it tells you basically it rotates all your pairs so that everything is aligned with this main axis.
+[39:52] And so if you do this and then perform your standard coordinate test, you are basically invariant on the rotations of the image plane.
+[39:59] So I can rotate the image plane and up to, let's say, a rounding issue that you may have, you will get the same pairs even if you rotate your camera.
+[40:09] So that's one way what you can do in order to compensate for the rotation.
+[40:13] And that was one of the things which turned the brisk features rotationally invariant by doing this rotation compensation proposed by the ORB approach.
+[40:26] If you think to these pairs, what your pairs should actually be, they should be uncorrelated so that each new pair adds new information to the scripter.
+[40:34] That's something that you would like to have.
+[40:36] So if you add your binary bits, all the new bits, all the new comparisons that you do should actually provide additional information compared to the bit you already know.
+[40:46] If you would add new bits and they don't provide any new information, that would actually not be good.
+[40:51] And you also want to have a high variance because this actually makes the feature more discriminative so you can discriminative scenes in a better way.
+[40:59] And what ORB does, it basically defines a strategy for selecting this 256 pairs, optimizing for both of those properties based on a training data set.
+[41:08] So collect a large training data set and then try to find pairs, so indices of pairs that you're using so that you maximize the variance on this training data set.
+[41:20] And you have the property that every new bit that you add actually, on average, provides you new information and that you don't have redundant information.
+[41:30] And if you optimize your pair selection strategy like this, you actually get a better matching performance.
+[41:36] And again, this depends on your training data.
+[41:38] So if your database where you're operating in the end is substantially different from your training database, you don't really gain that much.
+[41:45] But if you have a large enough training data set, that actually works quite well.
+[41:50] So if you now have these kind of ORB features and those SIFT features and put them next to each other and compare them a little bit.
+[41:56] We can see that ORB is around 100 times faster to compute than SIFT, which is a substantial gain to order the magnitude more is important.
+[42:04] Especially if you think about online operations, mobile robots or systems which need to process 8 cameras, 10 cameras and you want to extract features out of those cameras.
+[42:15] This actually makes a difference.
+[42:16] All four things you can implement those things easy on hardware.
+[42:19] So you may even have cameras which do this comparison directly for you and output your ORB features, which is again very attractive if you think about whatever operations on autonomous vehicles, autonomous cars, which have multiple cameras installed and want to extract those features.
+[42:34] Also, the bit strings are more compact.
+[42:36] So here we have 256 bits for ORB versus 4000 bits for SIFT.
+[42:44] And so it's even more compact to store.
+[42:48] And this also makes this attractive so that you only need the 16th of the storage space for ORB rather than SIFT.
+[42:56] What's the disadvantage of ORB that it is not scale invariant.
+[43:00] So the scale invariants that we have in the SIFT descriptor we do not have for ORB, although it's not really inside SIFT, I have to say.
+[43:07] We only get it from SIFT by working over the image pyramids and doing the computation multiple times on differently scaled versions of the image and take the maximum.
+[43:15] So it's not really inside SIFT itself.
+[43:18] So you could do the same thing for ORB and then take into account the ORBs on an image pyramid and also obtain at least some degree of scale invariant.
+[43:31] So the way you do that for SIFT, you can also do this for ORB.
+[43:36] ORB with respect to changes in the orientation is only invariant with respect to rotations of the image plane itself.
+[43:46] And SIFT is somewhat more robust to changes in the rotation of your camera outside the image plane.
+[43:54] But overall, the matching performance is similar if we ignore the scale between ORB and SIFT.
+[43:59] So if you have the same scale, they perform similarly.
+[44:02] If scale plays a role, SIFT is better, but just because we are not using the image pyramid for ORB, which we could do.
+[44:10] And several of the modern robotic systems that we find out there actually have a tendency to move towards those binary descriptors because they are so easy to compute and also weren't suffering from the painting issues that SIFT was suffering from, at least if you want to build your application.
+[44:28] For that, without being required to license the SIFT paint.
+[44:35] And so a lot of systems like ORBStem is one very prominent example, used those ORB features in order to realize a SLAM system which does 3D reconstruction based on those features.
+[44:46] So estimating the landmarks as ORB features are the points which generated these feature observations in the 3D world.
+[44:54] With this, I'm coming to the end of my lecture today.
+[44:57] So we have talked in these two parts about key points and about descriptors, which are the two key ingredients for the most common visual features that we find today, at least the manually designed features.
+[45:10] Again, the key point defines the location and the descriptor describes the appearance around that location.
+[45:16] And there are different ways how you can do this.
+[45:19] For example, SIFT, the gold standard that we introduced.
+[45:22] There's SURF, which is a variant of SIFT targeted to being faster to compute and also being able to exploit GPU resources.
+[45:29] And there are these binary features which became popular, let's say, 10 years ago and gained much more popularity over the last, let's say, five to six years because they are so efficient to compute, small to store, and you can do a lot of attractive things with it.
+[45:44] Especially for systems which perform online state estimation, which is a key topic that we're doing here in robotics, autonomous cars, vehicles, UAVs.
+[45:56] There, those binary features are very attractive.
+[45:59] With this, you should have a pretty good overview about those visual features which are out there, how you can use them, what are properties.
+[46:07] And of course, there's a zoo of different descriptors out there that may be optimized for your application.
+[46:14] But with those tools that we have shown here, you should have a very good starting point for building your own applications.
+[46:20] So with this, thank you very much for your attention and I hope you enjoyed the lecture.
+[46:24] Thank you.

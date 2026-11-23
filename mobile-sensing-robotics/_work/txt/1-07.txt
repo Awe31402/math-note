@@ -1,0 +1,737 @@
+[00:00] Welcome everyone. In today's lecture we'll be looking at probabilistic motion models.
+[00:05] What this essentially deals with is to understand the uncertainty that's involved while a robot is moving.
+[00:13] So the uncertainty in the motion can come due to multiple reasons.
+[00:17] This could be because, let's say, the wheels of the robot slip on the floor,
+[00:23] or this could be due to the fact that we give a certain command to the robot,
+[00:28] but the robot doesn't reach this velocity instantaneously.
+[00:32] So the motion that the robot executes is not the one that we actually expect it to do.
+[00:37] And this is one of the many reasons that introduces uncertainty in the motion for a robot.
+[00:43] In the previous lecture, if you remember, what we saw was basically how different types of robots,
+[00:51] so mainly different wheeled robots, move based on the control input that we give to them.
+[00:58] So we saw how differential drive robots work, we saw how Ackermann robots work,
+[01:02] but there we always assume that the control will be followed by the robot perfectly.
+[01:07] In today's lecture what's changing is that this motion is a bit uncertain,
+[01:12] and we want to understand how to model this uncertainty.
+[01:15] And generally we'll be using simple probabilistic models to capture this uncertainty in the motion.
+[01:22] And what we'll also look at is how these motion models, the so-called motion models,
+[01:28] can then be used for state estimation problems.
+[01:31] Since now we can both model the movement and the uncertainty in the movement,
+[01:36] we'll see how this fits into our Bayesian framework for state estimation.
+[01:41] Okay, so let's get started.
+[01:43] The main theme in this lecture is basically the fact that the motion is inherently uncertain,
+[01:50] and this uncertainty comes from multiple reasons.
+[01:53] So for example, if I ask the robot to move one meter forward, in practice maybe it just moves 95 cm,
+[02:00] or 1.1 m and 5 cm and so on.
+[02:04] So this could happen, for example, typically for example in a differential robot,
+[02:09] we set the velocity for the left and the right wheels, and this drives the robot.
+[02:16] However, suppose we ask the motors to rotate at a particular speed,
+[02:21] it may not actually achieve this speed instantaneously.
+[02:24] This results in the fact that the distance that it travels is less or more than we actually expect it to be.
+[02:31] And the question that we will look at today is how to then model this uncertainty out there.
+[02:37] So just to have an example here, what we see here is a maze environment,
+[02:41] and the robot starts here and then goes around this maze, all around basically.
+[02:46] And the red line here actually shows the path that's actually traversed by that robot.
+[02:53] However, the robot thinks that it actually traverses this other red line that you see here.
+[02:59] And what's happening here is that the internal estimate, or the odometry of the robot, is drifting.
+[03:06] So there seems to be a tendency to always estimate that it goes a bit right, then it's actually going.
+[03:13] This may be because of an imbalance in the way the weight is distributed on the robot.
+[03:19] Maybe one of the wheels has more tire pressure than the other one.
+[03:24] What we end up with is kind of a systematic drift over time,
+[03:28] and this is, so to say, the uncertainty that's involved while executing motion.
+[03:33] So the question that we ask here is given the actual movement here,
+[03:38] and the odometry or the estimate of the model here, how are these two linked?
+[03:46] So how can we actually map this uncertainty between them?
+[03:50] And if you think of it in terms of probability, what we are exactly calculating
+[03:55] is the probability of a robot ending up at Xt given,
+[04:00] so this line here is read as given, given that you start at Xt-1 and execute a particular command Ut.
+[04:09] And this probability distribution is also called as motion model,
+[04:13] because essentially it models if you start at Xt-1, what's the probability that you end up at Xt?
+[04:21] And if you again think of this example where I asked the robot to move one meter,
+[04:27] this probability would, for example, be meaningful to ask, say, around one meter, say, at 1.1 meter,
+[04:35] what's the probability that I end up at, say, Xt equals to 1.1, given, for example, we start at the origin?
+[04:43] And so this probability we can compute for different positions in the world.
+[04:50] So we can compute it at 1, we can compute it at 1.1, we can compute it at 0.99, and so on.
+[04:56] So what we expect is that if we ask the robot to move one meter,
+[05:00] the highest probability should be around one meter mark.
+[05:04] And what we basically encode using the whole probability is what's the distribution or where,
+[05:10] what's the probability at different points or different locations in the environment for the robot to land up in.
+[05:18] And the way this relates to our state estimation framework is in the following way.
+[05:23] So if you recall from the lecture from recursive Bayes filter,
+[05:27] we had come up with a recursive formulation for estimating the belief.
+[05:31] So this is the probability that the robot is at Xt.
+[05:35] And we had come up with a formulation that depends or is recursive,
+[05:39] so that depends on the belief at Xt-1 and is then modified by a certain parameter here.
+[05:45] So there are two parameters here.
+[05:47] One, the one which is the focus of this lecture is to understand how you move basically from Xt-1 to Xt.
+[05:56] So essentially what this equation is saying is that go over all your previous positions,
+[06:02] so Xt-1s, then multiply them with your motion model probabilities of ending up in a particular place,
+[06:10] sum them up, and then we will see what this particular term means later on.
+[06:16] So this is the place where we need this knowledge of how the robot moves
+[06:22] or how the probability distribution is when a particular action is made.
+[06:27] And if you remember again that we had these two main steps,
+[06:31] a prediction step and a correction step in the Bayes filter estimate.
+[06:34] And what we just saw is what is also called as the prediction step
+[06:38] because we are looking at all the positions, so all the positions Xt-1,
+[06:43] and we're looking at the probability at Xt-1 and then propagating it through the model,
+[06:49] so through the way we propagate this motion, the control that's given by ut
+[06:56] to give the predicted belief here denoted by the bar on top.
+[07:02] And then what would be the main focus of the lecture on observation model
+[07:07] would then be how does the measurements taken by your sensor then modify this belief.
+[07:13] So typically what happens is that you make a movement.
+[07:16] This movement usually introduces some uncertainty.
+[07:19] And then you take a particular measurement Zt.
+[07:22] This could be, for example, a GPS measurement.
+[07:25] This could be from a laser scanner.
+[07:27] This could be from different sources.
+[07:29] And often it works in the way that the motion model or the motion step introduces more uncertainty,
+[07:36] whereas the measurement step decreases this.
+[07:38] So this is the way in which these two models help us estimate the state of, for example,
+[07:44] where the robot is in the environment.
+[07:47] So to be a bit more formal, when we talk about motion model and, in particular here,
+[07:52] the probabilistic motion model, what we want to compute is the posterior probability.
+[07:57] It's posterior because we want to find out what's the probability of Xt given certain conditions.
+[08:03] And this condition is that given that you're at Xt-1 and you apply a certain command Ut,
+[08:10] what's the probability that you will end up at Xt?
+[08:13] So if you think of the different drives that we saw in the previous lecture
+[08:17] or in the lecture on locomotion, this Ut could be, in a differential drive case,
+[08:22] the velocities given to the left wheel and the right wheel.
+[08:26] If you think of an Ackerman drive, this could be the linear velocity, the angular velocity,
+[08:31] as well as the steering that you set for your robot.
+[08:35] And it holds not just for wheeled robots, but also for robots in general.
+[08:40] This could be, for example, a quadrocopter where you give different commands to the propellers
+[08:45] that you have, a humanoid or whatever.
+[08:48] The main idea is when you give a particular command, what's the probability distribution
+[08:53] of ending up at different places in the environment?
+[08:58] So what we'll focus in today's lecture is mainly on wheeled robots,
+[09:02] and we will see two commonly used models which kind of abstract different motions for wheeled platforms.
+[09:12] And these two typical models are what are called as the odometry-based models
+[09:17] and velocity-based model, also sometimes called as the dead reckoning approach.
+[09:23] The difference being the following.
+[09:25] In the odometry-based model, we set a particular command to our robot.
+[09:30] Then it executes this motion.
+[09:32] What we do then is to attach some kind of a sensor to the motor shaft
+[09:37] to understand how this motor is rotating.
+[09:40] Then we use this information to figure out how much a platform has moved.
+[09:46] So in a way, it's a feedback system where we put the control
+[09:50] to see actually how the platform has moved.
+[09:55] So technically speaking, you could treat this as a measurement,
+[09:59] but the way we will treat this in this course is to treat odometry as basically a control command
+[10:05] because it's a measurement of how basically we moved.
+[10:09] And the second model which is also quite commonly used is what is called as the velocity-based model.
+[10:15] In a sense, this is just a look-ahead step
+[10:18] in the sense you don't actually measure anything.
+[10:20] You say to the robot, okay, go with this velocity
+[10:23] and say linear velocity of one meter per second
+[10:26] and an angular velocity of three degrees per second.
+[10:29] And then you just use your physics of your platform
+[10:33] to figure out where you end up with.
+[10:36] We can see this a bit more in detail.
+[10:38] This is related to the odometry model.
+[10:42] And what you see here is kind of the setup that you have for wheel encoders.
+[10:47] So what happens is you usually use this kind of disc
+[10:51] which has alternating white and black lines,
+[10:53] and you attach this to the shaft of a motor.
+[10:56] And therefore when the motor rotates, this particular disc also rotates.
+[11:01] And then there is some associated electronics
+[11:04] which figure out when you move from a white line to a black line.
+[11:10] Often it results in a peak.
+[11:12] And therefore what we can do is to figure out
+[11:14] exactly how much the motor has rotated.
+[11:17] And then understanding how much the motor has rotated,
+[11:20] we can then translate this into how much the platform itself has moved
+[11:24] as, let's say for example, the wheels are directly attached to the motors and so on.
+[11:29] So when we talk about odometry models,
+[11:32] usually the robots are equipped with some kind of encoders
+[11:36] which give us, so to say, an internal state of how the motors are moving.
+[11:41] On the other hand, when we talk about the velocity-based model,
+[11:45] or what is called as dead reckoning,
+[11:48] what we do there is in a way a prediction.
+[11:51] So we know how our platform moves when a certain control command is given.
+[11:56] And we just use the equations that we developed,
+[12:00] for example, for the differential drive of an Ackerman drive.
+[12:03] And then we figure out where the robot would end.
+[12:06] In practice, the odometry model often gives
+[12:11] a better or higher accuracy measurement than the dead reckoning,
+[12:16] because in a way the odometry model captures the rotations
+[12:20] after the command has been executed,
+[12:23] where in the dead reckoning model you just wish that,
+[12:27] or you hope that this particular command is executed,
+[12:29] but you actually don't know what happened in between.
+[12:32] So in practice, we often use the odometry model to do the motion.
+[12:38] And now what we look at is why or from where
+[12:42] does this uncertainty in the motion come from.
+[12:46] And in particular, we will see this for wheel robots.
+[12:49] So the ideal case is, for example, here,
+[12:52] where we have the two wheels of exactly the same diameter,
+[12:56] and it's flat, and if it rolls smoothly on the floor,
+[13:00] you would expect that it makes the movement that is, say,
+[13:04] defined by the differential drive robot,
+[13:06] by the differential drive equations,
+[13:08] or by the Ackerman equations.
+[13:10] But in practice, what can happen is that
+[13:12] as it moves in the environment,
+[13:14] say it goes over a piece of wire or a stone or whatever,
+[13:18] and then this causes there to be a bump.
+[13:21] And what often happens is that you,
+[13:24] for example, in this case, this right wheel here
+[13:27] would skip certain revolutions.
+[13:29] And with this, you would end up thinking that
+[13:32] you covered a different amount of distance
+[13:35] than you actually did.
+[13:38] What can also happen is, for example,
+[13:40] you may have different wheel diameters.
+[13:42] This could be because of, let's say,
+[13:45] we pump the two wheels differently.
+[13:48] This would be a stupid thing to do,
+[13:50] but this is one way this could happen.
+[13:52] The other way would be, for example,
+[13:54] usually the robots would carry some kind of a load,
+[13:57] and then if the load is not evenly distributed,
+[14:00] it might happen that there's more pressure
+[14:02] on one side than the other.
+[14:04] Whereas when we use equations of motion,
+[14:07] we might not know this,
+[14:10] and what we end up in terms of an estimate of where we go
+[14:13] is different from the actual motion that the robot performs.
+[14:17] Also, it could happen that we are moving on platforms,
+[14:22] maybe in this case a carpet or a slippery floor,
+[14:25] and the wheels may not be perfectly rolling on this surface.
+[14:30] And in this case, again, what happens is that
+[14:32] we are not able to perfectly figure out
+[14:34] how much the wheel has rotated,
+[14:36] and therefore we make a mistake
+[14:38] in seeing how far the robot has actually moved.
+[14:42] So what we'll do in this lecture is that
+[14:44] we'll abstract a bit away from the exact drive,
+[14:48] so we will not talk specifically about
+[14:50] differential robot RKM,
+[14:52] but we'll see two models which kind of
+[14:54] sit on top of this,
+[14:56] which kind of generalize this,
+[14:58] and it also makes our analysis for the,
+[15:01] for deriving the equations a bit easier.
+[15:04] And the first of this model, like we said before,
+[15:07] is what is called as the odometry model.
+[15:10] So in this model, what happens is,
+[15:12] suppose at time t-1, we start at this position,
+[15:15] x-bar, y-bar, and theta-bar,
+[15:17] and at time t-1, we end up at the
+[15:21] x-prime, y-prime, and theta-prime positions.
+[15:25] And the way we would now express the
+[15:29] odometry command, so to say,
+[15:32] is by these three motions.
+[15:34] We say that the motion between any two points
+[15:37] can be explained as a delta rotation 1,
+[15:40] so you rotate first, then you translate
+[15:43] by delta translation, and then you
+[15:45] do a rotation by delta rotation 2.
+[15:48] So this is just an abstraction over the actual movement.
+[15:50] So for example, if you had a differential drive robot,
+[15:53] maybe the robot actually moves along an arc,
+[15:56] but for the sake of analysis,
+[15:58] what we say is that our control commands
+[16:01] in this case are broken down into this model,
+[16:03] where each motion is basically a rotation,
+[16:06] a translation, and a rotation.
+[16:09] And some equations here to figure out
+[16:12] what these rotation values are.
+[16:14] So we know that we start at this position,
+[16:17] and we end up at this position,
+[16:19] so it's the position and the orientation, so the poles.
+[16:22] And so for example, to figure out what's the translation
+[16:25] that we moved, it's essentially the distance
+[16:28] between these two coordinates, and this is what we see here.
+[16:32] Whereas the angle, so the delta rotation 1,
+[16:35] again can be obtained by taking the tan inverse
+[16:39] of the difference in the y's and the x coordinates,
+[16:43] subtracted by the original orientation that you have.
+[16:47] And similarly, the delta rotation 2
+[16:49] is what's left after removing the delta rotation 1
+[16:53] and the original yaw angle that you had.
+[16:57] So these are just equations for our odometry information.
+[17:01] So from now on in the odometry model,
+[17:03] we'll assume that the odometry commands
+[17:06] are basically defined by these three parameters,
+[17:10] so two rotations and a translation.
+[17:13] So now that we have, now we understand what the poles are,
+[17:16] so the poles in this case are 2D,
+[17:19] the robot lives in a 2D world, so it has an xy position
+[17:22] and a yaw, and the control commands
+[17:25] are these three things here.
+[17:27] So the next thing to understand the uncertainty, so to say,
+[17:30] is to model how the noise is there
+[17:36] on these different parameters.
+[17:38] So one way would be, for example, if you start here,
+[17:42] you could say that we roughly end up here,
+[17:46] but with, let's say, a Gaussian distribution
+[17:49] around this place.
+[17:50] This could be one assumption.
+[17:51] So we start from here, very likely we end up here,
+[17:54] but we might also end up a bit here, a bit here,
+[17:57] and this noise could be Gaussian.
+[17:59] But often in practice, what's seen to work better
+[18:02] is rather than assuming one big motion
+[18:05] which has Gaussian noise, we model the Gaussian noise
+[18:09] on each of these different commands.
+[18:11] So we have a delta rotation 1, a delta translation,
+[18:14] and a delta rotation 2.
+[18:16] And how we model is that there's a Gaussian noise,
+[18:19] and we'll see that, in principle, this
+[18:21] need not be just Gaussian.
+[18:22] So it could be any model which explains your noise well
+[18:26] in reality.
+[18:28] And basically, we would have three separate Gaussian noises,
+[18:31] let's say, on the delta rotation 1, the delta translation 2,
+[18:34] and the delta rotation 2.
+[18:37] And we should note here that the resulting noise that
+[18:43] would end up in the final position
+[18:46] would not be a Gaussian as before,
+[18:49] because the equations like we saw before,
+[18:53] these equations, because these determine how the motion
+[18:56] actually happens, are non-linear.
+[18:58] And therefore, when this Gaussian noise
+[19:00] propagates through these non-linear functions,
+[19:03] we would end up with some function here
+[19:05] which need not be Gaussian.
+[19:07] And the reason we do this is, in practice,
+[19:09] we observe that this particular model
+[19:12] explains the actual noise often better in real world.
+[19:17] So let's go a little bit more into details
+[19:19] of how actually we model this Gaussian noise.
+[19:22] So like we said, so for each of the parameters,
+[19:25] so the delta rotation 1, the delta translation 2,
+[19:27] and the delta rotation 2, we model noise terms.
+[19:30] So this epsilon here models the noise on those parameters.
+[19:34] So these are the mean movements.
+[19:35] So let's say, for example, this is the rotation
+[19:38] that we ask the robot to do.
+[19:40] And then this sets a particular noise on top of it.
+[19:43] And this noise, we model it depending on two terms.
+[19:47] One, this noise depends on how much you ask it to rotate.
+[19:51] So this alpha 1 is kind of a coefficient which says,
+[19:56] so if you ask the robot to rotate 30 degrees,
+[19:59] what's the error?
+[20:00] While if you ask it to rotate 60 degrees, what's the error?
+[20:03] So intuitively, we know that the larger the motion we ask it,
+[20:07] usually the higher the error is.
+[20:10] And in the general or in the typical model,
+[20:13] there's also a certain amount of,
+[20:15] or there's a certain effect of the translation that you make.
+[20:18] So if you make a larger translation,
+[20:20] it's possible that you end up with a rotation error
+[20:23] which is also larger.
+[20:25] Similarly, in the delta translation,
+[20:27] we model the noise in terms of the length that we cover.
+[20:34] And it's also a function of the two rotations that we have.
+[20:39] So we have terms.
+[20:40] So here, basically, we have four terms.
+[20:43] So alpha 1, which, let's say, maps the error in the rotation
+[20:48] part, alpha 2, which maps the error in the translation
+[20:51] parts for this case.
+[20:52] And then we have an alpha 3 and alpha 4 which,
+[20:55] so to say, capture the effects of translation on translation
+[20:58] and rotation on translation and so on.
+[21:02] And again, here, alpha 1 and alpha 2
+[21:03] are the same as in the first case.
+[21:07] So this random variable, in general,
+[21:09] we would assume it in most cases to be normal distributed
+[21:12] because it's the distribution we use most often
+[21:14] and also what is observed in reality.
+[21:18] But nothing stops us from defining this
+[21:21] as any other distribution that might be meaningful.
+[21:25] And for example, one such distribution
+[21:29] is the triangular distribution.
+[21:32] So it looks very much like a normal distribution
+[21:35] apart from the fact that in the normal distribution,
+[21:38] even if you go very far away, even if you're at infinite,
+[21:41] for example, there is a very small probability but still
+[21:45] a probability of you being, let's say,
+[21:48] infinitely away, which in the case of robot's movement
+[21:53] is equivalent to the robot being kidnapped, for example.
+[21:57] If you know that this is something
+[21:59] that won't happen in your system,
+[22:01] you can model your noise using a triangular distribution
+[22:04] where you ensure that your uncertainty is within a bound
+[22:08] and you never go out of these bounds.
+[22:11] And what you see here are basically the equations for how,
+[22:16] basically this is the equation for the normal density function
+[22:19] and this is similarly an equation
+[22:21] for the triangular distribution.
+[22:24] So given all this information,
+[22:26] we want to come back to our main question,
+[22:28] which is to figure out a way to compute
+[22:31] this probability distribution.
+[22:33] So again, we sit at xt-1,
+[22:36] we make a control command,
+[22:40] an odometry command in this case, ut.
+[22:43] So if you consider the odometry model,
+[22:45] this would be a rotation translation and a rotation.
+[22:48] And we want to compute the probability
+[22:52] of ending up at different positions.
+[22:54] So this is the probability that we want to compute overall.
+[22:58] And just a point to note,
+[23:01] how do we actually calculate this probability
+[23:04] at a particular point?
+[23:05] So it's just, again, the equations of a normal distribution
+[23:08] and a triangular distribution.
+[23:10] But what we see here in terms of a and b
+[23:14] are what are here called as query points
+[23:17] and standard deviation.
+[23:19] So the query point in our case would be,
+[23:21] suppose we expect the robot to end up at, say, x prime.
+[23:26] The query point would be, say, for any given x.
+[23:30] So x minus x prime would be, so to say,
+[23:33] how far you are away from your mean expectation.
+[23:36] And for that particular query point,
+[23:38] this would be the probability distribution
+[23:41] that's given by the normal equation.
+[23:43] Similarly, if you use a triangular distribution,
+[23:45] this would be that particular probability distribution.
+[23:49] So, for example, now we ask the robot to move 30 degrees.
+[23:54] So the mean movement that we expect is 30 degrees.
+[23:57] And suppose I ask,
+[23:59] what's the probability that it actually moved 45 degrees?
+[24:02] Then the a would be 45 degrees minus 30 degrees.
+[24:07] Whereas the b is, so to say, the standard deviation
+[24:10] which we need to understand
+[24:12] from the motion of the robot itself.
+[24:15] So usually what's the error that we expect
+[24:18] in this particular movement that's there?
+[24:21] So now that we have this, we come out with an algorithm
+[24:25] which actually summarizes the procedure
+[24:28] of computing these probabilities.
+[24:31] And so the result of this algorithm
+[24:35] is this probability distribution that we want to compute.
+[24:39] And in this case, we want to compute it
+[24:41] between a hypothesis x and x prime.
+[24:44] So our hypothesis is that we start at time t minus one
+[24:47] at x and we end up at x prime.
+[24:51] And the x bar and the x bar prime
+[24:54] are what we know from our odometry measurements.
+[24:58] So first what we do is basically
+[25:01] convert our odometry measurements
+[25:03] into our odometry model commands, so to say.
+[25:06] So what we have here is that if we had actually moved
+[25:09] from x bar to x bar prime,
+[25:14] this would be the equations that we exactly saw.
+[25:17] So these are the movements in terms of the translation
+[25:21] and the two rotations.
+[25:24] We compute exactly the same things for our hypothesis.
+[25:29] So if we want to figure out what's the probability
+[25:31] that we end up at x prime given that we started at x,
+[25:35] we again convert this into our model,
+[25:38] which are the rotation, translation, and rotation.
+[25:41] And then what we can then do is for each of these movements,
+[25:45] so the rotation, translation, and rotation,
+[25:47] we can compute the probability of these movements
+[25:51] actually having happened.
+[25:52] And we can compute it given the mean position
+[25:55] or the difference to the mean position here
+[25:57] and the noise that we modeled on that particular motion.
+[26:01] And then we assume here that these three motions
+[26:04] are independent of each other.
+[26:06] And therefore, for this particular hypothesis,
+[26:09] the probability distribution ends up being
+[26:12] the multiplication of these three probabilities
+[26:15] that you saw here.
+[26:16] So what we did here is to have kind of an algorithm
+[26:19] to figure out what's the probability
+[26:21] of moving to x prime from x.
+[26:24] And then we would need to repeat this for all the positions
+[26:27] in the environment for which we want to compute
+[26:31] this motion model probability.
+[26:34] And if you visualize the result, what we end up
+[26:37] is something like here.
+[26:39] So we start here at x.
+[26:41] Then we give a command U.
+[26:44] And what you see here, it's a visualization
+[26:46] of the probability distribution.
+[26:48] So we see that this larger or the more black areas
+[26:53] here correspond to the place where
+[26:55] you are more likely to end up.
+[26:58] And the places away from the center
+[27:02] are lighter, representing the fact
+[27:04] that you are less likely to end up there.
+[27:06] And the fact that this is shaped in this what is often
+[27:09] called as a banana-shaped distribution is in this case
+[27:13] because the robot might have a greater error in the rotation
+[27:18] components than the translation one.
+[27:21] That's why we see there's more variance along the angles
+[27:26] with respect to along the translation vector.
+[27:29] So in case if all the errors were, say, exactly the same,
+[27:34] we would see a more circular distribution here.
+[27:37] And of course, this depends on the path
+[27:39] that the robot itself takes because it's something
+[27:42] that's propagating over time.
+[27:44] So for example, if we take this particular path here,
+[27:47] we might end up with the shape which
+[27:49] looks like something like here.
+[27:52] So in this case, what we actually
+[27:53] did is to go to each one of these places.
+[27:57] So for example, we make a grid around, say,
+[28:00] around the final position.
+[28:02] And then for each one of these grids,
+[28:04] we basically computed this algorithm.
+[28:08] And then we ended up with different values.
+[28:10] So here, of course, it's plotted in 2D.
+[28:13] But in practice, it's a 3D case where you have the x, the y,
+[28:18] and the orientation.
+[28:20] So this is one kind of representation,
+[28:22] also sometimes called as the histogram representation
+[28:25] because we basically discretize our world
+[28:28] and we have one probability for each one
+[28:31] of this grid in the world.
+[28:32] Another way to represent this is through what
+[28:35] is called as a sample-based representation.
+[28:38] Essentially, what we see is a general probability
+[28:41] distribution function.
+[28:43] And the sample representation would be the blue things
+[28:47] that you see here.
+[28:48] And the idea here is that the places where there is a higher
+[28:51] density, we have more number of samples being sampled
+[28:56] from there.
+[28:57] And in some of the Bayesian implementations
+[29:00] that we'll see in this course, we'll
+[29:02] see that it's better to have a sample-based representation
+[29:05] than a histogram-like representation
+[29:07] like we have before.
+[29:09] So what we want to compute in terms of, let's say,
+[29:13] the motion model is we want a sample-based representation
+[29:17] for the motion model.
+[29:19] And this requires us to first know
+[29:23] how to sample different distributions.
+[29:25] And the first distribution that we would
+[29:29] like to sample from is a normal distribution.
+[29:34] And there happens to be a very simple way
+[29:36] to do this distribution.
+[29:37] So if you have a standard deviation of b,
+[29:41] the way to compute these samples would just
+[29:44] take 12 of such uniformly distributed numbers,
+[29:48] add them up, and divide by 2.
+[29:51] So this gives a distribution which
+[29:53] looks something like this.
+[29:55] So here we take a million samples.
+[29:57] And as we can see, the distribution of these samples
+[30:01] looks like a normal distribution.
+[30:04] And we can do this for a triangular distribution as well.
+[30:07] So it happens.
+[30:08] We won't look into the proof, but basically it
+[30:11] happens that if we compute a sample
+[30:14] from this particular formula here,
+[30:17] we can end up with a triangular distribution
+[30:19] which looks like this.
+[30:20] For example, if we have only 1,000 samples,
+[30:23] there's still some error in terms of approximation.
+[30:26] But the more samples we take, the more closer
+[30:28] we get to an actual distribution.
+[30:31] So here we have a million samples,
+[30:32] and we are quite close to a distribution that looks
+[30:36] like a triangular distribution.
+[30:38] And when we have this sample-based model,
+[30:41] we could think of them as a simulation.
+[30:43] So suppose we have 100 samples where we start from.
+[30:47] So these would be 100 different Xt minus 1s.
+[30:50] And then for each of the sample, we
+[30:54] compute the motion for each of the sample
+[30:56] and add the noise based on how we model the noise.
+[31:00] And we end up with these new poses.
+[31:03] So for each one of the poses, or each one
+[31:05] of the robot position Xt minus 1,
+[31:07] we make the motion, we sample some noise around that motion,
+[31:11] and this would give us a new probability distribution
+[31:15] of where you will end up with, so what the motion model
+[31:18] actually describes.
+[31:19] And we can summarize this in an algorithm here.
+[31:22] So what you have is your position
+[31:24] at time t minus 1, which is X, and then the control command U.
+[31:29] Again, in the odometry model, this
+[31:31] would be a rotation translation and a rotation.
+[31:34] And what we do is then the first motion can be thought of
+[31:39] as a rotation that we actually want.
+[31:42] And then we can sample from one of the noise distributions
+[31:46] that we saw before.
+[31:48] So these noise distributions, for example, in this case
+[31:52] is exactly the one that we defined before, the one which
+[31:56] depends on the amount of rotation that you give
+[31:58] and also on the translations that you give.
+[32:00] And we again repeat this for all the three motions.
+[32:03] And then what we do is basically
+[32:06] we propagate these motions using the motion model.
+[32:11] So what we have here is that if we start at X,
+[32:14] we end up at X prime, which is nothing but X
+[32:17] plus the translations that we took times the cosine
+[32:21] of the angle plus the rotation that it made,
+[32:26] including the noise that we sampled.
+[32:28] So we will end up in place that we expect
+[32:30] plus some noise around it.
+[32:32] And so what this will help us is to come up
+[32:37] with a new X prime, Y prime, and theta prime,
+[32:40] which would be the place where the particle would end up with.
+[32:44] And in this case here, this sampling
+[32:46] could be from different distributions.
+[32:48] It could be from a normal distribution, as it says here,
+[32:51] or a triangular distribution, or some other fancy distribution
+[32:54] if you come up with which describes your motion well.
+[32:58] So how this looks in the end is what
+[33:01] we see in the bottom here.
+[33:02] So before we saw this histogram kind of distribution,
+[33:05] where we had, let's say, the shade of black here,
+[33:08] the shade of gray here, representing how probable
+[33:10] it is to reach here, what we see here
+[33:13] is these are the different samples, which
+[33:16] could be the places where you would end up with.
+[33:19] So you can see roughly that the shape
+[33:21] is similar to the histogram one.
+[33:23] And in each of these cases, basically it
+[33:26] characterizes different noise parameters.
+[33:29] So in this case, there's more error on the angle,
+[33:32] so it's more banana shaped.
+[33:34] Whereas in this case, it seems that the robot
+[33:37] has more error along the direction in which it moves.
+[33:40] And therefore, the error is larger,
+[33:42] the variance is larger along the motion.
+[33:45] Whereas again, in this case, it seems
+[33:47] that the error again in the angles
+[33:51] is much larger than the one in translations.
+[33:55] So let's see a simple example where
+[33:58] what happens here is that the robot starts at this position
+[34:01] and it executes this particular trajectory here.
+[34:05] And when you start, typically it happens
+[34:07] that you know exactly where you start from,
+[34:09] and then you execute a motion.
+[34:12] In this case, we show or we represent this
+[34:15] using the sampling based approach.
+[34:18] And we execute the first motion, we
+[34:20] see that we have more uncertainty, which
+[34:23] is captured by the spread of these particles or these samples.
+[34:27] And then we execute another motion and so on.
+[34:29] And after executing this for whatever 10 commands,
+[34:33] we end up with a probability distribution
+[34:35] which is quite spread.
+[34:37] So we could have done or we have done here
+[34:39] in this case using the samples idea,
+[34:41] but we could have also done the same using the histogram idea
+[34:45] where we would query for each point in the environment
+[34:48] or in the configuration space what's
+[34:51] the probability of ending up there.
+[34:54] So we've in general seen two approaches.
+[34:56] One where we look for each, so to say, grid in our environment
+[35:01] and compute this probability distribution.
+[35:04] So p of xt given xt minus one and ut.
+[35:08] We've also seen a simulation kind
+[35:10] of where we add this noise while doing the movement.
+[35:16] So we'll also quickly look at the other model
+[35:19] that we mentioned before, so the velocity based model.
+[35:23] Here basically what happens is that the command
+[35:26] is described by the linear and the angular velocity
+[35:29] for that robot.
+[35:30] So when you set a linear and an angular velocity,
+[35:33] this robot moves along some circular arc.
+[35:37] So this is also one way to model how a robot can move.
+[35:42] And in this case, the way we model the noise
+[35:46] is on these parameters v and omega.
+[35:49] So v being the linear velocity and omega
+[35:51] being the angular velocity.
+[35:52] So we could say that our linear velocity
+[35:55] is affected by some amount of noise,
+[35:57] here shown by this epsilon.
+[35:59] Again, this epsilon depends on, let's say,
+[36:02] the magnitude of the velocity of the linear
+[36:04] and the angular velocity.
+[36:05] And similarly, the error on the angular velocity
+[36:08] again also depends on both these magnitudes, each one of them
+[36:12] having their own coefficients.
+[36:14] However, there's a small problem with this method
+[36:17] in the sense that the state that we want to track
+[36:21] is having three dimensions.
+[36:23] So we want to track the x, the y, and the orientation.
+[36:26] The controls here are only two.
+[36:29] So there's a missing dimension, so to say.
+[36:32] And the way to think about this is that
+[36:34] if we give a particular linear and an angular velocity,
+[36:39] this corresponds to a particular arc that this robot traverses.
+[36:44] But what we are missing is the orientation
+[36:47] along that arc that it travels.
+[36:49] So you could end up, say, at the same position on this arc
+[36:53] but having different orientations.
+[36:55] And with this model, we lack the ability
+[36:58] to model this error on this third orientation parameter.
+[37:03] So what's often done in practice is
+[37:05] to have an extra error term here shown by gamma,
+[37:10] which we'll then see is added to the final orientation
+[37:15] of the system.
+[37:17] So here, we won't go through the proof
+[37:20] of how these equations come up.
+[37:21] But basically, these are the motion update equations
+[37:24] when we use the velocity model.
+[37:26] So the commands are basically v and omega.
+[37:29] Here, they're actually v hat and omega are the ones
+[37:33] which have the noise already added to them.
+[37:36] And so here, what happens is that if you start at x,
+[37:38] and then you apply a particular command, v and omega,
+[37:41] you end up at this x prime.
+[37:44] And this guy also, or these equations,
+[37:47] also include the noise as we model the noise in the v
+[37:52] using this v hat here, which captures
+[37:55] the noise in the linear velocity,
+[37:57] where this parameter captures the noise
+[37:59] in the angular velocity, and this gamma term,
+[38:02] which would capture then the error in the orientation.
+[38:07] So with this, we have a model for describing
+[38:12] the noise for a velocity-based model for wheeled robots,
+[38:16] mainly.
+[38:17] And what the results would look like is what we see here.
+[38:20] So visually, they look very similar to what
+[38:23] we saw from our odometry model.
+[38:27] But for certain robots, it's not possible
+[38:30] to say the robots are not equipped with some encoders.
+[38:34] In that case, we often use this velocity model,
+[38:38] since all we have is the commands that we give them.
+[38:41] And in practice, like I said before,
+[38:44] usually these velocity models are less accurate
+[38:47] than the odometry model, since this is, so to say,
+[38:51] apply command, and then just you don't know what happens,
+[38:55] rather than having a feedback about how much the robots move.
+[38:59] So we saw basically two different kinds of models,
+[39:02] an odometry model where we have these revolutions,
+[39:04] and therefore we can figure out how much the wheels move,
+[39:08] and this model where we just know the commands
+[39:11] and how the robot moves.
+[39:12] So with this, what we have is ways to describe the motion,
+[39:17] as well as to describe the uncertainty about that motion.
+[39:22] And then when multiple of these commands are executed,
+[39:26] these errors add up, resulting in the drift,
+[39:29] like we saw in the initial image.
+[39:33] So just to summarize, what we saw are two kinds of models,
+[39:36] so the odometry-based models,
+[39:38] where we have encoders on the motors,
+[39:40] a velocity-based model where we just know the commands
+[39:43] that we gave to the robot.
+[39:46] And then we discussed a couple of ways
+[39:48] to calculate this probabilistic motion model,
+[39:51] so what we can also call as the posterior probability
+[39:56] of ending up at x prime, given that you start at x
+[39:59] and you apply a command of u.
+[40:03] We saw a model where we can query for each point
+[40:06] in the space to figure out what's the probability
+[40:09] of ending up there, but we also saw another method
+[40:12] where we can propagate a sample to figure out
+[40:15] where we would end up in a simulated style affair.
+[40:18] And both of these methods we'll see in further lectures
+[40:21] how to use them for state estimation problems.
+[40:24] And typically, just a note here is that all the calculations
+[40:28] that we do is given a fixed time interval, delta t,
+[40:32] so we assume that these odometry commands hold true
+[40:35] for that fixed time interval, delta t,
+[40:37] and in practice, if we do this fast enough,
+[40:39] say 100 times a second, it's almost equivalent
+[40:43] to having a continuous integration of these commands.
+[40:48] So with this, I would also like to point you
+[40:50] to the literature for this lecture,
+[40:52] so if you would like to know more details
+[40:54] or figure out the proof for, let's say, the velocity model,
+[40:58] you could refer to the Chapter 5 in Probabilistic Robotics book,
+[41:02] and in general, it's a really nice book to understand
+[41:04] the different concepts that we cover in this lecture.
+[41:07] With this, I thank you for your attention
+[41:09] and see you in the next lecture.

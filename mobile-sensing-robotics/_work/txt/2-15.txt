@@ -1,0 +1,688 @@
+[00:00] In this lecture I would like to introduce a way to deal with outliers in your data association
+[00:06] in the context of the simultaneous localization and mapping problem.
+[00:09] So I assume you know how postgraphs work and I want to dive today into a least squares
+[00:15] approach that can deal with outliers and that's something we also refer to as robust least
+[00:21] squares and look into different techniques on how you can achieve that so that you can
+[00:25] run your SLAM algorithm even if your data association is not perfect.
+[00:30] Okay let's start with the assumptions that underlie the standard postgraph problem that
+[00:36] uses least squares as an error minimization technique.
+[00:39] So what we typically do is we minimize the sum of squared errors and these squared errors
+[00:44] are the errors that we have in our constraints stored in our edges in the graph and as we
+[00:49] have shown this is equivalent to estimating the mean of your Gaussian distribution for
+[00:58] your overall Gaussian.
+[00:59] So that is a direct relation between estimating the mean of a Gaussian distribution and minimizing
+[01:05] the square error.
+[01:06] So if we assume that everything is a Gaussian distribution that basically means we assume
+[01:11] that our edges basically follow this Gaussian curve in terms of the noise that we have and
+[01:18] if we talk about sensor noise this Gaussian distribution is actually quite a cache approximation
+[01:23] for that.
+[01:24] It however is problematic in the context of ambiguities in our data association in case
+[01:30] of outliers if you for example mix up two different landmarks in the environment then
+[01:35] this becomes problematic and the reason is that more probability mass actually goes into
+[01:39] the so-called tails of the distribution where we make a substantial mistake in our data
+[01:46] association so that the Gaussian assumption is actually not justified.
+[01:52] So the problem that we suffer in reality from if you go for the standard least squares approach
+[01:57] is the assumption that there are no outliers in our data association.
+[02:01] But in reality we will have that so today we are tackling the problem on how to deal
+[02:05] with such outliers and so outliers occur again in reality when we mix up things, our sensors
+[02:11] are never perfect, if we may have multiple modes in our distributions and Gaussians have
+[02:16] a single mode only and the underlying problem is that we use a squared error.
+[02:22] So if some data point is very far away from our model the error gets squared and gets
+[02:27] amplified quite substantially and this leads to the effect that even a small number of
+[02:31] outliers can drag away the model parameters from its actual solution and that what causes
+[02:37] problems to us.
+[02:39] In practice we experience these problems if for example places look identical and we perform
+[02:45] loop closures at places because we see objects but those objects appear in multiple places.
+[02:51] We can envision that as a large building which has rooms where all the rooms look very similar
+[02:58] and then the robot may mix up those rooms.
+[03:01] This can be very cluttered scenes or scenes with a lot of repetitive structures so you
+[03:06] may think of a car driving along an alley where the trees are planted in equidistance
+[03:12] distances so you're driving around maybe using trees or tree trunks for localization for
+[03:17] your pose estimation and then it's very likely that you can mix up a couple of those trees
+[03:24] and this leads to data station mistakes.
+[03:26] Also GPS can be problematic in the example of multipath where you have signal reflections
+[03:31] and cannot perfectly uniquely determine where you actually are.
+[03:35] Just as a short illustration I brought here a simulated world.
+[03:39] This has been done by Edwin Olson and his team.
+[03:42] So you can see here a small robot, you see a few boxes standing around.
+[03:45] What you now can do is you can actually move the robot around in this world and estimate
+[03:50] how likely is it that the robot is actually at that place just based on the sensor observation.
+[03:55] And you will get a distribution which looks like this.
+[03:57] It has still one peak which stands out but you can clearly see that this is a multimodal
+[04:01] distribution and using a Gaussian may not be the best choice to represent that belief.
+[04:08] We don't have that only in simulation.
+[04:10] There's another example here from the Intel Research Lab dataset, one of the traditional
+[04:15] 2D laser-based SLAM datasets and we can have two places over here and two places down here
+[04:20] in the corridor and if we look to those scans and align one scan with the scan taken at
+[04:27] the other location you can actually see that we can actually align them using ICP quite
+[04:31] well where we actually then generate constraint that this place should be over there and this
+[04:35] place should be over there.
+[04:38] And so we get better constraints between pulses which are actually far away and actually do
+[04:42] not belong to the same place.
+[04:45] Again that's something that doesn't vary often, does not happen very often but it can happen
+[04:49] from time to time if places look similar.
+[04:52] And the problem is that even a small number of those outliers and wrong loop closures
+[04:56] can actually lead to a wrong map.
+[05:00] So I have a short example over here which shows this Intel Research Lab with one outlier,
+[05:05] five outliers and then more of those outliers.
+[05:09] And you can even see a small number with one outlier still looks okay although if you look
+[05:13] carefully you see that this corridor is slightly bent compared to the original dataset but
+[05:18] even with five or ten outliers the map gets actually distorted substantially so that navigation
+[05:23] becomes impossible and even adding more outliers will actually lead to more severe situations.
+[05:30] And so the goal of today is that even if we have those outliers because our assumptions
+[05:35] we don't have a perfect sensor here we cannot get rid of those outliers in general how can
+[05:40] we perform the optimization that we're not sensitive to those outliers that even the
+[05:44] map that we built under those conditions look like the map which would be generated
+[05:48] in an outlier-free case or looks nearly like that.
+[05:51] So the key question today is how do we deal with these problems, with these data association
+[05:56] ambiguities in the context of the simultaneous localization and mapping problem.
+[06:00] And that's what we are dealing here with.
+[06:03] And I will present in the following multiple approaches how you can do this.
+[06:07] There are different variants, some are very popular out there, some actually rather novel
+[06:12] and they have certain advantages and disadvantages and we are going to discuss them here in that
+[06:15] course today.
+[06:17] I want to start with the max-mixture approach developed by Pratik Agarwal and Edwin Olson.
+[06:25] The nice idea about this approach is that you introduce models which can have multiple
+[06:30] modes so not a single Gaussian so you can actually generate a constraint which has multiple
+[06:34] modes it's something that I find actually very attractive.
+[06:37] So if you think about your typical Gaussian probability distribution that models an edge
+[06:45] so you can express this as your standard Gaussian, you have some constant sitting over here,
+[06:52] so the constant that we typically ignore, you have your exponential function and then
+[06:56] you have your error vector, your information matrix and your error vector.
+[07:01] And that's basically the term that we are minimizing because we are typically minimizing
+[07:07] the log likelihood of this distribution.
+[07:11] So what happens if we now change that from going for a single mode to multiple modes?
+[07:18] So if we want to turn this from a Gaussian into a sum of Gaussians, that's something
+[07:22] we can easily do, we can just put a sum operator over here and maybe have an additional weight
+[07:27] for each of this Gaussian and then turn the Gaussian belief into a sum of Gaussians.
+[07:32] And that's something we can do, let's say we have k modes, two, three, four, whatever
+[07:36] we like and we turn this single Gaussian into a sum of Gaussians.
+[07:42] So we have our sum, the Wk is simply the weighting for a term for those Gaussians so maybe say
+[07:50] maybe one Gaussian has a higher weight than a second Gaussian for example and then we
+[07:56] have different terms over here but it's in the end more or less the same thing.
+[08:01] Let's see what happens if you integrate or if you replace this Gaussian by a sum of Gaussian
+[08:06] in our optimization.
+[08:08] So what we do, as I said before in our least squares approach, we are looking into the
+[08:13] log likelihood of this term or the negative log likelihood of this Gaussian distribution.
+[08:18] So if I take the negative log of this and the negative log of this one, we end up getting
+[08:23] this form.
+[08:24] So in the standard Gaussian case, the negative log likelihood basically gives me my error
+[08:28] term so the term that we have been using plus again a constant which doesn't depend
+[08:36] on our parameters of the error so we typically ignore that and just optimize for this term.
+[08:41] If we look to the sum of Gaussian now, we have the problem that we can't move the log
+[08:46] operator inside the sum.
+[08:48] We could only do it if it would be a product and then the product would turn into the sum
+[08:53] but we said we want to have a sum of Gaussians so we can't do that here.
+[08:57] So we can't move the log operator inside.
+[08:59] So we have the log outside the sum and then the still individual exponents as well.
+[09:04] So we can't use our least squares formulations, what we would like to optimize here, not because
+[09:10] this term, by taking the log likelihood, this term doesn't simplify and we can't easily
+[09:15] integrate in our system.
+[09:18] So that's a problem that Pratik and Edmond were facing and they had a smart idea on saying
+[09:23] okay let's simply make a crude approximation and get rid of the sum operator and just say
+[09:28] we are just caring about the most important mode at the current initial gas or at the
+[09:34] current location that we have.
+[09:36] So what they basically did is they just replaced the sum operator by a max operator and this
+[09:41] also which gave the approach the main max mixtures.
+[09:44] So we take sum of Gaussian model but in the end we replace the sum by the max operator.
+[09:51] That means if we have two modes which are rather far away the approximation error should
+[09:55] be actually very small assuming the Gaussian have small variances because they're very
+[10:00] far away from each other and the part where they overlap is actually pretty small.
+[10:06] If those two modes are very close together then of course the approximation error would
+[10:09] be larger but you can argue if you have real multimodalities or multiple modes in your
+[10:14] distribution that may be the case that they're actually further away.
+[10:18] So again the key idea is to move to turn the sum into the max operator because the
+[10:23] lock we can move inside the max operator and then basically reduce this to a term very
+[10:29] similar to a single Gaussian.
+[10:31] So let's see how the approximation error looks like.
+[10:34] So let's assume we have these are our two Gaussians which form our mixture model.
+[10:43] This means that the sum of Gaussians so what we actually want to have is this distribution
+[10:48] over here.
+[10:49] So we're going to minimize under this distribution.
+[10:51] The max mixture we just take the maximum of those two distributions actually would give
+[10:55] me this distribution over here.
+[10:58] So we can see that those distributions are clearly not the same so it's clearly an approximation
+[11:03] that we are doing but the shape of the distribution is not too much different only here in this
+[11:07] kind of overlapping area and this is already a situation where those modes actually very
+[11:10] close to each other.
+[11:12] If we move those modes further away from each other the error that we do with the max mixture
+[11:17] approach is actually smaller.
+[11:20] So it's a very smart idea to actually do that.
+[11:24] So what happens now we take our max mixture or max mixture and the max operators here
+[11:30] we compute the log or the negative log likelihood and then it turns into a problem which is
+[11:34] identical to what we had before except that we have the max or the min operator over here.
+[11:40] So what does it mean?
+[11:42] It means I need to evaluate all the modes of the Gaussian so all the modes of the components
+[11:49] of my Gaussians and select the component which has the highest value or the lowest value
+[11:57] depending on what I'm heading for of this error term.
+[12:01] So if I take this error term I just pick the Gaussian which explains my observation the
+[12:06] best and go for that in this iteration.
+[12:10] Then if the configuration of the graph changes over time it may mean that I've jumped to
+[12:14] a different Gaussian to a different case or different component and then I'm optimizing
+[12:21] under the other component but I'm basically evaluating all components and take the one
+[12:27] which looks the most promising in the current situation and just go with this one.
+[12:33] So how can I integrate that into my existing least squares formulation?
+[12:37] I can actually do this quite easily.
+[12:41] So the advantage of the max mixture is that the log likelihood that I'm minimizing again
+[12:48] results locally in a quadratic form as I would have that so in every iteration of the approach
+[12:55] nothing actually changes inside.
+[12:56] I may just change between modes from one iteration to the next one but inside one iteration of
+[13:01] my least squares approach I'm actually having basically the same setup that I had before.
+[13:07] The only thing I need to do, what I need to change is I need to actually in each step
+[13:11] evaluate all k components of my Gaussian.
+[13:14] So for every multimodal constraint I need to evaluate all of them.
+[13:17] So I need to compute the error value and then select the component which has the highest
+[13:24] log likelihood or the smallest negative log likelihood what I'm minimizing for and then
+[13:28] I just pick out the one which is kind of the best explanation and then perform my standard
+[13:34] least square error minimization as if it would be a single Gaussian given the component
+[13:40] that I've selected.
+[13:41] And of course this selection needs to be done in every iteration so I can jump from component
+[13:45] to component within an iteration although this doesn't happen too often or maybe in
+[13:50] the beginning of the optimization process but later on typically not that much anymore.
+[13:55] Let's see what the effect of that is.
+[13:57] So again what you see here on top was my standard least squares approach using just Gaussians
+[14:02] and down here you see exactly the same data set if I would use the max mixture approach.
+[14:07] So all the red lines are here outliers in the data cessation so I have one two three
+[14:12] four five six seven eight probably around ten here one here ten here and then this would
+[14:19] be fifty or a hundred.
+[14:21] But what you see is that even with this rather large number of outliers the system is able
+[14:26] to determine which of the approach is the right one which one is the wrong one and eliminate
+[14:32] or deactivate basically those and how this is done in this example because you can argue
+[14:37] that's just a single mode is that you have one mode for your observation that a very
+[14:41] flat Gaussian which basically says anything else is possible for those constraints.
+[14:47] So either it fits your current estimate or you take a very very flat Gaussian which has
+[14:52] a small much smaller impact on the optimization process.
+[14:57] So one of the advantages of this technique is that the computational overhead is actually
+[15:03] rather small.
+[15:04] So in this case using Cholesky composition the standard approach is the blue one the
+[15:09] standard least squares and the red one is the one of the max mixture approach.
+[15:14] So you can see the overhead that you generate is basically that you need to evaluate the
+[15:18] multiple components of your Gaussians of your multi mixture constraints but this is a small
+[15:24] effort compared to solving your linear system.
+[15:26] So that's something that's often neglectable and so in terms of the runtime there's not
+[15:33] a high increase in runtime if you go for this max mixture approach.
+[15:37] So again how does max mixture actually solve this problem because again I said it has multiple
+[15:43] modes and what we are talking here basically about one mode and outliers.
+[15:48] This is something you can do if you want to use max mixtures for outlier detection by
+[15:51] taking a sum of Gaussians of two Gaussians.
+[15:55] One is your loop closure that's kind of the red one over here and then you have a blue
+[16:01] one which is the second Gaussian which is very wide Gaussian so one with having a very
+[16:07] very large standard deviation or variance and as a result of this either the loop closure
+[16:14] fixed and you would stick actually to this blue one or the loop closure doesn't actually
+[16:19] fit to your estimate and then you would go for the blue one.
+[16:22] So even if you're let's say 20, 30, 40, 50 meters away you would only still have a small
+[16:28] impact of this constraint on your overall solution.
+[16:31] And if you draw this as an error function you can see that you have a quadratic error
+[16:36] function that's a red curve over here, a quadratic error function in here and then it's still
+[16:41] a quadratic one but one with a much wider which is much wider and has a smaller impact
+[16:47] over here and you can compare this to something which is called a corrupted Gaussian which
+[16:52] is the blue curve over here you can see that they're actually very similar to each other
+[16:56] only here in the point where you switch from inside to outside where you change the mode
+[17:00] they vary a bit but it's a very similar shape of for an error function.
+[17:07] You can also do other things like data station ambiguities you can say I'm either here or
+[17:12] there or anywhere else so you can add more than just kind of one outlier set up in here
+[17:19] and you can also use this for other things like slippage of your platform.
+[17:23] Let's say you have a robot which drives around could be that you put too much torque on your
+[17:27] wheels and the wheels basically slip on the ground maybe you're on a muddy ground or something
+[17:32] like this.
+[17:33] So you can actually also do this use this for dormitory constraints where you say either
+[17:36] the platform moved forward as I was expecting it to be which is the red curve or I was basically
+[17:40] standing still or moving very little which could be the blue curve and so you can use
+[17:45] this also for in an interesting way for other approaches where you're not just not just
+[17:51] only want to get rid of ambiguities in your data association but also for handling problems
+[17:57] that you may have in the kinematics of your platform and so it's actually an interesting
+[18:01] approach which is easy to implement and allows you to deal with outliers in a quite flexible
+[18:07] way.
+[18:08] So the the max mixture approach in order to deal with outliers is actually a very handy
+[18:15] tool and the nice thing is you can still use your optimization technique all the jacobians
+[18:21] that you actually computed before because you're basically staying inside the framework
+[18:25] of least squares optimization and minimization and you're just kind of selecting your modes
+[18:31] in an appropriate way and again a few examples how big the effect is on those two systems
+[18:37] this is it was again the the robot which was moving on a sphere and so the perfect
+[18:42] sphere is how the world should look like this is a result you get with gauss-newton running
+[18:47] this next mixture and if you use standard gauss-newton you can see just one single outlier
+[18:52] can actually lead to some local disturbances here in your in your in the trajectory of
+[18:57] the platform if you add 10 outliers it's already hard to envision this to be a sphere whereas
+[19:02] you don't see any notable effect with the max mixture approach and if you increase your
+[19:06] number of outliers to 100 this is not recognizable as a sphere anymore but the gauss-newton approach
+[19:11] still does a pretty good job so max mixture is a very handy tool for dealing with outliers
+[19:18] or especially when you have multiple modes in your data association especially these
+[19:22] multiple modes is very nice it's something that most of the other robust optimization
+[19:27] techniques actually can't support that you explicitly have multiple modes this is one
+[19:31] of the interesting properties of the of the max mixture setup or approach from my point of view
+[19:37] what it again does it supports multiple modes it approximates the sum in the sum of Gaussians by
+[19:43] the max operator that's kind of the key trick because then you're able to move the logarithm
+[19:48] inside the max operator and then turn your Gaussian distribution into a quadratic form
+[19:55] and so they can describe if you want to describe this by one single sentence you can basically see
+[20:00] the best node mode of your sum of Gaussians and stick with it as if it would be a single
+[20:06] Gaussian for this iteration of your Gauss-Newton approach and simply you do this reevaluation in
+[20:12] every iteration so it's quite easy to implement it's quite effective you can deal with multiple
+[20:17] modes but it can also use this for an outlier rejection if you take two Gaussians one centered
+[20:24] around what you think is the right solution and a very flat Gaussian for the remaining part
+[20:30] again very nice approach by developed by Pratik Agarwal and Edvin Olson and one of the kind of
+[20:37] notable approaches out there which is also used in real-world SLAM systems a second approach is
+[20:45] something which is called dynamic covariance scaling which doesn't have the property of
+[20:49] being able to run multiple modes but which has also some other nice properties in the
+[20:55] idea is actually very simple it's also just a special case of something that we will see
+[21:00] later on or dive more into details and the key idea is basically introduce an additional weight
+[21:05] to constraints and you're being able to down weight constraints if you think they are outliers so the
+[21:11] standard least squares approach as we said we are minimizing the sum of all our constraints that we
+[21:19] have again error vector information matrix error vector and so we are minimizing the squared error
+[21:26] that's what we are doing and what dynamic covariance scaling does it adds an additional
+[21:32] scaling term here in the middle so you can see this as a scalar that you multiply with your
+[21:37] information matrix so s square is sitting here so this kind of an additional waiting term that you
+[21:43] introduce and it's a waiting term which is an individual term for every constraint so for every
+[21:49] observation just add another scaling factor to it you can say if the scaling factor is one then
+[21:55] we actually have the standard least squares approach but what I can do is if I have a constraint
+[22:01] where I think it could be an outlier based on for example it's very far away from where expected to
+[22:07] be in the current iteration I can give him a smaller weight I can basically down weight it
+[22:11] so that the effect is smaller and it doesn't drag away the optimization from their good solution
+[22:19] and that's kind of the key idea behind it so we have the scaling parameter and there are
+[22:23] different ways so you can derive how the scaling parameter should be set up and what the dynamic
+[22:30] covariance scaling or DCS approach does it basically take the minimum of a value one
+[22:34] it basically means near the mean you keep it to one and stick with the standard least squares
+[22:41] approach or it takes this value over here so this chi-square was our overall error term without the
+[22:47] scaling factor in here and this here this Phi is basically the parameter that you can set to
+[22:54] influence the shape how aggressively you're basically up doing this this down weighting
+[23:00] and it's maybe hard to see what happens if you look to this equation so we can have a look to
+[23:06] a small illustration how that actually looks like so what you see here is in black the square error
+[23:11] so this is what your standard least squares approach would actually be optimizing and then
+[23:16] in blue we see the scaling function so this is this function s that we have seen before and the
+[23:22] red one is the scaled error function so the your your basically black error function scaled with
+[23:30] this blue curve and so this is basically in this in this area here both take the same shape both
+[23:41] have a squared error error shape and if they are if you are outside that area so outside this area
+[23:49] where the function s is one we have the original error which is shown over here this is kind of the
+[23:53] square error and the scaled error which is kind of this red part over here so the scaled down variant
+[23:59] of the error so if we are here in this situation the red curve would be the error function that
+[24:07] we are minimizing if we are moving closer this red curve goes more towards the black curve where
+[24:13] if we are moving further away this gets flatter and flatter and will be flattened down and this
+[24:19] point is also the point where we compute our linearization so if you linearize our function
+[24:23] and keep compute the Jacobian we have the scaling impacts our our Jacobian so the Jacobian changes
+[24:30] here it's not the Jacobian that doesn't look like this over here this is the Jacobian that will
+[24:34] actually generate another small video which you can see how how we change if we change the error
+[24:39] how the shape of this function actually looks like so you can see here the error is increasing
+[24:44] you've seen while we are in this area over here everything looks the same the the error functions
+[24:50] are the same but now the error is small and now gets smaller and smaller so I go up here error
+[24:56] increase up to here and then the error is actually weighted down again that means an error where
+[25:01] you're very very far away from your estimate it has even a smaller impact than the quadratic
+[25:06] error here at the border of the of your quadratic conversion basins quadratic function base and so
+[25:15] you can see this this area is actually where you assume to have noise in your measurement and
+[25:21] everything which kind of goes outside this is expected to be an outlier and you're slowly
+[25:26] decreasing it to even smaller values because you have data points which are very far away should
+[25:31] have a small impact but if something coming closer to an actual solution don't weigh down too much you
+[25:37] still want to kind of drag the Jacobian a bit stronger into the right direction so what DCS
+[25:43] basically does it adds additional waiting term to your error function and this waiting term is
+[25:48] computed in a certain way and the the waiting term depends on a known parameter and based on
+[25:55] the actual error value so the larger the error is the smaller the impact of this data point and if
+[26:02] you want to describe it as one idea weigh down a constraint the constraints that are far away from
+[26:08] your current mean estimate from your current best estimate and this works quite well for for
+[26:16] minimization is actually a special case of something which is called least squares with
+[26:21] robust kernels and that's actually the next thing that we're looking into so this dynamic
+[26:26] covariance scaling can be shown to be a special case of a so-called robust kernel and so we'll now
+[26:33] explore a little bit the possibilities of robust kernels and there's a technique also called
+[26:37] m-estimation which is around in the genetic community for example the mathematical community
+[26:44] of optimization since since quite a while and there are different weighing functions that you
+[26:48] can actually propose in order to be less sensitive to the outlier that you have in your data
+[26:55] association and again the key problem is again we ask these squares assume everything to be
+[27:00] Gaussian if we had out have outliers we actually have two little probability mass in the tails of
+[27:07] the distribution so we need basically to lift the tails in order to account to have a larger number
+[27:13] of outliers which are even very far away from your current estimate and basically how much you
+[27:20] actually lift the tails of a distribution tells you how many outliers you're you're expect to have
+[27:26] and also kind of what the distribution of the outliers is are they're completely random distributed
+[27:32] all over the place or if there's still some some information about how they actually distributed
+[27:39] and so this robust m-estimators are very similar then to this weighing and we can actually see that
+[27:47] there's a strong connection between them but first what they're doing they're basically saying we
+[27:51] don't take the actual squared error we just take the error and squeeze it through another function
+[27:57] and this is what is often referred to as the the function row so row of e and e is now the the not
+[28:07] the error vector but the value of your of your error function and it's used to define a probability
+[28:17] density function typically in a way saying p of e is x of minus rho times of e so it is another
+[28:24] function that we put into our optimization that allows us to treat constraints in a different way
+[28:33] depending on the actual error value so similar to DCS or if you make the connection to DCS this
+[28:41] function row would just be a quadratic function that uses this s as an additional scaling parameter
+[28:48] and if you think about the Gaussian case then this row would be quadratic function simply quadratic
+[28:57] so overall we are doing it want to do exactly the same thing we want to minimize the negative
+[29:04] log likelihood of this term and given that we ensure that this row sits inside the exponential
+[29:10] function so the max mixture couldn't be expressed in a nice way like this or the sum of Gaussian
+[29:14] couldn't be expressed in a nice way like this I have to say max mixture itself could then we have
+[29:21] the sum of our rows of these error values over here so again if we look to the Gaussian case
+[29:27] then this function row of e would simply be e squared and then we are minimizing this error
+[29:35] term over here okay and so now we can actually change this function role to account for different
+[29:42] outliers or give outliers different effects and there are different ways so you can do this we
+[29:47] can take the the absolute value the L1 norm then my function row is simply the absolute value of
+[29:53] that one way you can do or a very popular choice is the Hooper M estimator what the Hooper M
+[30:00] estimator does it basically says okay let's assume we have the squared error case if the
+[30:07] error or the absolute value of the error is smaller than a constant so it basically means
+[30:11] if the error is smaller than C away from 0 then we basically have a quadratic function and if we
+[30:19] are otherwise if we are outside so the error is larger than C then we basically have a linear
+[30:25] function over here which just grows linearly and not quadratically anymore and there is a large
+[30:30] number of different M estimators that you can cushy is also very popular one this corrupted
+[30:36] Gaussian that we actually seen before with the max mixture approach can be embedded actually into
+[30:41] here or at least as an approximation can be embedded into here like scissor man a large
+[30:46] number of other kernels that are out there so just to have a few illustrations so the the Hooper
+[30:51] kernel Hooper loss that I explained before is a quadratic function near 0 and then turns into a
+[30:58] linear function the further you go away so basically you say you make a decision is e larger than my
+[31:05] constant C if yes I treat it as an outlier if it is an outlier I use a linear function or it is
+[31:11] smaller than C then I regard as an inlier and I use my standard quadratic function quite easy
+[31:17] quite intuitive and one standard choice that is often used but again we can see there is a large
+[31:23] number of different ways how we can define our robust function l1 norm Hooper and a large number
+[31:29] of other variants and they even much more than those that I've shown here and what you can see
+[31:34] is typically this function are often somehow related to the quadratic function close to 0
+[31:41] except the l1 norm and then turn into something which is flatter than a Gaussian outside so it
+[31:50] can even be the case that we simply say something which is an outlier is not even considered anymore
+[31:55] because here all the Jacobians would be 0 so the contribution in the optimization problem is not
+[32:01] there anymore so having this robust loss function that would like now to explain a little bit how
+[32:10] what's the link between the weighted least squares and the this robust estimation so if you think
+[32:15] about weighted least squares we can write this as our error function times waiting term that we use
+[32:22] to it and the waiting term in our example could for example be the the information matrix so if
+[32:28] you take the information matrix out of this term and put it in here at least the squared value
+[32:32] that's actually equivalent so the information matrix doesn't do much more than doing performing
+[32:36] a waiting actually but we can say we introduce your weight which weights our constraints or we
+[32:41] have our robust estimation where we have our argument operator over the sum and not explicitly
+[32:48] the quadratic term in here but our function row and now the question is how are those two related
+[32:53] with each other we can let's have a see which impact they have into our optimization problem
+[33:00] so again the gradient of the optimum is expected to go to zero and so what we can do is we can just
+[33:06] compute the Jacobian and see what is the overall impact in the in the weighted least squares and
+[33:14] in the in the robust estimation approach and then actually make a difference between them so we can
+[33:23] compute the first derivative of a constraint that we defined before in the weighted least squares
+[33:30] and what we actually see what we get out of this this is kind of the weight weighting term times
+[33:38] the actual error value and then the error value derived with respect to X so this is kind of the
+[33:45] original error derived with respect to X and we need to multiply it with the weight and the actual
+[33:51] weight evaluate at that position X and this should be set to zero if I'm approaching my solution so
+[33:58] it's something that the optimizers will use in order to find the to generate this is the linear
+[34:04] system and now we can do actually the same for the robust optimization so we compute our derivative
+[34:10] of the function row of the function e of X with respect to X and then we can see here that this
+[34:18] term is actually the same as we had it before and only here we got the first derivative of our
+[34:23] function row sitting in here evaluated at the actual error value so what we can do is now take
+[34:31] those two expression and put them together so this was kind of the first one and the second one
+[34:36] derivative that we had over here and if you now compare them with each other we can actually see
+[34:41] that this part is the same it's identical and they only differ in this part over here but the whole
+[34:47] form is the same that means nothing else if we take W times e and FX is equivalent to the first
+[34:55] derivative of my row function evaluated at the error at the current error then we actually have
+[35:02] the same thing so what we can do is we can use this because weight at least squares or something
+[35:07] we know how to solve we are solving all the time and say if we set the weight in a smart way is
+[35:13] giving it exactly this value so 1 divided by e times the first derivative of row evaluated at e
+[35:23] then we are actually implementing the robust estimation but can do this within the framework
+[35:28] of weighted least squares that's kind of the nice thing so we can use the toolbox that we already
+[35:33] have and by setting the weight in a smart way for each of those constraints we actually implement
+[35:41] this robust least squares approach which is one of the very popular ways for dealing with this
+[35:47] now what you now see is the or may see is the connection between the dynamic covariance scaling
+[35:52] and these robust squares where we actually set a special weight which had a special form so it was
+[35:58] corresponding to one special loss function or one robust kernel so there's a direct link between this
+[36:05] dynamic covariance scaling and performing this weighted least squares or robust estimation
+[36:11] where the weight has a certain form so there's that means in the end that there's a direct
+[36:16] relationship between dcs and one of those kernels of those robust kernels and it actually turns out
+[36:23] there is the gammon mcclure this is called is has a direct relation to this dynamic covariance
+[36:29] scaling so we can see this dynamic covariance scaling as a special case of this robust
+[36:34] estimation so what have we learned we can use the weighted least squares approach
+[36:40] and by setting the weight in a smart way can realize these robust least squares what I will
+[36:46] change is the jacobians inside our weighted least squares so if we add these robust kernels
+[36:52] we need to change our jacobians because we have seen that there comes an additional term to this
+[36:57] which depends on your kernel function and this needs to be taken into account so you need to
+[37:01] change your code a bit if you want to implement that but the rest of your weighted least squares
+[37:06] actually stays the same and the only thing that you need to do is you need to actually
+[37:11] or decide which of those robust kernels you actually want to use and this again a few examples
+[37:20] shown here and this choice basically depends on your outlier distribution so what do you know
+[37:25] about your outliers if there's something that you actually know about your outliers this is kind of
+[37:30] the key thing in here so people will experience experiment with those kernel functions and use
+[37:39] different techniques or just by trying an error saying okay I have this type of problem
+[37:43] let's try all the kernel functions look which kind of kernel function works quite well for the
+[37:48] problem in hand and this was one of the reasons with dynamic covariance scaling it works actually
+[37:53] quite well in the context of the SLAM problem that you typically experience at least for for
+[37:58] laser-based SLAM systems and provides good results for that so you can assume then that
+[38:04] the error distribution that you get is somehow related to DCS but again this is just an estimate
+[38:11] and may depend on your sensor setup on the environment you're in and all those different
+[38:15] choices so again it's kind of a little bit unsatisfactory that you need to know something
+[38:23] about your or you need to know quite a bit about your outlier distribution in order to select
+[38:27] the kernel in the right way so we introduced a tool for dealing with outliers but still you
+[38:32] often do not know really what type of outliers you have so most of the time
+[38:36] it's a try and error procedure which of the robust kernels actually work well
+[38:41] one way to improve the situation are generalized robust kernels where we don't necessarily commit
+[38:49] on one single kernel but actually can try a so-called family of kernels and it boils down
+[38:55] to answering the question which kernel function should I use which function to use to choose
+[38:59] for my problem because as I said before it depends on the type of outliers so if you look to
+[39:07] a set of especially visual SLAM system or bundle adjustment systems out there which are which work
+[39:13] robustly in reality what you see how they do this is they say okay let's start initially with
+[39:20] some kernel which has very strong tails so those which are doing extremely extremely extreme or
+[39:29] very in an extreme way from the quadratic form if you're far away and we run a certain number
+[39:35] of outliers let's say n1 iterations of all these squares approach doing the strong outlier
+[39:39] rejection and then we're actually weakening them saying okay we assume to be kind of closer to our
+[39:46] guess and then perform maybe some iterations with a weaker kernel with weaker tail so we kind of
+[39:50] combine those and then we say ah then we inspect them and remove all the outliers which are larger
+[39:56] than my convergence of agency and then we say okay now everything which is kind of further away
+[40:03] from season outline we put it away we throw it away and then we optimize just with the gaussian
+[40:08] or maybe huber because some of the points in this last iteration may move out of these the the area
+[40:15] plus minus c again so we may don't want to make it too bad so let's say gaussian or huber with
+[40:20] the rest which remains and you can see yes you can do this you can implement this but it's kind of
+[40:26] you're varying your kernel in between and making if then out statement that many iteration in this
+[40:30] way that many iteration that way that's okay but it's kind of not very beautiful let's see if we
+[40:36] can do that actually better um so there are different ways for um describing error functions
+[40:43] with this robust kernel function sorry and um one popular approach on a popular approach
+[40:49] interesting approach was published last year by baron which uses this form of robust kernel you
+[40:56] can see this robust kernel has more parameters before we basically had e or e and c so c was
+[41:03] not explicitly a parameter in here but it was implicitly a parameter because it was kind of
+[41:08] where do you change from your quadratic error function to some other form of error function
+[41:14] but he had put it explicitly as a parameter and but it has an additional alpha parameter so this
+[41:19] alpha is kind of the thing which is new in there and the idea is that by changing the alpha
+[41:24] parameter you're actually changing the shape of your loss function and it turns out that
+[41:29] for different alpha values you actually get different um different perform or
+[41:37] you generalize different existing robust kernels so for example for alpha equals to two you will
+[41:43] realize the l2 loss so the quadratic error term um with l equals one you will realize
+[41:52] absoido huber or something very similar to huber with alpha equals zero you will realize
+[41:58] cushy with alpha equals minus two you will realize the gammon mclure kernel so the thing which is
+[42:05] very similar to dcs and you can actually bring it down until minus infinity and then you have
+[42:09] an extremely flat distribution over here and this is kind of a way where you can vary the different
+[42:17] um shapes of your loss functions based on the robust kernels that you have let's have a look
+[42:25] how they look like so what you see here on that slide is the different robust kernels or loss
+[42:32] function that you actually generate when you change your alpha parameter so this curve over
+[42:37] here you obtain if you set alpha equals to two if alpha equals alpha equals 1.5 equals to one
+[42:45] so you can see here this is something which looks like huber and the further you decrease
+[42:50] your values to zero in negative values until minus infinity then you actually get this shape
+[42:57] and um so you can see by varying these alpha parameter by making it smaller you reduce the
+[43:02] impact that the outliers will have until minus infinity is the lowest weighting that you can
+[43:08] generate okay so let's have a look how the weighting function actually changes so what
+[43:14] you see here on the right hand side is the weight that you're actually computing in your
+[43:18] weighted least squares so if you use the squared kernel so this one over here so alpha equals to
+[43:24] two then you actually get a weight of one all the time so this weight of one means you basically
+[43:28] don't do any weighting you're using the standard least squares approach if you change the alpha
+[43:34] parameter 1.5 1 0.5 0 and so on getting smaller you actually get this weighting term so though
+[43:44] you can see the smaller alpha gets the higher is the down weighting of the outliers until alpha
+[43:52] equals minus infinity when you have the strongest down weighting of the of the outliers so again
+[43:59] alpha equals two equals the standard least squares and the smaller you make alpha the
+[44:06] stronger the outlier down weighting actually happens to be so let's have a look how that
+[44:13] looks given different error distribution so what you see here in this histogram the blue histogram
+[44:19] are the actual distribution of residuals so if you generate outliers artificially you are in control
+[44:25] of this residual distribution and then you generate them and then you can see how the
+[44:31] different loss functions actually perform and what you can see here is that all the loss functions
+[44:36] that you see over here show their advantage at a certain type of outlier distribution which is
+[44:41] what we expect right so if we generate outliers according to Cauchy distribution Cauchy should
+[44:47] do the best job and the same holds for others but what you also see is kind of this yellow curve
+[44:52] which is here called adaptive and this is kind of the function which always fits to the outlier
+[44:59] distribution well and this is basically a function if you if you tune the alpha parameter to the
+[45:05] residual distribution we actually get the outlier distribution or the the loss function which best
+[45:11] represents our outlier distribution so through this adjustment by turning the knob this alpha
+[45:17] knob we can actually adapt the loss function to our outlier distribution that it best fits our
+[45:23] outlier distribution at that point in time would also recommend the original video by Jonathan
+[45:28] Barron who proposed this approach it's a very nice video which was nice illustration shows
+[45:34] how the approach actually works and selects the outlier approach the outliers so what I next one
+[45:41] is shown here is a small video where you can see how the what the adaptive weight of Barron does
+[45:48] and how the residual looks like and how a variant of our approach which I will explain in a second
+[45:53] actually works for different outlier distributions so what the problem with the
+[45:58] um with this with the adaptive approach from Barron is if you want to optimize
+[46:02] your alpha parameter inside your optimization approach then you have an issue that if your
+[46:09] alpha goes below zero then you actually leave the world of probability distributions where
+[46:15] the outlier distribution is actually a probability distribution because you suffer from the problem
+[46:19] that a normalizing integral gets infinitely large as we will see in a second so you can only
+[46:24] basically automatically adapt your weights in the area from two to zero and so what you see in here
+[46:32] is four different residual distributions so you can adapt the Barron and the variant that I will
+[46:38] present in a second to address the outlier distribution where it actually comes from and
+[46:44] here you can see that Barron cannot optimize further because this takes over negative values
+[46:49] but if you take another approach you actually get can adapt to your current outlier distribution
+[46:56] so let's have a look how that looks like so the goal now is not just to manually select one
+[47:01] adaptive kernel but to make a joint optimization over our original problem and determining alpha
+[47:08] so we want to say jointly optimize the actual optimization problem that we have
+[47:13] and determine the kernel function at the same point in time so then our minimization problem
+[47:19] has our unknowns x as before and we add this additional parameter alpha and then we use the
+[47:27] the ROAS or the adaptive kernel by Barron and put the error in here so c is now assumed to be a
+[47:33] constant it's not set in here but the alpha parameter sits in here and so in order what we
+[47:39] then do we define a probability distribution over this general loss function to basically
+[47:44] get our outlier distribution which is then a normalization constant which sits here in front
+[47:51] and then the exponent of minus our role as we did it also before for the robust B-squares approach
+[47:57] and then we need to compute this partition function or this normalization function z of alpha
+[48:03] which is an integral from minus infinity to infinity of this function so that
+[48:07] our probability distribution in the end sums up to one or integrates to one and now
+[48:15] so what we need to do is if we take our adaptive loss function our adaptive loss function is then
+[48:20] the negative log likelihood the negative log probability or likelihood of this term which is
+[48:24] our our row function plus the log of this zn and then we have the problem with this terms that
+[48:35] this value over here actually actually gets infinitely large so so we have this this term
+[48:44] can be can approach infinity for negative alpha values so if alpha is positive everything is fine
+[48:50] this will be a finite value but if alpha is negative then this term gets infinitely large
+[48:59] and that's a problem that we have because we then can't we actually don't get a probability
+[49:04] distribution for our error distribution that's something that is suboptimal so the problem sits
+[49:10] here in these uh in the integrals from minus infinity to infinity because we're basically
+[49:16] approaching a constant or slowly decreasing function for those heavy tails um so what we
+[49:21] can do is we can just make a small let's say trick and say let's not integrate from minus
+[49:28] infinity to infinity because i assume in reality i won't have these extreme error error values so
+[49:34] we typically can assume or we can make the assumption it's clearly an assumption
+[49:38] that we say we want to limit the maximum outlier that we actually consider and everything outside
+[49:43] is actually not taken into account basically everything outside we completely ignore
+[49:48] in our optimization problem so we then can put replace this infinity by some parameter tau
+[49:55] so they only integrate from minus tau to tau and not from minus infinity to infinity anymore and
+[50:01] through this limitation of this range we actually get back a probability distribution so that we
+[50:07] then can use this kind of modified adaptive loss function and illustrated how the how the the row
+[50:17] function looks like and how the corresponding weight actually looks like and what you see here
+[50:21] now we limit tau from minus 10 to 10 so you can see at 10 those curves actually drop down
+[50:28] to zero and so we can actually say only in this range we take the the the outliers into
+[50:37] account everything which is louder we just completely take out of our optimization problem
+[50:41] so whatever is is larger simply ignore to not take into account anymore as the original constraints
+[50:46] we just drop them from the optimization problem so this now so this kind of allows us now to to
+[50:55] again have probability distributions again an approximation from the original function and take
+[51:01] that into account in order to compute the error and the loss function at the same point in time
+[51:09] what you can see here actually on this curve is that if you are have a squared error like this
+[51:15] function over here and all your error values are small you will still prefer the squared error
+[51:20] rather than another loss function because you get as I have a lower offset over here so this offset
+[51:25] is basically come from this normalization function and the more aggressive your kernel gets
+[51:29] the larger the offset that you want to add so if you actually have a lot of outliers it will pay
+[51:35] the price for those offsets but if you are an outlier free case it will actually take the
+[51:40] squared function because then you actually get the lowest possible values out so what you now
+[51:44] would need you you could do is you could take this loss function and jointly optimize over
+[51:49] your parameters and over your alpha so as we said before you solve the joint optimization problem
+[51:56] and the idea of weighted least squares using this as your robust kernel function the problem
+[52:03] however is it leads to some problems in practice if you want to do this at least for more complex
+[52:09] problems so for simpler problems it turned out we found that this actually works quite well
+[52:13] but for larger problems you can actually run into issues so one of the issues is that this
+[52:19] alpha can dominate the parameter estimation process especially from complex problems quite
+[52:24] substantially so the system kind of prefers to turn the alpha knob because the effect that it
+[52:30] has is much smaller than turning the and then changing actually those parameters so we didn't
+[52:35] find that or our experience that it was not very stable to actually do that the second thing is
+[52:40] you actually sent quite sensitive also to your initial guess and one of the other things which
+[52:45] is not that problematic from a general perspective but from a user perspective is you need to
+[52:50] recompute your jacobians because now alpha is part of a problem and you need to derive everything
+[52:54] also with respect to alpha and so you need to put hands on your code and change your code again
+[52:59] if you before had already working least squares optimization system running so therefore we can
+[53:07] take another alternative approach which is using an expectation maximization based optimization
+[53:13] approach using this robust kernel so you can see this or expectation maximization to be just two
+[53:19] steps an estimation step and a maximization step in an estimation step we estimate a certain
+[53:23] parameter and the maximization step we then maximize an error function using the parameters
+[53:29] from the e step being fixed and that's and then this is an iterative process and that's exactly
+[53:35] what we're doing here in the e step we are estimating the alpha parameter for the current
+[53:39] iteration and then in the n step we are optimizing our standard least squares problem with a fixed
+[53:45] alpha see how the result looks like and then we are re-estimating the alpha based the on the
+[53:50] previous parameter set that comes out of the m step and then we re-evaluate our alpha so
+[53:54] we're iterating forth and back between estimating alpha but keeping the parameters fixed and then
+[54:00] maximizing or minimizing our function so that the overall error gets minimized but not changing
+[54:07] alpha and saying okay now we have a new solution let's inspect how alpha should look like we
+[54:11] perform the estimation of alpha get the best alpha out and then again perform our minimization
+[54:16] and we can kind of iterate forth and back between those two approaches this is something that we
+[54:21] found actually to work at least in the context of SLAM ICP or bundle adjustment approaches
+[54:27] much more robust than treating everything as a joint optimization problem I also have a few
+[54:32] examples here one is a nice example from the ICP where you can use this robust kernel also inside
+[54:39] your ICP approach and what you can actually see here is a car moving through on a highway-like
+[54:47] sequence it's part of the kitty data set and uses a 64-beam LiDAR scanner which takes this 360 degree
+[54:55] views around the world and you can do this with a standard let's say Huber loss which you use
+[54:59] in order to deal with outliers and you can use this with this adaptive loss function
+[55:04] and what you can see here is you have actually cars which are overtaking the the vehicle with
+[55:09] the scandal center on top so other vehicles and the problem with the other vehicles move through
+[55:14] the environment so you have dynamic objects especially in situations where you just have
+[55:18] a very flat surface over here which constrains your movement basically up and down but doesn't
+[55:23] give you a lot of constraints where you're on that road so you can basically slide along those road
+[55:27] because there's little structure around and then it can actually happen that the ICP uses the
+[55:33] two different views of the cars at different points in time and align them on top of each
+[55:37] other basically drags the car assuming that this car would actually be standing and of course this
+[55:44] is a wrong estimate so and this will lead to wrong alignments you can see then that alignment
+[55:48] errors pop up if you use this robust loss function it would actually say okay I'm fine with that this
+[55:54] car is not aligned treat the car as an outlier and let the other thing move align themselves
+[56:01] in the right way and have a small video which shows actually those two sequences
+[56:05] are one after the other first using huber and then using the adaptive kernel and you can actually see
+[56:09] over time in a small plot how the alpha parameter changes you can really see that in some situations
+[56:15] you are fine with your huber loss or cushy or whatever you use but in certain outlier rich
+[56:20] situations the value actually drops down to the minimum value of minus 10 in this example
+[56:26] performs the outlier rejection before it goes back to its to to higher values so this is a
+[56:32] small example you will see that the car actually driving here first using a fixed kernel you can
+[56:39] see the car driving around and in a few seconds you will see the other cars here the blue car
+[56:45] approaching the car overtaking the car and then there are very little structures to align for now
+[56:50] you can see the car basically stopped and actually starts moving backwards because it is it basically
+[56:55] aligns itself on that car until the car is gone if you take the other approach you can see how
+[57:00] the robust kernel is estimated here see your alpha values everything is fine now the car is approaching
+[57:05] and this value drops so you actually drop down perform a strong outlier rejection until the car
+[57:10] is overtaken and then you continue driving along the road and this is one of the examples where
+[57:17] this adaptive kernel is very helpful because it allows you to adapt your state estimation problem
+[57:22] your author rejection to the current situation that you have for example here on that road or
+[57:30] in your slam problem or in your icp or your bundle adjustment so the em-based approach using this
+[57:37] adaptive kernel is actually a quite attractive way and because it estimates the kernel and the
+[57:43] unknown parameters in kind of an iterative fashion so first the kernel then the parameters and the
+[57:48] kernel again then the parameters until it converges and it's from our experience provides
+[57:55] better results than doing a joint optimization at least for typical problems in in robot mapping
+[58:01] that we experience here and still the kernel function is able to adapt to the current
+[58:06] situation so alpha changes depending on your situation what you need to do as an approximation
+[58:12] is to actually limit the range of your of your view integration in this partition function
+[58:18] so this is an approximation that you basically integrate only in a range whatever from minus
+[58:24] 10 sigma to plus 10 sigma or if you normalize it to sigma or you're taking even values of 102
+[58:32] count but you have to set a constant offset for your optimization but then it's actually an
+[58:38] attractive approach which adapts to the current outlier situation in every point in time and
+[58:44] another nice advantage is that you actually don't need to change your least squares optimization
+[58:48] problem because none of the jacobean changes because you're taking the alpha estimation out
+[58:53] of the least squares problem do this in an em fashion so you have to do some coding outside
+[58:57] but then inside the the least squares you don't need to touch your least squares the only thing
+[59:02] you need to do is of course you need to implement the kernel function itself and the weight can be
+[59:08] directly put in because you compute it in closed form once you have your once you have determined
+[59:13] your alpha in your east step of the em but you don't need to change the jacobeans inside except
+[59:20] of setting a weight to this jacobeans so to sum up how do we deal with outliers in the context of
+[59:26] the simultaneous localization mapping problem there are different ways for dealing with outliers
+[59:30] during the optimization and the key question is what is the best way and this basically depends
+[59:34] on the question how does your error outlier distribution actually looks like and depending
+[59:39] on your outlier distribution you need to make a choice luckily at least if you're in the
+[59:47] single mode setup there's a way for doing this in automatic fashion as we just explained it here
+[59:52] if you are having multiple modes then actually i would recommend to use the the max mixture
+[59:59] model which is basically an approximation of using a sum of gaussians model to deal with
+[1:00:06] multimodalities and can also deal with outliers so the max mixture approach supports multimodal
+[1:00:11] constraints and it does so by taking a sum of gaussians making an approximation of it turning
+[1:00:17] the sum to the max operator which is advantages because of the of minimizing the negative log
+[1:00:22] likelihood and this is one way how you can deal with multimodal constraints and also deal with
+[1:00:28] outliers then dynamic covariance scaling are briefly introduced as a special case in the end
+[1:00:34] of the robust loss functions and this is a popular choice in the context of the simultaneous
+[1:00:39] localization mapping problem if you want to deal with a fixed kernel and we can actually show that
+[1:00:45] dcs is very similar to gem and mclure basically up to a constant or a scaling factor and so it's
+[1:00:52] very similar but it's a good choice if you want to commit to one kernel and several of the
+[1:01:00] error minimization toolboxes like g2o for example directly allows you to implement them to run dcs
+[1:01:06] but just by putting on a flag which can be advantages if you want to dive more deeper
+[1:01:12] into that then you need to look to the adaptive kernels and adaptive kernels are a technique
+[1:01:22] where you don't commit to one of those of your kernel functions or one of your row functions
+[1:01:28] which defines the shape of your outlier distribution but which estimates the shape
+[1:01:34] at the same point in time again if you know your outline distribution you're fine you commit to
+[1:01:39] your kernel but if you don't know that and i guess i would argue that most people don't know
+[1:01:42] how their outline distribution looks like then going for this em style adaptive estimation is
+[1:01:48] something that i would recommend still a lot of systems today use huber as their standard choice
+[1:01:54] but yeah it's just it depends if your outline distribution is huber it's fine it's better than
+[1:01:59] running the standard least squares but the question is is the outlier objection capabilities
+[1:02:04] enough for your problem in hand and especially for bundle adjustment problems for example i would
+[1:02:09] argue it's often not the case you can as a more aggressive kernel use gem and mclure or dcs as we
+[1:02:16] said it works quite well in the context of slam that's my experience but if i'm setting up a slam
+[1:02:22] system today i would go for this em based estimation using the adaptive kernel approach
+[1:02:29] so with this i'm coming to the end i will thank you very much and point out you to this kind of
+[1:02:33] four works here which introduce the max mixture approach dynamic covariance scaling these general
+[1:02:37] robust loss functions which was loss function was presented last year and as well as a new version
+[1:02:44] where we take this em based maximization into account in order to deal with robotic problems
+[1:02:49] with this thank you very much i hope you learned how you can deal with outliers in your data
+[1:02:54] association in the context of the draft based slam problem or least squares in general and hope that
+[1:03:00] was a helpful reference so that you can put hands on your optimizer in order to deal with
+[1:03:07] non-perfect datas thank you very much

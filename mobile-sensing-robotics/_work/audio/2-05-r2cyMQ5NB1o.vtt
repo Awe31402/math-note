@@ -1,0 +1,1901 @@
+WEBVTT
+
+00:00.000 --> 00:06.180
+Hello, I would like to talk today about least squares in a rather informal way and introduce
+
+00:06.180 --> 00:11.940
+you to a tool that is very handy for solving a large set of problems, especially state
+
+00:11.940 --> 00:15.540
+estimation problems, and that's what we will be using it for here.
+
+00:15.540 --> 00:20.100
+So just as a reminder, we start out with that because we want to use it as a tool to address
+
+00:20.100 --> 00:24.820
+the simultaneous localization problem, and we are especially looking here into one variant
+
+00:24.820 --> 00:29.060
+of the simultaneous localization mapping problem, which is a graph-based approach.
+
+00:29.120 --> 00:36.300
+So where we use a graph consisting of observations and controls and try to treat this as an optimization
+
+00:36.300 --> 00:42.300
+problem, and for that we will use the tool of least squares, so graph-based SLAM is nothing
+
+00:42.300 --> 00:45.240
+else than a least squares approach to SLAM.
+
+00:45.240 --> 00:50.540
+And in order to understand how that works, I would like to introduce you today into the
+
+00:50.540 --> 00:51.880
+least squares problem.
+
+00:51.880 --> 00:54.420
+So what is least squares for?
+
+00:54.420 --> 00:59.540
+It is a general approach for computing a solution of an overdetermined system, and
+
+00:59.540 --> 01:07.160
+it does that in a way that the small mistakes that we do everywhere is minimized, and we
+
+01:07.160 --> 01:11.100
+are minimizing the squared errors or the sum of the squared errors.
+
+01:11.100 --> 01:13.980
+So let's take a very concrete example first.
+
+01:13.980 --> 01:15.920
+What can be an overdetermined system?
+
+01:15.920 --> 01:20.140
+So for example, we have a set of parameters that we want to estimate, and we have a set
+
+01:20.140 --> 01:24.440
+of observations that we get which tell us something about those parameters.
+
+01:24.440 --> 01:28.340
+And then it is often the case that we have actually a large number of those observations
+
+01:28.340 --> 01:35.300
+because we want to estimate those parameters as good as possible, so we have more observations
+
+01:35.300 --> 01:40.260
+than parameters or more information in those observations than our parameters.
+
+01:40.260 --> 01:44.420
+And then, given that we have always noise in our observations, we will not find a perfect
+
+01:44.420 --> 01:45.420
+solution.
+
+01:45.420 --> 01:52.300
+We will not find the set of parameters that brings all the whole system to zero mistakes.
+
+01:52.300 --> 01:56.140
+So there will always be small noise values remaining.
+
+01:56.140 --> 02:01.580
+And we're trying to find parameters that minimize the sum of those squared errors.
+
+02:01.580 --> 02:05.080
+So overall, we say we have more equations than unknowns.
+
+02:05.080 --> 02:09.460
+Unknowns are our parameters, equations are the things that, at least in the way we use
+
+02:09.460 --> 02:13.540
+least squares, stem from our observations.
+
+02:13.540 --> 02:19.100
+And we want to find the unknowns or parameters so that the sum of the squared errors is minimized.
+
+02:19.100 --> 02:20.580
+And that's the standard approach.
+
+02:20.580 --> 02:24.680
+It is out there since more than 200 years.
+
+02:24.680 --> 02:30.260
+It's very frequently used in a lot of engineering problems, and we often use it here in order
+
+02:30.260 --> 02:34.220
+to estimate model parameters given a set of observations.
+
+02:34.220 --> 02:41.260
+So in the context of the SLAM problem, our observations can be sensor observations like
+
+02:41.260 --> 02:48.280
+camera data or laser rangefinder data, but also observations from our odometry encoder,
+
+02:48.280 --> 02:49.800
+so how the wheels move.
+
+02:49.800 --> 02:53.500
+And then the parameters we're going to estimate are often the position of the platform in
+
+02:53.500 --> 02:58.700
+the environment at different points in time, as well as the location of, for example, 3D
+
+02:58.700 --> 03:00.720
+landmarks in the environment.
+
+03:00.720 --> 03:03.140
+So we're trying to estimate those parameters.
+
+03:03.140 --> 03:04.140
+Where are we?
+
+03:04.140 --> 03:06.060
+What does the world look like given observations?
+
+03:06.060 --> 03:10.920
+And something, the way you see how I formulate the problem, that's something that we have
+
+03:10.920 --> 03:14.800
+been doing since quite a while, taking those observations to estimate certain parameters
+
+03:14.800 --> 03:16.380
+of the state.
+
+03:16.380 --> 03:20.360
+So the least squares approach, as I said, is around since quite a while.
+
+03:20.360 --> 03:26.400
+Karl Friedrich Gauss at the young age of 18 years developed this approach, and it first
+
+03:26.400 --> 03:32.120
+showcased a few years later in order to estimate the future location of the asteroid Ceres
+
+03:32.120 --> 03:39.920
+in 1801, where it first showcased that is a good tool for solving relevant problems.
+
+03:39.920 --> 03:46.540
+Again, we will be using it here in the context of the simultaneous localization and mapping
+
+03:46.540 --> 03:52.080
+problem, and using it in order to build maps is something that has been there from the
+
+03:52.080 --> 03:53.440
+very early days on.
+
+03:53.440 --> 04:00.020
+Even Gauss himself used it in order to build maps or build, measure distinct points in
+
+04:00.020 --> 04:01.020
+the space.
+
+04:01.020 --> 04:02.340
+So it's not a very new problem.
+
+04:02.340 --> 04:08.220
+The only way which is new in robotics is that the way, what kind of constraints, what kind
+
+04:08.220 --> 04:13.340
+of observations we have, that we are interested in certain things like doing this very fast,
+
+04:13.340 --> 04:19.820
+treating this as an online problem, not an offline problem, having other data association
+
+04:19.820 --> 04:21.460
+challenges in there.
+
+04:21.460 --> 04:25.540
+So there are a lot of things which are kind of special in the way we address the SLAM
+
+04:25.540 --> 04:26.540
+problem.
+
+04:26.540 --> 04:30.620
+But the overall idea of using the least squares approach for solving this mapping problem
+
+04:30.620 --> 04:34.820
+is something which is around there, so it's quite wild.
+
+04:34.820 --> 04:36.940
+Okay, so let's get slightly more concrete.
+
+04:36.940 --> 04:38.460
+How does that look like?
+
+04:38.460 --> 04:43.500
+So I formulated in a way that we say we have a given set of observation functions, which
+
+04:43.500 --> 04:44.860
+are here called f.
+
+04:44.860 --> 04:46.360
+So these are those f's.
+
+04:46.360 --> 04:51.140
+And what this observation function does, it basically computes an expected observation
+
+04:51.140 --> 04:55.420
+or a predicted observation, assuming that it knows the state.
+
+04:55.420 --> 04:59.460
+So the state or our unknowns are this variable x here.
+
+04:59.460 --> 05:03.420
+And we say, given that we know what the world looks like and where we are, for example,
+
+05:03.420 --> 05:06.340
+we can actually compute what we are expecting to observe.
+
+05:06.340 --> 05:09.780
+And this is what this function f does, my observation function.
+
+05:09.780 --> 05:13.860
+So f tells me what should I observe.
+
+05:13.860 --> 05:21.020
+And then we have our z i, which is the actual measurements or actual observation.
+
+05:21.020 --> 05:25.920
+It doesn't have to be necessarily direct observation of the state x, but the measurement is strongly
+
+05:25.920 --> 05:36.000
+related to the state x, so that we can relate the state x through this observation function
+
+05:36.000 --> 05:38.320
+with our measurement.
+
+05:38.320 --> 05:46.420
+And this exactly happens with our z hat, so z hat is our predicted observation, which
+
+05:46.420 --> 05:52.120
+uses this observation function, as I described it, to predict what we should see given we
+
+05:52.120 --> 05:54.420
+are in state x.
+
+05:54.420 --> 06:01.180
+So the key idea is then to take what we are expecting to observe, assuming x is correct,
+
+06:01.180 --> 06:07.020
+and what we are actually observing, so the observation that we're actually obtaining,
+
+06:07.020 --> 06:12.300
+and then relate them with each other to see how should x look like so that the observations
+
+06:12.300 --> 06:14.980
+are as similar as possible.
+
+06:14.980 --> 06:19.100
+So the goal of the overall approach is to estimate the state x, which best explains
+
+06:19.100 --> 06:21.580
+my set of observations.
+
+06:21.580 --> 06:25.500
+We have more observation, let's say we have n observations over here from 1 to n, and
+
+06:25.500 --> 06:30.620
+then we want to find the n which best explains our observation 1 to n, and we do that in
+
+06:30.620 --> 06:35.260
+a way that we are looking to the mismatch between what we actually observe and what
+
+06:35.260 --> 06:40.300
+we are expected to observe, and then look into the squared error of that.
+
+06:40.300 --> 06:44.100
+So we can also explain in a graphical way in a quite easy form.
+
+06:44.100 --> 06:48.880
+So here x is our unknowns, our parameters that we want to estimate.
+
+06:48.880 --> 06:55.200
+Then we have our observation function, which tells us what should we see given the state
+
+06:55.200 --> 06:59.320
+of the world is x, and this gives us our predicted observation.
+
+06:59.320 --> 07:02.640
+These are those z's with a small hat on top of it.
+
+07:02.640 --> 07:04.840
+And this is basically what we as a user need to provide.
+
+07:04.840 --> 07:09.680
+So we need to provide this function to compute the predicted measurements, and it depends
+
+07:09.680 --> 07:12.380
+on the sensor, for example, that we are using.
+
+07:12.380 --> 07:17.080
+And then we obtain our real measurement, which of course depends also on the sensor, but
+
+07:17.080 --> 07:22.440
+now on the actual physical device and not on our model of the sensor.
+
+07:22.440 --> 07:25.700
+And then what we are doing, we are basically comparing those pairs.
+
+07:25.700 --> 07:31.960
+So z hat 1 with z hat 1, z hat 2 with z hat 2, and we typically compute differences between
+
+07:31.960 --> 07:36.080
+them in the easiest form, and then square those differences.
+
+07:36.080 --> 07:39.800
+What we then try to do, if we would sum up all those differences, square differences
+
+07:39.800 --> 07:47.320
+here into a sum, that we want to basically change x so that this sum gets minimized.
+
+07:47.320 --> 07:51.800
+So it's a problem we're going to find x so that the discrepancies or differences between
+
+07:51.800 --> 07:56.640
+the predicted measurements and the real measurements is actually as small as possible.
+
+07:56.640 --> 08:02.680
+Again, a small concrete example, assume x are the location of 3D points or 3D features
+
+08:02.680 --> 08:04.240
+in the environment.
+
+08:04.240 --> 08:09.480
+So this x basically says, whatever, at that certain location there is a point and it has
+
+08:09.480 --> 08:17.480
+a coordinate, whatever, x equals 10, y equals 2, and z equals 3, just as an example.
+
+08:17.480 --> 08:22.960
+And then I have observations, in this case let's say a camera, which is positioned somewhere
+
+08:22.960 --> 08:29.280
+in the environment, and then the observations are basically those points projected onto
+
+08:29.280 --> 08:30.280
+my image plane.
+
+08:30.280 --> 08:35.080
+So I get a pixel coordinate for each of those 3D features.
+
+08:35.080 --> 08:39.520
+And what I, as a user of that algorithm or designer of that algorithm, need to do, I
+
+08:39.520 --> 08:44.040
+need to specify this observation function f, and this observation function in this case
+
+08:44.040 --> 08:48.160
+describes the projection from the 3D world onto the 2D image plane.
+
+08:48.160 --> 08:55.120
+So I actually need to describe how a point is mapped into a pixel coordinate.
+
+08:55.120 --> 09:01.480
+So given that I put in a random coordinate, let's say 1, 1, 1, then I need to, this function
+
+09:01.480 --> 09:07.080
+tells me to which pixel coordinate this point 1, 1, 1 will actually be mapped to.
+
+09:07.080 --> 09:12.960
+And then I can compare my actual observations, so what the camera, the pixel location that
+
+09:12.960 --> 09:17.920
+I actually got in my real image, with the pixel location that I computed using my function
+
+09:17.920 --> 09:26.960
+f, and then I want to try to change the, or I'm basically shifting around the location
+
+09:26.960 --> 09:31.760
+of those points in the 3D world so that this difference gets minimized.
+
+09:31.760 --> 09:35.480
+The question, how do I actually move those x around, how do I vary this x?
+
+09:35.480 --> 09:38.960
+This is what the approach basically tells us.
+
+09:38.960 --> 09:44.700
+Okay, so now let's get slightly more formal and see how that is actually set up.
+
+09:44.700 --> 09:50.460
+So everything boils down to computing this error, so the discrepancy between the actual
+
+09:50.460 --> 09:53.500
+measurement and my predicted measurement.
+
+09:53.500 --> 09:58.300
+And in my notation here, this is typically always called ei, so because we have multiple
+
+09:58.300 --> 10:01.940
+of those observations, so this is index i.
+
+10:01.940 --> 10:07.040
+And this error function depends on the state, so it depends on my current configuration
+
+10:07.040 --> 10:10.260
+of the parameters, so my current vector x.
+
+10:10.260 --> 10:14.880
+And it's again, the observation I actually obtained, so there's nothing I can change
+
+10:14.880 --> 10:20.720
+in here because this is what I actually observed, minus this function which takes in the parameter
+
+10:20.720 --> 10:21.720
+x.
+
+10:22.060 --> 10:27.840
+The x in here, this will lead to a change in this f of x here, so it will lead to a
+
+10:27.840 --> 10:30.240
+different difference between those two.
+
+10:30.240 --> 10:36.420
+So this is just kind of the vector difference, so this is a bold e, so this is a vector estimating
+
+10:36.420 --> 10:42.120
+or referring to the difference between the actual measurement and the predicted measurement.
+
+10:42.120 --> 10:49.680
+And then under the assumption that we have normally distributed variables with zero mean,
+
+10:49.680 --> 10:53.960
+so there's no bias in there, so it's basically just, let's say, a Gaussian noise that my
+
+10:53.960 --> 11:01.000
+sensor provides, could be the pixel coordinate in the example of a camera or could be a difference
+
+11:01.000 --> 11:04.320
+in range for laser rangefinder, for example.
+
+11:04.320 --> 11:12.020
+And we also assume here that we know how good our sensor is, so we have a notation of uncertainty
+
+11:12.020 --> 11:18.240
+of this sensor, which is expressed in an information matrix here, our omega i, so every observation
+
+11:18.240 --> 11:21.120
+can, for example, have a different information matrix.
+
+11:21.120 --> 11:24.620
+And the information matrix is the inverse of the covariance matrix, so it basically
+
+11:24.620 --> 11:29.200
+tells me how much information does this measurement actually convey.
+
+11:29.200 --> 11:38.720
+And then we can turn the error vector here into a squared error by using the error vector,
+
+11:38.720 --> 11:44.200
+so this is the same e i, transpose it, and multiply it with e i, so we square it.
+
+11:44.640 --> 11:49.280
+And what we also do, we put the information matrix in here as a weight, okay?
+
+11:49.280 --> 11:53.280
+So this is kind of, we already have a weighted least squares here.
+
+11:53.280 --> 12:01.360
+If we say all observations have the same uncertainty, then we can actually also leave that out,
+
+12:01.360 --> 12:05.360
+and then just the error function itself, okay?
+
+12:05.360 --> 12:10.040
+But here we typically have, or assume to have, some notation of uncertainty, so we will keep
+
+12:10.040 --> 12:14.040
+this information matrix with us all the time.
+
+12:14.040 --> 12:20.280
+And this encodes the uncertainty of the individual measurements observation that we have.
+
+12:20.280 --> 12:26.480
+Okay, and then this e i, non-bold phase, is a scalar value, and this describes us the
+
+12:26.480 --> 12:31.800
+error that one single measurement actually generates, and it's the squared error term
+
+12:31.800 --> 12:35.960
+here for that single measurement i.
+
+12:35.960 --> 12:42.240
+Okay, given that we have more than one observation, so we have multiple observations, we are actually
+
+12:42.240 --> 12:45.680
+interested in minimizing the sum of all those squared errors.
+
+12:45.680 --> 12:54.360
+So our desired state x star, so the x that we're going to compute, our optimal state,
+
+12:54.360 --> 13:00.320
+is computed by minimizing a function f of x, or capital F of x, which is here the kind
+
+13:00.320 --> 13:05.880
+of global error function, which is a scalar, and it can be expanded by just being the sum
+
+13:05.880 --> 13:11.040
+of the individual error terms that we just computed on the previous slide.
+
+13:11.040 --> 13:15.520
+So these are the squared error terms, which are also scalar, of the individual measurements,
+
+13:15.520 --> 13:18.400
+and we are simply summing over all measurements.
+
+13:18.400 --> 13:24.660
+We can again expand that further and say this is the sum over the error vectors times the
+
+13:24.660 --> 13:28.880
+information matrix times the error vector, and we are summing over all of them.
+
+13:28.880 --> 13:36.720
+And this is the function that I want to minimize, so it's the sum of all the individual observations,
+
+13:36.720 --> 13:41.560
+the error that results from the individual observations obtained through comparing the
+
+13:41.560 --> 13:46.080
+actual observations with our predicted observations.
+
+13:46.080 --> 13:50.680
+Okay, so the goal is then to find the minimum of that function.
+
+13:50.680 --> 13:57.440
+So the parameter x, so we are varying this x, and we are interested in the state x that
+
+13:57.440 --> 14:00.800
+is the minimum of this function, a global minimum.
+
+14:00.800 --> 14:06.240
+In general, this is a complex problem, especially depending how this function f actually looks
+
+14:06.240 --> 14:07.240
+like.
+
+14:07.240 --> 14:11.680
+So in practice, we need numerical approaches in order to solve that problem.
+
+14:11.680 --> 14:18.760
+And typically this function f is also a non-linear function, and this can lead to situations
+
+14:18.760 --> 14:25.600
+that we may not even be able to find a good solution for our problem, and so we need iterative
+
+14:25.600 --> 14:30.040
+approaches, but still it's not guaranteed that we actually find the minimum all the
+
+14:30.040 --> 14:31.040
+time.
+
+14:31.040 --> 14:35.920
+What we typically need is a good initial guess, so we need to have a good initial value for
+
+14:35.920 --> 14:41.720
+our x, if we are very far away from our initial solution, then we in most of the cases will
+
+14:41.720 --> 14:48.920
+not find a reasonable solution, at least for most realistic real-world problems where these
+
+14:48.920 --> 14:51.400
+functions are often non-linear.
+
+14:51.400 --> 14:57.440
+And we also assume that our error function is, let's say, reasonably smooth in the, let's
+
+14:57.440 --> 15:03.480
+say, local neighborhood of the actual global, hopefully global minima, where our initial
+
+15:03.480 --> 15:04.480
+guess is close.
+
+15:04.480 --> 15:08.120
+So we assume to be kind of close enough so that we can actually, through an iterative
+
+15:08.120 --> 15:13.200
+error minimization, actually end up in the minimum error configuration.
+
+15:13.200 --> 15:19.200
+Again, in general, there's no guarantee that we actually find the global optimum in the
+
+15:19.200 --> 15:20.200
+general case.
+
+15:20.200 --> 15:24.840
+There are several variants of this problem where I can say something about convergence
+
+15:24.840 --> 15:30.640
+guarantees or about guarantees, but in the general form this is not possible, and what
+
+15:30.640 --> 15:35.040
+we are doing here, we are solving this problem through an iterative least squares approach,
+
+15:35.040 --> 15:41.080
+so iteratively computing local linearizations of this function, and then treating it as
+
+15:41.080 --> 15:47.520
+if the, this function f or the error function e would be a linear function, and then kind
+
+15:47.520 --> 15:55.680
+of going step by step iteratively towards the minimum, again, no guarantee that this
+
+15:55.680 --> 15:58.000
+is actually works out.
+
+15:58.000 --> 15:59.180
+Okay.
+
+15:59.180 --> 16:04.040
+So what do we need to do in order to solve this iterative local linearization?
+
+16:04.040 --> 16:11.500
+So the first thing we need to do is to compute a linearized variant of our vector error function
+
+16:11.500 --> 16:16.840
+ei, and so we assume to have an initial guess, and what we need to do, we need to locally
+
+16:16.840 --> 16:23.260
+linearize around the solution that we have this error function, and then we take this
+
+16:23.260 --> 16:29.700
+local linearization, and through the equation that we have, we square it, and then get our
+
+16:29.700 --> 16:31.540
+squared error function.
+
+16:31.540 --> 16:36.940
+Okay, and then we have a quadratic function in the end, and what do we need to do in order
+
+16:36.940 --> 16:39.100
+to compute the minimum of a quadratic function?
+
+16:39.100 --> 16:43.900
+It's something that you may know from your analysis classes at school, so we typically
+
+16:43.900 --> 16:49.500
+compute the first derivative, we set the first derivative to zero, and then solve the remaining
+
+16:49.500 --> 16:56.260
+system and then get a solution for the minimum of that function, this quadratic form.
+
+16:56.260 --> 17:01.540
+However, we have a setup here that this quadratic function was an approximation in the first
+
+17:01.540 --> 17:07.020
+place, so we're basically going back to the start and saying, okay, assuming that my solution
+
+17:07.020 --> 17:10.580
+got a bit better than before, let's simply do the same procedure again.
+
+17:10.580 --> 17:18.420
+So we are again computing the local linearizations, approximating the general error function by
+
+17:18.420 --> 17:24.220
+a quadratic function, computing the minimum, and then we actually iterate this process.
+
+17:24.220 --> 17:27.060
+So let's dive into the steps, how that actually works.
+
+17:27.060 --> 17:31.820
+The first thing we need to do is to linearize our original error function, because this
+
+17:31.820 --> 17:36.220
+function f is in general non-linear, and we need to compute an approximation for it so
+
+17:36.220 --> 17:42.500
+that we have a linear function so that in the end, we have to obtain actually a quadratic
+
+17:42.500 --> 17:43.860
+error term.
+
+17:44.860 --> 17:50.620
+For doing this, we do something which is called a Taylor expansion, and for computing the
+
+17:50.620 --> 17:55.780
+Taylor expansion, we need to compute the first derivative of our function e.
+
+17:55.780 --> 18:02.300
+So we are saying our function e is now slightly written as x plus delta x, and this x is now
+
+18:02.300 --> 18:08.100
+our initial guess, so it's kind of a constant in this quadratic iteration, and this delta
+
+18:08.100 --> 18:11.260
+x is actually our variation around this initial guess.
+
+18:11.660 --> 18:17.780
+So this is zero if we add the initial guess, and typically takes values slightly larger
+
+18:17.780 --> 18:23.380
+or smaller than zero, and expresses the variations around this initial guess.
+
+18:23.380 --> 18:26.180
+So how does this actually look like?
+
+18:26.180 --> 18:31.220
+So this is the error term at the location of the initial guess.
+
+18:31.220 --> 18:38.100
+So ei of x, but this x here is now a constant initial guess, so this term also is a constant
+
+18:38.140 --> 18:43.860
+and typically abbreviated with ei in the remaining, so just drop the of x of the initial guess
+
+18:43.860 --> 18:46.060
+just to have a more compact notation.
+
+18:46.060 --> 18:53.380
+And then we have a sum of this absolute value constant offset, so to say, and this here,
+
+18:53.380 --> 18:59.300
+this j is Jacobian, so the first derivative if we leave the one-dimensional world, so
+
+18:59.300 --> 19:07.820
+to say, and multiply this with this delta x, which is my vector, which is the variation
+
+19:08.820 --> 19:11.940
+from the initial guess, so this is a kind of a small error vector.
+
+19:11.940 --> 19:17.020
+And this is basically a linear function, so we are having our linearization point and
+
+19:17.020 --> 19:22.060
+have a linear function in the neighborhood of this linearization point.
+
+19:22.060 --> 19:24.980
+And how is this Jacobian computed?
+
+19:24.980 --> 19:28.220
+Just as a reminder, that's something that I generally assume you to know, how to compute
+
+19:28.220 --> 19:36.340
+Jacobians and deal with basic linear algebra, but just as a short reminder, so this is a
+
+19:36.860 --> 19:42.060
+matrix, and we have in the dimensions the number of dimension that my parameter x has
+
+19:42.060 --> 19:50.020
+here, and down here we have the number of dimensions of my function f that I'm actually
+
+19:50.020 --> 19:54.420
+for which I want to compute Jacobian, so this is a partial derivative of the first component
+
+19:54.420 --> 19:59.540
+of the function derived with respect to the first dimension of x, this is again the first
+
+19:59.540 --> 20:03.220
+dimension of this function f derived with respect to the second dimension of my vector
+
+20:03.220 --> 20:09.300
+x and so on, and down here I'm basically keeping the dimension to which I compute the
+
+20:09.300 --> 20:14.740
+derivation, so the x1 constant, and changing the first dimension of the function, second
+
+20:14.740 --> 20:18.060
+dimension of the function, third dimension of the function, and so on.
+
+20:18.060 --> 20:21.900
+So it's a matrix of my partial derivatives.
+
+20:21.900 --> 20:31.180
+Okay, so this is now an approximation of my error function, of the individual error function
+
+20:31.180 --> 20:39.740
+for every single observation, and it is now from the originally non-linear error, it turns
+
+20:39.740 --> 20:44.780
+into a linear function, so this is a linearization, so this is an approximation here, that's important
+
+20:44.780 --> 20:53.740
+to note, this is an approximation, okay, so what we now can do is, given that we have
+
+20:53.740 --> 21:00.540
+the individual vector error function linearized, we now need to compute the squared error term,
+
+21:01.020 --> 21:05.820
+using this linearized function and compute the squared error of this linearized function,
+
+21:05.820 --> 21:12.380
+so this is now Ei of x plus delta x as before, but again note that this Ei is now the squared
+
+21:12.380 --> 21:18.860
+error term, it's not a bold phase character, and now we are putting in first the definition,
+
+21:18.860 --> 21:24.460
+how was this term defined, so just kind of writing down the definition, this was the error
+
+21:24.540 --> 21:30.860
+in vector form transposed of x plus delta x times my information matrix times the second
+
+21:30.860 --> 21:36.860
+error term again, so this was just the definition of the squared error multiplied with the information
+
+21:36.860 --> 21:43.100
+matrix, so our information about how much we can trust our observation or how uncertain this
+
+21:43.100 --> 21:47.980
+observation actually is, so what I'm now doing, now I'm using this Taylor expansion that I just
+
+21:47.980 --> 21:55.340
+computed and I'm replacing this term and this term over here with my approximation from the
+
+21:55.900 --> 22:00.380
+Taylor step that I just did on the previous slide, so what I can do now, I can say okay,
+
+22:00.380 --> 22:05.740
+this is now not exactly the same anymore, just approximatively the same, and this is here now
+
+22:05.740 --> 22:13.180
+my Taylor expansion, so this Ei which was just the error value in my linearization point and then
+
+22:13.180 --> 22:19.900
+plus the Jacobian times the deviation in the Jacobian, and then I can just expand this
+
+22:19.900 --> 22:26.860
+expression over here and then I will get a number of different terms, this is just obtained by
+
+22:28.620 --> 22:35.900
+expanding those brackets over here, and then we see we have some terms where we have
+
+22:36.940 --> 22:42.460
+independent of x, that's your system over here, we have some terms which are those terms over here
+
+22:42.460 --> 22:51.020
+where we have a linear dependency in my unknown delta x here and here, and we have a fourth term
+
+22:51.020 --> 22:58.700
+over here and this fourth term has quadratic elements, so I have delta x and delta x appear
+
+22:58.700 --> 23:05.500
+twice in form of a multiplication in this equation, so what I now can do is I can
+
+23:06.380 --> 23:10.460
+take this term and rearrange it a little bit, so this is just kind of copy paste what we had
+
+23:10.460 --> 23:15.580
+on the previous slide, and then I can just do a small rearrangement of these terms over here
+
+23:15.580 --> 23:22.940
+in order to group them and basically introduce a new variable to make my notation easier,
+
+23:22.940 --> 23:29.260
+so I have a kind of a constant term which takes this c, this is ci, this is basically constant elements
+
+23:29.260 --> 23:37.740
+of this expression, then we have a second term which we regroup which contains
+
+23:38.300 --> 23:44.140
+these elements here of my error vector and these are basically all the linear elements,
+
+23:44.140 --> 23:53.740
+so this is two times and then this expression ei transposed omega i ji and these elements here
+
+23:53.740 --> 24:02.780
+I replace by bi transposed by a vector bi, so this is a vector, times delta x and here is a quadratic
+
+24:02.780 --> 24:08.780
+term and again all the quantities which do not depend on my delta x I summarize in one variable
+
+24:08.780 --> 24:14.780
+here hi and then I have a quadratic element in here, so what I then can do is I can just
+
+24:14.780 --> 24:23.180
+rewrite it using my c, b and h and then the final equation looks like it's ci plus two times bi
+
+24:23.180 --> 24:31.500
+transposed times delta x plus delta x transposed hi delta x, so my quadratic term over here,
+
+24:31.500 --> 24:36.300
+my linear term over here and my constant term over here and again I was introducing
+
+24:36.300 --> 24:40.380
+these variables and was packing basically everything into those variables where there
+
+24:40.380 --> 24:47.980
+was no dependencies on this delta x and so far this was just a rearrangement of the individual
+
+24:47.980 --> 24:53.420
+error terms, so there was no black magic ongoing, the only approximation I did was putting in
+
+24:53.420 --> 24:59.740
+my Taylor approximation and then I was just rearranging those terms and this was done now
+
+24:59.740 --> 25:05.260
+for one squared error term for one single observation and again overall I want to do
+
+25:05.260 --> 25:09.980
+this for all the observations, I'm looking to the sum of all observations, so I can use the same
+
+25:09.980 --> 25:16.380
+thing for the global error term, so the global error term f of x initial guess plus delta x,
+
+25:16.380 --> 25:22.140
+my variable is just the sum over all the individual error terms, so again this was the
+
+25:22.140 --> 25:29.500
+result of the previous slide, this is the term for one single constraint or one single observation
+
+25:30.060 --> 25:37.500
+and what I then can do is I can just move the sum element here into the
+
+25:37.500 --> 25:42.620
+individual sums here in the bracket, so I have the sum over all ci's, I have the sum over all
+
+25:42.620 --> 25:50.860
+bi's and I have the sum over all hi's because my delta x of course is the same in all the sums
+
+25:51.500 --> 25:58.460
+and so then I have a sum element which takes all the constant elements into account, I basically
+
+25:58.700 --> 26:05.580
+have a part and a sum which takes all the coefficients of the linear term into account
+
+26:05.580 --> 26:12.060
+and I have basically all the coefficients for the quadratic terms, so that I can again do the same
+
+26:13.340 --> 26:20.060
+rewriting defining this as a c, this as b and this as h without the index i because now the
+
+26:20.060 --> 26:27.580
+sum of the individual terms and just by a simple rewrite I can then express the global error as
+
+26:27.580 --> 26:37.020
+the constant c two times b transposed times delta x, so this b is a vector plus
+
+26:37.900 --> 26:47.100
+delta x transposed times h times delta x and this h is a matrix, okay and the b and the h which are
+
+26:47.100 --> 26:52.940
+the kind of important element that we'll need later on are actually defined here, the one is
+
+26:52.940 --> 26:57.820
+just the sum over all the coefficients of the linear term and the other is the sum of
+
+26:57.820 --> 27:04.300
+the coefficients of the quadratic term and this b and h are elements that we will actually need
+
+27:04.300 --> 27:12.700
+later on. So as a result what we have so far we linearized our individual error terms, the vectors
+
+27:12.700 --> 27:18.220
+and then computed the quadratic error terms and it turned out everything turns into a large
+
+27:18.220 --> 27:23.900
+quadratic form. So our overall function that we're going to minimize is expressed over here
+
+27:23.900 --> 27:29.660
+and our goal is to minimize this overall function and again how do we compute the minimum of a
+
+27:29.660 --> 27:36.620
+quadratic form? So you may again think about how do we compute the minimum of a parabola when you
+
+27:36.620 --> 27:42.140
+think about and all these classes you had in school what you typically did is you were computing
+
+27:42.140 --> 27:46.620
+the first derivative of this function and then you're setting this first derivative to zero
+
+27:47.260 --> 27:52.940
+and then you have an equation that you solve and you solve it right back to x and then this tells
+
+27:52.940 --> 27:58.940
+you where your minimum is and we are basically doing the same thing here in this high dimensional
+
+27:58.940 --> 28:03.500
+space. What we need to do is we need to compute the first derivative of this quadratic form
+
+28:04.540 --> 28:11.500
+then we will set this first derivative to zero and this will lead us to a system of linear equations
+
+28:11.500 --> 28:16.140
+and then we have to solve the system of linear equations to come towards our solution. So it's
+
+28:16.220 --> 28:21.260
+basically the same thing what you still probably know from your classes in school except that we
+
+28:21.260 --> 28:27.020
+don't do this for the 1D case we do this for an in an n-dimensional case but the overall
+
+28:27.020 --> 28:38.380
+here actually stays the same. Okay so assuming we have our quadratic form here x transposed
+
+28:38.380 --> 28:43.580
+or the general quadratic form of this form because also have a constant here but the constant is not
+
+28:43.580 --> 28:50.220
+really relevant for us because the constant will anyway be gone in when we're computing the first
+
+28:50.220 --> 28:57.100
+derivative and then the first derivative of this quadratic form is given by h plus h transposed
+
+28:57.100 --> 29:04.860
+times x plus b and so this is kind of for because we are in the in the form of where h is a matrix
+
+29:04.860 --> 29:11.340
+and not a scalar as you may know or remember it from school so where you would have this quadratic
+
+29:11.900 --> 29:17.740
+term would give two times x times the coefficient and this will give simply the coefficient so the
+
+29:17.740 --> 29:23.820
+coefficient stays the same except of the transposition and here this two times h is h
+
+29:23.820 --> 29:30.060
+plus h transposed because we are in the matrix form but you can directly see the analogy to the
+
+29:30.060 --> 29:35.420
+one-dimensional case. So this is now we know how to compute the first derivative of this quadratic
+
+29:35.420 --> 29:42.460
+form will give us this derivative so we can just take it and apply it to our problem. So again
+
+29:42.460 --> 29:47.820
+this was our quadratic form and then we compute the first derivative of this quadratic form.
+
+29:48.780 --> 29:56.940
+Again the c vanishes because it doesn't depend on delta x. We have here two times b times the
+
+29:56.940 --> 30:02.940
+transposed times delta x and if you go back this was this constant term over here this turns just
+
+30:02.940 --> 30:09.420
+into b so in this case this is 2b of course we have the the factor 2 is still in here
+
+30:09.420 --> 30:13.660
+so the first this part of the first derivative will give 2b and then we have the part
+
+30:13.660 --> 30:22.940
+and delta x transposed h delta x this will give us 2 times h times delta x okay and so this is now
+
+30:22.940 --> 30:31.020
+our first derivative of our error function. Okay so the next thing we need to do we need to set
+
+30:31.020 --> 30:39.100
+this element to zero solve it and then we are done. So overall this means we're computing the
+
+30:39.100 --> 30:43.820
+first derivative that's what we just did in the previous slide we are setting it to zero so we
+
+30:43.820 --> 30:53.020
+have zero times 2b plus 2h delta x of course you can see immediately the two vanishes we can move
+
+30:53.020 --> 30:59.420
+b to the other side so that we will have a system in the end that we need to solve which is h times
+
+30:59.420 --> 31:06.380
+delta x equals minus b and here you see this is a system of linear equations and now what we need
+
+31:06.380 --> 31:13.100
+to do we need to solve this system of linear equations to get the solution for our increments
+
+31:13.100 --> 31:20.540
+and I'm just writing this here now by inverting h so we're basically multiplying h inverse from
+
+31:20.540 --> 31:26.380
+the left hand side if we do this then this turns the identity matrix delta x remains and here we
+
+31:26.380 --> 31:34.460
+have minus h inverse times b and this gives you the solution for your increments in reality you
+
+31:34.460 --> 31:40.460
+will not compute this inverse explicitly there will be other ways to do this but this is kind of
+
+31:40.460 --> 31:47.740
+this one step to move these delta x more towards the right solution okay so this was kind of one
+
+31:47.740 --> 31:53.980
+step of our approach and in general we need to iterate this and this gives us the Gauss-Newton
+
+31:53.980 --> 32:00.220
+solution to this so what we are doing in every step we are linearizing around the current initial
+
+32:00.220 --> 32:06.620
+guess that we have x for each measurement so this was this first term over here we need to linearize
+
+32:06.620 --> 32:13.100
+all our error functions and we need to do that over and over again because we are changing the
+
+32:13.100 --> 32:17.820
+initial guess the initial guess is always the solution of the previous iteration so we need to
+
+32:17.820 --> 32:23.900
+do this real linearization for every iteration then we compute our terms b and our terms h by
+
+32:23.900 --> 32:28.620
+basically summing over all error functions multiplying the value of the error function
+
+32:28.620 --> 32:34.460
+the information matrix and the Jacobian or here Jacobian transposed information matrix Jacobian
+
+32:35.420 --> 32:41.820
+so we use this to compute our b and our h this gives us the elements for our linear system and
+
+32:41.820 --> 32:47.740
+we solve this linear system and then say our new x our new initial guess is the old initial guess
+
+32:48.220 --> 32:55.100
+plus my delta x star that I computed and this is an iterative approach I'm iterating this
+
+32:55.100 --> 33:01.100
+until all those delta x are basically zero or very close to zero and then I'm basically hopefully
+
+33:01.100 --> 33:10.060
+converged to my global optimum again no guarantee that is the global optimum but the it's the hope
+
+33:10.060 --> 33:16.460
+if our initial guess is good that we will actually end up at the global solution so this was a very
+
+33:16.940 --> 33:23.660
+and informal introduction to least squares and the least squares approach that we will be using in
+
+33:23.660 --> 33:30.860
+this course next I can show a very short example a very small example a very simple example how we
+
+33:30.860 --> 33:37.500
+can actually use this in order to perform a state estimation problem and I want to use the example
+
+33:37.500 --> 33:42.140
+now not using slam but let's say odometry calibration so again as a short reminder from
+
+33:42.140 --> 33:48.620
+last year odometry is basically the position of our platform computed by counting the revolution
+
+33:48.620 --> 33:53.740
+of the wheels so when we have typically odometry measurements which basically tell us how much did
+
+33:53.740 --> 33:59.580
+we actually move forward and typically you have systematic errors in this process let's say
+
+34:00.220 --> 34:05.500
+one wheel is has different air pressure for example slightly larger or smaller
+
+34:05.500 --> 34:10.220
+so you will experience a drift to one of navigating one or two one of the sides or
+
+34:10.220 --> 34:15.500
+not everything is geometrically in a perfect shape and what we want to do is we want to kind of
+
+34:15.500 --> 34:21.420
+find a way using the least squares approach for minimizing this or eliminating this systematic
+
+34:21.420 --> 34:26.460
+error through a calibration procedure and that's what we want to do so what we assume here we have
+
+34:26.460 --> 34:30.940
+let's say a sequence of a mobile platform driving around we have those odometry commands
+
+34:30.940 --> 34:37.020
+and we additionally have ground truth information so we know where the platform actually moved to
+
+34:37.020 --> 34:42.540
+and this ground truth information can be made available by either using certain sensors which
+
+34:42.540 --> 34:48.940
+are on board by running a slam system by using an external motion capture system by using a
+
+34:48.940 --> 34:52.860
+lighter scanner we have installed on top of it or by externally tracking that system that's something
+
+34:52.860 --> 34:58.540
+we don't care we just assume that we have ground truth odometry available so we assume we have the
+
+34:59.260 --> 35:04.060
+odometry that we measured and we have the ground truth odometry available so this
+
+35:04.060 --> 35:08.060
+u star i expressed here so just we have an external tracking system for that
+
+35:08.940 --> 35:15.660
+and then we take a very very simple function our assumption here is that we can compute
+
+35:15.660 --> 35:23.260
+a corrected odometry command u i prime which is just a three by three matrix
+
+35:24.620 --> 35:31.180
+multiplied with our obtained odometry command so this is basically our correction function which
+
+35:31.180 --> 35:37.980
+performs the correction and turns the uncalibrated odometry into the calibrated odometry so this is
+
+35:37.980 --> 35:44.460
+now a very simple function but it's pretty good for us for using this as an example on how to use
+
+35:44.460 --> 35:50.140
+our least squares problem so we obtain our correction function f and now to do that we need
+
+35:50.140 --> 35:55.500
+to find our parameters parameter vector x which is kind of how does this function look like so
+
+35:55.500 --> 36:00.860
+these are the parameters of this function f and that's my unknown that i actually want to estimate
+
+36:01.420 --> 36:07.740
+so let's say first what is the state vector here okay the state vector is this calibration function
+
+36:07.740 --> 36:15.340
+that i want to compute and so this state vector is then these nine elements which are used to design
+
+36:15.340 --> 36:22.300
+this function right so these are exactly those elements here so my state vector is simply
+
+36:22.300 --> 36:29.660
+nine-dimensional vector containing these nine elements of this function f okay so what is my
+
+36:29.660 --> 36:37.180
+error function again the error function is discrepancy between what actual status and what
+
+36:37.180 --> 36:44.140
+i think it is with my function so between the the truth or what i actually obtained and between the
+
+36:45.020 --> 36:50.780
+my model that i'm using for predicting that so in this case the error is simply given by
+
+36:51.580 --> 37:00.380
+what the actual position of the of the platform was minus this function this calibration function
+
+37:00.380 --> 37:07.740
+times u my my information that i actually get from my system here okay so what i then need to do is i
+
+37:07.740 --> 37:13.020
+need to the next step to do i need to take my error function and compute the first derivative
+
+37:13.020 --> 37:19.900
+of my error function so how does this actually look like so what i need to do is i need to
+
+37:19.900 --> 37:28.300
+take this and derive it with respect to my um with respect to my parameters so i need to take this
+
+37:28.300 --> 37:36.380
+function and derive it with respect to the individual dimensions of my state vector so
+
+37:37.020 --> 37:44.380
+it's basically de by dx and this is dx so i need to derive this expression over here
+
+37:45.100 --> 37:52.540
+with respect to all my unknowns so my jacobian will be a matrix which has um nine
+
+37:54.860 --> 38:03.260
+columns because we have these nine dimensions over here and that's three rows because this is
+
+38:03.260 --> 38:09.740
+a three-dimensional function okay so it is will be a three rows and nine columns
+
+38:10.540 --> 38:16.860
+and it actually turns out that this is a very very easy form so everything where nothing is
+
+38:16.860 --> 38:25.260
+written here it means um that there are zero elements because what happens i have my um my
+
+38:26.700 --> 38:33.340
+this term is my vector my ui star which is constant i'm multiplying this ui i say with
+
+38:34.140 --> 38:41.820
+respect to x y and theta in the 2d case and i need to multiply this term with this matrix over here
+
+38:41.820 --> 38:48.140
+so if i then compute the first derivative for example for this element um computing the first
+
+38:48.140 --> 38:57.020
+derivative with respect to x 1 1 so this term is constant this term over here will be multiplied
+
+38:57.580 --> 39:03.900
+with the first element of this vector so u i x the first component and this will be linear
+
+39:03.900 --> 39:10.220
+linear multiplication with this x 1 1 and then the second dimension is with this one and the
+
+39:10.220 --> 39:14.380
+third dimension with this one but they're all independent of x 1 1 so if i could be the first
+
+39:14.380 --> 39:20.140
+derivative of this term the only term that will remain is u i x so the first component of this
+
+39:20.140 --> 39:27.900
+vector and this is the same for y theta and so on so i will have here non-zero elements which
+
+39:27.900 --> 39:32.780
+are basically the elements of this vector over here and all the other elements here will be
+
+39:32.780 --> 39:40.300
+zero because there's no dependencies of this variable so all those elements are zero over here
+
+39:40.300 --> 39:47.340
+and what i additionally see in this jacobian is that there is no dependency on x so an x is never
+
+39:47.340 --> 39:52.620
+showing up in this jacobian and this is something which is not normally not the case but here it is
+
+39:52.620 --> 39:57.980
+the case what does it mean if i compute the first derivative and the first derivative does not
+
+39:57.980 --> 40:06.060
+depend on the variable anymore it actually means that my function was already a linear function
+
+40:06.060 --> 40:13.900
+beforehand because i basically have a constant first derivative so that means that i already have
+
+40:13.900 --> 40:22.300
+a linear function and it means that the i don't need to re-linearize so if i run my least squares
+
+40:22.300 --> 40:30.220
+approach and compute a solution and i would repeat the iteration again i would get exactly the same
+
+40:30.220 --> 40:36.060
+quantities in there okay so the initial guess doesn't matter so i just need it means i just
+
+40:36.060 --> 40:42.540
+need one single iteration and then i'm actually done and can compute my solution so now i have my
+
+40:43.020 --> 40:48.140
+so now i have my jacobian and then it's a standard procedure i just compute
+
+40:48.140 --> 40:55.980
+my h and my b get a system of linear equations i solve it and this gives me my state vector
+
+40:55.980 --> 41:00.860
+this state vector over here and then i put the state vector putting into my calibration function
+
+41:00.860 --> 41:08.860
+and i obtain my solution okay it's rather straightforward and the fact that the jacobian here
+
+41:08.860 --> 41:13.340
+is independent of x means that i don't need to iterate over this process
+
+41:14.860 --> 41:20.220
+so a few questions you may ask yourself um how would the parameters of this function actually
+
+41:20.220 --> 41:24.860
+look like if odometry would be perfect so how should this calibration function look like
+
+41:24.860 --> 41:31.020
+if modometry would already be perfect okay let's go back and look to this function over here if
+
+41:31.020 --> 41:39.980
+my odometry is already perfect that means this ui is already this ui star and then you know to
+
+41:39.980 --> 41:45.900
+bring this expression to zero this matrix here should actually be the identity matrix right so
+
+41:45.900 --> 41:50.460
+if i have the identity matrix over here your one elements and everything else is zero this term
+
+41:50.460 --> 41:55.340
+would always be zero and i have no error no error remaining and i found the minimum of my function
+
+41:55.900 --> 42:02.060
+so that would be the case if odometry would be perfect the next question is how many measurements
+
+42:02.060 --> 42:07.820
+do i actually need to find a solution to my calibration problem in here we need to look a
+
+42:07.820 --> 42:12.940
+little bit how many unknowns do we have and how much information does every single observation
+
+42:12.940 --> 42:18.620
+actually provides us so how many unknowns do we have nine unknowns these nine elements of this
+
+42:18.620 --> 42:25.660
+three by three matrix and with every observation we basically have a three-dimensional observation
+
+42:25.660 --> 42:31.980
+so at least at minimum we need to have three observations because we have nine unknowns we
+
+42:31.980 --> 42:38.060
+need to fill every observation gives us basically three equations so we need to have at least three
+
+42:38.620 --> 42:42.060
+if not typically more equations in order to come up with a good solution
+
+42:43.020 --> 42:50.140
+the next thing is this matrix h is a symmetric matrix why is this actually the case any ideas
+
+42:50.700 --> 42:59.260
+why h is a symmetric matrix of course i answer this question now for you so it's because the
+
+42:59.260 --> 43:07.100
+way h is constructed that i was um it consists of the jacobians let's say let's go back so you
+
+43:07.100 --> 43:15.260
+let's go back so you can see it better how was h set up the matrix h is set up by jacobian
+
+43:16.860 --> 43:23.580
+transposed time for jacobian with weight matrix in between and this weight matrix is
+
+43:25.660 --> 43:32.460
+the inverse of the covariance matrix which is a positive semi-definite or matrix and so i
+
+43:32.460 --> 43:38.860
+multiply here j transposed and j from the left and the right hand side and just kind of a sum
+
+43:38.860 --> 43:43.820
+of all those elements so all the individual elements will be symmetric so that also my
+
+43:43.820 --> 43:50.940
+function f and my function h is symmetric in the end and then the last question is how does
+
+43:50.940 --> 43:56.780
+the structure of the measurements actually affect the structure of h that's something which may not
+
+43:56.780 --> 44:04.140
+be very clearly visible but um what you can uh maybe guess if you compute those jacobians
+
+44:04.140 --> 44:09.260
+and we have seen here a lot of elements in jacobian zero and if the elements in jacobian
+
+44:09.260 --> 44:15.820
+zero that means there is no impact of this observation with a certain parameter in my
+
+44:15.820 --> 44:22.780
+state space and so as a result of this the more the more and the more measurement will tell me
+
+44:22.780 --> 44:28.300
+about all my state vectors the more denser populated these jacobians will be and this is
+
+44:28.300 --> 44:36.540
+a direct impact on my h matrix so the sparse of the matrix is the lesson in one observation tells
+
+44:36.540 --> 44:41.340
+me about variables and what we have in reality especially in the context of the SLAM problem
+
+44:41.980 --> 44:48.140
+especially is that an observation only relates a very small number of variables with each other
+
+44:48.140 --> 44:52.860
+and so it's very these these h matrices for the individual observations are very sparse
+
+44:52.860 --> 44:56.860
+consist of a lot of zero elements and this is something that we'll exploit later on
+
+44:56.860 --> 45:04.220
+in order to compute an efficient solutions I want to spend a few words now on how to
+
+45:04.220 --> 45:11.340
+efficiently solve a system of linear equations so what we want to do is we want to solve hx
+
+45:11.340 --> 45:18.540
+equals minus b and in theory we can solve this as I said before by computing the inverse of h
+
+45:19.100 --> 45:26.380
+multiplying it from the left hand side so then this will go away and we have h inverse multiplied
+
+45:26.380 --> 45:31.660
+here from the left hand side to this equation but this requires a full matrix inversion which
+
+45:31.660 --> 45:37.260
+is something you don't do in practice so what you typically do is you use matrix decomposition
+
+45:37.260 --> 45:42.460
+techniques or other techniques for a large system like conjugate gradients and this could be
+
+45:42.460 --> 45:48.940
+Cholesky factorization you may exploit or QR decomposition it depends a little bit
+
+45:48.940 --> 45:53.900
+on the properties of your system and I just want to go through a very brief example and tell you
+
+45:53.900 --> 46:01.740
+how you can use Cholesky factorization in order to do this so if a is a symmetric and positive
+
+46:01.740 --> 46:09.260
+definite matrix and the system we want to solve is ax equals to b what we can do we can use the
+
+46:09.260 --> 46:15.260
+Cholesky factorization and what the Cholesky factorization actually does it take this matrix
+
+46:15.260 --> 46:21.900
+a and splits it up into two matrixes this is l transposed with l being a lower triangular matrix
+
+46:21.900 --> 46:30.220
+so where the upper triangle everything above the main diagonal contains zero elements
+
+46:30.220 --> 46:39.660
+so or zero and so what Cholesky does it provides us this matrix l so that we can express a as l
+
+46:39.660 --> 46:48.060
+l transposed okay so what can we do now we can actually replace this a with l l transposed so
+
+46:48.060 --> 46:54.860
+then our linear system is l l transposed x equals b and what we then can do is we can say okay
+
+46:55.580 --> 47:02.860
+let's first or let's multiply this l transposed with x so l transpose x and x because this is
+
+47:02.860 --> 47:08.860
+a matrix times a vector and this will basically give me a new vector so this means I can then
+
+47:08.860 --> 47:16.140
+solve the system l times let's say the new vector y equals to b now first solve this system so first
+
+47:16.140 --> 47:24.620
+solve this system over here ly equals b where y is l transposed times x and this is easy to solve
+
+47:24.620 --> 47:30.860
+because l remember is a lower triangular matrix so your matrix which has triangular shapes so you can
+
+47:30.860 --> 47:40.540
+very easily solve it your linear system and then the second step you solve l transposed x equals y
+
+47:40.540 --> 47:45.260
+of course this is exactly the missing part that you want to solve the replacement before
+
+47:45.260 --> 47:50.380
+and again this linear system is very easy to solve because this is now an upper triangular
+
+47:50.380 --> 47:56.460
+matrix because it's the transposed of the lower triangular matrix so by computing the Cholesky
+
+47:56.460 --> 48:03.820
+decomposition we basically replace solving the linear one complex linear system by solving two
+
+48:03.820 --> 48:09.180
+simple linear systems and so of course the main work is done within this Cholesky decomposition
+
+48:09.180 --> 48:18.540
+but once I have it I can very easily solve my system of linear equations so to sum up how we
+
+48:19.180 --> 48:25.100
+use this Gauss-Newton method in order to compute a solution to a least squares problem
+
+48:26.940 --> 48:31.020
+it's an iterative approach and we typically start with an initial guess so we have an initial idea
+
+48:31.020 --> 48:37.340
+on what the parameters of our system are and depending on our actual problem how non-linear
+
+48:37.340 --> 48:46.140
+it is this initial guess might must be very good or if you basically have a linear case then this
+
+48:46.140 --> 48:51.500
+initial guess doesn't matter because it doesn't play any role in the computation of the Jacobian
+
+48:51.500 --> 48:56.140
+so what we then need to do so what is the actual work that the design of the algorithm needs to do
+
+48:56.140 --> 49:00.940
+we need to compute the linearizations of our error functions so we need to sit down and compute the
+
+49:00.940 --> 49:07.260
+first derivatives of these error functions when we have this first derivatives we can compute
+
+49:07.260 --> 49:13.580
+this quadratic term and the key elements we're interested in this quadratic term is this h and
+
+49:13.580 --> 49:20.460
+this b so the matrix h and the vector b why is it the case because these are the only two elements
+
+49:20.460 --> 49:26.300
+which remain when I compute the first derivative of this quadratic form and set this derivative to
+
+49:26.300 --> 49:32.540
+zero then I get a system of linear equations which just contains this h and this b and I then need to
+
+49:32.540 --> 49:38.380
+solve this system of linear equations and for that I can use for example to just get a composition
+
+49:38.380 --> 49:43.980
+in order to solve that system and this is actually a step which takes may take a substantial amount
+
+49:43.980 --> 49:49.580
+of computational resources and then I finished one single iteration and then I iterate I go back
+
+49:49.580 --> 49:55.820
+to this point over here where my the solution that I computed here is my new initial guess and I
+
+49:55.820 --> 50:02.620
+repeat this process until convergence and this leads me to a new configuration
+
+50:02.620 --> 50:09.180
+of my state of my parameters that I wanted to estimate which if converged minimizes the
+
+50:09.180 --> 50:17.420
+squared error terms so this was kind of a short summary on how to solve the least squares problem
+
+50:17.420 --> 50:24.700
+in very practical setup and in the way we will be using it here in the course before ending however
+
+50:24.700 --> 50:31.420
+I want to go a step further and tell you a little bit about the relation of this least squares
+
+50:31.420 --> 50:36.940
+problem to probabilistic state estimation we started out if you think about that saying
+
+50:36.940 --> 50:42.460
+in this approach of what we call probabilistic robotics we want to represent the state of the of
+
+50:42.460 --> 50:47.980
+our robotic system for example as a probability distribution and we argue that this is valuable
+
+50:47.980 --> 50:53.180
+because we can't compute the exact values and probabilistic approaches have the advantage that
+
+50:53.180 --> 50:58.060
+we explicitly have a notation of uncertainty that we then can exploit for state estimation
+
+50:58.060 --> 51:03.580
+but also for action selection processes but what I explained so far was actually
+
+51:04.220 --> 51:10.300
+it's not directly obvious how this relates to probabilities right so what I actually want to
+
+51:10.300 --> 51:20.540
+do now is answer the question how is this the spheres approach relates to state estimation
+
+51:20.540 --> 51:24.940
+probabilistic state estimation so what's the connection between them and for that I want to
+
+51:24.940 --> 51:31.100
+start with probabilistic state estimation and see that through some assumptions that we do we
+
+51:31.100 --> 51:37.420
+actually end up if you want to maximize this probability distribution add a solution that
+
+51:37.420 --> 51:41.340
+our least squares problem actually generates for us so that there's a direct link under some
+
+51:41.340 --> 51:50.140
+assumptions so we start out with saying okay we have a probability distribution about my vector x
+
+51:50.140 --> 51:54.220
+and typically we have a time series here because that's how we will use it in the past and we'll
+
+51:54.220 --> 52:00.860
+be using it before we have a set of observations and controls control commands although those
+
+52:00.860 --> 52:05.740
+control commands can be very easily interpreted also as an as an observation how I can do that
+
+52:05.740 --> 52:12.220
+and so by just applying Bayes rule and an independence assumption Markov assumption
+
+52:12.220 --> 52:17.820
+we can actually rewrite that in the form that we have some normalization constant as a result of
+
+52:17.820 --> 52:24.780
+Bayes rule some prior node so this was this x0 at times zero where we don't have any observations
+
+52:24.780 --> 52:33.340
+or control commands available and then it's a product where we have our motion model so
+
+52:33.340 --> 52:38.700
+everything related to u and our observation model everything related to that as a product written
+
+52:38.700 --> 52:46.540
+in there okay so this is kind of just expanding this term basically with product rule and applying
+
+52:46.540 --> 52:52.300
+Bayes rule a few times and exploiting the Markov assumption actually similar as in the derivation
+
+52:52.300 --> 52:55.980
+for the Bayes filter the only difference is in the derivation of the Bayes filter I was only
+
+52:55.980 --> 53:02.700
+interested in xt over here and not zero to t so this is actually even easier okay so we have that
+
+53:02.700 --> 53:07.740
+now what we can do is okay let's have a look to the lock likelihood so if you compute the lock
+
+53:07.740 --> 53:13.980
+likelihood of this term so it means we put a lock in here and a lock over there so if I compute the
+
+53:14.700 --> 53:20.540
+the logarithm of that probability then the different element the product basically
+
+53:20.540 --> 53:29.820
+turns into a sum so I have this log of eta log of p of x0 of my prior and lock of this expression
+
+53:29.820 --> 53:36.060
+and all as a sum so this is my my constant the normalization constant from Bayes rule then I
+
+53:36.060 --> 53:43.420
+have a lock of my prior and then the product turns into a sum of the lock from the my motion model
+
+53:43.500 --> 53:52.540
+and the lock of my observation model okay and now I'm making an assumption now I say okay let's
+
+53:52.540 --> 53:59.500
+assume all these probability distributions in here are actually Gaussians so the prior here
+
+53:59.500 --> 54:07.820
+is the Gaussian my motion model is the Gaussian and my observation model is a Gaussian okay
+
+54:08.780 --> 54:14.140
+so this is an explicit assumption we are leaving kind of the general state estimation and making
+
+54:14.140 --> 54:18.620
+it more specific by saying okay let's restrict our distributions to Gaussian distributions
+
+54:19.260 --> 54:23.500
+so well how does a Gaussian distribution look like or especially the log of a Gaussian distribution
+
+54:23.500 --> 54:30.300
+so it is some constant minus the elements we have in the exponent right so this is x minus
+
+54:30.940 --> 54:37.260
+my mean transposed my inverse of my the inverse of my covariance matrix and then again
+
+54:37.260 --> 54:44.540
+x minus my mean and now I can actually link that and define what my error
+
+54:44.540 --> 54:51.020
+function looks like or it can for now just say just replace it so let's replace this term here
+
+54:51.820 --> 55:02.220
+with e transposed let's replace this term by my omega and replace this term again by ei
+
+55:02.220 --> 55:06.460
+so I'm just basically defining those variables but of course I'm defining in a way that I can
+
+55:06.460 --> 55:15.260
+make the link to the least squares problem so I have my error term over here my information matrix
+
+55:15.260 --> 55:19.900
+which is the inverse of the covariance matrix and my error term over here and so this again
+
+55:19.900 --> 55:28.060
+a squared term has exactly the same shape as the the squared error that I actually had before
+
+55:29.260 --> 55:35.900
+so if I take this with log likelihood of a of a single Gaussian distribution and plug it into
+
+55:36.460 --> 55:43.980
+my my expression that I had over here so putting it in here in here and in here and if I do this
+
+55:43.980 --> 55:51.260
+then I obtain this term over here where say I have my error term for the prior
+
+55:53.100 --> 55:59.180
+and I have an error term related to the odometry command and an error term with respect to the
+
+55:59.180 --> 56:07.100
+observation and they're all just added up times a constant factor so if I'm now maximizing the
+
+56:07.100 --> 56:14.620
+log likelihood of my probability distributions if I'm maximizing this term this is actually
+
+56:14.620 --> 56:22.380
+equivalent to minimizing the error right so maximizing the probability distribution is
+
+56:22.380 --> 56:29.100
+equivalent to minimizing I can ignore the constant if I think about a minimization or maximization
+
+56:29.100 --> 56:38.620
+my prior plus the errors resulting from motion commands and the errors from my observations so
+
+56:38.620 --> 56:44.780
+so far we didn't look into a prior before and we didn't look into the the command so far we
+
+56:44.780 --> 56:51.980
+basically had only the sum of the errors of the individual observations so this means that
+
+56:51.980 --> 56:58.540
+minimizing the squared error is equivalent to maximizing the the log likelihood of independent
+
+56:58.540 --> 57:05.180
+Gaussian distributions so if we assume everything is Gaussian and we have independent observations
+
+57:05.180 --> 57:10.060
+independent Gaussian distributions then computing the solution to the least squares problem
+
+57:10.060 --> 57:17.500
+is actually equivalent for computing the mean so the most likely configuration of that probability
+
+57:17.500 --> 57:22.620
+distribution and so that's actually the link between both of them so if I'm computing the
+
+57:22.620 --> 57:29.980
+minimum error configuration I get the mean of this Gaussian distribution so by performing this
+
+57:29.980 --> 57:35.980
+error minimization I actually have a direct link to probabilistic state estimation and there are
+
+57:35.980 --> 57:43.180
+different ways that we can compute or approximate also the covariance matrix by exploiting this
+
+57:43.180 --> 57:49.100
+matrix H that we have so there are more links but I wanted to show here the quite obvious and easy
+
+57:49.100 --> 57:57.420
+to derive link on how those two elements actually come together so to sum up what we've introduced
+
+57:57.420 --> 58:02.460
+here is an let's say not very formal more an informal introduction to the least squares problem
+
+58:02.460 --> 58:08.220
+but at a level of math of formality that I think it's good to understand what's going on and which
+
+58:08.220 --> 58:13.820
+allows you to use this as a tool for solving standard least squares problem if you have very
+
+58:13.900 --> 58:19.340
+special setups you may need to dive deeper but the majority of problem at least in basic form
+
+58:19.340 --> 58:24.780
+you can actually solve with the techniques that I have explained over here we introduced the Gauss
+
+58:24.780 --> 58:31.260
+Newton approach as an iterative approach for solving these non-linear problems and the key
+
+58:31.260 --> 58:36.780
+things is we introduced we used a linearization in order to turn the non-linear error function into a
+
+58:36.780 --> 58:43.020
+linear error function approximated by a quadratic form and they compute the minimum and we need to
+
+58:43.020 --> 58:47.100
+actually iterate this process due to this linearization so we need to be clear that
+
+58:47.100 --> 58:53.980
+this linearization is an approximation of the original problem and what we also have shown
+
+58:53.980 --> 59:00.860
+now in the last minutes is that the relationship between performing this error minimization and
+
+59:00.860 --> 59:04.940
+probabilistic state estimation so that by assumptions that we make over the probability
+
+59:04.940 --> 59:11.660
+distributions involved we can actually show that minimizing the error is equivalent to maximizing
+
+59:11.660 --> 59:16.060
+the probability and the least squares approach here is a very popular method in a lot of
+
+59:16.060 --> 59:21.260
+disciplines there's not only robotics this is basically all fields of engineering at some point
+
+59:21.260 --> 59:27.180
+in time use least squares in order to solve problems in certain fields it's more popular
+
+59:27.180 --> 59:32.140
+in geodesy basically I don't say all problems boil down to least squares problems but that would also
+
+59:32.140 --> 59:36.700
+be wrong but least squares plays a very very important role in here and also in a lot of
+
+59:36.700 --> 59:41.500
+other disciplines being able to solve these squares problems will dramatically simplify your
+
+59:41.500 --> 59:49.500
+life in terms of generally squares in Gauss-Newton so basically every textbook on numeric calculus or
+
+59:49.500 --> 59:55.900
+optimization will cover these squares to some degree even you get an overview on open resources
+
+59:55.900 --> 01:00:01.260
+like Wikipedia where you can have a look to if you want to dive a bit more into details and look up
+
+01:00:01.260 --> 01:00:08.220
+resources there and depending on the community you're coming from there are variants or a large
+
+01:00:08.220 --> 01:00:13.500
+zoo of literature on these squares using different differently being differently formal using
+
+01:00:13.500 --> 01:00:19.180
+different notations so even the notation that I used here may be different from the notation you're
+
+01:00:19.180 --> 01:00:25.660
+used to and so there's a whole variety on how that may look like and I want to point out the
+
+01:00:25.660 --> 01:00:30.140
+probabilistic robotics book on actually this relation of the least squares approach to
+
+01:00:30.140 --> 01:00:34.860
+probabilistic state estimation where you can actually show what the similarity and differences
+
+01:00:34.860 --> 01:00:40.780
+are so with this I would say thank you very much for your attention and I hope with this lecture
+
+01:00:40.780 --> 01:00:48.300
+you got an idea how least squares works what you can do with it and in the upcoming lecture we
+
+01:00:48.300 --> 01:00:54.060
+will actually use this tool in order to do useful computations with it such as looking into the
+
+01:00:54.060 --> 01:00:59.740
+simultaneous localization and mapping problem from a graph perspective and use least squares
+
+01:00:59.820 --> 01:01:04.060
+in order to find the most likely map configuration for example
+
+01:01:04.060 --> 01:01:08.140
+so with this thank you very much for your attention and see you soon thank you
+

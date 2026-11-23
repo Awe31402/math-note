@@ -1,0 +1,394 @@
+[00:00] Welcome to our first lecture on point cloud registration.
+[00:05] So I want to dive today a little bit into the details of the iterative closest point algorithm,
+[00:11] or at least starting with a mathematical basis of the ICP algorithm.
+[00:15] So we will look into the question how we can align 3D or 2D point clouds with respect to each other,
+[00:21] and that's a key ingredient that we use in scan matching approaches, for example, to build maps of the environment.
+[00:28] And this is the first part of a lecture, there's a second part.
+[00:32] In the first part we will look into the mathematical details on how to compute an optimal alignment given point-to-point correspondences.
+[00:40] And in the second lecture we will then relax the assumption that we know the data association, or the point correspondences,
+[00:46] and we'll estimate them while we are iteratively estimating the correspondences and compute the transformation itself.
+[00:56] So we start today with assuming known correspondences, so we know which points in point cloud number one correspond to which point clouds in point cloud number two.
+[01:05] Okay, but let's start. Why should we actually care about scan registration or alignment?
+[01:11] We should care about this because it's an important ingredient in mapping applications, for example.
+[01:16] So if you have a platform navigating through the environment equipped with a sensor that records the 3D scene,
+[01:24] so this could be a laser range scanner, this could be a depth camera, or could also be a stereo camera,
+[01:29] this sensor will generate data, range data, about the environment.
+[01:34] And this range data will generate 3D points in the world, for example, where obstacles or where there are distinct points or landmarks in the environment.
+[01:43] And while we are moving through the environment, we need to register those individual readings, so put them into the same reference frame.
+[01:51] And this is something that we do here in point cloud registration where we want to find the transformation so that two sets of points will overlap as good as possible.
+[02:03] So for example, you have a small mobile robot navigating through the environment and every few meters it takes a range scan, moves forward, takes another range scan.
+[02:11] We need to align those range scans in order to get an accurate model of the environment.
+[02:17] So here's just a small illustration of a surface. The same we can do also with surfaces.
+[02:23] And we have two scans or two readings of the surfaces, the gray one as well as the yellow one.
+[02:29] And if this is an initial guess, so the initial two surfaces put into the same reference system, we can see that they actually don't align very well.
+[02:40] And what the algorithms that we are looking into here today is they try to find a transformation, update the transformation, so that those two surfaces or those two point clouds are put into the same reference frame.
+[02:52] And again, this is something which is commonly used in robot mapping or SLAM algorithms.
+[02:58] It's basically the first step to register one range reading against the next one.
+[03:04] Here's an example is a car navigating through the environment equipped with a 3D LiDAR.
+[03:09] So it generates 3D point clouds 10 times per second.
+[03:13] And the task is to register those point clouds in order to estimate where the car was while navigating through the environment.
+[03:20] And by concatenating those point clouds appropriately, we can actually build maps of the environment.
+[03:28] And scan matching or scan registration is the first step in this process of building a map of the environment.
+[03:34] And that's what we want to investigate here today.
+[03:37] So let's see what means registration of 3D points.
+[03:42] So we assume we have two or more sets of points.
+[03:46] So today we'll only focus on two sets and those sets have typically been recorded at different locations.
+[03:53] So for example, the platform was navigating through the environment and the task now is to find the transformation,
+[03:59] typically a rigid body transformation, that means a translation vector and a rotation matrix,
+[04:04] so that these two point clouds will be transformed into the same reference frame
+[04:10] so that the same position seen in scan number one and seen in scan number two
+[04:15] will actually correspond to the same 3D location in the world.
+[04:19] So that means we are trying to find a rotation matrix and a translation vector so that we can align those two point clouds.
+[04:28] We assume those point clouds to be rigid, so not deformable, at least initially,
+[04:32] so that we don't need to deal with deformations inside the point clouds.
+[04:36] So it's something that we ignore for now.
+[04:38] And there are two ways or two basic principles how I can do this task of registering those two point clouds.
+[04:45] The first one is an SVD-based procedure and that's the procedure we'll look into today,
+[04:52] which is the basis for the iterative closest point or ICP algorithm,
+[04:56] which tells you given correspondences how you compute this transformation.
+[05:01] So this is something that we refer to as known data association or known correspondences.
+[05:05] And this is what we will be focusing here in the first part of the lecture.
+[05:09] So we assume which point in point cloud number one corresponds to which point in point cloud number two.
+[05:15] Not all points need to have a corresponding partner, but we need to have a sufficient number.
+[05:20] In the second part of the lecture, we will then relax this assumption and try to estimate the correspondences as well.
+[05:26] But for today, we assume known correspondences and if we have those correspondences, we can perform this alignment.
+[05:35] So if we are coming back to the example that I've shown before here with these two surfaces,
+[05:41] then what we are basically doing in every step or every update of this algorithm is one of those alignment steps.
+[05:48] And in all those steps, we assume the data association to be given and then compute this relative transformation.
+[05:56] And so we're just looking into this single step on how to compute this transformation.
+[06:02] So the part one of this lecture focuses on point cloud registration with known data association or with known correspondences.
+[06:09] And we want to derive a solution on how to compute these transformation parameters in an optimal way with a direct solution.
+[06:18] And also an approach which is fairly efficient to be executed under the assumption, of course, of known data associations.
+[06:25] That is important over here. In the second part of the lecture, we will then relax this assumption.
+[06:29] But for now, we always assume known correspondences.
+[06:32] So that means we have two sets of points. We have a point cloud Y and a point cloud X consisting of different numbers of points.
+[06:40] And we assume to have these correspondences given.
+[06:43] So the correspondences can be expressed with a set of pairs of indices, i and j, for example,
+[06:50] telling me that point number one in point cloud Y corresponds to point number 10 in point cloud X, for example.
+[06:57] So this is what these correspondences actually tell me.
+[07:00] And what I then want to find, I want to find translation vector and a rotation matrix, so T and R,
+[07:07] so that I can transform the point cloud X into the coordinate system of the point cloud Y,
+[07:13] so that the Euclidean distances between the corresponding points in X and Y gets minimized.
+[07:21] I'm actually minimizing the squared error over here for all those corresponding points.
+[07:26] So basically I have a sum, I'm summing over all corresponding points.
+[07:29] Say, where is the location of this point in the point cloud Y?
+[07:33] I subtract from this the location of the point X transformed into the reference frame of point cloud Y.
+[07:41] I square that error and that's the term that I want to minimize.
+[07:45] So if I can minimize this expression, I found the optimal rotation matrix and the optimal translation vector that aligns those two point clouds for me.
+[07:54] If I have zero noise and I scan exactly the same points, the sum can theoretically be zero.
+[08:00] In practice, this is often not the case because of course we have noisy measurements about the world
+[08:06] and we cannot guarantee that we always measure exactly the same point in the environment,
+[08:10] although we assume that to be here the case for our correspondence problem, but that's nothing we can guarantee.
+[08:16] So this term is typically not zero, but we want to make it as small as possible.
+[08:21] So the key idea is that given those correspondences, I'm able to find the rotation and translation in one go.
+[08:30] With a direct solution, that means I don't need any initial guess.
+[08:34] So assuming I have the surface here, the blue surface and the red surface, and I have a few correspondences here indicated by those lines,
+[08:41] I want to find the rotation matrix and the translation vector so that those two overlap.
+[08:47] In this example here, the red curve is transformed into the blue curve and that's the task that I actually want to look into.
+[08:55] Before we start, I want to simplify the notation a little bit and especially those correspondences.
+[09:01] So I'm not interested in all points in those point clouds, I'm only interested in those points where they exist as corresponding partners
+[09:09] because the others don't contribute to the underlying estimation problem over here.
+[09:13] So I'm basically reordering those points in X and Y in a way that first I consider only those points which have a corresponding partner
+[09:23] and then order them in a way that the first point in point cloud X corresponds to the first point in point cloud 2,
+[09:29] and the second point in point cloud X corresponds to the second point in point cloud Y, and so on and so forth.
+[09:35] So that I basically have an index n which I can use to index a point in X as well as in Y and I can ensure that this is a corresponding point.
+[09:45] So this is just reordering basically the subset of corresponding points in both point clouds that doesn't change the problem itself,
+[09:52] but it makes the notation easier and more lightweight so that it's hopefully easier to understand.
+[09:58] So from now on I will not use this set C anymore, I will just use this index n so that the variable index with n in the point cloud X and point cloud Y corresponds to a pair of points.
+[10:11] And then I want to find the rigid body transformation so that I can transform the points in my point cloud X, my input point cloud,
+[10:19] so that they will be all transformed to a new set of coordinates called X' and this should be done in a way that the sum of squared errors,
+[10:30] the point-to-point errors that remain between X bar n and the corresponding point Yn is minimized. So that's our overall goal.
+[10:42] And the problem that we are looking here into is actually a special case of the so-called absolute orientation problem that is frequently used in geodesy, also in computer vision,
+[10:53] which is actually a more complex problem to the problem we are looking in here where we try to find the similarity transform between two point sets.
+[11:01] So in the absolute orientation problem, we don't only have a rotation vector and the rotation matrix and translation vector, we also have a scale parameter.
+[11:10] For example, if we are performing a 3D reconstruction from monocular images and we don't have the scale information, then we would need such a similarity transform.
+[11:19] Here, for the point cloud alignment, we assume that we know the scale, so we don't need that scale parameter.
+[11:27] The scale parameter is basically assumed to be one in all the things that we are doing from now on here so that this reduces to a rigid body transformation that I'm considering here.
+[11:38] But just to make clear, this is a special case of a more general problem.
+[11:43] And then we want to start diving a bit more into the details and actually derive the solution itself.
+[11:48] So the formal problem definition says we have a set of corresponding points, Xn and Yn, and we maybe also have weights.
+[12:00] So that means all of those correspondences have a weight, for example, how certain I am about this correspondence.
+[12:07] That's something that I just added here, if we have perfect correspondences, we typically don't need those weights, then we have equal weights, all the weights are equal to one.
+[12:16] But if I later want to integrate, for example, uncertainties, then these weights become handy, so the derivation here also uses those weights Pn.
+[12:26] And I want to find the transformation parameters again so that the weighted sum of squared errors get actually minimized.
+[12:33] So all of those squared errors here have a weight associated to that in this example over here.
+[12:41] And the important thing to note in here is that a direct solution exists.
+[12:47] Direct solution means that it's not an iterative procedure where I need an initial guess.
+[12:51] So completely free of an initial guess, I can actually come up with a rotation matrix and a translation vector that minimizes this term.
+[13:01] And it is also the optimal solution. That means there exists no better solution and I don't need any initial guess, which are two great properties that I have in here.
+[13:10] Again, this always assumes perfect data cessation, so we can't guarantee this if we don't have the data cessation or don't know about the data cessation.
+[13:22] So informally, what this algorithm does, this approach does, it minimizes this function.
+[13:28] It basically involves a shift of those two point clouds and I'm shifting them together basically in a way that I'm aligning the center of masses of those points.
+[13:38] So I'm basically shifting those point sets so that their center of mass overlaps.
+[13:42] And then I'm performing a rotation that minimizes the error not changing this rotation point anymore.
+[13:48] So these are kind of, informally speaking, the two steps that we are doing here.
+[13:53] Computing the center of mass is fairly easy, I just need to sum up the points and average over them.
+[14:00] The second part here, estimating the rotational component, is somewhat more complex and involves a singular value decomposition that I need to execute in order to find the optimal rotation matrix.
+[14:13] Okay, so this direct solution says I need to compute the mean, or in this case weighted mean, of my point set Y and my point set X, which is shown over here.
+[14:24] So indicated as Y0 and X0. So it's just the weighted sum of the points itself.
+[14:31] And then I'm using those weighted sums and compute a so-called cross-covariance matrix.
+[14:38] So I'm taking the points set Y, subtract the mean from the points and do the same in X, and then I compute the outer product of these vectors and summing all of them up together with the weight.
+[14:52] And this gives me this cross-correlation matrix H over here.
+[14:57] And then I'm taking this matrix H and perform a singular value decomposition of H.
+[15:02] So I'm decomposing H into three matrices, into a matrix U, into a matrix D, a diagonal matrix, and into a matrix V, or V transposed over here.
+[15:13] So the SVD is a standard mathematical procedure which decomposes these matrix H into three matrices with special properties.
+[15:23] And then I can compute my rotation matrix as V times U transposed, so the first and the last matrix that result from this SVD, and this gives me my optimal rotation.
+[15:36] I haven't explained to you why this is the case. It's something that we will do in a couple of minutes.
+[15:40] I'm here only showing the solution what needs to be done.
+[15:43] So I'm computing the center of masses, I compute this matrix H, compute the SVD, and from the result of the SVD I can extract the optimal rotation matrix.
+[15:53] And we can do this in a similar way for the translation vector.
+[15:58] So here we again use the center of mass of the point lots of X and Y, and then we have the rotation matrix that we just computed in the last step.
+[16:06] And then the translation vector is simply given by Y0, so the center of mass of the point set Y minus the rotation matrix times the center of mass of the point set X.
+[16:20] So the weighted mean of this point set X.
+[16:23] Again, I haven't explained why this is the case, I only provided you with the solution, but we will derive the solution in a minute.
+[16:31] So that the result of this algorithm basically says, okay, you can compute your rotation matrix R and your translation vector without an initial guess as the optimal parameters given in this form using this matrix H, the SVD, and the center of masses.
+[16:50] And that's what the solution to the algorithm is.
+[16:53] So if you, let's say you don't care why this is the case, you only want to compute R and T, you can stop watching this video and just write down those quantities and you're done with it.
+[17:04] If you want to understand why this is the case and actually derive everything from the basics, then you should stay with us for a bit more time.
+[17:13] So the SVD-based alignment, if I break it down into steps, say I compute the means of those point sets Y0 and X0, then I compute something which is called mean reduced coordinates.
+[17:25] So I'm basically subtracting the mean from the points at Y and the mean from the points at X, and then I can compactly write this cross-covariance matrix that I compute this matrix H.
+[17:36] Then I look into my mathematical toolbox and use my SVD function which is in there, which again decomposes this matrix and from the result I can construct my rotation matrix R as well as my translation vector here as we described before.
+[17:52] And then I can simply transform the point set X with this rotation matrix and the translation vector which gives me X' and which is the other transformed coordinates.
+[18:03] And then the sum of the squared differences between Yn and X bar n is minimal.
+[18:12] So in the end you can see this as a translation of one point set onto the other point set, so here moving the red one onto the blue one and we're basically shifting them so that their center of mass overlaps and then we are basically performing a rotation around this center of masses so that the points are then properly aligned with each other.
+[18:39] And I can express this here also in this form of the equation, but that's basically what happens.
+[18:45] And if I know my correspondences again, this is the right way to do it and we are done. No further steps are needed for known correspondences.
+[18:54] So done, we are happy, nothing else needs to be done.
+[18:59] If you are someone who wants to dive a little bit deeper and actually understand why this is the case, then you should stay with us and because you probably ask yourself the question why is this a good solution or not even a good solution, why is this the optimal solution, why is there no better solution, why do I not need an initial guess, although some people may have told you you need an initial guess for the ICP algorithm.
+[19:21] If you want to learn that, then stay with us and we will actually go back and start from the beginning and derive the solution for computing the matrix R and the translation vector t over here.
+[19:35] So the next, let's say, half an hour we will dive here into the details.
+[19:40] Okay, so let's start. Again, as a reminder, my formal problem definition, which was the points at y, x and my weights and we want to find rotation matrix and translation vector so that the differences between the points in points at y and x bar, so the transform points from x gets actually minimized. So that's the task.
+[20:04] So the first thing we are doing now, we are defining a new coordinate system and we are defining a local coordinate system in which we want to work and the coordinates are defined through this point set y, so the target point set, which should define the coordinates of my final point set.
+[20:27] And the origin should be the weighted mean of all the points yn. So I'm summing over all points yn, multiply them with the weights and then normalize through the sum of the weights.
+[20:41] And I want to operate in this local coordinate system, so all the transformations are now done in this coordinate system where the origin is the weighted center of mass of this point set y0.
+[20:57] And if I look to the equation that I want to minimize then, then the expression gets more complicated, so I get this point set here and this y0 over here, but the important thing to note is that this doesn't change my problem because I'm basically adding this y0 or subtracting the y0 and adding the y0 again so it doesn't change the overall minimization problem that I need to look into.
+[21:20] So basically from now on I want to compute everything in this coordinate system where the origin is the weighted mean of these points yn.
+[21:32] Okay, so the second thing I want to do is I want to rewrite my translation vector a little bit. So again, I had my transformation here and I want to do some transformation now with this equation and to rewrite t so it looks slightly differently and this will become handy later on.
+[21:53] So what we're doing, we are subtracting the mean of the points at y0 from both sides because we said we want to work in this mean reduced coordinate system, subtracting the mean of the points at yn here.
+[22:08] So we are basically taking this equation and subtracting y0 on both sides.
+[22:13] And what I'm then doing, I'm basically rewriting this expression over here, exploiting the fact that a rotation matrix times the rotation matrix transposed is the identity matrix, so I can basically add this bracket over here and multiply r transposed to the two quantities here which were originally not multiplied with my rotation matrix.
+[22:34] And so then I have this expression over here and in this different local coordinate system I can define kind of a new vector over here, consisting of these quantities here, which I now call x0.
+[22:51] And it is important to note that at this point I don't know what x0 is. Later on it will turn out that this is the weighted mean of the points at x but this is something I don't know at the moment.
+[23:02] This will be the result of the computations here.
+[23:05] So I'm basically introducing a new variable x0 which is defined like this, so if I know r and I know t then I can compute x0 so I don't add any new unknowns to my problem.
+[23:18] I'm just kind of rewriting this to simplify my life a little bit. I'm introducing this new variable x0 so that this is then my final equation over here.
+[23:26] So I move the translation basically inside the bracket which basically means this is the translation that I'm first executing, subtracting from the point xn before I perform the rotation over here.
+[23:40] Again, this is just kind of rewriting things.
+[23:44] And also this doesn't change my initial minimization problem. The only thing I need to do, I need to now work in this local reference frame which was basically I'm subtracting this y0 from xn, what I did before, and then I'm having here on this side basically replaced this vector t with my x0 over here.
+[24:08] And so it's still the absolute same minimization problem and the only thing I need to do now to minimize this equation, I don't need to compute r and t, I need to compute r and x0.
+[24:18] So these are the two variables I'm minimizing and I want to compute this optimal rotation matrix r star and the optimal vector x0 star that minimizes this expression.
+[24:30] So what I've done so far, I've just rewritten my quantities a little bit to simplify my life later on and now I actually want to minimize this expression over here.
+[24:41] So what I do, I take this expression and turn this into my objective function.
+[24:47] And basically just rewriting my objective function a little bit.
+[24:51] So again, it's a quadratic term and so this is the coordinates of the set y, subtracted by their mean, minus r times xn, subtracted by my new variable, transposed the vector again times my Pn.
+[25:10] And so what I now want to do is I want to minimize this function and compute the minimum of this function.
+[25:17] And so the question is how to do this, how do I minimize such a function?
+[25:22] And you should all know how you minimize a function.
+[25:26] This goes basically back to your courses that you have even taken at school, how you have a general function f and you want to define or compute the minimum of this function.
+[25:37] What you typically do, you compute the first derivatives, you check for the points where the first derivative is zero, which is then a minimum or a maximum, selecting the minimum.
+[25:47] And this basically boils down here to solving the resulting equations that I obtain if I first compute the first derivative, set it to zero and then solve the resulting equations.
+[26:00] Then I get the optimal parameters x0 and r over here.
+[26:06] And that's exactly what we want to do now.
+[26:09] So in order to do this, in order to compute the first derivatives, I'm basically expanding this dot product over here or the vector transpose times vector and basically multiply the expression with the other.
+[26:23] So this expression times this equation, this expression times this, this times this and this times itself, which gives me three individual sums with those individual terms over here.
+[26:34] So I'm just kind of rearranging my objective function a little bit. I don't change the quantities itself.
+[26:40] So nothing really magically has happened over here.
+[26:45] And then I can actually look to these three lines over here, first line, second line, third line.
+[26:50] What you can see here in this first line is that is actually an expression which doesn't depend on x0 and which doesn't depend on my rotation matrix r.
+[26:59] So this is basically a constant under those two parameters.
+[27:03] The second line over here only contains x0 but doesn't contain the rotation matrix and the third line contains both of those quantities.
+[27:12] So this expression, no x0, no r pops up and here no rotation matrix r pops up.
+[27:20] And this is just a side note. We will now continue with this objective function over here and compute the first derivative with respect to x0, set it to 0, solve it and then minimizing the function with respect to r as well.
+[27:35] So let's start with x0 because this is the somewhat easier part.
+[27:39] We want to solve this or minimize this with respect to x0.
+[27:43] That means computing the first derivatives of this function with respect to x0, sending it to 0 and then resolving the equation.
+[27:52] So what we're doing is we are taking our objective function, just copy paste from the previous slide, and compute the first derivative with respect to x0.
+[28:01] So we're taking our function phi, our objective function and deriving it with respect to x0.
+[28:07] So the first term over here is a constant because it doesn't depend on x0.
+[28:13] The second term here is basically a quadratic term in x0 so this gives us this 2.
+[28:21] The term x0 has a negative sign over here which brings us a negative sign over here and then we have the sum just taking into account the linear part over here.
+[28:32] And for the second part over here, there this is only linear in x0 so we have the negative sign will pop up here, will compensate for this negative sign over here so this turns into plus.
+[28:47] The 2 stays the same and then have this linear term over here.
+[28:51] So this is directly the computation of the first derivative of this function over here.
+[28:58] Now I take my first derivative and need to set this first derivative to 0.
+[29:03] Of course I want to find the parameter where the first derivative is 0 because that's the point where I have a minimum or a maximum.
+[29:10] So how does it look like? I take this equation over here and simply set it to 0.
+[29:16] Set the first derivative to 0 so this is my resulting equation.
+[29:20] So what I can do now is I can basically take this negative part over here and move it to the other side.
+[29:26] I can divide by the factor of 2 and then I'm getting this equation over here.
+[29:33] So this sum over here sits over here and this sum basically sits over here. Not much has happened.
+[29:42] Okay and now I need to look a little bit into the details in order to find the term which generates this equality and I'm looking here to this sum.
+[29:54] So the sum over all points xn minus x0 times the weight.
+[30:02] And actually I can't ignore the weight over here.
+[30:07] I need to take this expression now into account and say what does this mean?
+[30:11] So this means nothing else.
+[30:14] I compute the sum over my points x0 and this is actually the summing over the points multiplied by the weights actually gives me the mean of this point set.
+[30:29] And then I'm actually subtracting the mean of that point set.
+[30:32] So I'm basically taking all the individual points, subtracting the mean and then computing the mean over this expression.
+[30:40] This means the result of this sum must be 0.
+[30:44] Because again I'm taking the points, subtracting the mean from all the individual points and then I'm summing over those points all these deviations from the mean.
+[30:55] And as a result of this I will end up in 0 because I've subtracted the mean before.
+[31:01] So this expression over here turns out to be 0 and if this is 0 a rotation matrix multiplied with a 0 vector gives me 0.
+[31:13] So that means this expression over here also must be equal to 0.
+[31:17] So this is a result of that.
+[31:20] Okay, now I take this expression and continue from this expression over here.
+[31:27] Just expanding the sum, so I get this result over here and then I can simplify this and move xn to the other side because x0 doesn't depend on the sum.
+[31:41] So I can move it out of the sum, divide by the sum term and then I'm actually ending up with this expression over here.
+[31:47] And if you look to this expression we can actually see that it is the weighted mean of all the points x0.
+[31:53] And the important thing to stress in here is that this is a result of the fact that we want to compute the x0 that minimizes my objective function.
+[32:03] So x0 turns out to be the weighted mean of the point set.
+[32:08] But this is nothing which I have set manually or provided.
+[32:14] This is something which is a result of this minimization.
+[32:18] And that's also the reason why I call this variable x0.
+[32:21] But when I was starting, when I was introducing this variable, I was not knowing that it's actually the weighted mean of the point set x.
+[32:27] So this is a result of this minimization.
+[32:32] So the optimal value for x0, given my data association, is the weighted mean of the point sets of xn.
+[32:39] So something I can compute easily.
+[32:41] I just need to iterate over my point set xn, over all the values, sum them up, multiply it with the weights, normalize by the weights,
+[32:48] and then I'm getting the weighted mean, the center of mass of the weighted points x0.
+[32:54] And this is my x0, which is one of the quantities from which I can then directly derive my translation vector.
+[33:02] Because there's a direct relationship between x0, the rotation matrix, and the translation vector.
+[33:07] Okay, so that's done. I know how x0 must look like, and it's easy for me to compute.
+[33:13] It's very good. First part of the problem is solved.
+[33:17] Now, what I want to do is, I need to take care about the second variable that I want to identify.
+[33:22] And this is my rotation matrix RT.
+[33:25] So we did it for x0 for the vector, now we need to do this for the rotation matrix.
+[33:29] We need to find the optimal rotation matrix so that it minimizes my objective function.
+[33:35] That's the task that we now need to look into.
+[33:39] So if I look to my objective function, again, copy paste from the expression that I had a few slides back,
+[33:46] and we had seen over there that only the last expression here, that third line,
+[33:51] is an expression which depends on the rotation matrix R.
+[33:54] So those two quantities over here are independent of R.
+[33:58] That means in my process of trying to find how should R look like in order to minimize this expression,
+[34:05] I can ignore those two lines because they are completely independent of R.
+[34:10] So the only thing I need to take into account is this second line over here.
+[34:14] And I can say I either need to minimize this expression over here,
+[34:18] which is equal to maximizing this expression when I'm actually just changing the sign.
+[34:23] And I want to do this under the constraint that R transposed R must be an identity
+[34:28] because we have a rotation matrix over here.
+[34:31] So this is one of the points that I will be exploiting also later on.
+[34:35] Okay, so let's see how that works.
+[34:39] So given that we already computed x0, we can actually exploit that knowledge about x0.
+[34:45] And we use this x0 just to rewrite things a little bit so that the expression gets a little bit easier.
+[34:50] And we compute the so-called weighted mean reduced coordinates.
+[34:55] So we are taking our point set y and subtracting the weighted mean of y from them,
+[35:02] and we do the same thing for the points at x.
+[35:04] So we're taking the points, computing the weighted mean of the points at x0 and subtracting from all the points.
+[35:09] And so that basically the center of masses of those points overlap on R in 0, 0, 0.
+[35:18] And so I can just take all my points yn, I call them an, and just by subtracting the weighted mean of that point set and do the same for x.
+[35:27] So basically the coordinates x turn into b's and the coordinates y turn into a's, just that they are weighted mean reduced coordinates.
+[35:35] So the weighted mean lies in 0, 0, 0.
+[35:38] So then the expression simplifies, basically those expressions are directly replaced with a and b,
+[35:48] and then this is the expression I actually need to focus on.
+[35:54] So how are we going to do this?
+[35:58] The first thing we are exploiting is that we can actually rewrite this expression over here,
+[36:03] which is exactly what I copied before, by using the trace.
+[36:07] And we are doing this because later on we can exploit an inequality in order to perform this maximization that tells us something about the trace of matrices.
+[36:16] And therefore we are now shifting from this notation into the notation of using the trace.
+[36:21] And basically it says that this expression is equal to this one over here,
+[36:25] so it's the trace of this rotation matrix R over here and a matrix H, which is the cross covariance matrix of these vectors b and a.
+[36:34] So it's an times b transpose, so the outer product over here, times the weight vector summed over all points,
+[36:43] and this is the cross covariance matrix of the vectors a and b.
+[36:48] And this gives me the matrix H, and then this expression over here, the original expression is equivalent to this expression,
+[36:56] so we basically need to find the matrix R that maximizes this trace.
+[37:02] So the task for now is to find R so that this expression here is as large as possible,
+[37:08] the trace of R times the cross covariance matrix defined over the individual data points.
+[37:15] So how do we do this? And we are doing this by exploiting the singular value decomposition now.
+[37:22] Again, this is something where we basically say, okay, let's take the singular value decomposition, decompose this matrix H,
+[37:29] and define a matrix R and then see what happens.
+[37:32] Then we can actually show that the choice of R is an optimal choice, so that's basically how this derivation works.
+[37:38] So we are taking this matrix H and are computing a singular value decomposition of this matrix H.
+[37:44] That means we are breaking up this matrix H into three matrices, a matrix U, a matrix D, and a matrix V or V transposed.
+[37:52] And here the important thing is that D is the diagonal matrix, so zeros everywhere, only elements on the main diagonal,
+[37:59] and these are the singular values of D, and it's done in a way that these are positive values.
+[38:08] And U transposed times U is the identity, and V transposed times V is also the identity.
+[38:15] So these are the properties that hold based on the singular value decomposition.
+[38:20] Okay, and what we're now doing is we're performing the singular value decomposition and now define a matrix R
+[38:26] using this U matrix and this V matrix with the goal of then showing that this was the optimal choice, using an inequality.
+[38:35] So we are taking the results of the singular value decomposition, say let's see what happens if we define R in the way that it's V times U transposed.
+[38:45] If we do so, then we can actually rewrite this expression of the trace because now we know what R looks like.
+[38:51] So R is V U transposed, so V U transposed, that's R.
+[38:56] And H I just computed with the singular value decomposition as U times D times V transposed, so this is my matrix H.
+[39:05] So if I look to this multiplication of five matrices, I see here that I have two matrices in the middle, the U transposed and U,
+[39:13] which must be the identity based on the singular value decomposition.
+[39:16] So this expression simplifies the trace of V D V transposed.
+[39:22] So far so good.
+[39:23] The next thing I'm going to exploit is that D is a diagonal matrix which has only positive elements on the main diagonal.
+[39:33] So I can basically break up this matrix D in a product of two matrices where on the main diagonal are the square roots of the singular values.
+[39:42] I just then need to multiply this matrix with itself to get D.
+[39:47] So D is split up into, let's say, D square root times D square root, where D square root is basically the same diagonal matrix except that I have the square roots on the main diagonal.
+[39:58] So if I multiply those two matrices, I will get the same expression.
+[40:02] Why are we going to do this? Why are we doing this?
+[40:04] I actually want to replace this V square root of D with a new matrix and then exploit certain properties of this matrix.
+[40:12] Therefore, I'm doing this split up here which seems to be rather arbitrary at the moment because then we can exploit that further down the line.
+[40:22] Okay, so as I said, we split up this matrix D as it is a diagonal matrix.
+[40:28] We can rewrite this and basically move the transposition operator inside because again this is just a diagonal matrix.
+[40:35] So if I compute the transposition of a diagonal matrix, it's the same.
+[40:39] So we can exploit this for splitting up the product as the trace of V square root D times V square root D in brackets transposed.
+[40:48] This only holds because I have this diagonal matrix over here.
+[40:52] So I can now define a new matrix A as V times square root of D so that I can write the trace of R times H is equal to the trace of R AA transposed.
+[41:06] And so far this is just a definition.
+[41:08] All these expressions just hold based on exploiting the properties of the singular value decomposition.
+[41:15] There's no other things have been exploited other than the properties resulting from the SVD.
+[41:22] I furthermore know that this matrix A is a positive definite matrix and this again results from my singular value decomposition that's generated me this matrices V and D.
+[41:35] And so as a result of that, I know that this is a positive definite matrix A.
+[41:42] And with A being a positive definite matrix, I can exploit an inequality and this inequality actually tells me then that I use the optimal rotation matrix.
+[41:54] So this inequality tells me the trace of any positive definite matrix A times A transposed is larger or equal than the trace of the same matrix multiplied with an arbitrary rotation matrix.
+[42:09] So I can multiply any further rotation matrix here called R' and then the trace of this positive definite matrix will only decrease or stay at the same value.
+[42:22] And this holds for any rotation matrix R.
+[42:25] And this is a result of the Schwarz inequality.
+[42:29] And if I use this result, I can say, OK, my trace of R times H is the trace of AA transposed, which must be larger or equal than the trace of any arbitrary rotation matrix multiplied with AA transposed.
+[42:47] And now I can actually replace back that AA transposed by design was equal to R times H.
+[42:54] So this is my arbitrary rotation matrix R' times R and H.
+[43:00] And what this means here, this expression is that I can multiply any arbitrary rotation matrix here from the left hand side to my expression, which turns the two Rs into a new rotation matrix.
+[43:11] And the result of the trace then will always be smaller than my original trace.
+[43:18] So that means if I use any other rotation matrix than the rotation matrix that I have chosen, the trace will be smaller.
+[43:25] That means this is the maximum trace that I can actually get for this type of matrix.
+[43:32] So as a result of this, by choosing R smartly, namely as V times U transposed, this expression will be maximized.
+[43:43] And any other design of a rotation matrix will lead to a smaller trace.
+[43:48] And as a result of this, this is the design of the rotation matrix that maximizes this trace.
+[43:55] If you want to go a little bit further and actually know why this inequality holds, you can actually go back to this 1978 paper of Aaron et al, where they actually derive all that.
+[44:08] I just put the corresponding expression here on the slides that tells you why this term actually holds.
+[44:16] So as a result of this, we now have defined the x0 value that maximizes, or the x0 value that maximizes my objective function, and I have found the rotation matrix which maximizes my objective function.
+[44:33] So this rotation matrix, R equals V times U transposed, is the optimal rotation matrix in order to maximize my objective function.
+[44:44] So as a result of this, I have now computed x0 and R, the two variables on which my objective function depended, in order to minimize it.
+[44:56] So sorry if I said maximizing a second ago, of course I mean minimizing because the oval function is, I'm seeking to minimize over here.
+[45:06] So the question I may have, is this a unique solution?
+[45:11] Is only a unique solution if the rank of this matrix H is of full rank?
+[45:18] So this matrix H is a three by three matrix.
+[45:22] If you're in the 3D world, the same holds for U and V, which are rotation matrices, and so my matrix D is a three by three diagonal matrix with elements on the main diagonal.
+[45:33] And only if all those values are greater than zero, this solution is actually a unique solution.
+[45:41] Otherwise, it is not a unique solution as soon as one of those values is equal to zero, then I don't get a unique solution out, then there are multiple possibilities how this matrix can look like.
+[45:53] But otherwise, it's a unique solution.
+[45:56] Okay, so I know x0, I know R, and then I can compute my optimal translation vector just based on the formula that I used in order to define x0.
+[46:08] So this was my starting point, how I defined x0, it depends on the rotation matrix, it depends on the weighted center of mass of the second point cloud, of the first point cloud, sorry, and the translation vector t.
+[46:21] So I can simply move t to the other side by moving this expression over here, multiplying from the left hand side, this minus R, and as a result of this, I can compute my translation vector t in that given form, which is the optimal translation vector for my overall minimization problem.
+[46:41] So what we have done now, we derived the solution that minimizes my objective function, or my error function, and computed the optimal solution coming up with a rotation matrix and a translation vector that doesn't require any initial guess, and there's no better solution than the one we have proposed under the assumption of no data association.
+[47:07] The only steps that I need to do, I need to be able to compute a cross covariance matrix which is trivial, I need to compute the weighted center of masses which is trivial, and I need to compute a singular value decomposition for which I typically use my mathematical toolbox in order to do this.
+[47:24] So as a result of this, with those parameters, I have found the optimal alignment of these two point clouds, there's no better solution than that, it's optimal, and I don't need an initial guess, so it's a direct solution that we could compute.
+[47:40] These are all great properties for such an algorithm that I want to have, it's optimal, I don't need an initial guess, and furthermore, this is also really fast to do because I'm only dealing with three by three matrices and the singular value decomposition of a three by three matrix if nothing which challenges your computer a lot.
+[48:02] So, to sum up, what have we done? We have provided a registration algorithm for aligning points, two point clouds, under no data association, so soon we know our correspondences.
+[48:20] It provides a rigid body transformation, it's a special case of the absolute orientation problem, so we could also do this if we have a scale ambiguity in here, so if one point cloud needs to be scaled, we can do the same, then our objective function gets a bit more complicated, we have another parameter in there, but what we have shown here is basically a special case of that, and it is again a direct and optimal solution and a very effective and popular method.
+[48:48] So the standard ICP algorithm that we will discuss in the second part of the lecture is basically based on this SVD solution.
+[48:57] So what we will be looking into the second part of the lecture is point cloud registration with unknown data association.
+[49:04] So there we relax the assumption that we know the correct one-to-one correspondences between those points and look into ways what can we do if this is not available.
+[49:15] In general, as a short outlook, it turns out that there is no direct solution that I can actually execute if I don't know the data association.
+[49:29] So I can maybe guess a data association like the one shown over here, which is not the optimal one, but then I will of course get an alignment which is not perfect because my data association was not the right one.
+[49:40] And so the trick of the iterative closest point algorithm is basically to repeat this process.
+[49:47] So based on the fact that in step one we are going from here to here, let's simply try again to re-estimate, so guessing data associations, and then recomputing this alignment as an iterative algorithm.
+[49:59] And then we can basically repeat using the toolbox that we derived and iteratively executing is always guessing the data association again.
+[50:07] And this leads to the so-called ICP algorithm so that after a couple of these ICP steps, we hopefully end up getting the right solution.
+[50:17] But again, the assumption here is we don't have perfect correspondences, but we have a good idea how those correspondences may look like.
+[50:24] So we have an initial guess either based on the point locations, and then we can look for example for the nearest neighboring points, or we have an idea of point correspondences.
+[50:34] If you have no idea at all what the initial guess could look like, we could still try to align the points with computing the center of mass and trying to shift them on top of each other, but then it typically gets more tricky.
+[50:46] And the key idea again is to iteratively estimate the data association and the transformation, the data association and the transformation until I actually converge.
+[50:54] And this goes back to an algorithm which is by now nearly 30 years old and is known under the name iterative closest point algorithm.
+[51:03] It's one of the extremely popular methods that is used for aligning point clouds between the other and is the standard in a lot of SLAM algorithms that we are basically using today.
+[51:16] And again it works by the idea of picking for every point its closest neighbor, compute the rigid body transformation, execute the alignment and repeat this process until nothing changes anymore.
+[51:29] And this actually brings me to the end of the lecture today.
+[51:34] What we discussed is the registration of point clouds which is a central task for building maps, for SLAM algorithms, for estimating the movement of a mobile platform incrementally, something like Lidar-based odometry.
+[51:48] These are all techniques that rely on some form of point cloud registration and we looked into a technique that is used in order to compute the optimal alignment in forms of a transformation and a rotation between point clouds or laser scans, some range data that allows us to compute 3D points in the environment.
+[52:10] And given the data associations the SVD allows us to come up with an optimal solution and this is a basic for the ICP algorithm that we will then discuss in the next lecture.
+[52:22] And with this I'm coming to the end.
+[52:24] Thank you very much for your attention over here.
+[52:28] Thank you.

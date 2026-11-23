@@ -1,0 +1,1007 @@
+WEBVTT
+
+00:00.000 --> 00:11.000
+So today I want to explain how we can actually estimate the intrinsic as well as extrinsic parameters of our camera, which is called the so-called direct linear transform.
+
+00:11.000 --> 00:29.000
+So what we want to do is we want to estimate the five intrinsic parameters, so the camera constant, the offset in x and y of the principal point, potential shear, as well as the scale difference of those five intrinsic parameters which are elements of the calibration matrix.
+
+00:29.000 --> 00:37.000
+We want to estimate that, as well as the location of the camera, under the assumption that we know a certain number of fixed points in the environment.
+
+00:37.000 --> 00:46.000
+So assume we have the 3D coordinates of a set of points in the scene, can we actually estimate the intrinsic and extrinsic parameters of our camera?
+
+00:46.000 --> 00:50.000
+And yes, we can do this, and that's what I want to talk about today.
+
+00:50.000 --> 01:00.000
+So if you want to describe how a point from the 3D world is actually mapped into a pixel coordinate, we have this equation x equals px.
+
+01:00.000 --> 01:15.000
+And we discussed intensively in the lecture on the intrinsic and extrinsic, how those parameters are sitting inside p, what do they mean, and how they impact the process of mapping a 3D point from the world into our image.
+
+01:15.000 --> 01:28.000
+What we want to do today is to actually estimate those parameters, so to find values for those parameters, given that we know some of the points in the world, and given that we know where they are mapped to in our image.
+
+01:28.000 --> 01:34.000
+So today, these x's are given, and we want to compute the parameters of p.
+
+01:34.000 --> 01:45.000
+So assume we know a certain number of so-called control points here, indicated by those red crosses distributed over our scene, we want to estimate the intrinsic and extrinsic of our camera.
+
+01:45.000 --> 01:48.000
+So that's the task we are heading for today.
+
+01:48.000 --> 02:03.000
+So one wanted our intrinsic and extrinsic parameters of our camera, what is given are the coordinates of the object in the 3D world, as well as observations of the 3D locations of those points in our image.
+
+02:03.000 --> 02:10.000
+And we assume to know the data association, so we know which point is mapped to which pixel in our image.
+
+02:10.000 --> 02:21.000
+And based on this information, so based on the known 3D coordinates of the control points, and based on the observations, we want to estimate the parameters in p, so the intrinsic and the extrinsic.
+
+02:21.000 --> 02:29.000
+And the mapping works using this DLT, that's something that we have described, so we have our camera illustrated here with our projection center.
+
+02:29.000 --> 02:35.000
+So this is the origin of the coordinate system of our camera.
+
+02:35.000 --> 02:44.000
+We have our image plane shown over here, and then the point in 3D on an object is projected onto our image plane.
+
+02:44.000 --> 02:47.000
+And this was kind of this model that we are using.
+
+02:47.000 --> 02:55.000
+In reality, of course, the image plane sits behind here in that camera, but we can rotate it to the front and then have a coordinate system over here.
+
+02:55.000 --> 03:03.000
+So we know the small x, we know the large x, and we want to know the parameters of the overall mapping process.
+
+03:03.000 --> 03:20.000
+So what was in there in this process are the extrinsic parameters, which is the location of the camera as well as its orientation, this is x0 and r, and the intrinsic, the calibration parameters, which are stored here in k.
+
+03:20.000 --> 03:23.000
+And these are the elements that we want to estimate.
+
+03:23.000 --> 03:30.000
+So we can actually write that down and also see this is a 3x1 vector, so two dimensions in homogeneous coordinates.
+
+03:31.000 --> 03:44.000
+There's a 3x3 calibration matrix, a 3x3 rotation matrix, there's a 3x1 vector for the shift, and the 4x1 point of the point in the 3D world expressed in homogeneous coordinates.
+
+03:44.000 --> 03:54.000
+And all the parameters of p are stored here in this part, which overall sums up to a 3x4 matrix.
+
+03:54.000 --> 04:05.000
+So we have the 3x4 matrix, the camera internal parameters, the so-called intrinsics, are stored inside k, and the extrinsics are the postparameters of the camera.
+
+04:05.000 --> 04:19.000
+That means the translation, three dimensions, and the rotations, three dimensions, given through this x0 and the rotation matrix, and together this is this DLT transformation we have been talking about.
+
+04:20.000 --> 04:34.000
+So what we want to do today, given this, and given this, we want to estimate three translation parameters, three rotation parameters, and the five parameters of my calibration matrix.
+
+04:34.000 --> 04:36.000
+So that's the task of today.
+
+04:37.000 --> 04:44.000
+The first question that we should ask ourselves, how many points do we actually need to know in the environment and observe in our image?
+
+04:44.000 --> 04:51.000
+So we have this equation x equals px, so how many of these x do I actually need in order to solve my problem?
+
+04:51.000 --> 04:59.000
+In order to do that, let's look at how many unknowns we have and how many information one of those observations actually generates.
+
+04:59.000 --> 05:10.000
+So if we say this is a point in 2D and this is a point in 3D, but expressed in homogeneous coordinates, this would be a 3D vector here and a 4D vector over here.
+
+05:10.000 --> 05:15.000
+However, we are not interested in the points in homogeneous coordinates. In the end, we want to obtain Euclidean coordinates.
+
+05:15.000 --> 05:21.000
+That means we need to normalize them away, basically dividing by the last component.
+
+05:21.000 --> 05:31.000
+So we divide this vector by the last component and this vector by the last component, which gives us the Euclidean coordinates over here and the Euclidean coordinates over there.
+
+05:31.000 --> 05:37.000
+And then we basically need to take our projection matrix p and multiply it with those elements.
+
+05:37.000 --> 05:50.000
+So what we in the end obtain is this form here and if you write them down, basically expand all the multiplications here, then we obtain two equations for a single observation.
+
+05:50.000 --> 05:56.000
+So if you see one point, we get two observation equations, one for the x coordinate and one for the y coordinate.
+
+05:57.000 --> 06:13.000
+And at the same point in time here, we have these two equations and we have the unknowns or the unknowns that we need to estimate are all the parameters which are sitting in here.
+
+06:13.000 --> 06:19.000
+And remember, the DLT has 11 degrees of freedom, 5 plus 6.
+
+06:19.000 --> 06:34.000
+So if we have 11 unknowns in here and we get two observations for every point that we see, that means we need 11 divided by 2, which would be 5.5.
+
+06:34.000 --> 06:40.000
+So we need six points in the environment in order to being able to estimate that p here.
+
+06:40.000 --> 06:45.000
+So at least six control points we need to know in order to estimate all our parameters.
+
+06:45.000 --> 06:50.000
+And this is different from what is called spatial resectioning, for example, versus DLT.
+
+06:50.000 --> 06:54.000
+So spatial resectioning basically localizes already calibrated camera.
+
+06:54.000 --> 06:59.000
+Then I have only six unknowns and need to have at least three points in the environment.
+
+06:59.000 --> 07:03.000
+But we are looking here today is actually more interested in the camera calibration part.
+
+07:03.000 --> 07:08.000
+So determining the intrinsic parameters, but also the location of our camera, then we have 11 unknowns.
+
+07:08.000 --> 07:15.000
+That means we need to have at least six points and this can be solved by this DLT computation.
+
+07:15.000 --> 07:25.000
+Of course, under the assumption that we only have an affine camera, that means we are ignoring our nonlinear effects or nonlinear noise that we have in our process.
+
+07:25.000 --> 07:29.000
+So we assume only our linear dependencies that we have.
+
+07:30.000 --> 07:35.000
+So in sum, the task today is compute the mapping,
+
+07:35.000 --> 07:46.000
+determine the parameters and we use the direct linear transform for computing the orientation of an uncalibrated camera using at least six known 3D points in the environment.
+
+07:46.000 --> 07:48.000
+So what are we doing?
+
+07:48.000 --> 07:51.000
+We are estimating the 11 elements of p.
+
+07:51.000 --> 07:54.000
+Remember p has 11 elements.
+
+07:54.000 --> 08:06.000
+Although it has 12 numbers, there are also 11 degrees of freedom in there because one is due to the property of the homogeneous matrix that it's only defined up to a scalar.
+
+08:06.000 --> 08:12.000
+And what we have given are the 3D coordinates of the points xi and we have at least six of them.
+
+08:12.000 --> 08:17.000
+Let's say capital I and we have the observed image coordinates of that point.
+
+08:17.000 --> 08:22.000
+So we know which point in the world is mapped into which image coordinate so the data association is given.
+
+08:22.000 --> 08:27.000
+And we assume that this function expresses everything we want to express.
+
+08:27.000 --> 08:30.000
+So let's see how that works.
+
+08:30.000 --> 08:39.000
+So we write down x equals px and expand our matrix px so that we have the 12 elements in there from p11 to p34.
+
+08:39.000 --> 08:42.000
+And these are our unknown parameters that we want to estimate.
+
+08:42.000 --> 08:46.000
+This x is given and this x over here is given.
+
+08:46.000 --> 08:55.000
+The first thing we do, we just slightly rearrange or rewrite that equation by saying, okay, let's take those numbers and group them together as a vector called A.
+
+08:55.000 --> 09:02.000
+Let's take those and group them as a vector called B and this one as a vector called C.
+
+09:02.000 --> 09:10.000
+So we define three new vectors A, B and C as follows so that A transpose gives me the first row of the matrix P,
+
+09:10.000 --> 09:19.000
+B transpose gives me the second row of the matrix P and C transpose gives me the third row of my projection matrix.
+
+09:19.000 --> 09:28.000
+So that I then can write the same equation x as A transpose, B transpose, C transpose multiplied with my vector C.
+
+09:28.000 --> 09:34.000
+So nothing very bad has happened. We just defined three new variables, three new vectors to regroup them.
+
+09:34.000 --> 09:45.000
+If you now multiply these elements with x, it means A gets multiplied with x, B gets multiplied with x and C gets multiplied with x.
+
+09:45.000 --> 09:50.000
+And this gives us the one, two, three dimensions of my output.
+
+09:50.000 --> 10:01.000
+So my output u, v, w in homogeneous coordinates can be written as A transpose xi, B transpose xi and C transpose xi.
+
+10:01.000 --> 10:10.000
+So in order to obtain u, v and w, we only need to compute the product of these two vectors over here.
+
+10:10.000 --> 10:22.000
+And again, remember we wanted to estimate that in the end in Euclidean coordinates because we want to have in the end have only this information about the two pixel coordinates that we're getting.
+
+10:22.000 --> 10:27.000
+So to turn this into a Euclidean vector, we need to divide those two elements by wi.
+
+10:27.000 --> 10:38.000
+So that means it would be a division of A transpose x by C transpose x for the first component and B transpose x divided by C transpose x for the second component.
+
+10:38.000 --> 10:41.000
+And we can just kind of write that down.
+
+10:41.000 --> 10:44.000
+So our xi in Euclidean coordinates is written over here.
+
+10:44.000 --> 10:54.000
+And so in order to perform the normalization to go from the homogeneous world to the Euclidean world, we need to divide by the last component, in this case, C transpose xi.
+
+10:54.000 --> 11:04.000
+So that my x coordinate is A transpose xi divided by C transpose xi and my y coordinate is B transpose xi by C transpose xi.
+
+11:05.000 --> 11:15.000
+So what we now can do is we can use this equation and this equation to define a system of equations.
+
+11:15.000 --> 11:20.000
+So this can be just by multiplying with C transpose xi.
+
+11:20.000 --> 11:27.000
+We can bring that to the other side, subtract A transpose x and we get this equation which equals to zero.
+
+11:27.000 --> 11:37.000
+We can do exactly the same thing for our second equation for the y coordinate so that from the y coordinate we derive this equation.
+
+11:37.000 --> 11:44.000
+And putting those things together, we actually get a system of our linear equations.
+
+11:45.000 --> 11:55.000
+So that we can actually rewrite this in a form that here we have minus x transpose A plus x transpose C equals to zero.
+
+11:55.000 --> 12:01.000
+And here x transpose B y times x transpose C equals to zero.
+
+12:01.000 --> 12:04.000
+Why are we doing this? Why are we writing this in this way?
+
+12:04.000 --> 12:12.000
+Because here in this setup, the A, B, C are in the end our unknowns, our parameters we want to estimate.
+
+12:12.000 --> 12:17.000
+And the capital X and lowercase x and y are our known parameters.
+
+12:17.000 --> 12:23.000
+So it's kind of slightly differently how you would rewrite a system of linear equations where x is typically your unknown.
+
+12:23.000 --> 12:30.000
+Here the x are our unknowns and A, B, C are kind of the elements that we in the end want to estimate.
+
+12:30.000 --> 12:35.000
+Therefore we write it in this form that our unknowns do not have the transposition over here.
+
+12:36.000 --> 12:45.000
+Okay, so that means we can actually collect a parameter vector P where we stick A, B, C together.
+
+12:45.000 --> 12:49.000
+And this can be kind of a vectorization of my matrix P transpose.
+
+12:49.000 --> 12:53.000
+It's just kind of sticking those 12 elements on top of each other.
+
+12:53.000 --> 13:01.000
+So this here is nothing else than a 12 by 1 vector containing the individual elements of my matrix P.
+
+13:01.000 --> 13:15.000
+And if I use this, I can then rewrite that system of linear equations that I had before into a coefficient vector A transposed for the x coordinates
+
+13:15.000 --> 13:20.000
+and A transposed for the y coordinates multiplied with my unknown parameters P.
+
+13:20.000 --> 13:27.000
+And so this equation results me in this part and this equation results me in this part over here
+
+13:27.000 --> 13:38.000
+because this is the other coefficients which depend on the xi and here we have the coefficients which depend on the ay on the y component over here.
+
+13:38.000 --> 13:46.000
+And so if you write this down like this, then P is my vectorized version of P.
+
+13:46.000 --> 13:55.000
+My A transposed x is simply minus xi transposed, zero transposed, small xi times capital Xi transposed.
+
+13:55.000 --> 14:00.000
+And which we can expand into a vector of this form.
+
+14:00.000 --> 14:07.000
+So we have the minus x, y, z coordinate over here of the point in 3D, a minus one and then a couple of zeros.
+
+14:07.000 --> 14:14.000
+And then the x coordinate of the image multiplied with the x coordinate, the x coordinate and the image multiplied with the y coordinate of the point,
+
+14:14.000 --> 14:18.000
+the x coordinate multiplied with the z coordinate of the point and the xi coordinate.
+
+14:18.000 --> 14:21.000
+And we can do exactly the same for y as well.
+
+14:21.000 --> 14:31.000
+The only difference is that the zeros are basically sitting here at a different position and those elements are shifted over here, but it's analogous to that.
+
+14:31.000 --> 14:40.000
+So let's verify that rewriting that I have done, which we'll use in a few minutes to solve that system, that this is actually still correct.
+
+14:40.000 --> 14:45.000
+So that what I've written down here is exactly the same than our original system.
+
+14:45.000 --> 14:48.000
+Let's make a quick check and see that we have done everything right.
+
+14:48.000 --> 14:59.000
+So we can verify the coordinates by simply computing this product of this coefficient vector and our unknown, which I have written down, just copy paste from our previous slide.
+
+14:59.000 --> 15:05.000
+So just as a reminder, this was my vector A, this was my vector B and this down here was my vector C.
+
+15:05.000 --> 15:09.000
+So this I can rewrite this as ABC.
+
+15:10.000 --> 15:17.000
+And over here, I can take the first four elements and they give me the minus xi.
+
+15:17.000 --> 15:31.000
+This is the negative 3D coordinate of the point expressed in homogeneous coordinates, a zero vector and the pixel coordinate multiplied with my 3D location.
+
+15:31.000 --> 15:44.000
+And so this is the nothing else than this element multiplied with A, the zero multiplied with B, this goes away and this third element multiplied with C.
+
+15:44.000 --> 15:48.000
+So exactly get my equation down here.
+
+15:48.000 --> 15:52.000
+So I have nothing else than what I exactly had written down before.
+
+15:52.000 --> 15:55.000
+We can do exactly the same thing with B as well.
+
+15:55.000 --> 15:58.000
+It's completely identical except that the zero sits over here.
+
+15:58.000 --> 16:02.000
+So only the B parts survive and the A part goes to zero.
+
+16:02.000 --> 16:15.000
+So by this quick check that A transpose P gives me my original equations, I can now use this form of writing it down as A transpose B in order to do my computation.
+
+16:15.000 --> 16:26.000
+So what I need to solve is this thing, I can stack that together as a big coefficient vector, just stacking these A's together, always AX, AY, AX, AY and so on.
+
+16:26.000 --> 16:30.000
+So this is a large matrix and my unknown vector P.
+
+16:30.000 --> 16:39.000
+And so I can say this is just a regular matrix, let's call that M and the vector P is still my unknowns and this has to be equal to zero.
+
+16:40.000 --> 16:50.000
+So what I basically did for all of those observations, so for every observed point, I generate one of those pairs.
+
+16:50.000 --> 17:03.000
+So this AXI is for the coefficient about the X coordinates of the point I and the coefficients of the Y coordinate of point I gives me, every point gives me two of those equations.
+
+17:03.000 --> 17:04.000
+So I can stack them.
+
+17:04.000 --> 17:10.000
+So this thing here in the end is a matrix which is in dimension 2I times 12.
+
+17:10.000 --> 17:18.000
+2I because I have two points, I have a number of points and 12 because everything has in here those 12 elements.
+
+17:18.000 --> 17:26.000
+So I have this matrix 2I times 12 and this 12 dimensional vector P and this should be equal to zero.
+
+17:26.000 --> 17:39.000
+So if I solve this system, then I actually have a solution for my parameters P which then directly define my projection matrix.
+
+17:39.000 --> 17:43.000
+So how do we actually solve this MP equals to zero?
+
+17:43.000 --> 17:48.000
+This is a special type of linear system, it's a so-called homogeneous system.
+
+17:48.000 --> 17:51.000
+That means a system where the right hand side equals zero.
+
+17:51.000 --> 17:56.000
+So this is AX equals to not B but zero over here.
+
+17:56.000 --> 18:02.000
+And solving this system is equivalent of finding the null space of this matrix A.
+
+18:02.000 --> 18:08.000
+So the null space of a matrix A is a vector to which I can multiply A and it will return me zero.
+
+18:08.000 --> 18:13.000
+So X must be a vector in the null space of A.
+
+18:13.000 --> 18:14.000
+And how to find that null space?
+
+18:14.000 --> 18:23.000
+For that we can use the singular value decomposition which is a technique for finding the singular values and singular vectors.
+
+18:23.000 --> 18:31.000
+And if I have a singular value that is zero, I know that the corresponding singular vector is part of the null space of A.
+
+18:31.000 --> 18:32.000
+So what do we need to do for this?
+
+18:32.000 --> 18:43.000
+We need to apply the SVD to our matrix M in order to pick out then the singular vector which corresponds to the singular value of zero.
+
+18:43.000 --> 18:46.000
+And that is then a solution to P.
+
+18:46.000 --> 18:50.000
+In practice, however, we have the issue that we have redundant observations.
+
+18:50.000 --> 18:55.000
+That means we typically have more observations, more equations than we have unknowns.
+
+18:55.000 --> 18:58.000
+So M times P will not be exactly zero.
+
+18:59.000 --> 19:05.000
+We'll take values close to zero but for a solution but unlikely not exactly zero.
+
+19:05.000 --> 19:10.000
+So what we have, we don't have M P equals zero, we have M P equals W with a small W.
+
+19:10.000 --> 19:17.000
+And so what we then want to do is we typically want to find a P that minimizes these Ws.
+
+19:17.000 --> 19:20.000
+Or what we are doing which minimizes W transpose W.
+
+19:20.000 --> 19:23.000
+So kind of the squared of that.
+
+19:23.000 --> 19:29.000
+So we have basically our residuals, our error that we want to minimize, W transpose W.
+
+19:29.000 --> 19:33.000
+And we want to find the P that minimizes this expression.
+
+19:33.000 --> 19:39.000
+So what we do is we just put those elements in here and then we have this expression over here.
+
+19:39.000 --> 19:48.000
+So we want to basically minimize the squared error here under the assumption that P is of norm one so that P itself doesn't go to zero.
+
+19:48.000 --> 19:51.000
+And in the end the P forms homogeneous matrix.
+
+19:51.000 --> 19:56.000
+This homogeneous matrix is anyway defined only up to a scaling constant.
+
+19:56.000 --> 19:59.000
+So I don't care about the actual lengths of my vector P.
+
+19:59.000 --> 20:01.000
+So how does it work?
+
+20:01.000 --> 20:08.000
+We are applying the SVD to the matrix M and the SVD decomposes the matrix M into three matrices.
+
+20:08.000 --> 20:13.000
+The matrix U, the matrix S and the matrix V or V transpose depending on your implementation.
+
+20:13.000 --> 20:16.000
+And these matrices have different properties.
+
+20:16.000 --> 20:23.000
+So this matrix S is a diagonal matrix for example which contains the singular values in descending order.
+
+20:23.000 --> 20:26.000
+So the largest first, the smallest one and the last.
+
+20:26.000 --> 20:31.000
+So the smallest singular value that we have we find in S1212.
+
+20:31.000 --> 20:36.000
+If it's zero it's perfect but typically it is not zero, it's smaller than zero.
+
+20:36.000 --> 20:39.000
+It's close to zero but not exactly zero.
+
+20:39.000 --> 20:47.000
+The matrix V or V transpose stores the corresponding singular vectors.
+
+20:47.000 --> 20:53.000
+So what we can do is we can pick out the singular vector that corresponds to the smallest singular value
+
+20:53.000 --> 21:00.000
+and use this as a solution for my P because it will minimize that squared error.
+
+21:00.000 --> 21:07.000
+So what I just do is just take this matrix V and take out of this matrix V
+
+21:07.000 --> 21:14.000
+the eigensingular vector that corresponds to the smallest singular value
+
+21:14.000 --> 21:16.000
+and this is the one which minimizes P.
+
+21:16.000 --> 21:23.000
+And this gives me my 12 values of P which I can then rearrange and have my projection matrix.
+
+21:23.000 --> 21:28.000
+And this is a straightforward application of the singular value decomposition
+
+21:28.000 --> 21:33.000
+that I use for finding such homogeneous systems or finding the null spaces of the matrix
+
+21:33.000 --> 21:38.000
+just by determining their singular values and singular vectors.
+
+21:40.000 --> 21:43.000
+Okay, so the question is does this always work?
+
+21:43.000 --> 21:47.000
+So it actually turns out that it's not always the case.
+
+21:47.000 --> 21:53.000
+So let's see, when does M actually has a rank of 11?
+
+21:53.000 --> 21:58.000
+And this is the case if I have at least six points or if I have less than six points
+
+21:58.000 --> 22:03.000
+that I mentioned, the number of rows that I have will be smaller.
+
+22:03.000 --> 22:09.000
+So if I have only five points, I would have ten rows so I can't have a rank of 11.
+
+22:09.000 --> 22:14.000
+And under the assumption that we have no gross errors, we need to have at least six points.
+
+22:14.000 --> 22:22.000
+The problem is we, however, will get a rank deficiency if all points in the 3D world lie on a single plane.
+
+22:22.000 --> 22:27.000
+And let me illustrate how that works because we can see directly from this matrix M.
+
+22:27.000 --> 22:33.000
+So again, my matrix M consists of all those blocks for the individual measurements,
+
+22:33.000 --> 22:36.000
+so two rows for every observation.
+
+22:36.000 --> 22:41.000
+Now assume all points in the 3D world lie on a plane and let's select a certain plane
+
+22:41.000 --> 22:45.000
+just to make it easy to visualize here, Z equals to zero.
+
+22:45.000 --> 22:52.000
+That means all points in the 3D world have a Z coordinate in the world reference frame that is actually zero.
+
+22:53.000 --> 22:56.000
+So what's the effect of that?
+
+22:56.000 --> 23:03.000
+The effect of this is that these elements, the whole column will be zero, this column will be zero,
+
+23:03.000 --> 23:05.000
+and this column over here will be zero.
+
+23:05.000 --> 23:08.000
+So these will lead to zero columns.
+
+23:08.000 --> 23:11.000
+So out of these 12 columns that I have, three will be zero.
+
+23:11.000 --> 23:16.000
+That means only nine columns will remain, which potentially are not zero everywhere.
+
+23:16.000 --> 23:23.000
+So that means the rank is reduced to at maximum nine in that setup.
+
+23:24.000 --> 23:31.000
+And so this will lead to a rank deficiency and I will not find an appropriate solution for my parameters.
+
+23:31.000 --> 23:37.000
+There is also, so the points lying on a plane, there's also some other critical configurations,
+
+23:37.000 --> 23:43.000
+but the, in practice, relevant critical surfaces are actually the points lying on a plane
+
+23:43.000 --> 23:46.000
+because that happens actually quite frequently.
+
+23:46.000 --> 23:51.000
+If you think that you have a wall where a lot of feature points are located and you know those points,
+
+23:51.000 --> 23:53.000
+then all those points lie on a plane.
+
+23:53.000 --> 23:58.000
+Or if you are in an airplane mode and you're watching down with an aerial camera
+
+23:58.000 --> 24:02.000
+and you have a roughly planar ground and you know a few control points on the ground,
+
+24:02.000 --> 24:06.000
+they all lie on a plane or at least approximatively on a plane,
+
+24:06.000 --> 24:10.000
+which will lead to the degenerated solution of your projection matrix
+
+24:10.000 --> 24:15.000
+and thus you will not be able to estimate your intrinsic and extrinsic parameters.
+
+24:15.000 --> 24:17.000
+So from a practical application point of view,
+
+24:17.000 --> 24:22.000
+you really need to make sure that your 3D points do not lie on a plane.
+
+24:22.000 --> 24:27.000
+They actually have a configuration so that they sufficiently vary from the planar configuration.
+
+24:27.000 --> 24:32.000
+Otherwise, you will not get a good solution for your matrix P.
+
+24:32.000 --> 24:35.000
+But again, one thing is what happens if we have our matrix P?
+
+24:35.000 --> 24:40.000
+If we have P, we still don't know the calibration matrix, the rotation matrix,
+
+24:40.000 --> 24:44.000
+or the translation vector where the camera is located in space.
+
+24:44.000 --> 24:48.000
+So how I can actually turn P into K, R, and X0?
+
+24:48.000 --> 24:53.000
+I mean, the other way is easy going from those parameters to the projection matrix.
+
+24:53.000 --> 24:55.000
+Of course, straightforward, that's the way P is defined.
+
+24:55.000 --> 24:57.000
+But what about the other way?
+
+24:57.000 --> 25:00.000
+How to go from P to those three parameters?
+
+25:00.000 --> 25:03.000
+And this is kind of the first time now that this becomes relevant
+
+25:03.000 --> 25:10.000
+and there's actually a way for doing this, for turning P into those three matrices.
+
+25:10.000 --> 25:13.000
+And for that, let's look to the structure of P.
+
+25:13.000 --> 25:22.000
+So the structure, the P is a 3x4 matrix, so it has a 3x3 matrix over here and a vector over here.
+
+25:22.000 --> 25:27.000
+So we can simply, as a definition, define a matrix H, which is a 3x3 matrix
+
+25:27.000 --> 25:34.000
+given by the first 3x3 block of P, and then a vector H, which is the last column of P.
+
+25:34.000 --> 25:40.000
+So H, capital H and small h, the matrix H and the vector H are directly there.
+
+25:40.000 --> 25:43.000
+And given that I know what kind of structure P has,
+
+25:43.000 --> 25:50.000
+I know that H is the calibration matrix times the rotation matrix, and H has this form over here.
+
+25:50.000 --> 25:55.000
+So what can we do in order now to extract K, R, and X0?
+
+25:55.000 --> 26:01.000
+The first thing is relatively straightforward, estimating X0.
+
+26:01.000 --> 26:08.000
+We can see this if we take this matrix H and invert it, we get Kr in bracket inverse.
+
+26:08.000 --> 26:13.000
+And if you multiply it from the left-hand side over here, we're actually eliminating this K and this R,
+
+26:13.000 --> 26:16.000
+and this allows us to then obtain X0.
+
+26:16.000 --> 26:21.000
+So for getting the projection center that is straightforward,
+
+26:21.000 --> 26:26.000
+we just invert the 3x3 block, multiply it from left-hand side to H, change the sign,
+
+26:26.000 --> 26:31.000
+and then we get the projection center of our camera.
+
+26:31.000 --> 26:34.000
+So that was very easy, very straightforward.
+
+26:35.000 --> 26:40.000
+The next thing, getting the rotation matrix out and the calibration matrix is more tricky.
+
+26:40.000 --> 26:46.000
+So what we now need to do is we have this matrix H, which is K times R.
+
+26:46.000 --> 26:51.000
+And so how can we actually break this single matrix into two matrices
+
+26:51.000 --> 26:57.000
+so that they both have the properties of the one is the calibration matrix and the other one is the rotation matrix?
+
+26:57.000 --> 27:02.000
+So in order to do this, we need to ask ourselves, what do we know actually about this matrix K and this matrix R?
+
+27:03.000 --> 27:12.000
+Can we exploit some of the properties in there so that we can appropriately decompose this matrix H into our two matrices that we want to have?
+
+27:12.000 --> 27:17.000
+So the structure tells me K is a triangular matrix.
+
+27:17.000 --> 27:20.000
+This is this 3x3 triangular matrix.
+
+27:20.000 --> 27:23.000
+And R is a 3x3 rotation matrix.
+
+27:23.000 --> 27:27.000
+So you need to ask yourself, is there actually a matrix decomposition technique that you know,
+
+27:27.000 --> 27:32.000
+which decomposes a matrix into a rotation matrix and into a triangular one?
+
+27:32.000 --> 27:34.000
+And actually there is one.
+
+27:34.000 --> 27:37.000
+So QR decomposition is a technique to do this.
+
+27:37.000 --> 27:45.000
+It decomposes a matrix in a matrix Q and a matrix R, where Q is a rotation matrix and R is a triangular matrix.
+
+27:46.000 --> 27:57.000
+And we actually don't perform that on H itself because the rotation matrix and the calibration matrix actually swapped.
+
+27:57.000 --> 28:01.000
+If they would be sitting the other way around, then the QR decomposition would work.
+
+28:01.000 --> 28:03.000
+But now they have the wrong order.
+
+28:03.000 --> 28:10.000
+So what we need to do is we simply invert H because then through the inversion, those two matrices swap around.
+
+28:10.000 --> 28:12.000
+We do everything on the inverse.
+
+28:12.000 --> 28:22.000
+So we perform the operation, the QR decomposition on H inverse, which then gives us a Q and a R.
+
+28:22.000 --> 28:32.000
+So applying the QR decomposition here on H inverse will give me Q and R, where Q is the rotation matrix transposed and R is the calibration matrix inverted.
+
+28:32.000 --> 28:39.000
+So remember, if you invert a matrix, it doesn't change the upper or lower triangular property.
+
+28:39.000 --> 28:42.000
+So we can do this also with K inverse.
+
+28:42.000 --> 28:52.000
+So by decomposing this matrix H inverse into QR, I get the rotation matrix and the calibration matrix actually separated from each other.
+
+28:53.000 --> 29:07.000
+One thing we need to take care of, our matrix H with K times R is homogeneous matrix and SUS is the calibration matrix homogeneous matrix because R is the standard rotation matrix.
+
+29:07.000 --> 29:11.000
+So as a result of this, we need to make sure we have appropriate normalization.
+
+29:11.000 --> 29:23.000
+So we can achieve this normalization by dividing the calibration matrix through its element 3, 3 so that we have a 1 over there and the rest of the parameters are appropriately normalized.
+
+29:23.000 --> 29:34.000
+So K can be updated as 1 divided by K 3, 3, so the element 3, 3 of the original matrix so that this element becomes 1 and we have our normalized matrix.
+
+29:34.000 --> 29:37.000
+And then we have our matrix K.
+
+29:38.000 --> 29:42.000
+Okay, one thing we need to take care of as well.
+
+29:42.000 --> 29:50.000
+With this, if you compute the decomposition of H inverse, it will lead to a matrix K which has positive diagonal elements.
+
+29:50.000 --> 29:53.000
+So all the three elements on the main diagonal are positive.
+
+29:53.000 --> 29:59.000
+Consider that the first two elements, so K11 and K22 was our camera constant.
+
+29:59.000 --> 30:04.000
+But we defined our coordinate system in a way that the camera constant is negative.
+
+30:04.000 --> 30:10.000
+That is that I have the projection center, the image plane in front of it and the point there in the world.
+
+30:10.000 --> 30:13.000
+If it would sit on the other side, everything would be fine.
+
+30:13.000 --> 30:16.000
+But we defined our coordinate system in that way that it sits here in front.
+
+30:16.000 --> 30:23.000
+So what we need to do is we need to perform a rotation of our coordinate system so this is appropriately taken into account.
+
+30:23.000 --> 30:28.000
+And we can do this by a rotation of pi around the Z axis.
+
+30:28.000 --> 30:38.000
+Because in this way I have a matrix, the rotation matrix turns into minus 1, minus 1, 1 on the main diagonal which exactly flips the two signs of my camera constant.
+
+30:38.000 --> 30:49.000
+So what I need to do is I need to, after I have computed in the step before R and K, I need to rotate both of them with a 180 degree rotation.
+
+30:50.000 --> 30:54.000
+So the decomposition of H in this QR decomposition still holds.
+
+30:54.000 --> 31:01.000
+But I need to make sure I do this to have the coordinate system appropriately defined as we did it in the course.
+
+31:02.000 --> 31:06.000
+So to sum up, DLT in a nutshell with three simple steps.
+
+31:07.000 --> 31:13.000
+The first thing we need to do, we need to build our matrix M for getting our linear system Mp equals 0.
+
+31:13.000 --> 31:18.000
+P are our unknowns and this is the vectorized form of my projection matrix.
+
+31:18.000 --> 31:27.000
+And this is straightforward, we just need to put for every observation that we get, we generate those two rows and add them to this matrix M.
+
+31:27.000 --> 31:35.000
+So for every point we get those two equations which are two rows in my matrix M and I build up my matrix M.
+
+31:35.000 --> 31:42.000
+At least 12 by 12 matrix but can also have more observations by at least 12 I do need.
+
+31:43.000 --> 31:46.000
+And then I need to find the null space of that matrix.
+
+31:46.000 --> 31:53.000
+And the null space of the matrix I find through singular value decomposition so I run SVD on M which gives me these different matrices.
+
+31:53.000 --> 32:07.000
+And I'm only interested here in this matrix V because the last column of this matrix V actually gives me either the null space or the best approximation of the null space.
+
+32:07.000 --> 32:11.000
+So the singular vector corresponding to the smallest singular value.
+
+32:11.000 --> 32:20.000
+And this is our 12 values and I just rearrange those 12 values again in form of my matrix P and then I get P.
+
+32:20.000 --> 32:24.000
+And if I'm happy with P, I'm already done at that point.
+
+32:24.000 --> 32:34.000
+If I want to get the individual parameters out of this, so K, X0 and my rotation matrix, I need to do this additional step that we just did.
+
+32:34.000 --> 32:40.000
+So we define this matrix H and the vector H and then I can compute the projection center easily.
+
+32:40.000 --> 32:53.000
+I need to inverse H, perform the QR decomposition which gives me R and K and I still need to do the rotation and the normalization of K in order to have my proper calibration matrix.
+
+32:53.000 --> 33:04.000
+And then I can read out the values, for example, the intrinsics directly out of the calibration matrix because I know in which elements what is written such as principal point or the camera constant.
+
+33:05.000 --> 33:08.000
+And that's basically what DLT is about.
+
+33:08.000 --> 33:18.000
+So the important thing to notice, we are actually free to map between P and our three informations calibration matrix, rotation matrix and translation vector.
+
+33:18.000 --> 33:20.000
+I can map forth and back.
+
+33:20.000 --> 33:22.000
+Of course, from here I can go trivial to P.
+
+33:22.000 --> 33:27.000
+If I need to break up P, it's slightly more complicated, but we have discussed how that actually works.
+
+33:27.000 --> 33:32.000
+We are free to choose the sign of C of my camera constant.
+
+33:32.000 --> 33:43.000
+And this basically tells me how I choose my coordinate system and I make sure that the decomposition that I do is actually in line with my coordinate system.
+
+33:43.000 --> 33:47.000
+And we showed how we do this for the coordinate system we are here using.
+
+33:47.000 --> 33:55.000
+It's very important to note that the solution gets instable when my control points lie on a plane or approximatively on a plane.
+
+33:55.000 --> 34:01.000
+And this again was one of those critical surfaces which lead to a rank deficiency in M and I need to make sure that this is not the case.
+
+34:01.000 --> 34:06.000
+So I need to choose my control points appropriately that they don't lie on a plane.
+
+34:06.000 --> 34:12.000
+And what should also be remarked is that the solution that we provided here is statistically not an optimal solution.
+
+34:12.000 --> 34:15.000
+It's a direct solution, so I don't need an initial guess.
+
+34:15.000 --> 34:20.000
+But what the solution cannot do is it can, for example, not take into account uncertainties.
+
+34:20.000 --> 34:29.000
+Let's say uncertainty about the estimates of my control points or measurement noise that I have in determining the pixel coordinates of those control points.
+
+34:29.000 --> 34:36.000
+This information that the approach cannot exploit and thus it cannot be a statistically optimal solution.
+
+34:36.000 --> 34:43.000
+Nevertheless, it's a direct solution which is very attractive and typically the starting point for all other operations.
+
+34:43.000 --> 34:53.000
+So in sum, the DLT or the direct linear transform is a technique to estimate the intrinsic and extrinsic parameters of a camera taking the fine camera model into account.
+
+34:53.000 --> 34:59.000
+That means determining these 11 degrees of freedom, six extrinsic, five intrinsic parameters.
+
+34:59.000 --> 35:05.000
+And in this way we can compute all the parameters that is needed for the mapping of the uncalibrated camera.
+
+35:05.000 --> 35:12.000
+So we get all the parameters to describe how a point from the 3D world is actually mapped into our image plane.
+
+35:12.000 --> 35:19.000
+What we need to do for this, we need to have our camera and we need to know at least six 3D coordinates of control points in the environment.
+
+35:19.000 --> 35:22.000
+This is kind of a prerequisite for applying this.
+
+35:22.000 --> 35:25.000
+But if we have that, we can compute a direct solution.
+
+35:25.000 --> 35:29.000
+We don't need an initial guess and we get our parameters out of that system.
+
+35:29.000 --> 35:35.000
+And as a result of this, we can calibrate our camera with knowing six points in the environment.
+
+35:35.000 --> 35:40.000
+At least, of course, the more points we get, the better our results get.
+
+35:40.000 --> 35:45.000
+But that should be clear because we have more information from the observations that we can actually exploit.
+
+35:45.000 --> 35:51.000
+So thank you very much for your attention and to this first step towards calibrating a camera.
+
+35:51.000 --> 35:52.000
+Thank you.
+

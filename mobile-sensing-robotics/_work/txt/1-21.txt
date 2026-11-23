@@ -1,0 +1,443 @@
+[00:00] So welcome everyone to this lecture on robot localization.
+[00:04] So the goal is to provide you with an overview about
+[00:08] different techniques that can be used for robot localization,
+[00:12] and then in the later chapters,
+[00:14] dive deeper into the individual techniques.
+[00:16] So today, I'm only going to provide rough overview what means localization,
+[00:21] what it is about, and what different types of
+[00:24] techniques can be applied in order to localize a robot,
+[00:27] an autonomous car or
+[00:29] another moving vehicle that navigates through the environment.
+[00:32] So there's also a five-minute summary of
+[00:35] this lecture that you may want to watch beforehand as a preparation for this lecture,
+[00:40] and now we want to directly dive into the topic of localization.
+[00:45] So localization basically means where am I?
+[00:49] So we need to answer the question,
+[00:51] where is the robot in the world?
+[00:53] Where is the vehicle driving on a road?
+[00:57] Where are we?
+[00:58] So location information is the central part in here,
+[01:02] and location information or position information matters
+[01:06] because this is the basis in order to navigate effectively through an environment.
+[01:11] So we need to know our pose, for example,
+[01:14] in order to avoid bumping into obstacles,
+[01:16] in order to plan a correct feasible
+[01:20] and efficient to navigate paths from our current location to a goal location.
+[01:25] And so position information is key to a lot of basic robotics tasks,
+[01:29] especially robotic navigation tasks,
+[01:31] and therefore we care about where we are.
+[01:34] And localization, try to answer the question,
+[01:37] where am I, and often also where am I looking to or pointing to,
+[01:41] so in which orientation I'm actually in,
+[01:44] in order to provide relevant information for other downstream tasks.
+[01:49] So the questions where am I means we want to estimate
+[01:52] our position and our orientation or sometimes called heading
+[01:56] of a mobile system in some external or a given reference frame.
+[02:01] So that typically means there's a reference frame given,
+[02:03] could be a GPS reference frame,
+[02:05] but could also be a local reference frame for a building,
+[02:08] for a map, whatever we are using,
+[02:12] and typically localized with respect to a map.
+[02:15] And I want to do this based on sensor information,
+[02:17] assuming I have a mobile system that moves through the environment.
+[02:21] So I want to estimate where is a platform,
+[02:24] so for example an XY or XYZ location as well as a heading,
+[02:28] so where the platform actually looking to in some reference frame.
+[02:33] And for that we typically assume to have information about
+[02:36] what commands is the platform executing.
+[02:39] So if you think about an autonomous car,
+[02:41] it may be what is the steering angle
+[02:43] and what is the whole heart of the gas pedal being pressed
+[02:46] in order to estimate where the platform is going just based on the commands.
+[02:51] Or it could be the odometry commands of a mobile platform.
+[02:54] In addition to that, we typically assume to have sensor data.
+[02:57] The sensor data could be a camera, this could be a laser rangefinder,
+[03:01] this may be a GPS, this might be an IMU sensor.
+[03:04] So sensor data that we are receiving that we want to use
+[03:07] in order to localize ourselves in the environment.
+[03:11] Some of those sensors allow us to localize us with respect to a map
+[03:15] and others with respect to some external reference frame
+[03:17] even without having explicitly a map given.
+[03:21] But quite often in localization we refer to our location
+[03:26] with respect to a map that defines a reference frame
+[03:29] or some other global frame such as the GPS coordinates.
+[03:32] And localization means to answer the question, where am I?
+[03:36] You also know this question as a human,
+[03:38] so if you think about your mobile phone
+[03:40] and you use your favorite map application and press localize me or where am I,
+[03:46] you will have a map and it shows you a spot for example here in our building
+[03:49] which tells you where you are.
+[03:51] And here in this example now you have for example a longitude latitude value given
+[03:56] which describes a position in the GPS coordinate system
+[04:01] so that you can use this kind of global reference frame
+[04:04] in order to describe your locations.
+[04:06] But that's not the only way how we can do this,
+[04:08] we can also use maps and localize us with respect to maps.
+[04:12] So what you see here is actually an old robot,
+[04:15] the robot Rhino developed here in Bonn maybe 25 years ago,
+[04:19] maybe even a bit more and in this example it used a map of the environment,
+[04:23] this was basically a local map where you could see the free space
+[04:26] and the obstacles around and was using its sensors such as sonars or laser range finders
+[04:31] in order to estimate its own pose with respect to those obstacles.
+[04:35] Basically using a sensor model comparing what the platform sees
+[04:38] and how that fits into the map that it has about the environment.
+[04:43] And as a result of this, this platform will estimate its pose within this map
+[04:49] and in this case the map is providing us with our reference frame.
+[04:53] We can also think about autonomous cars navigating through the environment
+[04:57] where you have a vehicle like this equipped with different types of sensors such as cameras,
+[05:02] such as LIDARs, RADARs, GPS IMUs, wheel odometers and other sensors
+[05:07] trying to estimate where it is in the environment.
+[05:10] And here typically we have a map information that could consist of lane markings, of poles,
+[05:15] of buildings or other information about what is where in the environment
+[05:20] that we use as a map in order to localize.
+[05:23] So this describes the problem of robot localization or vehicle localization.
+[05:28] So using our sensor information and using the control commands that the platform is actually receiving,
+[05:34] we want to estimate where are we with respect to some map or other reference frame.
+[05:40] Most of the techniques for robot localization which are used today are probabilistic approaches.
+[05:45] That means they take into account that the observation that we have are not perfect,
+[05:51] that they are affected by noise and the same holds for all motion commands.
+[05:55] So sending a certain motion command, we cannot rely on the fact that the platform precisely executes this motion command.
+[06:02] There will be always noise associated to that because it will never precisely execute the command.
+[06:09] And a probability theory allows us to represent these uncertainties
+[06:13] and take these uncertainties into account when we're performing our estimation approach,
+[06:18] trying to estimate where the platform is and where it's looking to.
+[06:21] So if you think about the non-probabilistic world, it would be for the vehicle, for example, the description.
+[06:25] The vehicle is exactly here if we describe this here kind of as a 1D space
+[06:31] where X is the 1D variable describing where the platform is.
+[06:35] Then the standard or non-probabilistic localization would say you're precisely here.
+[06:40] And the probabilistic approach may fit a distribution which may look like a Gaussian
+[06:44] but could also be any other type of distribution saying the vehicle is somewhere over here
+[06:49] and the higher the value, the higher the probability that the platform is in a certain region of the environment.
+[06:55] And we are typically looking into estimating such a probability distribution
+[06:59] in order to describe where the platform is in the environment.
+[07:03] So we are performing state estimation or probabilistic state estimation.
+[07:07] So what's the state? Which state are we estimating?
+[07:10] So in localization, we are often needing to estimate the position of the platform and its heading.
+[07:15] So where is it looking to?
+[07:17] And if you're living in a 2D world, in this case,
+[07:20] then we typically have a three-dimensional vector describing an XY location and the heading as a 1D heading.
+[07:26] Where is the platform looking into? In which direction is it looking into?
+[07:30] So we have three variables that we need to estimate.
+[07:33] If we think about a 3D localization with six degrees, then we have typically six degrees of freedom.
+[07:38] So we have an XY and V coordinate and then three rotational angles, for example,
+[07:43] a roll, pitch, yaw describing the three different angles the platform can be looking to.
+[07:49] So we either have to estimate a 3D or a 6D vector in order to estimate the current position of the platform.
+[07:56] And often we're actually interested in estimating just the current platform.
+[07:59] Sometimes we are also interested in estimating the full trajectory or the full path that the platform has taken.
+[08:05] Quite often we are referring here to as just estimating the current location.
+[08:09] So it would be just a three-dimensional or six-dimensional vector.
+[08:13] There's also the word pose being used pretty often. Pose describes here position and heading information.
+[08:19] So the position information would be here, for example, XYZ and then the heading would be roll, pitch and yaw.
+[08:25] So if you hear the word pose, it typically means position and heading information put together.
+[08:31] And that's the quantity that we want to estimate.
+[08:33] So in probabilistic state estimation, we are concerned with estimating the probability distribution about where is the platform,
+[08:40] about our state, given our observation and our control commands.
+[08:44] So describing this in its most simple form, again, use a control command,
+[08:49] Z is the observation and X is the state that I want to estimate.
+[08:55] And often it boils down to estimating this probability distribution, or it could also be just estimating the most likely state is also an option.
+[09:03] But given that we are in the probabilistic framework and we also want to take into account the uncertainty that we have about our pose estimate,
+[09:10] often we're actually looking into estimating really the probability distribution, which could be Gaussian, but could also be a different type of representation.
+[09:19] And as we are in most online problems and navigation problems, concerned with the question, where am I now?
+[09:25] So not where have I been 20 minutes ago, but where am I now?
+[09:29] We are often using recursive state estimation techniques, so filtering techniques in order to perform this task.
+[09:35] And those filtering techniques most of the time are based on the base filter or recursive base filter that we have been discussing here in the past before.
+[09:45] So the belief about where the platform is right now, so the probability distribution of our state at time t is estimated given our observations and our control commands that we have received so far.
+[09:57] And the recursive base filter allows us to put this equation into a recursive form so that the same equation belief at time t minus 1 pops up here again.
+[10:04] So this is the current belief, this is based on the previous belief and then some quantities which only depend on the currently obtained state variables like the current control command and the current observation.
+[10:16] And there are two key components in here, two key distributions in which is the motion model and the observation model.
+[10:23] Again, as a reminder, the observation model describes you how likely it is to get the observation that I actually received given the state I'm currently in.
+[10:33] So given the state, what's the probability of a certain observation or the observation we currently received?
+[10:39] And the motion model describes us how likely is it to end up at a state x t given I know I was at x t minus 1 before and executed a certain motion command like pressing the gas pedal of my car with a certain intensity and turning the car with a given steering angle or putting to the right wheel and the left wheel of my differential drive a certain velocity command.
+[11:03] This describes the motion that the platform will be taking, was likely to be taking, and this motion model describes the probabilistic way on how do we walk from one state to the next state.
+[11:14] And with this information, with the observation and the motion model, we can turn the previous belief into the belief at the current point in time and we are typically recursively estimating our pose, updating our pose estimate, giving such a filtering equation.
+[11:29] Not all localisation systems are based on the idea of a recursive base filter, but several popular ones are.
+[11:37] Another term I would like to distinguish is global localisation with respect to what's called post tracking.
+[11:44] So global localisation means we have no idea where we start.
+[11:48] So we have an unknown initial configuration.
+[11:50] This basically means we can be anywhere and we have no idea where we are.
+[11:54] This is the task of global localisation.
+[11:56] Post tracking means we typically start from a known position or we have a fairly, let's call it, focused belief about where we are.
+[12:03] So belief is a small uncertainty and we just want to estimate where the system is moving, giving that start location.
+[12:10] This is something that's often referred to as post tracking and post tracking is typically the task which is simpler than global localisation because in global localisation we have more ambiguities about what happens in the environment.
+[12:24] So the key differences between those two approaches is that for global localisation approaches, from a technical perspective, I typically need to have a way to represent the large uncertainties really well.
+[12:36] And for post tracking, it's typically sufficient to have a fairly or allow for a fairly compact representation of the uncertainty.
+[12:43] So, for example, if we have a Gaussian distribution, that is something that is often well suited for post tracking, but not necessarily very good for global localisation.
+[12:53] At least in the set up where I have ambiguities in the environment.
+[12:56] So multiple hypotheses where the system could be because I have no idea where the system starts and I need to estimate the location of the platform based on the sense observations that I obtain and I basically need to narrow down the different possibilities of where that platform is.
+[13:11] At the same point in time, global localisation techniques need to have often a way for representing very large uncertainties.
+[13:17] So for a Gaussian distribution, for example, it doesn't really matter how large my uncertainty is as long as it can be well described with a covariance matrix, for example.
+[13:27] Other representations such as sample based representations may suffer in large or large scale global localisation because representing more states about where the system could be in also results in a higher computational or memory complexity.
+[13:42] So depending which problem you're actually addressing, the design of your localisation algorithm may look different, but we also have systems where this is both done together.
+[13:52] So key question that we need to answer ourselves, which are important to answer, which techniques should we use in order to perform global localisation or post tracking is kind of which type of belief do we need to maintain in order to track the position of our system.
+[14:07] Is a Gaussian belief find we need to take into account multimodalities and how much uncertainty can the localisation system handle?
+[14:13] So are we able to deal with very large uncertainties or are we constrained to very kind of local estimates about where the system is?
+[14:21] And this will have an impact on which kind of localisation system you may choose or how you set up your localisation system.
+[14:29] Then we often also distinguish between online and offline localisation and here the question basically is, is all sensor data available beforehand?
+[14:38] Then we typically talk about an offline approach.
+[14:40] So we want to use all the information at hand in order to estimate where the system was at a given point in time or where it was at every point in time.
+[14:48] In contrast to this, online localisation typically means we only have the information available up to a certain point in time.
+[14:54] So up to the current time step, for example.
+[14:56] And we're typically estimating where are we right now.
+[14:59] That's kind of the difference.
+[15:00] So if you think about online navigation, about an autonomous robot navigating through the environment or an autonomous vehicle driving through the world, we are typically interested in online localisation because we want to know where are we right now in order to make our navigation decisions.
+[15:15] If we recorded data and later on post-processed data and maybe want to use the location information to update the map of the environment, then maybe we're interested in offline localisation because we have all the data at hand before we start our computations.
+[15:29] And for us it's more important probably to come up with a good estimate using also kind of the future observations and to estimate where the system was at a certain point in time.
+[15:38] Given that we have all information available beforehand, we will choose an offline localisation approach probably for these types of problems.
+[15:45] But in 95 per cent of the cases or even more, we probably have for an online system because we want to make decisions based on where we are.
+[15:55] Before I dive into the different techniques, I want to distinguish something or a term which is often used, which is referred to as sensor odometry with respect to localisation.
+[16:06] So localisation really means answering the question, where am I?
+[16:10] In contrast to this, sensor odometry means to estimate the relative motion estimates of our platform exploiting sensor information.
+[16:17] So we are interested in estimating local motion updates like local odometry commands, for example, but we don't compute this based on the information that we get from our wheel encoders, for example.
+[16:29] We want to estimate it based on our sensor, for example, based on a laser rangefinder that is observing the environment or based on cameras.
+[16:37] So we often use sensor data and not wheel odometry information in order to compute the relative motion estimates.
+[16:46] And this is typically done by registering or aligning the sensor observation with respect to each other.
+[16:51] Typically, we don't come up with kind of a global pose estimate in here.
+[16:55] So there are some examples that you can have a look to.
+[16:57] One example is visual odometry, for example.
+[17:01] So you're estimating the trajectory of a camera based on the visual information that you're estimating.
+[17:06] So what you see here is a camera stream and you can see those points over here scattered all over the image.
+[17:11] These are feature points extracted.
+[17:13] And based on those feature points, you can try to align one camera image with the next camera image and then can estimate the trajectory of the camera.
+[17:21] So you basically see this in a local view down here, tracking the motion of the camera just based on the consecutive frames that we are receiving.
+[17:31] This is a typical case, visual odometry, where we use our camera, our vision sensor in order to estimate local motion updates, so local odometry, so to say.
+[17:43] And we can use this to estimate where we are, but it's typically not provided in some global frame.
+[17:49] So we talk about visual odometry.
+[17:51] Often visual odometry is combined with inertial sensing, visual inertial odometry, which relates camera positions with each other, often with the help of an IMU.
+[18:01] So if you just have two consecutive frames, so one camera image taken at time t, one taken at time t plus one, we can match features recorded between those images, so distinct points in the world, and then relate them with each other.
+[18:14] For example, using techniques such as the five-point algorithm or the eight-point algorithm, so basically relating one camera image location with respect to the previous one.
+[18:26] And as you may know, this can be determined only up to scale, at least if we have a monocular camera, so we can't estimate how far the cameras are apart, but we can only know in which direction the camera is moved and where the camera is looking to.
+[18:39] And so this is, we can basically determine five degrees of freedom, and then either we use a stereo camera to recover the scale, or we use the IMU in order to provide us with some scale information that we can actually get a 60 degree of freedom transformation.
+[18:53] So delta x, delta y, delta z, and the rotation angles, for example, in order to perform this estimation.
+[19:00] So if you do that, key ingredients of your approach will be some point of way for estimating essential or fundamental matrix of five-point algorithm or eight-point algorithm, depending if you have a calibrated camera or an uncalibrated camera.
+[19:13] Typically, outlier rejection techniques such as RANFEC will be used in this context in order to come up with a robust visual automatry system.
+[19:22] But again, this uses just the camera information to kind of reduce them into a relative motion estimate so we can update our pose.
+[19:32] And of course, also those commands are noisy.
+[19:36] What we can also do is using a LIDAR automatry, so it means we use a LIDAR or laser scanner in order to compute automatry.
+[19:42] That's actually a technique, so LIDAR automatry is more frequently used today.
+[19:46] Before, it was called incremental scan matching, typically.
+[19:49] That means we are registering consecutive scans obtained with the laser range finder in order to estimate how the platform has moved or the recording position or the center, the reference center of my sensor has moved from one time step to the other.
+[20:03] This is done with scan matching technique.
+[20:06] The iterative closest point or variance of the ICP algorithm are here, the standard choice not to register two scans with respect to each other.
+[20:13] And then I know how the platform has moved given this pair of scans and also given data associations.
+[20:19] And given that the LIDAR scanner also provides me with scale information, I don't need an IMU here.
+[20:25] I can exploit it, of course, if I have it.
+[20:27] But otherwise, the system will provide me the scale information.
+[20:31] So I directly get a six degree of freedom transformation out when I'm registering pairs of LIDAR scans.
+[20:38] And this is again something that we refer to as sensor automatry.
+[20:43] It provides relative motion estimates, so updates relative motion commands that are computed based on two or pairs of sensor observations.
+[20:53] It often doesn't really use a global map.
+[20:55] And so the question is, is this really localization?
+[20:58] Often people would say no, that's not really localization because we don't localize ourselves with respect to some coordinate frame.
+[21:06] But of course, it can be helpful to track our pose.
+[21:08] So if we know where we are and we have very good estimate of our relative motion, we can use this to estimate where we are.
+[21:15] So I would see it that sensor automatry is a tool that supports localization because we can use this information to estimate where we are and kind of reduce the uncertainty of our motion.
+[21:25] But it typically doesn't provide me a position estimate with respect to global frame that is provided by a map, for example.
+[21:35] Okay, so now let's dive into the localization problem and see how we can answer the question where we are in the world.
+[21:41] And there are basically four different approaches that are used in order to localize a mobile robot or a platform.
+[21:51] So one is so-called Markov localization or sometimes also use grid localization is used here.
+[21:56] Here we use a discretization of the environment where every kind of this discretization of our world means what the probability that the robot is at that location.
+[22:06] And then similar to an occupancy grid map, but just kind of in more dimensions, we are trying to estimate where the platform is as a kind of nonparametric belief.
+[22:15] There's also sometimes called nonparametric localization or histogram based localization.
+[22:20] Then there's Monte Carlo localization, which is a sampling based technique which is very frequently used in order to estimate the position of a platform, especially supporting multimodal beliefs.
+[22:32] Kalman filter based techniques are also very popular.
+[22:36] Typically, if a Gaussian belief is well suited to represent the location information that one estimate, then the Kalman filter or extended Kalman filter is a good choice.
+[22:45] But we may also run least squares approaches and then we have kind of what's called sliding window least squares.
+[22:52] So least squares is an offline technique.
+[22:53] Those three are online techniques and the sliding window basically sits somewhere in between.
+[22:57] So you can see the sliding window as an interpolation between least squares and the Kalman filter.
+[23:02] And depending on the computational resources you have, you can use this sliding window ideas in order to come up with the least square system, but only estimating the observations that you obtained so far, still being able to execute this in an efficient manner.
+[23:18] And the sliding window based approaches have certain advantages, especially if you want to fuse different sensing modalities.
+[23:25] But common approaches to robot localization are actually Monte Carlo localization, probably the most frequently used one, and Kalman filter based localization.
+[23:34] I just want to illustrate those different techniques here to give you an overview and then you have the possibility to dive deeper into individual aspects such as Monte Carlo localization or Kalman filter based localization.
+[23:45] Okay, let's start with Markov localization or grid localization.
+[23:49] So here the belief about where the platform is in the environment is typically represented with a histogram basically.
+[23:55] So we have here this example.
+[23:56] So we have a one dimensional world just to make it easier to illustrate over here.
+[24:00] We have a robot which can move through the environment and it basically can sense doors.
+[24:03] This is a sensor which says I'm in front of the door and it says I see a door and otherwise it says nothing.
+[24:09] And so then the question is how can we use this information of a robot that navigates through this 1D world and estimate where it is.
+[24:16] And what Markov localization does, it basically uses a histogram which is kind of illustrated over here in order to estimate what's the probability that the robot is within a certain small interval, let's say within a five centimeter region.
+[24:30] And so I'm basically discretizing this environment into these kind of five centimeter cells and then estimate the probability that the robot is in that cell.
+[24:38] So you can see this is a 1D histogram.
+[24:40] If the robot moves in 2D worlds, this would be a two dimensional histogram.
+[24:44] If you also want to estimate its orientation, it would be three dimensional, so X, Y and the orientation theta.
+[24:50] And if you go to six dimensions or a six degree of freedom, that would be kind of a 6D histogram, which gets pretty complex quite quickly.
+[24:57] So for typical 2D localizations, if we want to localize in an indoor environment and we have a wheel platform which kind of drives on the ground, it's not flying through the environment such as a UAV, a 3D histogram or 3D grid representing this belief is typically what you're using.
+[25:12] The great thing about this approach is that it naturally handles multimodal beliefs.
+[25:17] So I can have as many modes as I want.
+[25:19] It's just kind of that I can have a probability value for every cell.
+[25:24] So it's very easy to handle multimodal beliefs.
+[25:28] There's nothing I need to do for that.
+[25:30] However, it has limitations with respect to the accuracy, the localization accuracy that I can obtain.
+[25:36] And it basically tells us how large are those sizes, those cells.
+[25:39] If I have five centimeter cells, it basically means I can only localize my platform up to this cell size of five centimeters or five by five centimeters.
+[25:49] And if you think about especially larger high dimensional space, if you think about a 6D space, X, Y, that, your pitch roll, you can imagine that you actually really don't have much memory available in order to provide a fine grained discretization here.
+[26:04] That's the reason why this approach is to be not used for 3D localization in the 3D world where you would need 6D representation, but for 2D you still sometimes find these approaches.
+[26:15] Another downside is that all cells need to be updated upon every motion command or every observation that is obtained, which gets computationally very costly.
+[26:23] So even if you can store that easily in memory, it gets computationally expensive to perform this operation.
+[26:29] So if you, for example, have the platform, it stands in front of the door.
+[26:33] We have no idea where the system is initially.
+[26:35] So we have basically a global localization approach.
+[26:38] So we have the same uncertainty in all positions that the platform is.
+[26:42] And then the sensor says, I'm in front of a door.
+[26:44] I see a door.
+[26:45] That means the observation model would probably look like this.
+[26:49] So we get peaks in front of these doors.
+[26:51] This is kind of what a door sensor says.
+[26:53] Here the probability is not zero because it could be that the sensor makes a mistake and then we can also be anywhere in the environment.
+[27:00] But if we are in front of a door, it's more likely to provide us with the right information.
+[27:06] As a result of this, our histogram might be updated and may look like this.
+[27:09] So all the positions which lie in front of the door will have an increased probability.
+[27:14] If then in the next step the robot moves through the environment, we basically need to shift this histogram according to the direction of movement.
+[27:20] And we probably also kind of smear out that histogram over here because the motion again is uncertain.
+[27:25] So we increase the uncertainty due to the motion of the platform.
+[27:29] If you then get the next observation, we are in front of the second door, then we again multiply this observation likelihood with our belief.
+[27:36] And then we actually get a belief which looks like this.
+[27:38] So the probability of being here in that position gets larger and larger and larger.
+[27:42] And then we can again move through the environment and then this histogram flattens again a little bit because I'm getting more uncertain about the environment.
+[27:49] Even if I don't receive any further sensor information.
+[27:52] So that's basically the idea of Markov localization or grid localization.
+[27:56] So I'm using a histogram about the states where the system is in and estimate where the robot is based on that histogram.
+[28:04] That was Markov localization also called grid localization.
+[28:08] The second approach I want to dive into is Monte Carlo localization.
+[28:12] So Monte Carlo localization is an alternative technique where the belief is different.
+[28:17] So we're not using histogram, we're using random samples and every sample is basically a state hypothesis.
+[28:23] So it's a guess where the system is with respect to an X, Y, theta or X, Y that your pitch roll state.
+[28:31] So if this is my robot navigating through the environment, you can see these kind of black lines over here and these represent the position of samples.
+[28:39] So the state configuration of a sample.
+[28:41] In this case, it's just one dimensional.
+[28:43] It's just kind of the position where the platform is here.
+[28:46] Located in, but the key idea is that we don't have this discretization, this histogram of the environment.
+[28:52] But we are using random samples in order to represent the belief about where the platform is in the environment.
+[28:59] Then we can do the same thing.
+[29:00] So we can basically uniformly or roughly uniformly initialize our system if we have no idea where the platform is.
+[29:06] If the robot stands in front of the door in the same observation likelihood.
+[29:10] And so basically seeing that all those samples which are here beside those beliefs, they get amplified.
+[29:15] It means they get more important.
+[29:16] We will dive into that in more details how that works in the next lectures.
+[29:21] But for now, we just say, okay, those samples are better than the other samples.
+[29:24] It's more likely that we're here at that space.
+[29:27] And if the platform then moved through the environment and can see actually samples getting more denser over here, if I get new observation, this holds here as well.
+[29:35] So the robot moved through the environment and we are getting kind of clusters of those beliefs.
+[29:40] And the more of those samples we have in a certain region, that means the more likely that region actually is.
+[29:45] So this idea of Monte Carlo localization in order to be able to represent multimodal beliefs, but not using a fixed discretization of the environment.
+[29:55] And this is done through a sample-based representation, which is also one of the popular localization techniques out there.
+[30:01] So especially if you look into indoor localization techniques where no GPS or other things are available, then Monte Carlo localization is probably the gold standard today.
+[30:11] Other alternatives are
+[30:13] Kalman filter-based localization. So here we typically have Gaussian beliefs in measurements and also observation models.
+[30:20] So everything is assumed to be Gaussian and then
+[30:24] we can estimate where the platform is by updating Gaussian distributions using a Kalman filter.
+[30:29] So quite often this is used in the context when I want to localize landmarks because the
+[30:34] estimation of a landmark location can be quite well described with a Gaussian distribution, at least if I'm free of outliers.
+[30:40] And then I can have a kind of a trajectory of a robot, how a robot is driving through the environment shown over here,
+[30:46] certain observation that it gets and then I can provide a Gaussian estimate about where the platform is in the environment.
+[30:52] And here we are basically predicting the state of the system using a Gaussian.
+[30:56] We are performing a correction using our observations and recursively update our belief using this Gaussian distributions.
+[31:03] It's also a commonly used technique, actually a lot of localization techniques started as Kalman filter-based localization techniques.
+[31:09] And that works well as long as the assumption that my beliefs are Gaussian is not a too strong
+[31:16] violation of what happens actually in reality, especially with respect to the current belief.
+[31:20] So often, especially for global localization, this is not working that great,
+[31:26] especially if you have multi-modalities in the environment.
+[31:29] Okay, so the next technique I want to look into is least squares or least squares approach to localization.
+[31:35] This is typically an offline approach, not an online approach anymore,
+[31:38] where I assume to have all the sensor information available beforehand and then use all the sensor information in order to
+[31:46] compute the typical trajectory, so all pulses of the platform or maybe only just one position.
+[31:51] And this uses a standard least squares approach and the standard least squares error minimization approach that you
+[31:59] know already, where we want to estimate the
+[32:02] discrepancy between what the observation tells us and what the motion tells us in a global setup,
+[32:07] so having all observation at hand beforehand.
+[32:10] The least squares approach typically also takes Gaussian beliefs into account, but as it's doing real linearizations at every point in time,
+[32:16] it works somewhat better than the extended Kalman filter.
+[32:20] But if I'm very far away from the idea of a Gaussian distribution, it also may not work very well.
+[32:26] Quite often, least squares approaches are used kind of as reference solutions in order to estimate other
+[32:32] localization systems by kind of
+[32:34] recording all the data, making sure we don't have any outliers, providing a proper estimate, taking all observations into account,
+[32:41] computing a statistically optimal solution under the assumptions, and then using this as a reference position and compare online
+[32:47] localization systems with respect to this offline approach where all the information is available beforehand.
+[32:55] There are different ways how we can represent this. One way which became more and more popular over the recent years are factor graphs.
+[33:01] This is a graphical representation of the least squares problem where we have states, in this case, posters that we want to estimate, so the position
+[33:09] at time 0, time 1, time 2, time 3, then have landmark observations here and XL for the landmark location.
+[33:17] We have observations. These are represented by those factors, so seeing a landmark from a different positions.
+[33:22] We have odometry factors in between saying how did the system evolve over time?
+[33:27] We may have GNSS information or GPS information available.
+[33:30] We can build up this type of factor graphs where I basically want to compute configurations for those nodes so that the factors or the
+[33:39] the errors introduced by those factors actually gets minimized. It turns into a least squares problem,
+[33:45] but these factor graphs are quite attractive visual representation of the underlying problem. And
+[33:51] Frank Dillard is, for example, one of those persons who made factor graphs popular in robotics used for the SLAM problem for localization and
+[33:57] other types of problems. And it's an attractive formulation because it allows to visually describe a least squares problem in a fairly elegant way.
+[34:05] And you can transform this one basically directly into a matrix of a normal system where you can store an information matrix
+[34:12] and where you can see then directly
+[34:15] the contributions of those factors to certain elements in your matrix.
+[34:19] And last but not least, we have these sliding window based approaches
+[34:25] which basically use the least squares approach, but basically doesn't take the whole history into account. Because the more data I
+[34:33] record, the more data I need to take into account in my least squares problem. And what the sliding window least squares approach does, it
+[34:39] basically takes only the most recent N
+[34:42] observations into account. Let's say the most recent
+[34:44] 20 observations and then tries to approximate everything which happened before with one single variable.
+[34:51] And so while moving through the environment,
+[34:53] I'm basically getting a new observation in and throwing out a new an old one and trying to estimate a good belief about where the
+[34:58] system is in the environment.
+[34:59] So the key idea is to be better than a Kalman filter and this requires to do a proper modernization of the information that I
+[35:07] take out of my least squares problem, but still not be computationally as expensive as a least squares problem.
+[35:14] And this is a technique which you find today quite often, especially for outdoor localization.
+[35:19] So if you think about an autonomous cars driving through the environment,
+[35:22] they typically use some type of least squares or sliding window least squares approach in order to estimate their position.
+[35:29] Taking different sensors into account such as GSNS information, visual odometry, wheel odometry, light odometry, radar information
+[35:35] maybe and other sources in order to estimate that they fuse this information with a factor graph
+[35:41] which basically looks like this and chops of nodes which are old one and adds new nodes over here
+[35:46] taking a certain small history into account.
+[35:49] And we can see the sliding window approaches are sitting somewhere between the least squares approaches and the Kalman filter based approaches.
+[35:56] And basically depending on where I am on that line, I have a very short sliding window and the sliding window of size one
+[36:02] I basically end up having a Kalman filter or if I have an infinitively large sliding window approach
+[36:06] then I'm actually performing a least squares approach.
+[36:08] You can use the sliding window, the size of your sliding window basically to control how many computational resources you have at every time step
+[36:15] available in order to solve your localization problem.
+[36:18] And in this way turn this offline least squares approach kind of in an online approach taking only the most recent and
+[36:24] observations in order to
+[36:26] do your computations.
+[36:28] Often in this case approximations are also made with terms of how to throw away
+[36:33] so to say the old information that I take out of this graph structure.
+[36:36] So the marginalization because exact marginalization can be computationally expensive depending on how your graph looks like and therefore
+[36:43] approximation are often made on the way. I brought you a small example. And so this is a localization system of an
+[36:51] autonomous car driving through the environment. It's a system
+[36:55] developed by one of my PhD students Daniel Wilbas.
+[36:58] You see a vehicle driving through the environment and you can see build up basically a graph which is built up here
+[37:04] so you see kind of certain edges which are here illustrated as observations so they could observe buildings, you could observe poles,
+[37:11] corners which provides additional information
+[37:13] to the system and then the vehicle can drive through the environment.
+[37:17] You can also observe new features, use different types of objects in the environment such as poles, such as road markings.
+[37:24] It observes those road markings and basically builds up this graph and this graph that you can see over here is the
+[37:31] factor graph that I was talking about and you can also see here that this is not an infinitely long line.
+[37:35] It's basically chopped off over here. So this may be a trajectory of whatever 30-50 meters
+[37:40] maybe. It's basically throw away all the old information which sits in here and basically takes information away at the back and adds new
+[37:47] information at the top trying to estimate a
+[37:50] good estimate about where the vehicles in the environment without any jumps taking into account multiple sensing modalities.
+[37:56] Just as one example how such
+[37:59] localization system can be used and actually an up-to-date localization system used in prototype autonomous vehicles that are built in the industry today.
+[38:08] With this I'm coming to an end of the overview lecture that I've given here about robot or vehicle localization and
+[38:14] in subsequent lectures we may dive deeper into different aspects or different techniques for localization such as Kalman filter-based localization,
+[38:23] Monte Carlo localization or similar. So in some
+[38:27] localization means we want to estimate the position and the heading of a mobile system in the environment.
+[38:32] Central building blocks that we
+[38:34] that we use for this are our observation model, our sensor model and the map of the environment and
+[38:41] localization itself is a key element for other tasks that are used by mobile robots such as navigating, task planning,
+[38:49] collision avoidance,
+[38:50] picking tasks, delivery tasks. For all those tasks you need to know where you are.
+[38:54] So whenever you move efficiently through the environment, you should know where you are.
+[38:58] Otherwise, you can't navigate well and localization provides this key building block.
+[39:03] I guess I've shown that there are different variants how localization can be run, can be online, can be offline,
+[39:09] with a map, without a map, a global localization, post tracking.
+[39:12] So there's a large set of different variants and actually hundreds of papers on localization that are out there and are still being published.
+[39:20] If you look to the underlying estimation techniques, we basically find four types of techniques.
+[39:24] This is the grid-based or Markov localization. This is a Kalman filter.
+[39:29] This is Monte Carlo localization and least squares and again a variant of the least squares, a sliding window least squares approach.
+[39:35] These are techniques that are often used in modern and up-to-date localization systems.
+[39:40] Several of these approaches basically realize a base filter,
+[39:43] but the least squares approach doesn't belong to this category because we don't have a recursive belief where we only integrate the most recent
+[39:49] observation. I'm either taking all observations into account or a certain window of observation.
+[39:55] So this is not a base filter,
+[39:56] but the Kalman filter, Monte Carlo localization as well as Markov localization are base filter-based approaches.
+[40:03] With this, I say thank you very much for your attention.
+[40:05] And again, there's a short five-minute video, kind of a summary of this lecture available as well.
+[40:10] So thank you very much for your attention and I hope this gave you a good introduction on what localization is before diving deeper into studying the individual techniques.
+[40:18] Thank you very much for your attention.

@@ -1,0 +1,526 @@
+[00:00] Hello, I want to look today a bit into observation models. So we discussed the
+[00:06] recursive base filter for state estimation and have seen that in this
+[00:11] filter there are observation models and motion models involved and I want to
+[00:16] dive today a bit into basic observation models and explain how such an
+[00:21] observation model could look like for a simple rangefinder for example. So the
+[00:27] goal for today is giving an idea how such observation model looks like so we can
+[00:33] use it in different state estimation algorithms. So let's start. State
+[00:37] estimation again was the task of estimating the state X of a dynamic
+[00:41] system given observations and control commands. Observations typically referred
+[00:46] to as Z and control commands typically referred to as U and we have derived the
+[00:51] recursive base filter from that which consists of a prediction step and a
+[00:57] correction step. The prediction step in the recursive base filter takes the
+[01:03] previous belief and updates it with the so-called motion model into the
+[01:09] predicted belief. So it's a prediction of where the system or which state the
+[01:14] system will be given the control commands that I assume to be known
+[01:18] specified with the U. And then a second step is the correction step where we
+[01:23] take the predicted belief and combine it through multiplication with the
+[01:27] observation model into the corrected belief. So that means we are taking into
+[01:32] account our observation to turn the predicted belief into the corrected
+[01:36] belief and this then is the end of this one iteration of one step of the base
+[01:43] filter. And we are here looking into the second part so we assume to have the
+[01:49] predicted belief and we need to multiply it with the observation model so how
+[01:53] does such an observation model actually looks like for typical scanner. So the
+[01:57] topic for today is getting an idea on how these observation models look like.
+[02:01] Again what does the observation model mean? It tells me what is the probability
+[02:06] of getting a certain observation or the likelihood of getting a certain
+[02:09] observation given I'm in a state. So given I am in a certain state what is
+[02:15] the likelihood of getting a certain observation? And it typically uses to
+[02:21] take our current observation that we're actually getting and basically can
+[02:25] specify how likely is it I actually get that observation that I actually got
+[02:29] given that I'm in a certain state. And I want to start a bit with range sensors.
+[02:34] So range sensors are sensors that provide you the distance to the closest
+[02:39] obstacle that they are observing. This can be a standard 2D laser range scanner
+[02:44] as the 6 scanner over here. This is an Oyster 3D lighter which provides you
+[02:48] with 3D information. This can be a stereo camera or can be an active
+[02:53] sensor which projects a pattern into the environment for example using infrared
+[02:58] light and then perceive the pattern with a camera and through this information
+[03:02] can estimate how far obstacles are away. So we don't really care right now which
+[03:07] sensor we are using, which type of range sensor and of course if you have
+[03:12] different models for different range sensors they will have
+[03:15] different parameters and different noise characteristics. We want to look at
+[03:18] just into the most simplest form and therefore we stick here with this 2D
+[03:22] laser scanner. So it's just kind of a laser ray which is shot through the
+[03:26] environment and you measure the time it takes for the laser pulse to return. So
+[03:31] time-of-flight sensor and you can then relate this with the distance to the
+[03:35] obstacle by knowing how long the light has traveled. It could also be a sonar
+[03:40] scanner which does it not with light but with an ultrasonic wave. So different
+[03:44] ways how range sensors could look like. And we want to look into the very
+[03:47] simplest form so for now let's stick with this type of range sensor. So these
+[03:52] range sensors actually provide you in a single scan a number of range readings.
+[03:57] So it's not just one proximity measurement but actually a series of
+[04:01] proximity measurements. Let's say every degree or every half degree you get a
+[04:05] range reading so that in the end you get a list of range readings or an array of
+[04:09] range readings which tell you what the difference to the closest obstacle and
+[04:13] every entry in those rays corresponds to one direction expressed in the
+[04:18] reference frame of the scanner. And so the question now we look into what is P
+[04:22] of Z given XT for such a scanner. The first thing is we do is we treat those
+[04:28] individual measurements as independent measurements. So if the scan the D
+[04:33] consists of K measurements we typically treat those individual measurements as
+[04:37] independent given the sensor location. So not generally as independent but
+[04:42] independent given the sensor location and given we know the state of the world
+[04:46] given we know a map of the environment. That's kind of important that this is a
+[04:50] conditional independence. So what it means is for our model P of Z T given XT
+[04:58] so I just added M here as a map to make explicit that we have information about
+[05:02] the environment in the task we are typically referring to here. For example
+[05:07] if you have a map of the environment an occupancy grid map or a map of features
+[05:10] how can we build an observation model that we can use for localization. That
+[05:14] will be one of those examples over here. And what we say is we say all
+[05:18] those beams are conditionally independent given that we know the state.
+[05:21] So that means I can split given that the scan consists of K scans into a product
+[05:26] of K elements and say what's the likelihood of that single beam the
+[05:31] single range reading given the state and given the map of the environment. So this
+[05:35] is the independence of the individual beam given the map given the state
+[05:39] information about where the system is for example in the environment for
+[05:43] localization. Okay so it's individual measurements are conditionally
+[05:48] independent given the state of the world. So how does it look like in practice if
+[05:53] you have a range sensor here just visualized in 2D. So let's say this is a
+[05:58] the system where the location of the system and those red rays here are range
+[06:04] readings and that I obtained or want to evaluate and you can see some of those
+[06:09] rays end up at the obstacle location some actually seem to pass through an
+[06:13] obstacle and some lead to reflections or the two objects which are close to the
+[06:19] system and what we now want to do is we want to take this product over here and
+[06:25] compute this value for every of for each of those red rays and say how likely is
+[06:30] to get that observation given I'm here and given that's what the road looks
+[06:33] like. So you can assume you know where you are you know what the road looks
+[06:37] like and then it's you need to answer the question how likely is it to actually
+[06:40] get that range reading or for laser scanner so this is actually done this is
+[06:45] a sonar scanner over here which is typically more noisy than laser range
+[06:47] scanner for laser range scanner you would actually get something like this
+[06:50] so this is a laser scanner to the front laser to the back and these red things
+[06:55] are raised at a very high resolution and you can you need to answer the question
+[07:00] how likely it is to get actually that scan given that I'm at that point in the
+[07:04] environment and what this equation tells us that we can actually break it down
+[07:08] and can only consider a single beam so we take a single beam one of those
+[07:13] measurements and just need to take care about the single beam because in the end
+[07:16] we can just combine them into that product. So assume we know where we are
+[07:21] we assume where are the obstacles on the environment because we know the map what
+[07:25] is a simple model for estimating how likely is to obtain a certain range
+[07:31] reading and the most simplest form for that is a simple raycast model in these
+[07:35] type of occupancy grid maps so those maps that we have discussed already so
+[07:40] the simplest raycast model basically tells me what is the distance from the
+[07:45] sensor location to the closest obstacle so along the ray of light or the sound
+[07:52] is basically in the line of sight of the next obstacle and then say let's add
+[07:57] a Gaussian noise around that because this assumed measurement noise so we
+[08:01] assume our sensor is here this is our where the obstacle is through the
+[08:06] environment so if I draw a line from the center through the obstacle I need to
+[08:10] estimate how likely is to get a certain range reading this is kind of the range
+[08:14] reading and this is the probability for getting it and then it would be a
+[08:17] Gaussian distribution centered around the expected distance so there's
+[08:21] something we call expected distance because this is a true distance between
+[08:25] where we are and where the closest obstacle is according to my map so that's
+[08:30] what I'm expecting to observe and if I perform my range reading reality I will
+[08:34] get something similar but again my sensor is not perfect so there will be
+[08:39] noise associated to this and this is a simple raycast model that can perform
+[08:44] this so raycast because we're basically tracing a ray in our map to estimate
+[08:49] where the closest obstacle given we know where we are and this gives me the
+[08:53] expected distance and this is kind of ray casting operation and therefore this
+[08:56] is often cause called a raycast model because basically tracing a ray through
+[09:01] my map until I find an obstacle they are ever more advanced raycast model than
+[09:07] this simple model why is this simple model often not sufficient the reason
+[09:12] for this is that this doesn't cover all the things which could happen so for
+[09:17] example consider for example there is in the wall you're standing in front of a
+[09:20] wall but the wall is very far away let's say 10 meters away and you have a very
+[09:25] precise scanner let's say has a standard deviation of three millimeters or
+[09:29] something like this so you would say how likely it is to measure a distance of one
+[09:34] meter and if the object is 10 meters away small standard deviation or small
+[09:39] noise in your sensor how likely is to measure distance of one meter it's
+[09:42] basically a probability of zero but it can actually happen for example because
+[09:47] a person walked through the environment stands in front of your robot and
+[09:51] obstructs the line of sight between the sensor and the wall so you may argue ah
+[09:56] yeah of course violation against our assumption that world aesthetic and all
+[10:02] those things but there's something that we have to deal with in reality and if
+[10:05] we don't take that into account those systems will brutally fail therefore you
+[10:10] typically take into account additional factors than just this Gaussian noise
+[10:15] when setting up an observation model so this is an example for a more advanced
+[10:21] observation model so again we have our predicted obstacles so that's what the
+[10:27] map tells us where our closest obstacle is and then we have a function which
+[10:31] looks like this we had a little bit of a weird shape over here or at least when
+[10:34] you see that for the first time you may argue why should actually look like this
+[10:37] so what is in there so we can see is there seems to be something like a
+[10:41] Gaussian noise around the measurement being involved in here which makes sense
+[10:45] that's what we have used been using before and having Gaussian measurement
+[10:50] noise is probably something which is a reasonable assumption for most of those
+[10:54] range sensors but then there's something else involved we can see there's a
+[10:58] function which seems to be kind of decaying over here maybe there's some
+[11:02] constant function over here constant value and there's kind of a weird peak
+[11:05] in the end this peak in the end typically refers to something that we
+[11:09] call a max range reading and this is something an invalid reading of the
+[11:14] scanner where the scanner didn't get any return because the obstacle is too far
+[11:17] away or may have been a reflection so this is what's called this kind of
+[11:21] invalid or max range reading there if it's shown here at the end okay but the
+[11:26] question still how do the other components come together there's also
+[11:28] kind of a small dent in here which looks a little bit weird with something we
+[11:32] don't see in a Gaussian distribution so how do these things come together and
+[11:35] this more this model actually is it is a combination of four different models so
+[11:41] it's a mixture a sum of four different models and I want a guy go through those
+[11:46] four different models and explain them how those models come together and those
+[11:49] models include your general sensor noise the probability that dynamic objects
+[11:54] those you don't know about walkthrough the scene a random component and this
+[11:58] max range component so let's start with a simple beam based proximity model so
+[12:05] this is kind of the model which just takes into account the sensor uncertainty
+[12:09] so this is basically the simple raycast model that we have defined or
+[12:14] illustrated before so this is the probability that of obtaining a certain
+[12:20] measurement so getting a certain hit so this is the expected obstacle here's
+[12:24] your sensor so there's a distance to the wall for example in your map and then
+[12:28] the probability of getting a certain measurement can be described by this
+[12:32] douse Gaussian distribution and this is the mean of this Gaussian distribution
+[12:36] is this accepted expected measurement you have the uncertainty of your of your
+[12:41] sensor in here and this is your Gaussian roll model so if you have a sonar this
+[12:49] variance is probably be larger than for laser range scanner or if you have a
+[12:53] camera it may again be differently modeled if you have a range camera so
+[12:58] for example there you would change that also with the distance to the obstacle
+[13:03] and you can this can be can be a complex shape but for a given expected distance
+[13:09] and this to be fixed and then this would be one part of that model so this is the
+[13:14] pure Gaussian measurement noise then the second part want to take into account is
+[13:20] unexpected obstacles how likely is to that an unexpected optical pops up
+[13:25] obstructs your field of view and this way generates a different range reading
+[13:30] from what you have expected so this was my example of the person walking around
+[13:34] through the environment and this is often represented through an
+[13:38] exponentially decaying function which starts high then decays and stops at the
+[13:43] expected measurement and this is something which probably raises a lot of
+[13:47] questions on your side why should we use such a model why does this model
+[13:51] actually make sense and can be physically plausible like explained
+[13:56] reasonably okay so the first thing I want to look into is kind of this the
+[14:01] differentiation between are we closer than that expected or not and what do
+[14:07] you see in here the function decays and then drops to zero over here and this
+[14:10] leads to this dent in this in this combined function so why do we have that
+[14:15] weird thing the reason is if we have obstacles dynamic obstacles in the
+[14:20] environment we only care about those obstacles if they are between us and the
+[14:24] obstacle we are expected to see so if we have if you're standing in front of a
+[14:29] wall and a person walks by between us and the wall we will see that person so
+[14:34] obstructs our field of view if the person ever walks behind the wall
+[14:38] there's no way that I can see that person so the person further away then
+[14:43] where the map tells us there's an obstacle it won't obstruct my reading
+[14:47] and this it will not be sensed by the sensor therefore it drops to zero over
+[14:52] here and whatever happens behind the obstacles that are actually in the map
+[14:57] I don't care of course this may be different if you assume that some walls
+[15:02] environment maybe may be taken down then this shouldn't drop to zero but to a
+[15:06] small value but there's something that we ignore over here so we are just
+[15:11] taking this typical case into account that a person dynamic obstacle walks or
+[15:15] moves freely through the space and then it's only relevant if it obstructs your
+[15:19] field of view between the scanner and the obstacle according to the map but
+[15:25] why is it an exponentially decaying function that's something that may sound
+[15:30] weird or unexpected to you but actually it makes sense to model it in that way
+[15:35] and it's actually something that it's a physically plausible model that you can
+[15:39] explain very well so let's dive into that and see how it looks like so why
+[15:43] do we have this exponentially decaying function to model dynamics so what we do
+[15:47] is we first assume a uniform distribution of these dynamic objects
+[15:52] and in the world so we don't say they prefer certain locations we just say
+[15:57] okay they can cure anywhere with the same probability if you don't if you
+[16:01] any don't have any further knowledge that may be a reasonable assumption
+[16:04] maybe we have some additional knowledge then we could take it into account but
+[16:08] here in this general model we assume that we have uniform distribution of
+[16:13] objects about the environment but the key insight in here is only the closest
+[16:19] object matters so if you have if you populate the space with a lot of people
+[16:25] working around you're only interested in estimating the distance to the closest
+[16:30] object and not to any object behind it so if two people walking by you're
+[16:36] actually interested in the first person one closest to your scanner because this
+[16:41] is the one obstructing a field of view and the one behind it you don't care
+[16:43] about and so what we are then interested is kind of always having what's the
+[16:49] probability of having a uniform distribution of objects in the
+[16:52] environment and then finding the first one then what we can do is we can
+[16:55] actually draw an analogy to bit strings how often do certain bit strings occur
+[16:59] so binary strings and and this actually helps us to actually come up in a very
+[17:06] easy to understand way why this exponentially decaying function makes
+[17:09] sense so consider now we are in kind of in a 1d world and I'm just kind of
+[17:13] considering the distance between me and let's say the camera right now or this
+[17:19] may be the expected obstacle so if I can randomly place objects in the
+[17:24] environment how likely is that a certain configuration occurs and I'm only
+[17:28] interested in getting the first obstacle and we can so zero means a free space
+[17:34] and one means an obstacle in this bit string notation the question is how
+[17:38] often do certain configurations pop up so you can see this the the the sensor
+[17:43] is sitting over here and looks into this direction and so the question is how
+[17:49] many configurations exist where the first bit string is one and all other
+[17:55] bit strings I don't care about because I don't care if they're kind of people
+[17:59] lined up or it's just one person I'm only interested in the first person so
+[18:04] whatever happens behind it I don't care that's one of those situations where if
+[18:09] you're measuring from here the first object is the first person standing
+[18:15] directly in front of the sensor and leads to a return then we can be in a
+[18:19] situation that let's say there are some free space between the robot free space
+[18:23] and the object and then I can ask myself how many bit strings exist with a zero
+[18:29] and a one and then followed by zeros because I'm again only interested in the
+[18:32] first obstacle and I can take that further not only with four digits I can
+[18:37] take as many digits as are as large as my space is and then count kind of there's
+[18:42] free space free space free space object and then there's for example the object
+[18:47] in reality then this is possible configurations and the question is how
+[18:51] many of those configurations of all possible configurations in the
+[18:54] environment can exist there could be situations where there are no persons
+[18:58] around there could be situations around where there's one person around two
+[19:01] person three person four persons five persons and so on and so forth I'm
+[19:04] distributing them randomly over the space questions how often do different
+[19:08] configurations occur we can ask yourself how many bit strings exist let's say we
+[19:13] have here four digits four bit strings in this example where the first digit is
+[19:17] one and all others are zero or how many configurations to exist whereas a zero
+[19:23] one and then followed by two bit strings I don't care about and so we can see how
+[19:27] many bit strings actually exist with different bit string exists with four
+[19:32] digits so how many are that so if it's one
+[19:35] digits would be two four eight sixteen so there are sixteen different bit
+[19:40] strings that exist consisting of zeros and ones so how many of those are these
+[19:48] ones over here these are actually bit strings where the first one is a one and
+[19:52] then the others are all possible bit strings so it would be two four eight so
+[19:58] there are eight possible configurations where this can pop up in this example I
+[20:03] fixed two of them so they are just two times two four possibilities left and
+[20:09] here only two possibilities left and here's no other possibility left so this
+[20:13] is much more likely to cure than this configuration down here so I can just
+[20:17] count how often do certain bit strings actually occur in this case it would be
+[20:21] a one because this one is fixes only one configuration for that first bit and
+[20:25] then there are two possibilities for the second bit for the third bit for the
+[20:28] fourth bit so it would one times two times two times two two to the power of
+[20:32] three equals to eight and this for all the other bit strings so I can see the
+[20:37] point that it's much more likely to observe an object which is close to the
+[20:43] platform than an object that is further away in this example even the
+[20:47] probability that this is going to happen would be 50% of all configurations so
+[20:52] more than all the others here put together because this is one plus two
+[20:57] plus four is seven and this is eight so there are more situations where this
+[21:00] work here and again this is something that just count often do certain bit
+[21:07] strings secure assuming this uniform distribution of an arbitrary number of
+[21:11] objects through the environment then I will actually generate a pattern where
+[21:16] it's much more likely to get a closer return than a return which is further
+[21:20] away and this is something which is modeled by this exponentially decaying
+[21:24] function of course I need to set up those parameters and I can actually
+[21:28] train those parameters by observing real-world situations and see how often
+[21:32] does it occur I look at different values in environments which are highly
+[21:35] populated by humans compared to environments where no one is around but
+[21:40] I will get this exponentially decaying function so this was kind of the second
+[21:45] component of that model then the third component of this model is something we
+[21:49] call a random measurement something completely random happens something I
+[21:52] haven't modeled at all and everything has the same probability of happening I
+[21:55] just don't know what's going on this could be a wall has been taken down and
+[21:59] someone is walking behind the wall or any other type of these weird situations
+[22:03] and we can just add a small uniform probability that the random event is
+[22:09] going to happen so is that I can avoid that just because I haven't taken
+[22:14] something into account it drags a probability of model to zero and then
+[22:18] invalidate my whole scan so this just kind of the thing that something I
+[22:22] haven't modeled random effect let's take that into account with a small
+[22:26] probability and then there's a certain probability that we have a max range
+[22:32] reading or no return reading that depends if your sensor has a limited
+[22:36] sensing range let's say it can only watch two meters far away and you have a
+[22:40] large open wall a whole weight then this is much more likely to occur rather
+[22:44] than situations we're in a very narrow space you may have also other effects
+[22:49] like a total reflection of the beam so that you to get no return or another
+[22:53] error configuration of your scanner so there's a certain probability a constant
+[22:57] probability that this may also happen if I now take those four models into
+[23:02] account and sum them up I will actually get this resulting mixture density
+[23:07] function which this missus small dent over here was a small uniform
+[23:10] probability the max range probability Gaussian and my exponentially decaying
+[23:15] functions and this is how the resulting mixture actually looks like and the
+[23:20] question is how can we actually determine those parameters how do we
+[23:24] know how much weight we give to the exponentially decaying function and how
+[23:28] much weight do we give to the Gaussian noise for example because that's
+[23:32] something that's relevant in practice in the end these are often different
+[23:36] parameters so if in this case for example four parameters because of a
+[23:41] weighted sum of those four functions or maybe three parameters if I make sure
+[23:45] I'm normalized to one so four parameters but normalization constant because how
+[23:50] can we determine the parameters how can we also determine the parameters like
+[23:53] the width of this Gaussian distribution some of those parameters may be easy to
+[23:57] obtain like your measurement noise of the pure measurement noise maybe
+[24:01] something that even your sensor specifies or you can determine this in
+[24:05] a controlled experiment putting your sensor in front of a wall and measuring
+[24:08] that often enough and fitting a Gaussian distribution to that that's something
+[24:12] you can easily do other parameters like the exponentially decaying functions may
+[24:16] be harder to obtain and the weighting parameters as well but what you can do
+[24:21] is you can just use raw sensor data that you recorded in an representative
+[24:27] environment and just learn those parameters from that data so what you
+[24:31] see here is a time series of a single range reading taken so this is a time
+[24:38] index and this is the the measured range and this is basically distance of three
+[24:43] meters over here and so that this is where my expected obstacles so I put a
+[24:48] sensor three meters in front of the wall and take those measurements and record
+[24:52] it and this was an environment where a lot of people were walking by and these
+[24:56] are the results how often you have got you received a certain range reading so
+[25:02] what I can do is I can take this data of course this only
+[25:06] holds for an expected distance of three meters and then fit my models into this
+[25:12] so the the four components of this model will be fitted to that data and I can do
+[25:18] this for example with a histogram so if I have a histogram here showing a range
+[25:24] reading for expected distance of three meters or four meters I will get these
+[25:29] functions over here and the the the curve over here is my parametric model
+[25:36] and the histogram over here is a number of occurrences simply counting from this
+[25:43] data how often certain events have been taking place and then I'm adapting the
+[25:47] weight parameters that I'm as close as possible to that histogram you can see
+[25:51] here that actually those random effects actually do happen and of course the
+[25:56] more data you get in the more representative your environment is the
+[26:00] more you hit the probably those some outliers here will vanish and you will
+[26:06] actually get very smooth models that you can learn from data you can also do this
+[26:10] for other sensors such as a not necessarily only for laser range scanners
+[26:14] you can use this also with sonar sensors so sonar sensors are typically less
+[26:18] accurate than a laser rangefinder and if you take sonar scans then you will get
+[26:23] similar looking functions the parameters may be different but it turns out that
+[26:28] even though sonars you can actually use with the same model and actually
+[26:33] ascribe the observations that you're obtaining in an appropriate fashion so
+[26:38] that as a result of this you can then for example for a certain observation
+[26:43] that you're getting in an environment so that's a real observation that you're
+[26:46] getting you can estimate where is this observation likely to occur so P of Z
+[26:51] given X and M and you can vary X now because the observation is fixed the map
+[26:56] is fixed but you can vary the pose and then you actually get this example out
+[27:00] here and then you can see that there's the darker the grayish area the more
+[27:05] likely it is that you actually obtain this observation so just by having this
+[27:10] single observation you can estimate that you're most likely in the corridor over
+[27:13] here and this is actually the true location so there are a couple of
+[27:16] locations which could explain that so it's basically a system standing in
+[27:19] front of two doorways where the door is open this is something that occurs more
+[27:23] often in this environment but there's an example how you can use this model in
+[27:27] order to estimate how likely is to get a certain observation at a certain
+[27:32] position and this is kind of the standard or kind of advanced raycast
+[27:38] model so on which goes beyond just Gaussian measurement noise and is a very
+[27:42] popular and frequently used models in robot localization to interpret range
+[27:47] readings and estimate how likely is to observe the observation that we got at
+[27:51] different positions in the environment or under different parameters there's
+[27:57] another model for those range sensors which is called the beam endpoint model
+[28:01] so the beam endpoint model is an alternative model which is much simpler
+[28:07] to compute with respect to the raycast model so the beam endpoint model is a
+[28:13] physically not plausible model in the sense that I'm only taking into account
+[28:16] the endpoint of my skin and I'm ignoring if any obstacle lies on the path the
+[28:23] advantage is that this is a model which is extremely simple to compute can be an
+[28:27] extremely fast and works surprisingly well although it lacks quite some
+[28:31] physical motivation so the idea is as follows you you have a platform over
+[28:36] here and you obtain a range reading let's say here whatever five meters and
+[28:41] the question is how likely is that this occur and the only thing that the beam
+[28:45] endpoint model does it actually checks the endpoint of that scan says is there
+[28:49] an obstacle yes or no as easy as that so in the most simplest form you would just
+[28:54] compute your sine cosine operation to estimate the coordinate where that beam
+[28:58] ends up and then you say is there an obstacle yes or no of course you now may
+[29:03] not be very you won't take some noise into account here so you may want to say
+[29:08] how far is this point away from the closest obstacle so is it very close to
+[29:12] a wall or is it in the free space so this is something we are still very fun
+[29:16] free space is probably a reading which would have a very low probability but if
+[29:22] the beam would end up here close to an obstacle you can say it's actually more
+[29:25] likely that I will return get a return here and the advantage of this model is
+[29:29] that it can be computed very very easily so what you can do is you can
+[29:34] actually build a lookup table which tells you where obstacles are in the
+[29:38] environment so this could be a lookup table all the white cells are free cells
+[29:42] all the gray cells are obstacles or what you can do is you can even convolve them
+[29:47] with the Gaussian kernel or expand those obstacles and with the decaying function
+[29:51] and then estimate how likely it is to get a certain get a return at a certain
+[29:57] point in time given how far I'm away from an obstacle and this can be
+[30:01] computed very efficiently so something as a Euclidean distance transform on
+[30:05] binary images can be used to estimate for every cell or every pixel in an
+[30:09] image how far it is away from a dark cell or a bright cell and then this
+[30:14] allows you to encode distance informations or cells so that we get a
+[30:19] measurement you just have to look up one pixel one element and lookup table and
+[30:23] basically get your model parameters out which is extremely efficient to compute
+[30:27] and therefore a very popular tool especially if you need to perform a lot
+[30:32] of those evaluations so localization systems such as a particle filter which
+[30:36] we will get to know later on in the course they often use those models
+[30:40] because they have to perform a large number of those evaluations so if you
+[30:45] for example have this as your lookup table and you didn't want to estimate
+[30:49] the probability of getting a certain measurement here along that path then
+[30:53] this would be your resulting model you're basically looking to bright and
+[30:58] dark cells which gives you a certain probability that a measurement will
+[31:02] occur given where you are and what the environment looks like so this is the
+[31:06] probability of getting different range readings given the position that you're
+[31:11] standing here in the map of the environment so it's basically the
+[31:13] probability distribution along that ray over here but if you want to evaluate it
+[31:17] you know already the distance because you know what you have measured then you
+[31:21] just need to look up this function at one specific point and therefore this
+[31:26] can be done very very efficiently so there's an example how an occupancy
+[31:31] grid map can be turned directly into one of those so-called likelihood fields or
+[31:35] beam endpoint model or likelihood field models also commonly used name so you
+[31:39] basically take your occupancy grid map and you're basically for every cell
+[31:43] estimating the distance to the closest obstacle with the Euclidean distance
+[31:47] transform and then squeeze it for example through some Gaussian decaying
+[31:50] function so that in the end you you have get a kind of this smeared variant
+[31:55] of this map you just plot it in the in the inverse to have dark representing
+[32:00] low probabilities bright representing high probabilities so that in this
+[32:04] likelihood field if the platform is at a certain position you just need to
+[32:08] compute the endpoint location look up in that map and the brighter the value the
+[32:12] better it is return your your likelihood value for that observation and again
+[32:17] there's something which is very efficient and therefore especially used
+[32:21] on mobile systems where efficiency matters or where a lot of those
+[32:25] likelihood evaluations need to be performed for example when you're using
+[32:29] Monte Carlo methods where as particle filters where this has to be done very
+[32:33] very often before coming to the end I also want to look a bit into models for
+[32:40] landmarks so if you have distinct points features or landmarks in the environment
+[32:44] and how does a simple model look like for estimating a feature location in the
+[32:50] environment or having a feature location from your map and when I estimate how
+[32:53] likely it is to get a certain observation so one thing we can do is
+[32:57] so-called range bearing sensors so this is a sensor like it's a razor range
+[33:01] finder which gives you a bearing and range reading because typically it's a
+[33:05] rotating laser in this scanner and provides your range readings and at
+[33:09] different orientations and then we're basically extracting from this range
+[33:14] scan landmarks that we can detect in those scans and then have certain
+[33:18] landmark locations so we can write this down in parametric form if we assume a
+[33:23] Gaussian noise for example the Gaussian either a general Gaussian or a Gaussian
+[33:27] in the rotational part and the and the in the range reading part this depends
+[33:32] on actually modeling it but what I have I have a range bearing observation so my
+[33:37] range my bearing information I have an XY theta my pose information and maybe I
+[33:42] have the observation of the landmark given a map then I can easily compute
+[33:45] what I'm going to observe so what I'm expected to observe and this is kind of
+[33:49] the the distance between where the platform is the pose and the landmark so
+[33:57] the basic where's the landmark according to my map how far am I away from this
+[34:00] and this is just the Euclidean distance and in which orientation this is
+[34:04] something that I can directly determine using the etan2 function so the
+[34:09] artangians and just need to subtract my orientation of my platform which tells
+[34:14] me where should see the obstacle and this is then my mean estimate and then I
+[34:18] add some Gaussian noise to this so this would be the simplest model that I can
+[34:24] use this to estimate where I am and a similar model not exactly the same model
+[34:28] but a similar model and can be used if you want to localize with landmarks and
+[34:33] has been done for example in the context of Robocop this Robo soccer competitions
+[34:38] where you want also need to estimate the position of the platform with
+[34:42] respect to some poles and in this examples they were three poles one two
+[34:46] and three and we get this range bearing observations and then if you observe the
+[34:52] landmark number one which is this one over here basically these are the
+[34:56] possible locations where you could be taking to count a range bearing model
+[35:01] not exactly the same what I've showed before but a similar one then for
+[35:06] observing the landmark number two you will be something on that circle which
+[35:11] is represented over here and the landmark three will tell you you're
+[35:15] somewhere located on that circle over here and by combining these informations
+[35:19] about the different landmarks you will get an estimate that you're somewhere
+[35:22] over here which actually represents to the position of the platform in reality
+[35:26] so by using multiple of those landmark observations even if they don't allow
+[35:32] you with one single observation assess the full state of the system through the
+[35:35] combinations of multiple those distributions you're actually able to
+[35:39] nail down where you are so this is one of the examples by data Fox on
+[35:44] localizing robots on the soccer field for some early Robocop competitions we
+[35:52] can also see what happens if you have a bearing only sensor so if we only
+[35:57] estimate can only estimate the orientation but don't know how far it is
+[36:01] away this is something you would probably have in a camera I just kind of
+[36:05] here's a kind of 1d line camera then your observations just the bearing
+[36:08] information the heading information we but we know where we are where we're
+[36:12] looking to we know where the feature or the landmark or the 3d point depending
+[36:16] how you call it is in the world and then it's the the model becomes very similar
+[36:21] simple it's just basically in which orientation should it be minus where I
+[36:27] am and and then that's the location where you should actually observe your
+[36:31] landmark and then you may add some Gaussian noise to this with covariance
+[36:37] in this viewing measurement this would be a simple model for perceiving
+[36:41] landmarks or points in the environment here in the 2d case but of course easily
+[36:46] generalizable to the 3d world information with this I'm coming to the
+[36:53] end for today I just wanted to give you a short introduction how to be
+[36:57] observation models look like that we can use in the base filter framework for
+[37:02] performing state estimation again short reminder because it's so so central to a
+[37:07] lot of state estimation problems the base filter was a recursive state
+[37:10] estimation technique that allows you to estimate the state of your system at
+[37:14] time T given you know T minus 1 and take uses for that the observation model and
+[37:20] the control model and we looked in their different realizations how this could
+[37:24] look like the how it is built be implemented in practice particle
+[37:29] filters Kalman filters extended Kalman filters and other types histogram
+[37:33] filters other types of state estimation techniques and they often use one of
+[37:36] those models and today I presented a few of the observation models examples for
+[37:42] observation models that are used especially with the range sensors where
+[37:45] you want to estimate what's the likelihood of an observation given I
+[37:49] know where I am and given what the world looks like and we presented this simple
+[37:53] or standard basic models they can use today you can go more advanced if you
+[37:58] have a know a lot of properties of your sensors you can of course put more
+[38:02] efforts into estimating the proper sensor parameters so if you want to
+[38:06] calibrate a terrestrial laser scanner and you want to be super precise you
+[38:10] will probably take a different approach than the one I have presented here what
+[38:13] we've presented here are models for sensors we typically use on mobile
+[38:17] platforms that we need to evaluate on a regular basis or very often you know to
+[38:22] perform state estimation where we want to have a compromise for simplicity of
+[38:26] the model and still a good way for dealing with the let's say problems we
+[38:32] have in the real world such as dynamics being around imperfect maps and those
+[38:36] models have been very successful used in this context further reading I still
+[38:43] recommend the base filter if you want to get an idea why you need those models
+[38:47] and especially the chapter 6 in the probabilistic robotics book on
+[38:51] observation models is the the chapter to inspect for the things that I've
+[38:57] presented here today so thank you very much for attention I hope you get an
+[39:01] idea how those models look like that you use especially for range sensors in
+[39:06] state estimation algorithms again if you use cameras or features
+[39:11] landmark maps just the last two or three examples should give you an idea how
+[39:16] they could look like typically that boils down there to a Gaussian estimate
+[39:20] for example in your pixel coordinates which is equivalent to the bearing
+[39:24] information if you have a calibrated camera and that's how you do that for
+[39:29] point measurements if you have those grid maps it's a bit more complicated
+[39:33] but I've shown it here today you may need to pre compute your models but
+[39:37] typically what people do they build lookup tables so that in the end they
+[39:40] can be computed in a very efficient manner that's it thank you very much for
+[39:44] your attention

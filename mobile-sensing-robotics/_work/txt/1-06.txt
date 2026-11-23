@@ -1,0 +1,497 @@
+[00:00] Welcome everyone. Today we'll be talking about the topic of locomotion, which essentially deals with how different mobile robotic systems move in their environment.
+[00:11] So there are different examples of mobile robotic systems. These could be small robots which move in indoor environments.
+[00:18] These could be autonomous cars which move in the urban cities. Or these could be, for example, flying drones which have propellers and let them fly.
+[00:28] Or these could be some other complex movement systems such as for humanoids which have legged systems.
+[00:35] In each of these cases, we provide certain input to these mobile robotic systems.
+[00:41] So this could be movement of motors, movement of the legs, movement of the propellers, whatever.
+[00:46] And this results in a certain movement for that mobile robotic system in its environment.
+[00:52] So to understand how these inputs link to the movement is what basically locomotion does.
+[01:00] So in this lecture we will primarily focus our attention to mobile systems that are wheeled.
+[01:07] So they are equipped with wheels which let them move around in their environment.
+[01:12] A couple of reasons to do this. One, they are one of the most common kind of platforms that are available around us.
+[01:21] And therefore very useful to know how they work.
+[01:25] And two, because the analysis is quite straightforward which lets us understand the principles in a rather simple manner.
+[01:32] So let's get started.
+[01:35] What does locomotion really mean?
+[01:38] So the definition is the power of motion from place to place.
+[01:43] Essentially what locomotion deals with is to understand how to move from point A to point B in your environment.
+[01:52] And this is done quite at a lower level in the sense that we don't really understand at this point how our environment looks like or anything.
+[02:00] We don't have a map of the environment or we don't have a plan which we want to particularly follow.
+[02:05] It's more at a level as to understand when we provide certain inputs to our mobile robotic system, how does it respond?
+[02:13] How does it actually move in its environment?
+[02:17] And this information is actually relevant for state estimation problems.
+[02:23] So if we understand how the robot reacts to certain input commands, then we kind of have an estimate of where the robot is over a period of time.
+[02:35] This information, so this locomotion information, can then be fused with information coming from other sensors, some other external sensors.
+[02:44] This could be, say, a GPS sensor if you're outside, or this could be a laser scanner which gives us some motion of how we move.
+[02:53] And so this information can then be fused together in order to estimate the pose of our system.
+[03:01] So these are some techniques that we'll see in other parts of the course, but basically the idea of locomotion fits in there in order to have an estimate of how the platform has moved.
+[03:13] So in this lecture, since we limit ourselves to wheeled robots, there are three or four types of wheeled robots which are quite common, and they are listed here.
+[03:23] They're also called as drives.
+[03:25] So we'll spend quite a bit of time understanding what is called as the differential drive.
+[03:31] Essentially these are robots, typically indoor robots, which have a couple of wheels on them.
+[03:38] And each of these wheels has a motor attached to them which rotates these motors and lets them move around in their environment.
+[03:47] We'll see in detail how the motion has evolved and how we can control such robots.
+[03:55] The other common kind of robot or drive that we have all seen is the ackerman drive or the car drive.
+[04:03] Essentially in these vehicles you have the back wheels which are fixed, and we have front wheels which can be then steered.
+[04:12] And in this way we are able to track a certain path or a certain circular arc, for example.
+[04:19] And there are these two other drives which are quite interesting.
+[04:22] One is called as the synchronous drive and another which is based on these mechanism wheels, which become quite interesting in confined spaces.
+[04:32] So if you have really limited space to make a maneuver, these kind of drives really help us out there.
+[04:38] So we'll also look a little bit about how and where these drives can be useful.
+[04:45] Okay, so the basis of a wheeled robot is a wheel.
+[04:49] So we start at the wheel and the concept is something we're all familiar with.
+[04:54] So we have a wheel and there is an axis going through the wheel.
+[04:58] Typically this axis or this axle is then connected to a motor which rotates.
+[05:04] And for example here, if the motor rotates in the clockwise direction, we end up with a motion which is in the forward direction.
+[05:12] So it's a very simple case in 1D, nothing surprising there.
+[05:16] However, if we have multiple wheels, the analysis is not so straightforward.
+[05:23] So we want to understand what happens when we stack several of those wheels on a mobile platform.
+[05:30] And we want to understand what's the resulting motion when we apply different, for example, inputs, different velocities on each of these wheels, how do they then react.
+[05:42] So let's see how this works.
+[05:45] And to understand basically this motion, there's this concept of instantaneous center of curvature.
+[05:53] Essentially what this means is that if we make our whole robotic system move around a certain center of curvature,
+[06:04] then we can ensure that the wheels that are attached to this system move smoothly.
+[06:10] So basically they roll. When they roll, they move smoothly on the surface instead of skidding around.
+[06:17] So what we really want to avoid is that the platforms skid around in the environment,
+[06:22] as then there will be large forces both on the floor itself where the robot is moving,
+[06:29] but also large forces that are acting on the platform itself.
+[06:34] So the idea is to have the wheels always rolling.
+[06:38] And one of the ways to actually ensure this rolling is to make sure that all the accesses of the wheels are intersecting at a common point.
+[06:51] So this is not good. Why? Because, for example, if say these are three wheels that are on our platform
+[07:00] and there is this axis which passes through each of these wheels,
+[07:05] and since each one of these wheels is rotating, they do not have a common center.
+[07:10] And therefore what will happen is one or more of these wheels will be skidding.
+[07:15] Instead, if we arrange them in the following manner such that the accesses which pass through each of these wheels
+[07:22] pass through an instantaneous center of curvature, then they can all move smoothly as one object around that ICC.
+[07:32] So there are two ways to look at it. Either we can see them as multiple wheels on the same platform,
+[07:39] or we could see it as the platform at different points of time.
+[07:45] And in either case, we would want them to move in such a manner that there is always one point around which it's moving along a curve.
+[07:55] And what we want to essentially set is we want to control these different wheels,
+[08:04] so by spinning them at different rates or by steering them in a particular manner such that we always maintain this one point of rotation.
+[08:14] In order to do this, let's start off with the basic laws of physics which we will use to derive these equations
+[08:24] and to understand how the platform moves while following a particular arc, for example.
+[08:31] So, for example, the first law here is a very basic one which says the amount of distance moved s
+[08:39] is nothing but the linear velocity of the platform multiplied by the amount of time for which that particular command has been given.
+[08:47] So this is a really simple model in the sense that we are also neglecting any accelerations here, so there are no acceleration terms.
+[08:55] Essentially, this means that we are making the assumption that we can supply a particular velocity to the platform instantaneously.
+[09:07] This is typically not the case in real robots. You often require a certain time in order to reach a desired velocity.
+[09:15] But it so happens that for controlling robots or for understanding the motion of robots at lower speeds, this is a fair enough assumption.
+[09:25] And the next equation that we see here is the angular orientation of our platform.
+[09:31] So the yaw angle in this case, represented by theta, is nothing but the angular velocity of the robot, omega, multiplied by the time for which that particular angular velocity has been applied.
+[09:46] And similarly, we also have a relationship between the linear velocity and the angular velocity when a particular platform or any point mass for that matter is following a circular arc.
+[10:00] So in this case, the relationship between the linear velocity is nothing but the angular velocity times the radius of curvature of the arc which that particular platform is following.
+[10:15] So these equations will be used in order to understand how different drives or different robots actually move in their environments.
+[10:26] We start off with the most basic or the most common drive, what is also called as differential drive that you see here.
+[10:34] So essentially, a differential drive robot has two wheels.
+[10:38] So one we see on this side and one on the backside, which we don't see here.
+[10:42] But basically, each of these wheels is connected to an axle, connected then to a motor which rotates.
+[10:50] So what we can do is to move each of these two fields independently.
+[10:55] We can see this a little bit better in this picture here.
+[10:58] It's a smaller robot, but the idea is the same.
+[11:00] It's also a differential drive robot.
+[11:03] Again, two wheels connected to two individual robots which can spin at different velocities if you wanted to.
+[11:11] And oftentimes, what is often kept is also a third wheel which is a free moving wheel, also called as a caster wheel.
+[11:20] So it's mainly to maintain a balance and is not an active wheel, so to say.
+[11:25] So what we can do here is to set the velocities of each of these tires or the wheels independently.
+[11:36] And for example, let's say we want to go straight with this particular robot.
+[11:42] The answer is quite simple.
+[11:43] We set the same velocities both on, let's say, the left wheel and the right wheel.
+[11:48] And this would result in the platform moving in a straightforward manner.
+[11:52] The same if you want to move back, just the velocities are reversed and in this way we can move back.
+[11:58] However, if you want to move along a curve, this changes slightly.
+[12:04] So if you think of it, if you want to make a curve like this, the wheel which is on the left,
+[12:10] which is actually also in this case an inner wheel, it's towards the curve,
+[12:15] has to travel a distance which is less than the distance that the outer wheel has to travel.
+[12:20] And so since the outer wheel has to travel a larger distance when it's following this particular arc,
+[12:26] it needs to spin faster such that overall they don't skid.
+[12:33] And also if you think in terms of the instantaneous center of curvature that we just introduced,
+[12:40] by construction these differential robots always have an instantaneous center of curvature.
+[12:47] For example, since these axes pass through both these wheels,
+[12:54] essentially the instantaneous center of curvature will lie on that axis.
+[13:00] What's also interesting is that these kinds of robots can also spin on spot,
+[13:06] which is really interesting to have if you have confined spaces.
+[13:10] You can imagine that this is not possible for a car or a car-like robot,
+[13:15] which also we saw called an Ackermann robot, because there you can't really rotate on spot.
+[13:20] There's a minimum turning circle that's there which restricts us from making arbitrarily sharp turns, so to say.
+[13:28] However, for differential robots there's quite a nice property.
+[13:32] So how this is done is that by rotating one of the wheels,
+[13:36] so let's say the left wheel in clockwise direction and the other one in anticlockwise direction,
+[13:41] we are able to spin on spot.
+[13:44] And by switching it we can spin on the other way as well.
+[13:48] And so these are quite interesting properties for a differential robot.
+[13:55] Let's now put some variables on this robot to understand what are the different terms
+[14:01] that we are interested in and so on.
+[14:03] So like we said, we have two velocities, the left and the right.
+[14:08] So these are the velocities that can be set as an input to the system.
+[14:12] So vL and vR here.
+[14:14] And then there is an angular velocity that exists along, let's say, the center of mass of this robot.
+[14:22] And then there's also the fifth of these robots.
+[14:26] We will see why these particular terms are important in order to describe the motion that such drives actually follow.
+[14:35] In addition to its xy, for example, position here, defined by its center of mass,
+[14:40] we are also interested in the orientation of the robot here given by theta.
+[14:46] So to describe the position of our robot, of this differential robot in a global coordinate frame,
+[14:53] what we would require essentially is the x and the y positions of the center of mass.
+[14:59] And often this is taken at the midpoint of the axis that passes through these wheels, so somewhere here.
+[15:06] And we are also interested in the orientation of the robot.
+[15:11] So let's see a little bit in more detail.
+[15:15] Again, it's the same thing what we saw before.
+[15:18] We have a left velocity and the right velocity for the two corresponding wheels.
+[15:23] We have an orientation of the robot.
+[15:26] And what we also show here is the radius to the instantaneous center of curvature here.
+[15:34] So this point here represents this instantaneous center of curvature,
+[15:37] so the robot is making a turn, presumably like this, along this point.
+[15:43] And, of course, we have the length between the two wheels on the robot itself.
+[15:51] So now we will use one of the laws that we saw before,
+[15:55] which is the relationship between the linear and the angular velocities of the robot.
+[16:02] So essentially what we would like to end up with is to understand the motion of the robot
+[16:06] in terms of its linear and angular velocity, so v and omega,
+[16:10] in terms of the commands or in terms of the velocities that are set to it.
+[16:15] For example, in this case, vL and vR are the velocities that are set to these two wheels.
+[16:22] And what we want to understand is how does the overall robot, the overall platform,
+[16:26] respond to these commands.
+[16:29] So we want to understand what the angular velocity as well as the linear velocity of the platform as a whole is,
+[16:35] given that we set vL and vR to the two wheels.
+[16:39] And so we'll develop some equations and come out with these results and see how they look like.
+[16:44] And where we start with is the relationship between the linear and angular velocities.
+[16:50] So essentially the formula that we're following is v is equal to omega times R,
+[16:55] where R is the radius of the circle that it's rolling along.
+[17:00] So in this case, if we take at the left wheel here, the radius of the circle that it's following,
+[17:12] in this case it's the distance to the instantaneous center of curvature,
+[17:17] is nothing but R minus L over 2.
+[17:19] So since R is the distance from the center of the robot to the instantaneous center of curvature,
+[17:27] and L over 2 is this distance, essentially this particular distance that's left here is nothing but R minus L over 2.
+[17:35] And the same happens for the right wheel here.
+[17:38] So nothing more, but it's R plus L over 2 since it's on the other side.
+[17:46] So we just rewrite these two equations here, and the first step is to just take out omega on one side.
+[17:54] So what we have is these equations with vR over R plus L by 2 being equal to vL over R minus L by 2.
+[18:03] Then we do some algebra, very simple algebra, just multiply and move the terms around.
+[18:10] What we would find is we multiply vR times R minus L over 2 is nothing but vL times R plus L over 2.
+[18:20] Then we can remove some terms, and then if we rearrange it, what we would like to find is an expression for the R.
+[18:28] So the distance between the center of the wheels to the instantaneous center of curvature.
+[18:38] So this radius of the circle that the platform itself is following around.
+[18:43] And if we move these equations, so we take R out, and if we move the equations around, what we will end up with is an equation for R,
+[18:52] which depends on two things, or three things.
+[18:56] This depends on the L, which is the distance between the two wheels.
+[19:01] So L is nothing but the distance between these two wheels.
+[19:04] And it depends on the left and the right wheel velocity.
+[19:09] So now we have an expression for R based on our inputs as well as some dimensions of the robot itself.
+[19:16] Let's see what else can be developed from here.
+[19:22] So we have these equations, which we saw before.
+[19:26] We can also add them up, so in this case we basically add these two velocities here, and we obtain the equation here.
+[19:35] So nothing VL plus VR is omega times R minus L over 2 plus R plus L over 2, and these two terms will cancel each other out there.
+[19:47] And if giving us VL plus VR, or VR plus VL equals to 2 omega R.
+[19:54] And therefore if we rearrange, we have an expression for the angular velocity of the whole platform
+[20:01] in terms of the individual velocities of the wheels and the radius of curvature.
+[20:08] Since we had just computed the radius of curvature, we replace it into this equation.
+[20:15] And we will end up with an equation like this, where we will have basically these terms sitting in here.
+[20:23] And if we look at this equation, we can see that we can cross over some terms.
+[20:29] And with a little bit of manipulation, what you end up is now, again, an equation for the omega,
+[20:36] which is the angular velocity of the platform, in terms of either the velocities that have been set to individual wheels,
+[20:43] or some parameter of the robot itself.
+[20:46] So in this case, the length between the two wheels that we have.
+[20:49] So we have done two things. One, we have expressed the radius of the curve,
+[20:58] the curvature which the robot is going to follow in terms of these parameters.
+[21:06] We have also expressed the angular velocity in terms of the two velocities of left and right wheels, as we see here.
+[21:18] What we can then do is also find out an expression for the linear velocity by replacing these two things
+[21:26] that we had computed in step 2 and step 3.
+[21:29] So step 2, I think, gave us the angular velocity as vr minus vL by L.
+[21:37] And r was nothing but L over 2 times the right velocity plus the left one,
+[21:43] whole divided by the right velocity minus the left one.
+[21:47] And if we just replace these two equations here, what we would end up is that the linear velocity is this expression here.
+[21:57] And here we see that these two terms are the same, which we can cross out, the L's cross out.
+[22:05] Essentially what we end up is that the linear velocity is nothing but the average of the left and the right velocity.
+[22:13] And this also makes sense intuitively.
+[22:15] So what we have now are three things.
+[22:19] One, we know how the complete platform moves with respect to the left and the right velocities that we put onto these two wheels.
+[22:31] We know what the angular velocity of the robot is, and we also know the radius of the curve that this robot travels along.
+[22:40] So these are the important terms that we require in order to understand how this differential robot moves
+[22:46] when a particular velocity is applied to the left and the right wheels.
+[22:53] So with this, we can also compute the coordinates, for example, of the instantaneous center of curvature.
+[23:00] So we've had the radius, which is given by this particular term here.
+[23:06] And then we know that if the position of the robot is set here to x and y, and then some amount of trigonometry,
+[23:15] so it makes an angle of theta with a positive x-axis, so essentially this particular coordinate would be nothing but the position of this,
+[23:25] which is x, minus the r times of sinus of that theta would give us this particular coordinate.
+[23:33] And similarly, to get the y coordinate, it would be cosine of theta, which needs to be added to the position of that point itself.
+[23:44] So what we are now able to express is the coordinates of the instantaneous center of curvature
+[23:52] in a global coordinate frame using the radius of curvature that we just computed now.
+[24:00] Next, what we are really interested in is to infer how the platform is going to move.
+[24:05] So for example, we know where the platform is at time t, and we want to understand where the platform would be at time t plus one.
+[24:15] And this is also called as forward kinematics.
+[24:18] So given the velocities, whatever vL and vR to the two wheels, where would we end up after one particular time step?
+[24:28] So what we see here is a discrete format of understanding this.
+[24:33] So for example, for a time period of delta t, we apply a constant velocity to our platform.
+[24:43] So a constant rotational and a linear velocity to the platform.
+[24:47] The new position, so in this case, x refers to the position, so the location x and y, whereas theta refers to the orientation of the robot.
+[24:56] And essentially, this depends on where it is.
+[25:02] So what you need to do is to take where you are, so this is xt, and subtract the coordinates of where your instantaneous center of rotation is.
+[25:12] So this gives us xt minus xicc.
+[25:15] And then when we multiply it with the rotation matrix, so this R of omega t corresponds to the rotation matrix,
+[25:22] which is defined along an axis which is perpendicular to the plane here.
+[25:26] This way, we would get the new position of the robot.
+[25:33] So we have to take the xicc and add it to this difference vector that we have just computed.
+[25:41] Similarly, we can also compute the new orientation as nothing but the old orientation plus the angular velocity times delta t,
+[25:52] because this is the amount that the robot has rotated in the meanwhile.
+[25:57] So this is a way to understand how the robot would move over time.
+[26:04] And in this case, it's a discrete formulation, whereas here, it's the same idea but as a continuous formulation.
+[26:12] So this is what actually happens in reality.
+[26:14] So you don't have constant velocities per se, but rather following a trajectory or a profile of velocities.
+[26:22] And there, we would end up integrating instead of just adding like we saw here.
+[26:30] So the next robot that we actually see here is quite similar to the differential robot that we saw before,
+[26:36] in the sense that these wheels, both in the front and the back, are attached with a fixed axle.
+[26:43] You can control the velocities of, let's say, the front wheels and the back wheels separately, but they are attached rigidly.
+[26:52] So in some sense, it's similar to differential drive, but if you look carefully, there's a flaw, so to say,
+[27:00] in the kinematic design of this robot itself.
+[27:04] Because if you think there's an axis which is going through the front pair of wheels,
+[27:11] and there's also an axis which is going through the back pair of wheels.
+[27:15] And since they're attached rigidly parallel to each other, there is no way that those two axes will ever meet.
+[27:25] So of course, if you just want to move straight, it's fine. They're parallel, you apply the same velocities to all the wheels,
+[27:31] and then you go straight, either forward or backward.
+[27:34] However, as soon as we have to make any turn, then this means that since these two axes can never intersect,
+[27:43] this kind of robot will always skid. It's never possible to roll freely with this kind of robots.
+[27:49] And therefore, sometimes these kinds of controls, or to control these robots, are also called as skid steer robots.
+[27:58] So they're not very elegant in terms of kinematics, but it so happens that they're quite sturdy,
+[28:05] and they're often used in outdoor environments for navigation.
+[28:10] The next drive that we look at is what is called as the Ackerman drive.
+[28:14] So this is the typical car. In this case, it's an autonomous car, but just the car, yet the same.
+[28:21] And for these kind of cars, what you would have is that the back wheels would be usually fixed,
+[28:27] and the front wheels are steerable.
+[28:31] So in this case, essentially what would happen is, if you want to go straight, of course, the same idea,
+[28:36] put the same velocities on all the four wheels, and then it goes straight.
+[28:40] But if you want to turn, the idea would be then to turn the wheels such that you obtain an instantaneous center of curvature
+[28:52] by intersecting the back wheel axis and the front one.
+[28:58] So since this is an Ackerman kind of drive, the kind of maneuvers that it can do are restricted.
+[29:08] For example, like a differential drive, it can't really rotate on spot,
+[29:14] because at the least there is this distance or this difference between the back wheel and the front wheel,
+[29:20] and therefore it can't make a non-zero radius turn, so to say.
+[29:28] So let's look at how this Ackerman drive actually works.
+[29:33] So to analyze this Ackerman drive, one usually approximates, or it's an assumption that one makes,
+[29:41] instead of using the real back wheels, you take a virtual wheel which lies at the center of these axes,
+[29:50] and this point would then be, so to say, would be the center of mass or the center of the vehicle
+[29:57] which will follow the trajectory P here as shown here.
+[30:02] And again we have these terms L, which is the width between the two wheels,
+[30:07] as well as this term D, which is the distance between the back wheel axis and the front wheel axis.
+[30:15] So the goal would be to figure out how to make this particular robot follow a particular trajectory shown here in blue here.
+[30:25] So to make the analysis simple, one usually approximates this Ackerman drive
+[30:32] to what is called an Ackerman model to what is called a bicycle model.
+[30:36] So in addition to this virtual wheel in the back, we also create, so to say, a virtual wheel in the front.
+[30:43] Sometimes this wheel is also called as the ideal wheel.
+[30:47] However, the difference is that this wheel is fixed, whereas this front wheel is steerable.
+[30:53] So you could think of this wheel moving at different steering angles in order to track a particular trajectory.
+[31:02] So let's see how this would then result in a motion.
+[31:09] So for example, now let's say we want to follow a particular arc,
+[31:14] so an arc which is passing through this back wheel.
+[31:18] However, if we put the same steering angle of our so-called ideal wheel on to the actual wheels that you see here,
+[31:29] since there is some distance between these two front wheels,
+[31:34] the circle along which that they are passing does not have the same radius anymore.
+[31:41] This means then that they are slipping.
+[31:44] So each one of these front wheels is actually following a different curve
+[31:50] instead of the one that we actually follow, which we want to follow using this path P here.
+[31:57] So if you think about it, the answer to this would be then that the two front wheels cannot just steer at the same angle.
+[32:08] They need to move or they need to be steered at different angles.
+[32:13] So the one which is towards the inside of the curve needs to steer less,
+[32:17] whereas the one which is on the outside probably needs to steer more.
+[32:22] In either case, we need to have different steering angles for the inside and the outside wheels,
+[32:29] and actually this is what also happens when we actually steer our car in real life.
+[32:35] So let's actually try to derive these equations and see how that looks like.
+[32:41] So first, let's do it for the ideal wheel itself.
+[32:44] Although this wheel doesn't exist in reality, let's now for assumption's sake
+[32:50] assume that there is this ideal wheel, and we want to figure out how much we should steer
+[32:57] so that we have an instantaneous center of rotation and therefore we are rolling smoothly.
+[33:04] So in this case, for example, we determine or we define this steering angle by delta,
+[33:12] and if we look at the right angles, we would also come out that this angle here is delta.
+[33:18] So what we see here is, again, this is the center of the back wheel,
+[33:23] and this is the instantaneous center of curvature.
+[33:26] So this R is basically this radius of that particular circle.
+[33:31] We again have this D, which is the length between the two axes,
+[33:35] and the L, which is the width of the car itself.
+[33:40] So the question that we now want to ask is what should be this delta
+[33:45] such that it intersects at our instantaneous center of rotation.
+[33:51] What is the relationship between delta and other geometric quantities that we see here?
+[33:57] And actually this is quite straightforward.
+[33:59] So if you look at the tangent of this angle delta, that is nothing but the opposite side here,
+[34:05] which is D, which is the distance between the two axes,
+[34:09] and this particular distance here, which is nothing but R.
+[34:14] It's R because it's the distance from the center of our car to the instantaneous center or location.
+[34:21] So basically tan of delta is D over R, which means delta is nothing but arctan of D over R.
+[34:31] However, if we actually want a smooth motion for all the three,
+[34:36] for the whole vehicle as a whole, then it means that we need different circles
+[34:42] that the inner and the outer wheel actually follow.
+[34:45] So this is the path that we want to track,
+[34:48] and also the path that the back wheel tracks can be slightly different from the one
+[34:53] that the ideal wheel or the center front wheel tracks.
+[34:57] And so by choosing the steering angles for the inner and the outer wheel
+[35:04] such that they intersect at the same point as our ideal wheel does,
+[35:08] then we could come out with a formulation or a way in order to track our robot
+[35:15] along the curved surfaces without any slipping.
+[35:19] So it will be smooth, so to say.
+[35:22] And so the question is, how do we actually figure out what these steering angles
+[35:27] for the two front wheels are?
+[35:29] And so we go back to the similar diagram like we had before,
+[35:34] where if we move our steering wheel by delta,
+[35:40] so that we could think of this steering angle as the amount of steering,
+[35:46] for example, that we give on the steering wheel.
+[35:50] This need not be directly the case that if you move your steering wheel five degrees
+[35:54] that the wheel also moves five degrees.
+[35:57] But just for argument's sake, let's assume that when you move your steering wheel by delta degrees,
+[36:03] also the steering wheel moves by delta degrees.
+[36:07] So the question that we want to answer here is that if this ideal wheel moves by delta degrees,
+[36:13] how much should the inner and the outer wheel move by or how much they should rotate?
+[36:20] And again, we get the constraints from the geometry of the platform itself.
+[36:25] We want that the axis passing through these individual wheels all pass through the same point.
+[36:33] This ensures then that the whole overall system would rotate around the same point.
+[36:39] This happens automatically for the wheels which are on the backside
+[36:41] because they are attached to the same axis.
+[36:43] The axis through them will also pass through the instantaneous center of curvature.
+[36:48] What's more tricky is how to ensure that the front two wheels also pass through the instantaneous center of curvature.
+[36:57] And like before, if we write down the formulation or the relation, geometric relation here,
+[37:04] we had this from before that the tan of delta is nothing but D over R.
+[37:10] So this V base length, so to say, here over the radius of curvature.
+[37:16] Similarly, for the inner wheel, delta I here, or the left wheel that you see here,
+[37:23] is nothing but the D which is the same, so this length is the same,
+[37:29] whereas the radius along which it's turning is shorter.
+[37:32] So it's R, which is the distance from the center to the RCC,
+[37:36] minus the half of the length of this width of the car.
+[37:41] And therefore we have the relationship for the inner tire or inner wheel
+[37:47] as tan of delta Di is D over R minus L by 2.
+[37:52] And similarly we can argue for the outer wheel, this being tan of delta 0 is D over R plus L by 2.
+[38:01] So now, if we set these angles delta I and delta O as given by these equations,
+[38:08] we would ensure that the entire platform has one instantaneous center of curvature
+[38:14] and therefore would move smoothly along the curve that we want to track.
+[38:19] And so, in principle, if you have a car for which we can make some digital calculations,
+[38:25] we could think, okay, we could take the arctan of these numbers
+[38:28] and then figure out, based on the curvature that we want to track,
+[38:31] how much we should steer if it's an autonomous car.
+[38:35] However, this problem is not something that's new.
+[38:38] And this has been done for quite a long time.
+[38:43] For example, here what we see, the solution is used in cars,
+[38:48] but also was used originally for horse carriages.
+[38:52] So what was happening was that previously all the front wheels were steered in the same manner,
+[39:01] which we now know is not good because this results in skidding,
+[39:04] which results in large forces on these wheels.
+[39:07] And this was what was happening and this resulted in the fact that the horse carriages were breaking down a lot.
+[39:16] And there was a smart solution which was found in terms of a mechanical fix.
+[39:21] So by attaching this extra rod, they have to be calculated to be of a certain length,
+[39:27] also these linkages here have to be of a certain length,
+[39:30] such that now when you pull or when you steer, you can move this mechanism here
+[39:37] such that the axis that passes through the two front wheels will always rotate.
+[39:42] This is also roughly how the mechanism in our cars, or at least the older cars, work like.
+[39:49] So this is a constraint that is made mechanically similar to enforce these specific steering angles,
+[39:59] but to do it rather in an elegant and mechanical manner.
+[40:04] So now we know how essentially to control or to drive an ackermann type of car
+[40:12] by ensuring that all the four wheels of the platform are rolling smoothly.
+[40:19] With this we move on to the next drive, which is an interesting drive, also called as synchronous drive.
+[40:26] So essentially what happens is that in the synchronous drive you put wheels parallel to each other on the platform
+[40:34] and then they all move at the same linear velocity.
+[40:38] So if you give the same velocity to all those wheels, they would move straight.
+[40:42] Similarly, by giving negative of that velocity, they move backwards.
+[40:46] What's interesting is that it's also possible to rotate all these wheels exactly the same.
+[40:52] There's one motor which rotates at some angular velocity and that is transferred to each of these wheels.
+[40:59] What this then results in is a very nice motion where you can move straight and back,
+[41:05] but also at a particular angle because all these wheels are rotated in the same way.
+[41:13] So you could come out with really smooth motions and you could reach parts of the environment in a confined space
+[41:22] as opposed to using, for example, an ackermann model where you would need to do more manoeuvring
+[41:27] in order to reach the same positions in the environment.
+[41:32] And again, similar to what we saw before, in order to understand what our new positions would be,
+[41:37] we need to integrate our velocities over time and this will help us infer where the robot is at time t plus one.
+[41:49] Another interesting drive is this XR4000, what was initially done in XR4000.
+[41:58] It's almost like an ackermann drive in the sense that there are two wheels on the front which can be steered,
+[42:05] but also the wheels on the back can be steered.
+[42:08] So in this sense, what one does is to have the axis of these front and back wheels intersect at a particular ICC.
+[42:18] Then we can ensure that the whole system rotates around the ICC.
+[42:24] By moving both the front and the back wheels, this allows to move in tighter circles than is what is possible with an ackermann drive.
+[42:34] So this is really an interesting kind of drive which is mainly used in the outdoor environments and this is an example of such a robot.
+[42:44] Again, for the inference of the next time instance, so where the poles of the robot are the next time instance, we do the same.
+[42:52] So we have to integrate the velocities over delta t's which would give us the idea of where this robot would end up at time t plus one.
+[43:02] So like I said, we want to ensure that the ICC, so the axis passing through these four wheels, end up through or pass through this ICC which would ensure a smooth motion.
+[43:16] So this last mechanism that we see here is really one of the coolest ones. So this is obtained using what are called as mechanism wheels.
+[43:23] So essentially these are four motorized wheels with some passive rollers on top of it.
+[43:31] So there are wheels on top of wheels. So these rollers are normally put at an angle of 45 degrees on top of these actuated wheels.
+[43:43] And by rotating these actuated wheels, these rollers then passively, so to say, rotate due to the normal forces and the friction from the ground.
+[43:52] And what this allows us to do is to make movements, for example, a sideward movement which would be not possible with an ackermann drive or even with a differential drive.
+[44:03] So with these kind of robots, you are able to move, for example, side and so on.
+[44:07] So for example, if you look at the equations here, we have basically four motors, so there are four degrees of freedom.
+[44:16] And we can set the individual velocities on the X, on the Y and on the rotational velocity by setting these different velocities on the four wheels.
+[44:28] So by setting certain velocities for V0, V1, V2, V3, so the wheels 0, 1, 2 and 3, we can obtain a particular velocity in the X direction, similarly in the Y direction and an angular velocity.
+[44:42] Since we have four motors and only three degrees of freedom, we also have to ensure that this error vector or this error velocity goes to zero.
+[44:54] So let's look at how this motion or how this mechanism looks in practice.
+[45:00] So this is a robot, for example, which has these mechanism wheels.
+[45:04] And as you could see, it slides along the floor and reaches this particular time for some other application.
+[45:11] But as you see here, the active wheel rotates.
+[45:15] But also the passive wheels on its collision or on interaction with the surface also rotates, allowing it to move on sidewards, for example, and creating motions which would not be possible with other kinds of drives.
+[45:32] So the next kind of vehicles that we see are what are called as tracked vehicles.
+[45:40] In this case, these are almost similar to the skid steer vehicle that we saw, but there's a track around the platform.
+[45:48] And these are really interesting for environments in which wheels won't do.
+[45:55] So you really need to have these kind of tracks in order, for example, to go up and down rugged surfaces or stairs in this case.
+[46:03] As you can imagine, this is quite a rough kind of drive.
+[46:07] So there is no mechanism per se to steer these tracks so that you can have a smooth motion.
+[46:14] Whenever you turn, they're not the nicest experience, but basically essentially use skid in order to turn similar to the skid steer mechanism.
+[46:25] So what we see here is another kind of robot, so a kind of motion, in this case a humanoid motion.
+[46:34] So we have legged systems.
+[46:37] So the movement of the locomotion for a humanoid system is much more complicated as it first has to figure out, in this case, where those steps are and then make the movement.
+[46:49] So in this case, the robot does what is called a statically stable movement.
+[46:56] So it moves such that at every point in its movement, it's stable.
+[47:01] So we as humans typically don't walk like this.
+[47:04] We walk in a dynamic way such that we may always be falling, so we're not stable at each point of time.
+[47:10] But while tracking or while moving, we are stable overall.
+[47:15] So this is another kind of movement which is not a wheel-based movement, but using legged systems.
+[47:23] So the main advantage of such systems is that if we want a robot to operate in environments which are already, so to say, made for humans, you don't want to redesign them for wheeled vehicles.
+[47:37] This is the kind of systems that one needs to develop.
+[47:42] So something that's more cool, so to say, to look at is this robot called the Atlas system that's developed by Boston Dynamics.
+[47:52] So in this case, what you see here is a dynamic kind of stability.
+[47:57] So it's not stable at any one point in time, but overall, while making the movements, it's stable.
+[48:03] So this is a very complex system with several controllers, ensuring that these different motions are being followed.
+[48:14] It's one of the very few robots which have these capabilities to do it.
+[48:30] So they're able to do really complex movements.
+[48:33] This is, of course, helped by the specific hardware that they have, but also understanding the dynamics or understanding the movement in order to do such complicated tasks in the environment, so to say.
+[48:49] With that, we move to a couple of terms that we often come across when we are studying or reading papers about motion of different platforms.
+[49:00] And one of these terms is what is called as the nonholonomic constraints.
+[49:06] So essentially, nonholonomic constraints are those which limit the possibilities for a particular platform, how it moves in the configuration space or how it moves or to where it can move.
+[49:19] For example, if you think of a differential or a synchronous drive, they can move on a circular trajectory, so they can move on any circular trajectory, including one with a radius of zero, but they cannot move sideways.
+[49:34] So this is a kind of a holonomic constraint that exists for our differential robot.
+[49:40] However, if you think of the same case, when we have a robot which is equipped with mechanism wheels, so the wheels which lets us move sideways as well, it has no holonomic constraints.
+[49:51] So there is no place or there is no post, so to say, in the configuration space where we cannot reach.
+[49:58] And so we can always reach any particular post in the configuration space, starting from wherever we are, if we have no nonholonomic constraints.
+[50:08] The other term that exists there is what are called as holonomic constraints.
+[50:14] These differ from the nonholonomic constraints in the sense that holonomic constraints are those constraints which actually restrict the configuration space or the valid configuration space that the platform can assume in the first case.
+[50:27] So they sound similar, but it's slightly different, the two constraints.
+[50:31] So in the nonholonomic constraints, it's that the control space with respect to the current configuration itself is reduced in the sense that, for example, for a differential robot, moving sideways is not possible due to the lack of, so to say, the controls on that particular platform.
+[50:50] Whereas holonomic constraints mean those constraints or those parts of the configuration space that are not reachable at all irrespective of our controls itself.
+[51:02] So, for example, if you think of a system which moves on a track, so a train on a track, or certain trailer systems where you can attach, say, to your car a particular trailer in the back.
+[51:14] And since it's attached with, say, a link, there are certain poses or certain configuration spaces which cannot be reached at all.
+[51:22] And such constraints are called as holonomic constraints.
+[51:26] These are important to know because if we have certain holonomic constraints or nonholonomic constraints, this information is useful, for example, during planning.
+[51:36] So if you want to move around in a room with, let's say, several obstacles.
+[51:41] If there are certain things our platform cannot do, then such knowledge would be useful to have before planning.
+[51:48] Of course, if we have a platform which has no holonomic constraints or no nonholonomic constraints, that's the best case.
+[51:55] This means that the planning problem itself becomes much easier as our platform can essentially do anything that our planning algorithm requires us to do given that it's a free space.
+[52:10] With that, we move to the next topic, which is what is called as dead reckoning and odometry.
+[52:18] Dead reckoning essentially means we want to estimate the motion based on the inputs that have been given to the platform.
+[52:27] For example, if we have a differential robot and we give a certain velocity to the left and the right wheel,
+[52:36] and we want to estimate how far this particular robot has moved.
+[52:40] Of course, in the ideal case, if the robot does exactly what we asked it to do, then this dead reckoning would be the perfect position of where the robot is.
+[52:50] But typically this is not the case. There could be some limits in control, the surface might not be smooth.
+[52:57] There's all kinds of conditions which result in the fact that if you just estimate where you will be based on the commands that you would give, you would not have the most accurate estimate.
+[53:10] So to compute the estimates just using the controls or the inputs is what is called as dead reckoning.
+[53:16] So you integrate these commands over time to figure out where you move.
+[53:19] So, for example, if I say I move with a velocity of one metre per second for three seconds, I would move a distance of three metres.
+[53:28] And this would be a dead reckoning solution for where you are.
+[53:32] But odometry is basically a little bit more, which means that you actually have some kind of encoders on your wheel.
+[53:42] So these count, for example, the number of revolutions that your wheels make, and you use these revolutions to figure out how much you move.
+[53:52] So since this is kind of a feedback on the movement that you make, so say you ask the wheels to rotate at a certain velocity, maybe the wheels didn't rotate at that certain velocity.
+[54:03] However, since you recorded how many revolutions the wheels actually did, typically odometry measures end up being more accurate than a dead reckoning kind of estimate.
+[54:14] So here's a simple example to see how this odometry looks like.
+[54:18] So in this case what we see here is kind of a maze environment in which a robot is moving.
+[54:24] So this is how the robot actually moved.
+[54:28] However, due to some errors in the odometry, so there's some kind of a systematic error it seems here towards the right, this is what we expect, or this is what we estimate our robot to have done.
+[54:40] In this case there's a systematic error to the right, and therefore at each term we have this drift that accumulates over time.
+[54:49] However, given the odometry sensors that we have, this is what we got.
+[54:54] So this is probably a quite noisy sensor, therefore there's a large error.
+[54:59] Of course depending on the quality of the odometry sensor or the encoders, we might have better or worse estimates.
+[55:07] Either way, dead reckoning and odometry are a way to estimate the motion, so what is the movement that the robot has done in the environment.
+[55:16] And we'll be seeing this in further lectures. We'll use this odometry, so to say, as a prediction step where we have an initial guess of where our robot is and then fuse these with extra information coming from the sensors to figure out a better pose for the robot itself.
+[55:36] So as a summary, what I introduced today was different kinds of wheeled drives.
+[55:42] So we saw a differential robot, an Ackermann robot, and a couple of other more sophisticated wheeled motions.
+[55:51] We saw the math to describe the motion for the differential drive, and we also saw some equations for the Ackermann drive in order to move it along a trajectory smoothly.
+[56:03] And we saw the idea, or we at least introduced the terms of nonholonomic and holonomic constraints which basically limit the movements that a robot is able to do in an environment and why such constraints are important to consider for other tasks such as planning.
+[56:21] And we shortly saw what the terms odometry and dead reckoning means and how they let us estimate what is the movement that the robots have done.
+[56:31] With that, I thank you for your attention.

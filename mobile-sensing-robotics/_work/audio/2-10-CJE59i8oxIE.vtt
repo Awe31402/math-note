@@ -1,0 +1,2477 @@
+WEBVTT
+
+00:00.000 --> 00:05.280
+Welcome to this third part of the lecture on point cloud registration and
+
+00:05.280 --> 00:09.920
+looking into the ICP algorithm and today we want to look into the most general
+
+00:09.920 --> 00:15.280
+let's say nonlinear least squares approach to point cloud registration. So
+
+00:15.280 --> 00:20.760
+so far we have discussed finding point cloud registrations given known
+
+00:20.760 --> 00:25.320
+data stations where we look into finding the optimal transformation to
+
+00:25.320 --> 00:29.000
+transform the two point clouds on top of each other and then in the second part
+
+00:29.000 --> 00:32.920
+of the lecture we looked into the question what happens if we don't know
+
+00:32.920 --> 00:38.760
+the data association and go for the ICP based approach where we find the closest
+
+00:38.760 --> 00:43.240
+point in another point cloud in order to estimate correspondences. In the third
+
+00:43.240 --> 00:47.840
+lecture here today we want to look into a least squares approach where we don't
+
+00:47.840 --> 00:53.860
+use this SVD based registration but look in a somewhat more general formulation
+
+00:53.860 --> 00:57.640
+of that which in the end leads to a Gauss-Newton based iterative alignment
+
+00:57.800 --> 01:02.200
+and see what we can do with this for point cloud registration. So what we have
+
+01:02.200 --> 01:07.240
+seen in the previous lecture we have this example here of those two bunnies
+
+01:07.240 --> 01:11.680
+and the goal is to align those bunnies so for every point in point cloud number
+
+01:11.680 --> 01:14.680
+one we look for the closest corresponding partner in point cloud
+
+01:14.680 --> 01:19.120
+number two based on a nearest neighbor criterion so we look for the closest
+
+01:19.120 --> 01:23.280
+point and then say this is a correspondency and then try to minimize
+
+01:23.280 --> 01:27.360
+the distances between those two point clouds and actually minimizing a squared
+
+01:27.400 --> 01:30.800
+distance and if you run this video we see different iterations which are
+
+01:30.800 --> 01:36.480
+ongoing here which try to find a data association then perform the alignment
+
+01:36.480 --> 01:40.120
+step then again look for data station do the alignment step and so on and so
+
+01:40.120 --> 01:45.000
+forth until after a couple of iterations those two point clouds are aligned with
+
+01:45.000 --> 01:49.560
+each other. So and we started out originally with a very simple form of
+
+01:49.560 --> 01:54.840
+this alignment so consider we have two point sets Y and X over here in some
+
+01:54.880 --> 01:59.160
+different coordinate systems one could be a global coordinate system which is
+
+01:59.160 --> 02:03.040
+available some form of map form this could be your local sensor frame it
+
+02:03.040 --> 02:06.600
+could also be two different sensor frames that doesn't really matter and
+
+02:06.600 --> 02:12.640
+then we have the correspondencies over here indicated as a set C which are
+
+02:12.640 --> 02:17.560
+these gray lines knowing this point and these points they should correspond and
+
+02:17.560 --> 02:21.440
+those two points should correspond and initially we assume this to be known
+
+02:21.480 --> 02:25.280
+then in the second part of the lecture we relaxed this assumption and tried to
+
+02:25.280 --> 02:30.040
+estimate this C and then based on this information we can estimate the
+
+02:30.040 --> 02:35.120
+parameters of a rigid body transformation so rotation matrix R and
+
+02:35.120 --> 02:41.840
+a translation vector T to perform the point set X n into a point set X n with
+
+02:41.840 --> 02:46.200
+a bar on top of here which then should be in the coordinate system of the point
+
+02:46.200 --> 02:53.200
+set Y and this should happen under the constraint that the sum of differences
+
+02:53.200 --> 03:01.200
+between the point cloud the red one and the transformed one should be minimized
+
+03:01.200 --> 03:05.880
+and then we could apply that transformation and transform the points
+
+03:05.880 --> 03:11.920
+the blue points onto the red ones and assuming that there's some noise in this
+
+03:11.920 --> 03:17.320
+process there may be small variations in there but overall we should get the
+
+03:17.320 --> 03:22.360
+alignment that minimizes this squared error so we are minimizing this error
+
+03:22.360 --> 03:27.520
+function over here which is the distance between the point sets in the target set
+
+03:27.520 --> 03:32.320
+so the red ones minus those transformed blue ones and then trying to find the
+
+03:32.320 --> 03:35.960
+best transformation so that this error is actually minimized and that's a least
+
+03:35.960 --> 03:41.280
+squares approach and we use an SVD based technique in order to find this
+
+03:41.320 --> 03:46.320
+transformation and in the lecture today we will not use this SVD based
+
+03:46.320 --> 03:51.640
+formulation but use general least squares approach and this has the
+
+03:51.640 --> 03:55.360
+advantage that we can take different error functions into account and not
+
+03:55.360 --> 04:00.000
+just these simple ones we also have different ways for dealing with
+
+04:00.000 --> 04:05.120
+uncertainties of that of these points and different advantages why in some
+
+04:05.120 --> 04:09.920
+situations we may want to go for the least squares approach and leave the SVD
+
+04:09.960 --> 04:14.040
+based alignment if SVD based alignment works well for you it's compatible with
+
+04:14.040 --> 04:16.800
+your error function you can do everything you want to do there's no
+
+04:16.800 --> 04:20.880
+reason to go to these least squares to this least squares approach you can do
+
+04:20.880 --> 04:25.400
+the same with your SVD based technique if you however want to add additional
+
+04:25.400 --> 04:28.600
+information into your error functions maybe in the end want to go to a
+
+04:28.600 --> 04:33.640
+non-rigid alignment of point clouds if you know that this object can be
+
+04:33.640 --> 04:37.960
+deformed then you also need to go towards the least squares solution like
+
+04:37.960 --> 04:42.880
+the one we are shown over here okay so the goal again is to find the parameters
+
+04:42.880 --> 04:46.240
+of a transformation that best aligns my data points and we looked into
+
+04:46.240 --> 04:49.840
+different parts of the lecture in part number one we looked into known data
+
+04:49.840 --> 04:53.080
+association in part number two we said we want to estimate the data association
+
+04:53.080 --> 04:57.680
+leading to the ICP approach and then in the lecture today we will look into the
+
+04:57.680 --> 05:02.880
+least squares or robust least squares approach so in the first part of the
+
+05:02.880 --> 05:08.400
+lecture a known data association and here we could derive an efficient
+
+05:08.400 --> 05:12.160
+computable optimal and direct solution for finding the rigid body
+
+05:12.160 --> 05:17.120
+transformation so everything perfect in this setup nothing to do here so if you
+
+05:17.120 --> 05:21.280
+know your data association part one is sufficient you don't need to know more
+
+05:21.280 --> 05:25.600
+and typically we however don't know the data association so then part two
+
+05:25.600 --> 05:29.840
+becomes interesting for you and then there is no direct or optimal solution
+
+05:29.840 --> 05:33.960
+available and we need to basically estimate or guess correspondences and
+
+05:33.960 --> 05:38.520
+then ended up with an iterative approach in order to align those point clouds we
+
+05:38.520 --> 05:43.400
+can also illustrate this the ICP approach so we typically have our points
+
+05:43.400 --> 05:48.720
+that we look for points either sampling them from a mesh or selecting points
+
+05:48.720 --> 05:51.560
+based on a laser range scanner for example which generates three data
+
+05:51.560 --> 05:55.960
+points and then we look for corresponding partners in the other
+
+05:55.960 --> 06:00.280
+point set typically the closest point with the smallest Euclidean distance for
+
+06:00.280 --> 06:05.280
+example and then we use this information in order to minimize the distances so
+
+06:05.280 --> 06:09.480
+transform one mesh onto the other or one point cloud onto the other and then we
+
+06:09.480 --> 06:15.160
+are iterating this process of finding new correspondences given this improved
+
+06:15.160 --> 06:19.840
+initial guess and iterate this procedure until convergence and we also look into
+
+06:19.840 --> 06:23.440
+different variants over here should we take into account all points for this
+
+06:23.440 --> 06:27.960
+alignment or just a subset and how do we find the data association or a good
+
+06:27.960 --> 06:31.840
+data association so we looked into a point to point metric also point to
+
+06:31.840 --> 06:36.760
+plane and other techniques in order to try to find compatible point sets for
+
+06:36.760 --> 06:40.280
+the alignment we can weigh our correspondences and also looked a little
+
+06:40.280 --> 06:45.360
+bit into outlier rejection what happens if a certain number of points are caused
+
+06:45.360 --> 06:49.960
+by outliers for example when operating in dynamic environments and we generated
+
+06:50.080 --> 06:57.520
+solution for that which are kind of variants of the ICP algorithm so for
+
+06:57.520 --> 07:01.880
+finding those correspondences there are different ways on how to do this and
+
+07:01.880 --> 07:07.800
+again finding a good data association is key and we had some kind of let's say
+
+07:07.800 --> 07:12.680
+best practices so investing in your data association is key if your data
+
+07:12.680 --> 07:16.720
+association is wrong you're not getting the correct alignment so putting a lot
+
+07:16.720 --> 07:20.000
+of brainpower and finding good data associations is key and this still holds
+
+07:20.000 --> 07:24.200
+for this part of the lecture nothing changes in here if you have an initial
+
+07:24.200 --> 07:28.280
+guess for example from wheel odometry or from other sensing modalities you
+
+07:28.280 --> 07:31.840
+should exploit that information because a good initial guess helps you to do
+
+07:31.840 --> 07:36.320
+better data associations and this way end up with a better alignment we also
+
+07:36.320 --> 07:41.400
+have seen that normal based metrics typically work better so if you for
+
+07:41.400 --> 07:44.340
+example use the point-to-plane metric it typically works better than the
+
+07:44.340 --> 07:49.340
+point-to-point metric we will see something similar here today and we need
+
+07:49.340 --> 07:53.740
+to take care of outliers especially in dynamic environments and today we want
+
+07:53.740 --> 07:56.860
+to look into the point cloud registration using a nonlinear least
+
+07:56.860 --> 08:00.620
+squares approach so basically going into the standard least square error
+
+08:00.620 --> 08:04.620
+minimization and not exploiting kind of these special properties and that we did
+
+08:04.620 --> 08:10.980
+for the SVD based alignment in the first part of that lecture but going to a
+
+08:10.980 --> 08:15.460
+general approach and again you may ask yourself why should I care why do I need
+
+08:15.460 --> 08:20.140
+a nonlinear least squares approach to do this and there may be multiple reasons
+
+08:20.140 --> 08:25.740
+so the SVD solution basically assumes point-to-point correspondences and maybe
+
+08:25.740 --> 08:29.340
+you have different ways for defining your correspondences you have more
+
+08:29.340 --> 08:34.580
+complex error functions so to say which then require more general formulation
+
+08:34.580 --> 08:40.340
+because you can't put that into the SVD based alignment also the least squares
+
+08:40.380 --> 08:43.340
+approach at least if you have Gaussian uncertainties in your measurement noise
+
+08:43.340 --> 08:49.540
+is a statistically optimal solution so you can better better take into account
+
+08:49.540 --> 08:56.780
+uncertainties if you know that points have certain let's say more complex
+
+08:56.780 --> 09:00.820
+shapes than just a single weight for your correspondency but you have more
+
+09:00.820 --> 09:04.060
+complex shapes of your alignment you may take that into account in the least
+
+09:04.060 --> 09:08.220
+squares approach those informations often hard to get but if you have it you
+
+09:08.220 --> 09:13.020
+could exploit it better in a set up here and what you do then is you run
+
+09:13.020 --> 09:17.780
+typically Gauss-Newton or Levenbeck Marquardt approach typically and here we
+
+09:17.780 --> 09:22.700
+use Gauss-Newton and perform an iterative error minimization in order to
+
+09:22.700 --> 09:29.380
+come up with a solution and you want to do that as a starting point using the
+
+09:29.380 --> 09:36.140
+2d point-to-point ICP so something we can perfectly solve with the SVD based
+
+09:36.220 --> 09:40.700
+approach but as an illustration show you how we can do this and then in the
+
+09:40.700 --> 09:45.500
+second step generalize this to the point-to-plane metric for example okay
+
+09:45.500 --> 09:49.460
+so let's start with the least squares approach for 2d point-to-point
+
+09:49.460 --> 09:54.100
+registration so we have point sets in 2d not in 3d this makes a lot of the
+
+09:54.100 --> 09:59.340
+computations easier and then we want to find the rigid body transformation
+
+09:59.340 --> 10:04.500
+consisting of 2d shift vector our translation vector and 1d rotation
+
+10:04.540 --> 10:10.700
+matrix in order to align those point sets so in the 2d plane okay so very
+
+10:10.700 --> 10:14.580
+similar to before we want to minimize the Euclidean distance between the
+
+10:14.580 --> 10:18.500
+points after the alignment we have an error vector which tells us the
+
+10:18.500 --> 10:23.980
+discrepancy for one point correspondency so where what's the distance between the
+
+10:23.980 --> 10:29.940
+transform point and the and the actual point where it should be we can put our
+
+10:29.940 --> 10:34.860
+transformation parameters in here of our body transformation rotation matrix
+
+10:34.860 --> 10:39.780
+R and translation vector T here in this example this is now a 2d vector and this
+
+10:39.780 --> 10:43.340
+is a 2 by 2 matrix of rotation matrix so that the parameters for the
+
+10:43.340 --> 10:48.900
+transformation are called TX TY and theta which is the translation X
+
+10:48.900 --> 10:54.820
+translation Y and the rotation in order to find the alignment so explicitly this
+
+10:54.820 --> 11:00.020
+is the error vector we are going to minimize and the question is how do we
+
+11:00.020 --> 11:04.500
+perform this error minimization and that's kind of the standard approach you
+
+11:04.500 --> 11:07.980
+compute you take your error vector if it's nonlinear and this is the case here
+
+11:07.980 --> 11:12.220
+because it's a rotation matrix so in this matrix are there sine and cosine
+
+11:12.220 --> 11:16.660
+functions in there therefore this is a nonlinear error function we need to
+
+11:16.660 --> 11:21.700
+linearize it so compute a linear approximation of the original problem
+
+11:21.700 --> 11:28.780
+and then work with this linearized function we basically compute the first
+
+11:28.780 --> 11:33.220
+derivatives set it to zero solve the remaining system of linear equations
+
+11:33.220 --> 11:39.540
+which then provides us with a solution to the problem iterating this of course
+
+11:39.540 --> 11:43.900
+and so in order to do the next step in order to linearize our error function
+
+11:43.900 --> 11:47.960
+our nonlinear error function we need to compute the Jacobian of this function so
+
+11:47.960 --> 11:51.880
+we need to take this error function here into account and compute the
+
+11:51.880 --> 11:55.680
+Jacobian that means we are taking this error function E they need to derive it
+
+11:55.680 --> 11:59.360
+with respect to the three parameters so we take this error function E we derive
+
+11:59.360 --> 12:04.000
+it with respect to TX we derive it with respect to TY and we derive it with
+
+12:04.000 --> 12:08.600
+respect to theta and that's what we're going to do which gives us the Jacobian
+
+12:08.600 --> 12:16.080
+in this case this is 2 by 3 matrix exactly we have a two-dimensional error
+
+12:16.120 --> 12:21.720
+function because we have the the function has an X and Y component and it
+
+12:21.720 --> 12:28.280
+has three parameters so we have 2 by 3 Jacobian again the Jacobian to be
+
+12:28.280 --> 12:32.880
+written in this form consists of the partial derivatives of my error function
+
+12:32.880 --> 12:36.240
+with respect to the individual parameters so here we have kind of the
+
+12:36.240 --> 12:43.760
+X dimension of the error function the Y dimension of the error function it's a
+
+12:43.760 --> 12:46.880
+two-dimensional error function and derived with respect to the three
+
+12:46.880 --> 12:52.560
+parameters so which gives us these six elements that we need to compute in order
+
+12:52.560 --> 12:57.320
+to formulate the Jacobian and this Jacobian is then the common component
+
+12:57.320 --> 13:00.960
+that I need in order to generate a linearized error function and then I'm
+
+13:00.960 --> 13:04.880
+just following the standard least squares procedure I'm just using this
+
+13:04.880 --> 13:10.400
+Jacobian E in order to formulate the system of normal equations and then
+
+13:10.400 --> 13:17.200
+solve this system and come up with next a better estimate of my parameters T X
+
+13:17.200 --> 13:22.800
+T Y and theta okay so how does it look like we need to compute those partial
+
+13:22.800 --> 13:25.920
+derivatives that's the next thing that we need to do so we take our error
+
+13:25.920 --> 13:29.440
+function into account and need to now derive this error function with respect
+
+13:29.440 --> 13:34.560
+to T X with respect to T Y and with respect to theta okay so we look into
+
+13:34.560 --> 13:37.880
+this error function here we need to derive it for example with respect to T
+
+13:37.880 --> 13:42.200
+X so T X the translation vector X only pops up here in the first dimension of
+
+13:42.200 --> 13:45.960
+this translation vector this part is independent from T X this is independent
+
+13:45.960 --> 13:51.360
+from T X this is a linear term so if I derive T X with respect to T X I get out
+
+13:51.360 --> 13:56.440
+of one this is exactly what we're getting here a one over here if we take
+
+13:56.440 --> 14:02.120
+the first dimension of this function derived with respect to T Y T Y never
+
+14:02.120 --> 14:05.760
+pops up because this is the second dimension this is a third dimension not
+
+14:05.760 --> 14:09.120
+in here it's not in here it's not in there so this gives me actually a value
+
+14:09.120 --> 14:14.880
+of zero and the same holds for the second dimension of this function if I
+
+14:14.880 --> 14:19.920
+derive it with respect to T X I get a zero in here and T Y a one so the these
+
+14:19.920 --> 14:25.560
+components the first four are just zeros and ones so everything is linear in here
+
+14:25.560 --> 14:29.760
+there is no non-linearity you can directly see this because we just said
+
+14:29.760 --> 14:34.680
+this two-dimensional vector here which has T X and T Y as linear elements in
+
+14:34.680 --> 14:40.440
+there there's no whatever quadratic function or other non-linear form the
+
+14:40.440 --> 14:44.120
+only non-linearity that we have is actually this rotation matrix over here
+
+14:44.120 --> 14:49.440
+so this is a rotation matrix that means it contains sine and cosine functions
+
+14:49.440 --> 14:54.480
+depending on the parameter theta over here and we need to derive it with
+
+14:54.480 --> 14:58.760
+respect to theta so those those elements the theta doesn't pop up so this is the
+
+14:58.760 --> 15:02.800
+only thing which remains so what we basically need to do we need to compute
+
+15:02.840 --> 15:07.800
+the first derivative of that rotation matrix with respect to theta because
+
+15:07.800 --> 15:11.560
+this value here is independent from theta this is then just a constant factor
+
+15:11.560 --> 15:17.320
+so we can write it in short form the first the two by two matrix here is the
+
+15:17.320 --> 15:24.960
+identity and then we have the first derivative of the rotation matrix with
+
+15:24.960 --> 15:30.200
+respect to theta multiplied with the vector X n which then gives these
+
+15:30.200 --> 15:35.760
+missing two components why do these components look like that and you can
+
+15:35.760 --> 15:39.400
+see this very easily if you compute the first derivative of your rotation matrix
+
+15:39.400 --> 15:44.240
+so you take your rotation matrix this is a standard 2d rotation matrix describing
+
+15:44.240 --> 15:48.280
+a rotation around theta and you compute the first derivative with respect to 0
+
+15:48.280 --> 15:52.820
+that means we compute the partial derivatives of those four entries so the
+
+15:52.820 --> 15:56.680
+cosine the first derivative of cosine theta with respect to theta gives us
+
+15:56.680 --> 16:03.120
+minus sine of theta that means this cosine theta turns into minus sine of
+
+16:03.120 --> 16:10.920
+theta and the sine turns into the cosine you can see over here and then this is
+
+16:10.920 --> 16:17.120
+the first derivative of our rotation matrix with respect to theta so I'm just
+
+16:17.120 --> 16:23.720
+taking this matrix and multiplying it with X n a 2 by 2 vector which is the
+
+16:23.760 --> 16:29.120
+point coordinates of my original point set and then this gives me these this
+
+16:29.120 --> 16:33.640
+vector over here consisting of these elements so this X n written in this
+
+16:33.640 --> 16:38.160
+form and Y n are the X and Y coordinates of this vector X n so these are the
+
+16:38.160 --> 16:46.120
+original coordinates of my points and so this is my Jacobian this is the elements
+
+16:46.120 --> 16:51.000
+that I need to compute and with this Jacobian and the individual error
+
+16:51.160 --> 16:57.360
+vectors over here I can now formulate my least squares problem so what do I need
+
+16:57.360 --> 17:01.000
+to do for this I need to compute my normal equation matrix which takes two
+
+17:01.000 --> 17:04.800
+into count Jacobian in order to set it up I need to compute the right-hand side
+
+17:04.800 --> 17:09.720
+of my coordinate system taking into account the Jacobian as well as the
+
+17:09.720 --> 17:16.400
+arrow vector evaluated in a position and then I need to solve my resulting linear
+
+17:16.400 --> 17:20.400
+system so these are the steps that I need to do and then I can just follow
+
+17:20.480 --> 17:24.480
+the standard least squares procedure so this is my Jacobian as a result of the
+
+17:24.480 --> 17:29.680
+Jacobian I can compute my matrix H n which is the Jacobian transpose times
+
+17:29.680 --> 17:34.480
+the Jacobian holding only for the point correspondence n I can do the same for
+
+17:34.480 --> 17:40.440
+the right-hand side B n so the vector of the right-hand side is J transposed times
+
+17:40.440 --> 17:47.040
+e the error vector for n and then I need to sum over all correspondences so sum
+
+17:47.040 --> 17:52.000
+my matrix H is a sum over this matrix matrices H n and same for the right-hand
+
+17:52.000 --> 17:57.640
+side so my matrix H is this form vector B has this form and then I have all the
+
+17:57.640 --> 18:02.960
+components that I have and I need to solve and H times Delta X so the update
+
+18:02.960 --> 18:07.400
+in the parameters so this vector X is now here the parameters of my
+
+18:07.400 --> 18:13.760
+transformation so T X T Y T theta T X T Y theta and basically the increments of
+
+18:13.760 --> 18:18.680
+that and so I need to solve this system which I can in this form very easily
+
+18:18.680 --> 18:23.480
+solve by just inverting this matrix this is a three by three matrix remember H is
+
+18:23.480 --> 18:28.320
+the three by three matrix and I can easily invert a three by three matrix so
+
+18:28.320 --> 18:32.840
+this is an easy way just inverting the matrix and getting my my update of my
+
+18:32.840 --> 18:37.320
+parameters so I update my transformation parameters and I iterate until
+
+18:37.320 --> 18:41.600
+convergence so the standard least squares approach so what I've replaced
+
+18:41.600 --> 18:47.240
+in here is basically the SVD based alignment that I used in the first part
+
+18:47.240 --> 18:50.800
+of the lecture we derived in the first part of the lecture by the standard
+
+18:50.800 --> 18:54.720
+least squares approach and the advantage is that I can take more complex error
+
+18:54.720 --> 18:58.400
+functions here into account which then will lead to different Jacobians of
+
+18:58.400 --> 19:02.040
+course so I need to always compute my Jacobian by hand and depending on the
+
+19:02.040 --> 19:06.120
+internal representation that I'm using my Jacobian will change as well it
+
+19:06.120 --> 19:11.320
+allows me to do a more general alignment so let's see how that looks like so this
+
+19:11.360 --> 19:16.200
+is my the example that we already used in the previous part of the lecture the
+
+19:16.200 --> 19:21.800
+two point that that should be aligned the blue one and the orange one we are
+
+19:21.800 --> 19:26.000
+looking for closest points we're going over all those points in the blue set
+
+19:26.000 --> 19:29.760
+trying to find a cross button see in my kind of reference scan to which I want
+
+19:29.760 --> 19:34.760
+to align it to so this would be the YM this would be the XN over here and then
+
+19:34.760 --> 19:39.280
+I'm estimating my correspondences just based on the nearest neighbor assumption
+
+19:39.280 --> 19:43.160
+over here and I compute the alignment after the first step of the least
+
+19:43.160 --> 19:46.960
+squares approach I'm actually ending up being here in this configuration and
+
+19:46.960 --> 19:50.960
+then I'm basically repeating this process again I'm re-estimating my
+
+19:50.960 --> 19:54.720
+correspondences that's how the new correspondences look like I compute my
+
+19:54.720 --> 20:00.960
+alignment and in every step you can see some of the the correspondences will
+
+20:00.960 --> 20:06.760
+change and we very slowly go a step forward until the two point clouds are
+
+20:06.760 --> 20:11.040
+finally aligned so in this case over here you can see both point clouds
+
+20:11.040 --> 20:15.520
+overlap perfectly so we have found the transformations which aligned the
+
+20:15.520 --> 20:19.920
+original point set with our target point set and we can actually plot the error
+
+20:19.920 --> 20:23.000
+over time so these are the iterations this is the error and we can see how the
+
+20:23.000 --> 20:26.800
+error basically goes down and something like after what I in this example
+
+20:26.800 --> 20:32.320
+whatever 15 16 iterations something like this we actually lit a situation where
+
+20:32.360 --> 20:38.440
+nothing changes anymore and the system has converged this was a simple 2d
+
+20:38.440 --> 20:41.480
+example something that we could have solved as well with the SVD based
+
+20:41.480 --> 20:45.040
+approach there was no need for going to the least squares approach in this
+
+20:45.040 --> 20:50.800
+example over here but just as an exercise we started with this in the
+
+20:50.800 --> 20:54.720
+next part of the lecture we want to do the same thing with the point to plane
+
+20:54.720 --> 21:00.440
+distance or point plane metric so looking into so leaving these point to
+
+21:00.440 --> 21:06.920
+point data station but going into point to plane just as a reminder point to
+
+21:06.920 --> 21:10.520
+point point to point metric was taking the different point sets and basically
+
+21:10.520 --> 21:14.480
+finding the closest points and trying to minimize these distances for the point
+
+21:14.480 --> 21:19.600
+of plane metric does it basically takes those distances and projects them on the
+
+21:19.600 --> 21:25.480
+normal vector of the individual of the normals that are generated from those
+
+21:25.480 --> 21:31.840
+points or from those surfaces and then only computes the projected error so we
+
+21:31.840 --> 21:35.880
+also have this other part which looked like this so for every point in my point
+
+21:35.880 --> 21:39.440
+dot here I'm looking for the course of the corresponding partners and then can
+
+21:39.440 --> 21:43.000
+estimate the normal and basically project the arrow on to the normal and
+
+21:43.000 --> 21:48.760
+then not taking this distance but taking this distance into account and this is
+
+21:48.760 --> 21:53.680
+basically the same as using the normal vector that I'm computing and
+
+21:53.720 --> 21:57.200
+multiplying it with the arrow vector that I had for my point-to-point
+
+21:57.200 --> 22:02.440
+alignment so with this dot product I'm basically projecting my arrow vector e
+
+22:02.440 --> 22:07.800
+onto the normal vector and then compute the sum of squared distances over this
+
+22:07.800 --> 22:11.920
+function okay so what we need to do we need to compute normals and we can
+
+22:11.920 --> 22:14.600
+compute normals in a point cloud typically by just iterating over the
+
+22:14.600 --> 22:18.840
+neighbors so for every point we look to its neighbors and that and then compute
+
+22:18.840 --> 22:21.920
+here a normal vector and that's basically what you see here simple
+
+22:21.920 --> 22:26.800
+estimation of the normals you can do also more advanced techniques you can
+
+22:26.800 --> 22:32.240
+compute basically take the points in the local neighborhood into account and look
+
+22:32.240 --> 22:38.280
+for the eigenvectors and eigenvalues of that are generated by those points and
+
+22:38.280 --> 22:44.800
+then take the eigenvector that corresponds to the smallest eigenvalue
+
+22:44.800 --> 22:48.720
+and so this is basically the normal of the surface and then you can actually
+
+22:48.920 --> 22:52.760
+get this normal information or you depending on the noise that you have you
+
+22:52.760 --> 22:56.560
+just take the cross product so there are different ways how you can do this in
+
+22:56.560 --> 22:59.680
+an either very efficient way or in a slow and more accurate and more robust
+
+22:59.680 --> 23:05.040
+way whatever way you do it you just need one way for computing this normal
+
+23:05.040 --> 23:09.800
+information okay so then we said our objective function should be the sum
+
+23:09.800 --> 23:16.280
+over the arrow vectors multiplied with my normal vector so if I expand it this
+
+23:16.280 --> 23:20.920
+will now be my error function or my objective function that I aim at
+
+23:20.920 --> 23:25.880
+minimizing so what do I need to do I need to compute again the decobian of
+
+23:25.880 --> 23:29.240
+this error term so this is now my error function which sits in here my error
+
+23:29.240 --> 23:34.400
+vector this is the squared error and this inside here is zero vector and I
+
+23:34.400 --> 23:41.380
+need to linearize it and compute the first derivative with respect to the
+
+23:41.380 --> 23:49.300
+parameters which are again t x t y and my rotation component theta so I have
+
+23:49.300 --> 23:53.980
+my Jacobian my arrow vector over here derived with respect to t x t y t theta
+
+23:53.980 --> 23:59.180
+the thing to note in here is that this expression over here is a 1d error
+
+23:59.180 --> 24:03.300
+function so this is a two-dimensional vector this is a two-dimensional vector
+
+24:03.300 --> 24:07.060
+but we're computing the dot product of these two two-dimensional vector so this
+
+24:07.060 --> 24:13.540
+turns just into one single number as a result of this this Jacobian is not a
+
+24:13.540 --> 24:19.340
+two by three matrix and it was before it's now one by three one by three
+
+24:19.340 --> 24:25.000
+vector that we have right so we just have three columns that my Jacobian has
+
+24:25.000 --> 24:29.020
+here and now what we need to do is we need to compute again as before the
+
+24:29.020 --> 24:35.260
+first derivative of this whole expression with respect to t x t y t
+
+24:35.540 --> 24:39.340
+theta and what basically changes here we had the expression we had before but now
+
+24:39.340 --> 24:45.140
+I have the dot product with with and the normal vector so we have basically need
+
+24:45.140 --> 24:52.100
+to multiply the terms that we had before with the XY and X and Y component of the
+
+24:52.100 --> 24:57.780
+normal vector over here so basically the first two elements here again this is a
+
+24:57.780 --> 25:02.620
+linear expression this so this just gave basically a constant of one so as a
+
+25:02.700 --> 25:06.500
+result of this if we compute then the dot product we have here the the
+
+25:06.500 --> 25:11.460
+components of the normal vector come into the game and for the third
+
+25:11.460 --> 25:15.940
+component we had this longer expression from the rotation matrix and again we
+
+25:15.940 --> 25:20.580
+have here parts of the normal vector that come into the game in order to
+
+25:20.580 --> 25:26.420
+compute here the Jacobian and then we simply take that Jacobian and then
+
+25:26.420 --> 25:30.660
+proceed as before so we are computing our H matrix we are computing the right
+
+25:30.660 --> 25:36.180
+hand side iterate as before so we start again with our example we had our we
+
+25:36.180 --> 25:40.980
+have our point-to-point correspondences here we are always showing the basically
+
+25:40.980 --> 25:45.980
+correspondency to the closest point which then was used to compute where the
+
+25:45.980 --> 25:49.540
+normal was used in order to compute then the error function and we again can
+
+25:49.540 --> 25:55.980
+minimize this error function and compute the alignment which now takes the normal
+
+25:55.980 --> 26:01.580
+information for this alignment into account and what we can see here so if
+
+26:01.580 --> 26:05.580
+to be careful with this plot because the scale is a little bit different as
+
+26:05.580 --> 26:09.140
+compared to the plot we have seen before but what we generally see the arrow
+
+26:09.140 --> 26:13.820
+drops faster to a low value so in this example here after kind of 10 or let's
+
+26:13.820 --> 26:19.620
+say 11 iterations we converge before I think at the 16 so but again the scale
+
+26:19.620 --> 26:22.900
+is a little bit different of the axis so you can't compare those plots immediately
+
+26:22.900 --> 26:27.940
+you'll have to take care if you compare those plots and so this is an example of the 2D
+
+26:27.940 --> 26:33.620
+point-to-plane metric now using the least squares approach for minimizing it.
+
+26:33.620 --> 26:38.540
+The problem of the point-to-plane or one problem issue of the point-to-plane
+
+26:38.540 --> 26:42.980
+metric is that it's not symmetric so depending if you compute the error from
+
+26:42.980 --> 26:46.780
+seeing from one point or the other point gives you a different result because the
+
+26:46.780 --> 26:52.580
+normal information is different in one surface or point set compared to the
+
+26:52.580 --> 26:58.940
+other so if we want to fix this and propose a symmetric point-to-plane
+
+26:58.940 --> 27:03.780
+metric which takes the which is symmetric independently if I'm using a
+
+27:03.780 --> 27:06.940
+normal vector from one cloud or the other cloud that's what we may want to
+
+27:06.940 --> 27:10.980
+have so just as a comparison the point-to-plane a point-to-point was just
+
+27:10.980 --> 27:14.260
+computing the difference between the points the point-to-plane was taking
+
+27:14.260 --> 27:18.380
+basically one point and computing the normal information using this normal
+
+27:18.380 --> 27:22.220
+information and taking this error vector the same one over here and
+
+27:22.220 --> 27:25.900
+projecting it on this normal vector so this was basically the result that I was
+
+27:25.900 --> 27:31.420
+getting but obviously this would only be symmetric if I would have the same
+
+27:31.420 --> 27:35.220
+normal vector here for this point it would have the same normal vector than
+
+27:35.220 --> 27:40.780
+this one which typically is not the case so if you for example have these points
+
+27:40.780 --> 27:43.740
+with different normal vectors so this is the same normal vector the one we used
+
+27:43.780 --> 27:48.500
+before and now this is a different normal vector over here then the question
+
+27:48.500 --> 27:54.420
+is how can I define a metric which is symmetric so it can take both normal
+
+27:54.420 --> 27:59.660
+vectors into account and a fairly simple approach which has been proposed a few
+
+27:59.660 --> 28:04.660
+years not many years back actually quite recently and very easy solution is just
+
+28:04.660 --> 28:09.740
+average those normal vectors just sum or just sum them up so what we can do is we
+
+28:09.740 --> 28:14.780
+can compute the plane as the average of the two normal so we compute a new
+
+28:14.780 --> 28:19.460
+vector n over here normal vector which is simply the sum of these two normal
+
+28:19.460 --> 28:23.740
+vectors that I had in here and then I'm using exactly the same error function
+
+28:23.740 --> 28:30.940
+ever had before but now multiplying it not with the normal vector in of this of
+
+28:30.940 --> 28:35.060
+this blue point over here but basically this new normal vector which is the sum
+
+28:35.060 --> 28:40.820
+of the the other elements so basically it's very an approach very similar to
+
+28:40.820 --> 28:45.820
+the point to plane metric I'm just taking one additional vector into account
+
+28:45.820 --> 28:52.140
+so what I'm coming up with is a very similar formulation except that I'm
+
+28:52.140 --> 28:57.180
+replacing the single normal vector with the sum of two normal vectors so the
+
+28:57.180 --> 29:02.900
+only additional work that I need to do is to compute the normal vectors also in
+
+29:02.900 --> 29:06.100
+the other point cloud before I had to do it only for one point cloud and now I
+
+29:06.100 --> 29:10.460
+need to also compute the the normals for my second point cloud but this is the
+
+29:10.460 --> 29:16.100
+only change that I need to do and if I use this error function compared to the
+
+29:16.100 --> 29:21.180
+other error function I'm actively getting a better result when aligning
+
+29:21.180 --> 29:27.580
+point sets so this is an example kind of the what you see here is the result that
+
+29:27.580 --> 29:32.220
+you obtain with the symmetric metric this is point centered point to plane
+
+29:32.220 --> 29:36.660
+this is point to point metric you basically have the error before the ICP
+
+29:36.660 --> 29:40.580
+iteration and then the error after the ICP iteration so depending on the
+
+29:40.580 --> 29:44.260
+initial error you had you're basically mapping it to the output error and so
+
+29:44.260 --> 29:48.340
+what you can actually see this plot is always lower than the point to plane
+
+29:48.340 --> 29:51.660
+metric which is always lower than the point to point metric so you can see you
+
+29:51.660 --> 29:57.760
+get actually better results for the alignments using this symmetric metric
+
+29:57.760 --> 30:04.840
+over here so fairly easy let's say improvement that you can do which is
+
+30:04.840 --> 30:08.720
+very easily implemented the only thing that you need to do is to add a second
+
+30:08.720 --> 30:13.280
+vector over here and this simple change leads to a better convergence speed
+
+30:13.280 --> 30:18.240
+because you can quit more quicker reduce the error then potentially make better
+
+30:18.240 --> 30:22.600
+data associations and then faster converge to the right solution and also
+
+30:22.600 --> 30:27.320
+you can show that increases the basin of conversion so the more error you have
+
+30:27.400 --> 30:33.360
+in your initial alignment still you get good data associations and as a result
+
+30:33.360 --> 30:37.880
+of this come up with a better solution so aligning your point clouds
+
+30:37.880 --> 30:43.920
+correctly despite a larger initial error so this symmetric metric over here is
+
+30:43.920 --> 30:50.600
+probably thing you want to start with when you build your own ICP solution the
+
+30:50.600 --> 30:53.960
+next thing that we can take into account in the context of the least squares
+
+30:54.000 --> 31:00.600
+approach is to do an outlier rejection so in terms of least squares estimation
+
+31:00.600 --> 31:06.480
+we often refer to this as robust least squares where we don't take the
+
+31:06.480 --> 31:11.560
+residuals into account as they are but we can down way residuals which are
+
+31:11.560 --> 31:16.600
+likely to belong to an outlier and there's this is a standard approach
+
+31:16.600 --> 31:21.680
+which is available some of the long time on reducing the impact of data
+
+31:21.800 --> 31:26.360
+cessation errors or outliers in our estimation techniques and there's
+
+31:26.360 --> 31:30.240
+something which is often referred as robust kernels or M estimators so what
+
+31:30.240 --> 31:34.080
+we are doing if we are computing or doing a standard least squares is we are
+
+31:34.080 --> 31:38.160
+basically have an quadratic error function right and so the further we go
+
+31:38.160 --> 31:43.240
+away in the x-axis the larger the error gets quadratically that is the relation
+
+31:43.240 --> 31:47.800
+to the Gaussian distribution where we are basically computing the mean of the
+
+31:47.800 --> 31:51.640
+Gaussian distribution with this form and but the problem with this is that the
+
+31:51.640 --> 31:56.280
+probability of point points with very large residuals is actually very small
+
+31:56.280 --> 32:00.560
+if I assume this Gaussian and they basically drop to something close to
+
+32:00.560 --> 32:04.480
+zero until I'm whatever three four five six Sigma away it's basically zero
+
+32:04.480 --> 32:07.920
+afterwards and this is not what happens in reality there is a certain
+
+32:07.920 --> 32:11.560
+probability that we have strong outliers typically because something happens in
+
+32:11.560 --> 32:15.600
+the scene that we haven't probably taken into account or model when designing our
+
+32:15.600 --> 32:22.480
+our noise values or error functions so what we can do in this robust estimation
+
+32:22.480 --> 32:27.000
+is to use a different kernel function or do using a different function instead of
+
+32:27.000 --> 32:31.160
+a quadratic function to it we squeeze our error vector this can be just linear
+
+32:31.160 --> 32:38.720
+so just the absolute value this could be things like here in the around the
+
+32:38.720 --> 32:42.040
+actual error we keep our quadratic form but then at some point in time we turn
+
+32:42.080 --> 32:46.320
+it into a linear function though that the growth is only linearly and outside
+
+32:46.320 --> 32:51.600
+this area over here which basically says close to the correct solution we are
+
+32:51.600 --> 32:56.640
+assuming our Gaussian noise but further away we are kind of down weighing the
+
+32:56.640 --> 33:00.200
+impact of those points not taking them quadratically into account but linear so
+
+33:00.200 --> 33:05.880
+this is for example a Hooper functional Hooper kernel that is used and you need
+
+33:05.920 --> 33:12.920
+basically define your kernel function depending on your on your outline
+
+33:12.920 --> 33:18.280
+distribution and so for example these values give a smaller weight to points
+
+33:18.280 --> 33:22.120
+which are very far away you can hear the impact even goes more or less constant
+
+33:22.120 --> 33:28.000
+so this will basically not penalize an error larger if it's two or ten basically
+
+33:28.000 --> 33:31.320
+doesn't make a big difference anymore in this kernel so depending on the error
+
+33:31.320 --> 33:34.560
+function which tells you something about the assumption that you make about your
+
+33:34.560 --> 33:39.000
+outline distribution and there is again a large set of different kernels that
+
+33:39.000 --> 33:42.640
+you can actually use there's a large family of different kernel functions and
+
+33:42.640 --> 33:46.760
+you basically need to find the kernel function which best fits to your data
+
+33:46.760 --> 33:52.200
+and how is this taken into account so you basically squeeze your error vector
+
+33:52.200 --> 33:58.280
+through one of those robust kernels and so as a result of this your Jacobian
+
+33:58.280 --> 34:04.160
+will change and you can actually turn this into a weight factor that you put
+
+34:04.160 --> 34:08.200
+into for every error term so basically every error term gets an additional
+
+34:08.200 --> 34:13.160
+weight and basically down ways those errors in the minimization but again the
+
+34:13.160 --> 34:16.640
+choice of this kernel function depends on the outliers that you're actually
+
+34:16.640 --> 34:22.960
+experiencing here is an example of different error functions so this
+
+34:22.960 --> 34:26.200
+quadratic error function over here and this is basically different forms of
+
+34:26.200 --> 34:31.760
+down weighing the impact of outliers so this is basically the error term that
+
+34:31.760 --> 34:37.400
+you get the further you're away from your in this case from the zero point
+
+34:37.400 --> 34:42.600
+which is the minimum error configuration and this the shape of those kernels
+
+34:42.600 --> 34:47.160
+basically turn into weights so the weight of one which is shown over here
+
+34:47.160 --> 34:53.240
+corresponds to the quadratic term and depending on the different kernel shape
+
+34:53.240 --> 34:57.200
+that I'm using I'm basically reducing the weight the further I'm away from the
+
+34:57.200 --> 35:01.520
+zero error configuration and what you can do is you can take into account
+
+35:01.520 --> 35:07.280
+these different kernel functions by not just selecting one of those kernel
+
+35:07.280 --> 35:10.400
+functions but there's actually a family of distribution where you have this
+
+35:10.400 --> 35:15.000
+parameter alpha over here which basically interpolates between those
+
+35:15.000 --> 35:19.600
+functions over here so you can start with alpha equals to two you will get
+
+35:19.600 --> 35:23.640
+this quadratic form and as you increase this value you are basically going
+
+35:23.640 --> 35:29.800
+moving down here and reducing the impact of outliers and what you then can
+
+35:29.800 --> 35:34.320
+do is you can actually optimize your solve your least squares problem at the same
+
+35:34.320 --> 35:38.160
+point in time optimizing your alpha parameter so that you're a basically
+
+35:38.160 --> 35:43.200
+adapting your robust kernels to the actual outlier situation that you have
+
+35:43.200 --> 35:47.400
+and so this was an example I think I've also showed in the second part of the
+
+35:47.400 --> 35:52.840
+lecture this is an example on the kitty highway scene where you have a car
+
+35:52.880 --> 35:57.360
+driving over the highway very little structure around and then a second car
+
+35:57.360 --> 36:02.000
+comes and overtakes the actual car and the overtaking car provides a lot of
+
+36:02.000 --> 36:07.640
+structure so the ICP algorithm often hooks to this car and aligns the car
+
+36:07.640 --> 36:11.520
+against the other moving car and this of course screws up the point cloud
+
+36:11.520 --> 36:15.760
+alignment serial and the motion estimation of the car quite substantially
+
+36:15.760 --> 36:20.480
+and this happens if use for example a Hoover loss but if you take this and
+
+36:20.480 --> 36:24.200
+this adaptive kernel into account which estimates the shape of the outlier
+
+36:24.200 --> 36:29.040
+distribution for the current situation then you can actually perform better and
+
+36:29.040 --> 36:32.880
+this is an example a video where you can see the car driving around and building
+
+36:32.880 --> 36:36.760
+a map of the environment and for the different colors here are just kind of
+
+36:36.760 --> 36:40.120
+the different type of objects that we are seeing so some semantic information
+
+36:40.120 --> 36:44.280
+and if you first can run this with a fixed kernel and you can see a second
+
+36:44.280 --> 36:48.760
+car showing up here very soon in blue over here and as approaching the car and
+
+36:48.760 --> 36:52.160
+as soon it overtakes the actual car this car will register its position
+
+36:52.160 --> 36:56.560
+against the moving car over here and so it leads to failure in the registration
+
+36:56.560 --> 37:00.200
+because the car basically hooks to the other car and localized with respect to
+
+37:00.200 --> 37:04.600
+the other car if you use this adaptive kernel approach you see the car
+
+37:04.600 --> 37:08.680
+approaching over here and then this alpha parameter will drop to very small
+
+37:08.680 --> 37:13.080
+values which basically performs a very strong outlier rejection and then this
+
+37:13.080 --> 37:17.360
+car doesn't hook onto the other moving car and you're able to better deal with
+
+37:17.360 --> 37:22.960
+the outliers and not lead to a wrong alignment just because your outliers are
+
+37:22.960 --> 37:28.720
+very prominent so in practice what happens is you need to take into account
+
+37:28.720 --> 37:33.120
+your outliers if you want to build up robust registration techniques
+
+37:33.120 --> 37:38.360
+and you need to do this properly in order to adapt to the situation so
+
+37:38.360 --> 37:41.440
+there are two ways you can do this on the one inside you can use some
+
+37:41.440 --> 37:44.360
+heuristics or something that you know about your problem in order to reject
+
+37:44.360 --> 37:48.480
+outliers if you know that only certain parts in the environment is potentially
+
+37:48.480 --> 37:51.360
+moving and other parts are static you can actually exploit this information
+
+37:51.360 --> 37:55.840
+because you put background knowledge into your process this can be seen as
+
+37:55.840 --> 37:58.360
+good because you're exploiting additional knowledge you will get better
+
+37:58.360 --> 38:02.840
+results but it can also be seen as bad because you're exploiting something
+
+38:02.840 --> 38:06.920
+which is problem specific so your solution will not generalize well into
+
+38:06.920 --> 38:10.160
+other situations always kind of the trade-off that you need to do and there
+
+38:10.160 --> 38:14.520
+are different ways of using those heuristics that you can exploit but
+
+38:14.520 --> 38:18.800
+and the other thing is to use this more general methods like this kernel
+
+38:18.800 --> 38:24.000
+rejection techniques so that you can exploit the best of both worlds so if
+
+38:24.000 --> 38:27.560
+you have some information about the environment use it explicitly to
+
+38:27.560 --> 38:31.240
+identify what is a potential outlier or at least not taking it into account in
+
+38:31.240 --> 38:36.600
+the initial registration steps and then combine this with robust kernel in the
+
+38:36.600 --> 38:41.000
+easiest case it could be whatever a Hoover kernel but these adaptive
+
+38:41.000 --> 38:45.040
+kernels typically perform better because they can adjust themselves to the
+
+38:45.040 --> 38:50.360
+underlying an outlier distribution which is better for you and you can also ask
+
+38:50.360 --> 38:54.360
+yourself if you build up one of those systems are there certain parts of the
+
+38:54.360 --> 38:58.380
+environment which I know they are static so I can rely on them more than on
+
+38:58.380 --> 39:02.840
+others you can ask yourselves do I know something about my ego motion am I'm
+
+39:02.840 --> 39:06.200
+driving on a car the car is not going to move sight words for example at least
+
+39:06.200 --> 39:09.760
+not substantially and these are all information that you can take into
+
+39:09.760 --> 39:13.680
+account in order to perform better and this is something I also talked about in
+
+39:13.680 --> 39:19.160
+part two of the lecture what you can also do is if you build multiple of
+
+39:19.160 --> 39:22.920
+those techniques let's say you take the point-to-point algorithm you take the
+
+39:22.920 --> 39:26.320
+point of plane it takes a symmetric one maybe you have a strategy where you say
+
+39:26.320 --> 39:30.920
+okay let's take additional knowledge into account and estimate the pose but
+
+39:30.920 --> 39:33.800
+maybe I also want to have a more general approach which also performs well in
+
+39:33.800 --> 39:37.320
+other situations so you can actually build a multiple registration techniques
+
+39:37.320 --> 39:40.680
+or multiple what we sometimes call sensor or dormitory estimation
+
+39:40.680 --> 39:44.960
+techniques use sensor information or to estimate a dormitory what you then can
+
+39:44.960 --> 39:48.640
+do is you can actually combine multiple of them so let's say this way you have
+
+39:48.640 --> 39:50.600
+this vehicle moving through the environment you have different
+
+39:50.600 --> 39:55.440
+dormitory proposals let's say one taking robots kernels into account one using
+
+39:55.440 --> 39:59.480
+point-to-point one using point-to-plane one using additional color information
+
+39:59.480 --> 40:04.640
+one using semantics whatever you name it you can generate different proposals and
+
+40:04.640 --> 40:08.960
+so what you then can do is you can check how well is the result that this
+
+40:08.960 --> 40:14.440
+proposal estimates actually in line with the motion you can take basically join
+
+40:14.440 --> 40:18.760
+up multiple estimation techniques and then do some let's say sanity checks
+
+40:18.760 --> 40:22.560
+something you know about your vehicle for example to exploit to see which of
+
+40:22.560 --> 40:26.080
+those proposals are likely to be wrong and which are more likely to be correct
+
+40:26.080 --> 40:31.360
+and then select the proper registration or dormitory in every step in order to
+
+40:31.360 --> 40:35.400
+come up with a robust motion estimate and it turns out that there's actually
+
+40:35.400 --> 40:41.480
+there's no best solution so different algorithms which are chosen different
+
+40:41.480 --> 40:45.400
+times in the algorithm you can see here this is a generalized ICP which is
+
+40:45.400 --> 40:48.320
+basically a combination of this point-to-point and point-to-plane
+
+40:48.320 --> 40:51.800
+registration technique and point-to-point are the most commonly picked
+
+40:51.800 --> 40:55.320
+ones sometimes you want to use color information so this is basically how
+
+40:55.360 --> 40:58.320
+often as one of those algorithms been picked in typical driving situations
+
+40:58.320 --> 41:01.680
+where it performed the best and you can see there is no best solution there
+
+41:01.680 --> 41:06.120
+always situations where a certain algorithm performs better than others
+
+41:06.120 --> 41:12.520
+and combining those different approaches and then deciding which is potentially
+
+41:12.520 --> 41:16.160
+the best alignment I can get in the current situation can be exploited if
+
+41:16.160 --> 41:22.880
+you really three for building robust estimation algorithms so a few remarks
+
+41:22.880 --> 41:27.000
+from practice you should always exploit your initial guess if you have an
+
+41:27.000 --> 41:30.560
+initial guess so this is one of the recommendations never ignore an initial
+
+41:30.560 --> 41:34.600
+guess that you have this initial guess will be valuable for you because it
+
+41:34.600 --> 41:38.040
+probably gives you a better data station the first place and then your
+
+41:38.040 --> 41:41.560
+registration algorithms will perform better this could also be things like a
+
+41:41.560 --> 41:45.360
+constant velocity model so if you don't have let's say an additional dormitory
+
+41:45.360 --> 41:49.880
+source you may take into account the just repeating the movement that you
+
+41:49.880 --> 41:53.720
+have estimated before if you do an incremental estimation technique
+
+41:53.720 --> 41:58.640
+because very likely you're moving with a vehicle that is driving at a constant
+
+41:58.640 --> 42:02.720
+speed it's not changing speed all the time and this can be taken into account
+
+42:02.720 --> 42:05.680
+in order to come up with a better initial guess just a constant velocity
+
+42:05.680 --> 42:11.400
+model for example as a general remark these the normal based distance metrics
+
+42:11.400 --> 42:15.080
+typically perform better than the point-to-point alignment there can be
+
+42:15.080 --> 42:20.400
+other situations but from my experience is that the those which use normals
+
+42:20.400 --> 42:25.200
+typically perform better so for example this symmetric approach is one of the
+
+42:25.200 --> 42:29.200
+things I would be would be my first starting point if I build up a stand
+
+42:29.200 --> 42:32.440
+registration technique because it showed to be better than point-to-plane
+
+42:32.440 --> 42:38.440
+point-to-plane was a standard for a long time so that's probably a good start is
+
+42:38.440 --> 42:43.880
+to start with this symmetric approach as I said before whenever you have
+
+42:43.960 --> 42:48.200
+information about your outliers or also which part of the scene are likely to be
+
+42:48.200 --> 42:52.920
+not outliers exploit this explicitly so this is what I call informed outlier
+
+42:52.920 --> 42:57.440
+rejection applied if it's possible it will lead to better results if you can
+
+42:57.440 --> 43:02.680
+exploit specific properties of your scene of your problem but of course you
+
+43:02.680 --> 43:07.200
+need to take into account that this may limit the applicability of your
+
+43:07.200 --> 43:10.600
+algorithm if you want to do a very general approach which works in all
+
+43:10.600 --> 43:15.840
+environments and the adaptive kernels we found them quite powerful in order to
+
+43:15.840 --> 43:21.640
+adapt the current situation to the or adapt the robust kernel to the current
+
+43:21.640 --> 43:26.760
+outlier distribution and then perform good results and not needing to commit
+
+43:26.760 --> 43:31.080
+on a specific kernel beforehand so these are kind of some remarks that you could
+
+43:31.080 --> 43:35.040
+take into account when you build your own registration algorithms and there
+
+43:35.040 --> 43:40.120
+are a few more so if you have this what we call sensor odometry so where you
+
+43:40.160 --> 43:45.120
+estimate the movement of a vehicle based on an ICP or ICP like algorithm over
+
+43:45.120 --> 43:50.080
+time you can do actually a couple of things so first if you have multiple
+
+43:50.080 --> 43:53.760
+sensors take multiple sensors into account even if you for example have a
+
+43:53.760 --> 43:57.680
+laser scanner and a camera and you want to estimate using both sensing
+
+43:57.680 --> 44:01.560
+modalities you can treat them independently and estimate transformation
+
+44:01.560 --> 44:05.120
+parameters just based on your camera even if it's just a single monocular
+
+44:05.120 --> 44:08.680
+camera you can at least derive five degrees of freedom out of the six
+
+44:08.680 --> 44:11.720
+degrees of freedom from your camera and typically cameras provide you with a
+
+44:11.720 --> 44:15.400
+really good orientation estimate and so you can take actually multiple sensors
+
+44:15.400 --> 44:21.360
+into account either fusing them using them jointly or using one as a kind of
+
+44:21.360 --> 44:25.680
+sanity check for the other and only if all of them agree you say okay that's a
+
+44:25.680 --> 44:29.360
+good way to go it's one examples velocity constraints or other dynamic
+
+44:29.360 --> 44:34.640
+constraints your car won't accelerate from zero kilometers per hour to 100
+
+44:34.640 --> 44:38.400
+kilometers per hour within a second or very unlikely it's going to do that so
+
+44:38.440 --> 44:42.640
+exploit constraints because they allow you often to identify certain failure
+
+44:42.640 --> 44:48.280
+cases and and what the where the incremental registration does it provides
+
+44:48.280 --> 44:52.160
+you incremental corrections so you're always registering against the previous
+
+44:52.160 --> 44:56.040
+skins or the previous five skins or ten skins but typically not much more so
+
+44:56.040 --> 44:58.960
+you're building basically a local map and always align against your local map
+
+44:58.960 --> 45:02.920
+if you really want to get drift free in the long run you need in some point in
+
+45:02.920 --> 45:06.360
+time go to a SLAM algorithm and then probably perform some global
+
+45:06.360 --> 45:10.040
+optimization some global these squares on aligning a trajectory so also
+
+45:10.040 --> 45:14.440
+changing a trajectory in the past and in order to close loops correctly and get
+
+45:14.440 --> 45:19.440
+globally a good estimate so the incremental odometry only keeps you
+
+45:19.440 --> 45:23.520
+active for a while the further you go the more you may then want to turn it
+
+45:23.520 --> 45:27.400
+into a SLAM system. As a last remark especially when SLAM comes into the game
+
+45:27.400 --> 45:32.000
+from my experience the uncertainties that you're estimating with an ICP
+
+45:32.000 --> 45:36.920
+based approach are typically not that great so typically you tend to
+
+45:36.920 --> 45:41.120
+overestimate the accuracy of your alignment or the the precision of your
+
+45:41.120 --> 45:47.200
+alignment with respect to what happens in reality so I tend to not trust the
+
+45:47.200 --> 45:52.600
+uncertainties you get out of your skin alignment too well again there are
+
+45:52.600 --> 45:57.960
+special techniques also recently been proposed that try to do better on that
+
+45:57.960 --> 46:02.480
+but in general I would be a bit more bit careful with the uncertainties that
+
+46:02.480 --> 46:07.120
+you get from a scan matching estimation technique but you can take them into
+
+46:07.120 --> 46:10.840
+account to some degree but put it in with a user with a grain of salt and you
+
+46:10.840 --> 46:15.800
+can integrate it into SLAM algorithms so this is an example of Lidar
+
+46:15.800 --> 46:19.920
+based SLAM system that we have been built or Jens Bielle, the main
+
+46:19.920 --> 46:26.640
+contributor here which uses ICP with a protective data station basically
+
+46:26.640 --> 46:29.720
+matching the current laser scans against the circle based map
+
+46:29.720 --> 46:33.760
+representation again taking the normal information to account using robust
+
+46:33.760 --> 46:37.120
+kernels so that you can then build maps of the environment so these are all
+
+46:37.120 --> 46:42.320
+sequences of the kitty data set and building maps of the environment using
+
+46:42.320 --> 46:46.560
+this sensor data correct for loop closures so that you get a proper
+
+46:46.560 --> 46:50.840
+trajectory estimate out and map of the environment so basically estimating
+
+46:50.840 --> 46:55.800
+where the sensor was and building a map of the environment at the same time and
+
+46:55.840 --> 47:00.560
+that's what you can do is if you combine the point cloud registration techniques
+
+47:00.560 --> 47:06.280
+that we have discussed here with SLAM or global optimization techniques and with
+
+47:06.280 --> 47:11.000
+this I'm actually coming to the end of what we call the rigid registration so
+
+47:11.000 --> 47:14.040
+where we have one rigid body transformation to transform one point
+
+47:14.040 --> 47:19.200
+cloud into another one we can however go a step further so there are different
+
+47:19.200 --> 47:24.160
+applications where autonomous systems or intelligent systems are faced with
+
+47:24.200 --> 47:29.600
+deformable objects like me as a human I can deform I can move my arms and these
+
+47:29.600 --> 47:35.680
+are things that a mobile system or robot may need to take into account so they
+
+47:35.680 --> 47:40.080
+are steps towards non-rigid registration they actually have been around since
+
+47:40.080 --> 47:44.320
+quite a while so already 20 years ago people investigated into non-rigid
+
+47:44.320 --> 47:49.360
+registration of point clouds for example seeing which part has changed and may
+
+47:49.400 --> 47:54.040
+be able to deform some aspects over here a lot of the work has been done here
+
+47:54.040 --> 47:58.720
+based on humans so humans have a certain skeleton a certain structure and we can
+
+47:58.720 --> 48:03.680
+can we exploit the skeleton structure in order to perform a matching and knowing
+
+48:03.680 --> 48:08.520
+that my arms can only move in a certain way and there's of course information
+
+48:08.520 --> 48:13.600
+that we can exploit and we have been using the non rigid registration also
+
+48:13.600 --> 48:17.840
+for other tasks like dealing with growing plants if you have 3d models of
+
+48:17.840 --> 48:21.760
+plants taking at different points in time you may need to align or want to
+
+48:21.760 --> 48:25.320
+align those points or to track the growth of the plant for example over
+
+48:25.320 --> 48:30.360
+time and you can do this by transforming one point cloud into another point cloud
+
+48:30.360 --> 48:37.560
+in in a non rigid way and this is something where you need those least
+
+48:37.560 --> 48:40.800
+squares approaches as well you typically have more complex cost functions into
+
+48:40.800 --> 48:44.480
+account and sometimes even the least squares methods may not be the best
+
+48:44.480 --> 48:48.720
+choice there are other approaches taking deformations differently into
+
+48:48.720 --> 48:52.240
+account and then using finite element methods for example that's something
+
+48:52.240 --> 48:56.600
+we're not going to cover here but the with the least squares approaches you
+
+48:56.600 --> 49:00.280
+can actually go pretty far in here and what typically happens if you will have
+
+49:00.280 --> 49:04.560
+additional cost terms in your optimization problem for example taking
+
+49:04.560 --> 49:07.840
+into account that you don't want to change the topology of your theme at
+
+49:07.840 --> 49:11.800
+least not substantially only to allow for small changes and different things
+
+49:11.800 --> 49:15.240
+like this so there's an example that could look like so this is a point cloud
+
+49:15.240 --> 49:22.120
+of a plant at day one day six and day ten so this is a tomato plant and you
+
+49:22.120 --> 49:25.680
+see the point clouds and you can imagine that may be very tricky to align this
+
+49:25.680 --> 49:29.960
+point cloud with this point thought for example estimate how has a stem been
+
+49:29.960 --> 49:34.600
+growing what's the change in the size of the leaves things like this and but what
+
+49:34.600 --> 49:39.480
+you can do is you can actually try to do this and again a tricky way is how does
+
+49:39.480 --> 49:42.480
+the data cessation look like and you especially for these type of
+
+49:42.480 --> 49:47.640
+non-registration techniques you need to invest a lot of brain power into the
+
+49:47.640 --> 49:53.520
+data cessation between those points and so this is for example two point clouds
+
+49:53.520 --> 49:57.520
+which I have been just a day away and you can see here is a small leaf is
+
+49:57.520 --> 50:01.480
+branching out here so this here the plant only has two leaves here there's
+
+50:01.480 --> 50:05.720
+three leaves and if you want to do the registration it's helpful to exploit
+
+50:05.720 --> 50:10.040
+additional information like in this case I'm sorry skeleton information that
+
+50:10.040 --> 50:13.920
+you have over here so you can fit a skeleton into the stem and into the
+
+50:13.920 --> 50:17.720
+leaves and try to make the data station based on the skeleton just exploiting
+
+50:17.720 --> 50:23.760
+how plants typically grow and also saying yes you can there can be new
+
+50:23.760 --> 50:27.160
+branches coming out at some points so that you then need to do the data
+
+50:27.160 --> 50:33.280
+station only based on those points on that skeleton and again you need to take
+
+50:33.320 --> 50:37.520
+into account that elements have been growing and you may want to have
+
+50:37.520 --> 50:41.280
+different error functions being taken to account for example taking into account
+
+50:41.280 --> 50:45.400
+that transformations and shouldn't change along the path so what the
+
+50:45.400 --> 50:48.920
+approach is doing basically every of those dots gets an own rigidbody
+
+50:48.920 --> 50:53.280
+transformation because everything can be moved changed a little bit or not even a
+
+50:53.280 --> 50:56.160
+rigidbody transformation it's even a fine transformation because the thing
+
+50:56.160 --> 51:00.200
+can also grow and but you but you don't want to do is that a fine transformations
+
+51:00.200 --> 51:03.480
+of those points change dramatically so you're going to want to perform some
+
+51:03.480 --> 51:10.080
+regularization over the change in the fine transformation along that way and
+
+51:10.080 --> 51:13.760
+then you want to have certain regularization terms taking into
+
+51:13.760 --> 51:17.200
+account so you come up with a cost function which is more complex but can
+
+51:17.200 --> 51:22.760
+realize this non rigid registration so they can match one skeleton with another
+
+51:22.760 --> 51:27.440
+skeleton even if it has grown new leaves have appeared so that you can then
+
+51:27.440 --> 51:30.600
+actually take your skeleton match it against the other one and then actually
+
+51:30.600 --> 51:34.840
+come to an alignment of course the leaf the the point that is still slightly
+
+51:34.840 --> 51:39.400
+different because it has been grown the leaf has been grown but you can actually
+
+51:39.400 --> 51:44.640
+perform the alignment well for this skeleton and then use a skeleton and
+
+51:44.640 --> 51:48.560
+transfer the information back to the overall point cloud so that you then can
+
+51:48.560 --> 51:53.280
+even realize more complex alignments and then determine which parameters of the
+
+51:53.280 --> 51:57.240
+plant has changed you can use this for phenotyping for deriving fit it to big
+
+51:57.240 --> 52:02.200
+traits from this information and then also actually if you do this with in
+
+52:02.200 --> 52:06.240
+between all the time steps track the development of the plant over time so
+
+52:06.240 --> 52:10.320
+this is a small example of a video so these are the points where you have
+
+52:10.320 --> 52:15.240
+actually taken a scan and the and the red one is always an interpolation
+
+52:15.240 --> 52:19.480
+between those two clouds so whenever it overlays with this one you see okay this
+
+52:19.480 --> 52:22.600
+is the exact measurement the point cloud and then you can actually turn to
+
+52:22.600 --> 52:27.680
+interpolations and estimate how the plant will actually grow over time and
+
+52:27.680 --> 52:33.920
+perform some visualization interpolating the plant grows and then actually track
+
+52:33.920 --> 52:38.200
+phenotypic traits between those plans over time although you hadn't had
+
+52:38.200 --> 52:41.880
+measurement at these positions and the other thing that you can do with non
+
+52:41.880 --> 52:48.080
+rigid registration again often people are using this in order to deal with
+
+52:48.080 --> 52:53.640
+humans so a lot of the literature looks into humans and lining clothes which is
+
+52:53.640 --> 52:57.440
+non rigidly moving and taking this information into account and so there's
+
+52:57.440 --> 53:03.320
+a whole set of more complex registration techniques than just the rigid body
+
+53:03.320 --> 53:07.240
+transformations that we have discussed here I just want to show this as a
+
+53:07.240 --> 53:12.600
+outlook where you can go if you want to dive deeper and are interested in those
+
+53:12.600 --> 53:18.520
+techniques there is a lot of literature out there for aligning humans or other
+
+53:18.520 --> 53:24.600
+non rigid objects. With this I'm coming to the end and I want to point out a few
+
+53:24.600 --> 53:28.960
+resources that I found useful if you want to dive deeper so the first thing
+
+53:28.960 --> 53:33.520
+is the Jupyter notebook by Igor Bogoslavsky which provides you a very
+
+53:33.520 --> 53:40.960
+easy dive into an examples everything done in Python performing the simplest
+
+53:40.960 --> 53:45.280
+form of point-to-point registration using the SVD approach then using the
+
+53:45.280 --> 53:49.480
+least squares approach all done in 2D so some of the examples that you have seen
+
+53:49.480 --> 53:54.560
+here actually stem from his notebook and then also performing outlier rejection
+
+53:54.560 --> 53:58.200
+with a simple robust kernel these are examples that you can see here with a
+
+53:58.200 --> 54:02.920
+few lines of code in Python you can actually and generate that of course you
+
+54:02.920 --> 54:05.680
+can do better you can take more heuristics into account but I found
+
+54:05.680 --> 54:10.920
+that's a very good starting point both for learning but also if you want to use
+
+54:10.920 --> 54:15.480
+this as a starting point for further projects so highly recommended to look
+
+54:15.480 --> 54:20.960
+it up. Then there are also libraries out there like Open3D one example provides
+
+54:20.960 --> 54:25.840
+you with existing point-to-point or point-to-plane registration techniques if
+
+54:25.840 --> 54:29.240
+you just want to use it as an out-of-the-box tool you don't want to
+
+54:29.240 --> 54:34.880
+dive deeper Open3D is at least one library you should look into maybe it
+
+54:34.920 --> 54:38.600
+fits your needs and you can form different types of mapping and map
+
+54:38.600 --> 54:42.760
+building using scan registration techniques out there. If you want to look
+
+54:42.760 --> 54:48.840
+into further material read papers I've here a list of papers that I found
+
+54:48.840 --> 54:52.680
+useful which cover certain parts that we have discussed here in the different
+
+54:52.680 --> 54:57.880
+lectures these goes to very early works like from Arun and Beslan McKay
+
+54:57.880 --> 55:04.200
+proposing the ICP algorithm more this SVD based alignment over more recent
+
+55:04.200 --> 55:08.960
+techniques overviews efficient variants of the ICP comparisons of ICP which
+
+55:08.960 --> 55:13.080
+metric is better in which situation so there's a large body of literature
+
+55:13.080 --> 55:19.920
+trying to come up with techniques supporting the ICP better dealing with
+
+55:19.920 --> 55:26.200
+outliers adding redundancy going for global ICP method so there's a large
+
+55:26.200 --> 55:30.760
+body of literature that you may want to dive into and then in the end maybe even
+
+55:30.760 --> 55:35.200
+use it to build up your SLAM system based on what you've seen here and again
+
+55:35.200 --> 55:38.680
+if you want to start with code Jupyter notebook by Igor Boguslavsky or there's
+
+55:38.680 --> 55:43.960
+also a simple ICP by Philip Iglera and that is publicly available which you
+
+55:43.960 --> 55:51.920
+have in I think Python, Julia, C++, Matlab, Octave so all of starting points to play
+
+55:51.920 --> 55:57.040
+around with to start with a simple ICP and then go deeper and with this I'm
+
+55:57.080 --> 56:02.240
+coming to the end so this was a three-part lecture on point cloud
+
+56:02.240 --> 56:08.000
+registration looking into ICP and its friends let's let's call it that way and
+
+56:08.000 --> 56:13.000
+it's an important task in robot perception in mapping that you need to
+
+56:13.000 --> 56:17.320
+be able to align point clouds either by shifting the sensor location and had the
+
+56:17.320 --> 56:21.360
+point clouds aligned and sometimes even going further and optimizing the point
+
+56:21.360 --> 56:25.040
+cloud positions it's all the point clouds itself or the positions in the
+
+56:25.040 --> 56:30.600
+point cloud itself ICP or the iterative closest point algorithm is the standard
+
+56:30.600 --> 56:33.320
+choice so whenever you want to build a new system you will always have to
+
+56:33.320 --> 56:37.320
+compare yourself against ICP and probably different variants of the ICP
+
+56:37.320 --> 56:42.740
+for performing incremental scan matching for aligning point clouds and what it
+
+56:42.740 --> 56:47.680
+basically does it computes a translation and rotation between point clouds or
+
+56:47.680 --> 56:52.800
+scans or surfaces depending what your underlying structure is and if you have
+
+56:52.800 --> 56:58.040
+a given data association that's easy if you don't have data association then it
+
+56:58.040 --> 57:03.880
+can be tricky and the data association determines your translation and rotation
+
+57:03.880 --> 57:07.920
+parameters and the major problem is actually determining the correct data
+
+57:07.920 --> 57:12.360
+association if you know your data association perfectly it's easy and
+
+57:12.360 --> 57:17.400
+getting the data station right which includes finding out which points to
+
+57:17.400 --> 57:20.520
+trust how does the alignment look like which points are outliers which should
+
+57:20.520 --> 57:23.760
+not take into account which belong to moving objects if if all that's solved
+
+57:23.760 --> 57:28.360
+that's easy but determining this is typically tricky and what happens in
+
+57:28.360 --> 57:31.920
+practice is that you have an iterative approach performing the data association
+
+57:31.920 --> 57:35.400
+then the alignment then again the data association then the alignment and so on
+
+57:35.400 --> 57:39.580
+and so forth and there are several variants how you can do this and in the
+
+57:39.580 --> 57:45.200
+most general form you end up using a nonlinear least squares problem and
+
+57:45.200 --> 57:48.580
+again your initial guess is always helpful especially if you go for the
+
+57:48.620 --> 57:52.660
+least squares approaches you will not be able to get very good results without an
+
+57:52.660 --> 57:55.740
+initial guess unless you can make very strong assumptions about your theme
+
+57:55.740 --> 58:01.380
+which then is similar to an initial guess and what you often find if you
+
+58:01.380 --> 58:04.780
+look to a more sophisticated algorithms is there will be a least squares
+
+58:04.780 --> 58:09.340
+approach probably being used there's probably some point to plane metric or
+
+58:09.340 --> 58:13.820
+plane based metric being used there is some data station heuristics involved
+
+58:13.820 --> 58:18.260
+and maybe looking into which points are compatible to have a good starting point
+
+58:18.260 --> 58:23.020
+with and then also some outlier rejections which are implemented in
+
+58:23.020 --> 58:26.780
+here so this is kind of the standard ingredients that you find today in
+
+58:26.780 --> 58:31.180
+popular SLAM algorithms and with this coming I'm coming to the end and I hope
+
+58:31.180 --> 58:35.660
+you find this video useful and if you want there's also a five-minute summary
+
+58:35.660 --> 58:39.780
+on the iterative closest point algorithm that I recorded within my five minutes
+
+58:39.780 --> 58:44.340
+with soul serious if this was all too long three hours of ICP you can just
+
+58:44.340 --> 58:54.180
+enjoy this five minutes so thank you very much so ICP stands for iterative
+
+58:54.180 --> 58:58.660
+closest point it's a technique in order to align to point up with each other so
+
+58:58.660 --> 59:02.460
+what meets point cloud alignment a point cloud is typically a set of points of
+
+59:02.460 --> 59:07.380
+3d or in 2d and what we want to do is we want to compute the transformation
+
+59:07.380 --> 59:11.300
+between two point clouds and the goal is that through this transformation points
+
+59:11.300 --> 59:15.980
+that are the same point in the real world actually lie on top of each other
+
+59:15.980 --> 59:20.020
+so that we can incrementally build a consistent model of the environment and
+
+59:20.020 --> 59:23.700
+therefore that's a key building block of most SLAM algorithms for example those
+
+59:23.700 --> 59:29.020
+that work based on laser range finders or RGB D cameras so how does it work
+
+59:29.020 --> 59:33.340
+let's dive into an example and understand how this ICP algorithm works
+
+59:33.340 --> 59:37.140
+it basically has two steps a data association step and then a second step
+
+59:37.140 --> 59:41.260
+computing the transformation based on the data association so the first step
+
+59:41.260 --> 59:46.540
+let's say we want to align the blue and the red point cloud over here and we do
+
+59:46.540 --> 59:51.060
+this using a simple nearest neighbor approach that means we iterate over one
+
+59:51.060 --> 59:56.100
+point cloud and look for the closest points to these points in the second
+
+59:56.100 --> 01:00:00.780
+point cloud and then make this alignment and these are my correspondences my data
+
+01:00:00.780 --> 01:00:05.220
+association that I have guessed based on this initial configuration the second
+
+01:00:05.220 --> 01:00:09.100
+step takes this data association and tries to find the transformation so that
+
+01:00:09.100 --> 01:00:13.620
+those two point clouds are moved on top of each other so to say so that the
+
+01:00:13.620 --> 01:00:18.180
+distances of those corresponding points actually get minimized and this is done
+
+01:00:18.180 --> 01:00:23.140
+using two steps the first step computes the center of mass of those
+
+01:00:23.140 --> 01:00:26.420
+corresponding points and shift the point clouds on top of each other and the
+
+01:00:26.420 --> 01:00:31.020
+second step computes the optimal rotation using an SVD based approach so
+
+01:00:31.020 --> 01:00:35.220
+that the points then are better aligned with each other why better and not
+
+01:00:35.220 --> 01:00:39.580
+perfect because our initial data station may not have been perfect so what we do
+
+01:00:39.580 --> 01:00:43.540
+is we repeat this process and based on the on the gas that we have right now
+
+01:00:43.540 --> 01:00:47.500
+how the points clouds are aligned we recompute our data associations and then
+
+01:00:47.500 --> 01:00:51.180
+recompute the alignment and we do this over and over again data association
+
+01:00:51.180 --> 01:00:55.740
+alignment data association alignment data association alignment until we
+
+01:00:55.740 --> 01:01:00.900
+converge and this is basically the vanilla ICP algorithm the iterative
+
+01:01:00.900 --> 01:01:06.420
+closest point algorithm in its basic form in practice there are several
+
+01:01:06.420 --> 01:01:12.420
+variants out there how you can optimize the ICP algorithm one prominent example
+
+01:01:12.420 --> 01:01:17.620
+is the pointer plane metric here you assume that the points don't stem or are
+
+01:01:17.620 --> 01:01:20.980
+not distinct points in the environment but they actually stem from a surface
+
+01:01:20.980 --> 01:01:24.540
+they're basically randomly centered through the scanner from a surface and
+
+01:01:24.540 --> 01:01:31.100
+by making an alignment between the point cloud and a surface we don't
+
+01:01:31.100 --> 01:01:35.020
+create an artificial point-to-point alignment which may not exist in the
+
+01:01:35.020 --> 01:01:39.540
+real world and this point-to-plane alignment typically or put a plane
+
+01:01:39.540 --> 01:01:45.100
+metric typically gives you a better result of your ICP algorithm but what it
+
+01:01:45.100 --> 01:01:49.700
+does it requires that you leave this SVD based approach and you have to go to a
+
+01:01:49.700 --> 01:01:53.300
+general least squares approach and then you would most likely use the Gauss
+
+01:01:53.340 --> 01:01:58.180
+Newton method in order to minimize the error under this point-to-plane metric
+
+01:01:58.180 --> 01:02:02.180
+but there are also several other variants out there such as techniques
+
+01:02:02.180 --> 01:02:06.020
+using a projective ICP that means you take the model that you have and
+
+01:02:06.020 --> 01:02:09.700
+project it for example into the range image that you created from your scanner
+
+01:02:09.700 --> 01:02:13.420
+and then try to find the alignment and you may also want to take into account
+
+01:02:13.420 --> 01:02:17.020
+robust kernels in your error minimization approach not a better deal
+
+01:02:17.020 --> 01:02:21.420
+with outliers so if you have outlier situations where some of the points are
+
+01:02:21.460 --> 01:02:26.340
+really wrongly aligned then those outlier rejection techniques help you in
+
+01:02:26.340 --> 01:02:32.180
+order to weigh those points down and ignore them in your data association or
+
+01:02:32.180 --> 01:02:36.500
+reduce their impact when then computing the transformation so there are several
+
+01:02:36.500 --> 01:02:40.620
+variants out there and it depends a little bit on the problem that you are
+
+01:02:40.620 --> 01:02:44.500
+addressing which of the variants you want to use but a point-to-plane metric
+
+01:02:44.500 --> 01:02:48.780
+is probably today the standard for aligning point clouds for example those
+
+01:02:48.860 --> 01:02:52.860
+that stem from a laser range scanner if you want to investigate the ICP algorithm
+
+01:02:52.860 --> 01:02:56.380
+further I suggest visiting the Jupyter notebook that has been created by Igor
+
+01:02:56.380 --> 01:03:00.420
+Boguslavsky and that guides you through the SVD based approach to the least
+
+01:03:00.420 --> 01:03:04.300
+squares approach telling you how you can deal with outliers and it's a very good
+
+01:03:04.300 --> 01:03:08.900
+starting point which you can grasp in a rather short amount of time how ICP
+
+01:03:08.900 --> 01:03:12.860
+works and providing you with a very simple Python implementation for this so
+
+01:03:12.860 --> 01:03:17.740
+I hope that was useful and you get an idea how the key building block of most
+
+01:03:17.780 --> 01:03:22.300
+laser-based SLAM system work and they are used in robotics in autonomous cars
+
+01:03:22.300 --> 01:03:26.580
+in order to build consistent models of the environment whenever you have for
+
+01:03:26.580 --> 01:03:31.020
+example a 3D laser rangefinder mounted on your mobile platform I hope that was
+
+01:03:31.020 --> 01:03:34.220
+useful and you learn something
+
