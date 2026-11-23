@@ -101,6 +101,8 @@ $g_m = 4$、$R = 1$ k → 分母 5。$R$ 越大越好：若用電流源（$R$ �
 
 [▶ 57:52](https://youtu.be/DXOygJ_gLGQ?t=3472)
 
+![MOS 疊接放大器：下面 Q1 共源、上面 Q2 共閘（閘極接 V_G2），中間節點看進去 1/g_m2，輸出接電流源負載 I](../figures/E4-03-cascode.svg)
+
 CS 上面接一顆**共閘**（閘極接固定電壓）。$R_s$ 一樣 50 k。
 
 CS 那顆的 $C_{gd}$：Miller 的倍數是「CS 這一顆的增益」——它的負載是上面共閘從源極看進去的 $\frac{1}{g_m}$（很小）：[▶ 59:26](https://youtu.be/DXOygJ_gLGQ?t=3566)

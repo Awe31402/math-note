@@ -163,6 +163,8 @@ $$
 
 [▶ 1:19:30](https://youtu.be/-tpHGJxPH88?t=4770)
 
+![左：差模半電路（源極接地的共源放大器）；右：共模半電路（源極接 2R_SS）](../figures/E3-12-half-circuits.svg)
+
 只加 $v_{cm}$（拿掉直流源，但 $R_{SS}$ 還在）。兩邊電流 $i$ 一樣（很小），$R_{SS}$ 流 $2i$：[▶ 1:22:38](https://youtu.be/-tpHGJxPH88?t=4958)
 
 $$

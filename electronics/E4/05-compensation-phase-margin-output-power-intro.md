@@ -171,6 +171,8 @@ $$
 
 [▶ 1:31:17](https://youtu.be/UvUpOBgrix0?t=5477)
 
+![共射放大器 Q1（R_C）後接射極隨耦器 Q2（電流源 10 mA）推 R_L，R_out = R_C/(1+β) + r_e](../figures/E4-05-ce-follower.svg)
+
 共射後面接一顆射極隨耦器（集極接最高電壓，射極接電流源）。
 
 - 開路電壓不變：$v_{open} = -g_mv_sR_C$（隨耦器增益約 1，基極幾乎沒電流）。[▶ 1:33:56](https://youtu.be/UvUpOBgrix0?t=5636)

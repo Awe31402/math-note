@@ -109,6 +109,8 @@ $$
 
 [▶ 1:03:50](https://youtu.be/oE0OxELNnWU?t=3830)
 
+![op amp 推 NMOS 的雷射驅動器：雷射在汲極、源極接 R 到地，R 上的電壓回到負端，i_o ≈ v_i/R](../figures/E3-20-laser-driver.svg)
+
 op amp（增益 $A_d$、輸出 $R_o$）驅動 MOS 閘極，源極 $R$ 拉回負端，雷射在汲極。
 
 **直接解** [▶ 1:05:56](https://youtu.be/oE0OxELNnWU?t=3956)：虛短路 → 源極 ≈ $v_i$；寫 KCL 把 $i_o$ 解出（短路下）。輸出電阻：信號源拿掉、加 $V_x$，

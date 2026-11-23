@@ -81,6 +81,8 @@ $$
 
 [▶ 16:29](https://youtu.be/lE0Riev-pKk?t=989)
 
+![左：遲滯電流控制，雷射電流在 I_ceil 與 I_floor 之間來回，平均約 V_R/(RA)；右：RC 延遲加 OR／AND 產生不重疊的閘極信號（死區時間）](../figures/E4-12-laser-deadtime.svg)
+
 - 開關接 5 V：電流上升，$v_s$ 上升，一直到碰到**天花板**。[▶ 18:02](https://youtu.be/lE0Riev-pKk?t=1082)
 - 比較器翻轉 → 開關接 0（中間經反相器，不需要很大的 $k$）→ 電流開始下降（斜率 $-v_o/L$）。同時門檻變成**地板**。[▶ 20:36](https://youtu.be/lE0Riev-pKk?t=1236)
 - 電流降到地板 → 又翻回 5 V → 上升……

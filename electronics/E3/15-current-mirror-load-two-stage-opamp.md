@@ -151,6 +151,8 @@ $$
 
 [▶ 1:25:07](https://youtu.be/8couFozn__4?t=5107)
 
+![兩級 CMOS op amp：Q1–Q2 差動對、Q3–Q4 PMOS 電流鏡負載、尾電流 2I；第二級 PMOS 共源 Q6 接電流源負載 I6](../figures/E3-15-two-stage-opamp.svg)
+
 差動放大器（電流鏡負載）輸出接第二級**共源**：PMOS 放大管（源極 10 V，閘極接第一級輸出約 8 V → $V_{SG} = 2$ V），汲極接 NMOS 電流源負載（電流鏡，到 −10 V）。[▶ 1:26:39](https://youtu.be/8couFozn__4?t=5199)
 
 - 所有 $V_{GS}$ 都設計約 2 V（比 $V_t$ 多一點）。【口頭】千萬不能讓某顆 $V_{GS}$ = 8 V，那早就跳出去了，變數位。[▶ 1:29:46](https://youtu.be/8couFozn__4?t=5386)

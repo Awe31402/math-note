@@ -130,6 +130,8 @@ $$
 
 [▶ 1:11:17](https://youtu.be/x5zWWhRF2J0?t=4277)
 
+![差動對大信號特性：i_D1、i_D2 隨 v_id 變化，在 ±√2 V_OV 時電流完全切到一邊；虛線為小信號直線](../figures/E3-14-large-signal.svg)
+
 不接電阻，$i_1 = \frac12k(v_{GS1} - V_t)^2$、$i_2 = \frac12k(v_{GS2} - V_t)^2$，$i_1 + i_2 = I$：
 
 $$

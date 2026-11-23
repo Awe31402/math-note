@@ -126,6 +126,8 @@ notes: 老師第 10 章 = Sedra/Smith 7e Ch12；§12.2 A 類 (p. 923)、§12.3 B
 
 [▶ 52:19](https://youtu.be/Sj9y5UoMmzY?t=3139)
 
+![AB 類推挽輸出級：偏壓電流源經 D1、D2 兩個二極體給 Q_N、Q_P 基極墊壓，下面由驅動級推動，輸出接 R_L](../figures/E4-06-class-ab.svg)
+
 0.6 V 用二極體來墊：兩個二極體串聯在兩顆基極之間，上面接電流源（例 1 mA）讓二極體導通，信號從中間進。[▶ 52:50](https://youtu.be/Sj9y5UoMmzY?t=3170)
 
 **問題** [▶ 54:24](https://youtu.be/Sj9y5UoMmzY?t=3264)：正半周 NPN 要送 500 mA → 基極要 5 mA，但電流源只有 1 mA——拉走太多電流，負載效應太嚴重。

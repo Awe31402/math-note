@@ -48,6 +48,8 @@ notes: 老師第 10 章此段 = Sedra/Smith 7e Ch13；§13.3 741 BJT op amp (p. 
 
 [▶ 00:30](https://youtu.be/y51u8kCFlos?t=30)
 
+![741 方塊圖：輸入級（A_d1 = 150、A_cm1 ≈ 3×10^-6）→ 增益級（約 2000）→ AB 類輸出級，加偏壓網路；R_id ≈ 1 MΩ、總增益約 3×10^5](../figures/E4-08-741-blocks.svg)
+
 ±15 V。三個部分：差動放大器（輸入級）→ 共射（增益級）→ Class AB 輸出級。加上偏壓網路：[▶ 07:47](https://youtu.be/y51u8kCFlos?t=467)
 
 - 參考電流：$\frac{30 - 1.4}{28.6\ \text{k}} = 1$ mA。[▶ 01:30](https://youtu.be/y51u8kCFlos?t=90)

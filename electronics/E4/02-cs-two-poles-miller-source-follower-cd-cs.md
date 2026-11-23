@@ -44,6 +44,8 @@ notes: 老師第 9 章 = Sedra/Smith 7e Ch10；§10.3.1 CS 高頻響應 (p. 722)
 
 [▶ 00:30](https://youtu.be/suF4WF8GyX0?t=30)
 
+![CS 高頻小信號模型：v_s 串 R_s 到閘極，C_gs 接地、C_gd 跨接閘汲之間，受控源 g_m v_gs、R_L、C_L 在輸出](../figures/E4-02-cs-hf-model.svg)
+
 $R_s = 50$ k（第一級的輸出電阻）、$g_m = 4$ mA/V、$R_L = 25$ k。電容：$C_1 = C_{gs}$（輸入到地）、$C_2 = C_{gd}$（跨接）、$C_3$（輸出到地）。兩端固定電壓的電容微分後沒電流，拿掉。[▶ 01:31](https://youtu.be/suF4WF8GyX0?t=91)
 
 個別看（假設都 1 pF）：$C_1R_s$、$C_3R_L$ 對應約 $10^7$；但 $C_2$ 把輸入、輸出扯在一起，要另外算。[▶ 03:35](https://youtu.be/suF4WF8GyX0?t=215)

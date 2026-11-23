@@ -146,6 +146,8 @@ $$
 
 [▶ 1:41:04](https://youtu.be/AbLF-GsNCJo?t=6064)
 
+![電阻負載的 MOS 差動對：Q1、Q2 源極接在一起接尾電流源 I，汲極各接 R_D 到 V_DD](../figures/E3-11-diff-pair.svg)
+
 源極電容的工作：直流維持住、交流提供一條電阻很小的路。IC 設計的人一定想到用 MOS——**把電容換成一顆一樣的 MOS**（源極接源極），兩條路共用電流源 → **差動對**。輸出可以從任一邊汲極拉。下一集詳細講。[▶ 1:42:04](https://youtu.be/AbLF-GsNCJo?t=6124)
 
 （同樣的想法見 [電子學（二）第 20 集](../E2/20-remove-capacitors-complementary-bridge.md)。）

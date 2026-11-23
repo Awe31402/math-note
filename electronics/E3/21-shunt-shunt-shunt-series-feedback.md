@@ -109,6 +109,8 @@ $$
 
 [▶ 32:14](https://youtu.be/ADE0OzhV11g?t=1934)
 
+![轉阻放大器：光偵測器（電流源 i_s 並 R_s）接 op amp 負端，R 從輸出跨回負端，正端接地，v_o ≈ −R i_s](../figures/E3-21-tia.svg)
+
 反相輸入接電流源，輸出經 $R$ 拉回反相端，正端接地。
 
 令 $\beta = 0$：輸入側並 $R$、輸出側並 $R$，其他都歸給基本放大器：[▶ 33:16](https://youtu.be/ADE0OzhV11g?t=1996)

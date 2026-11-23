@@ -76,6 +76,8 @@ $$
 
 [▶ 16:26](https://youtu.be/Zwg7MGcYu4A?t=986)
 
+![BJT Wilson 電流鏡：I_REF 流進 Q1 集極並接到 Q3 基極；Q2 二極體接法、基極與 Q1 共用；Q3 射極接 Q2 集極，輸出 I_O](../figures/E3-18-wilson-mirror.svg)
+
 Wilson 只改上面的負載（下面差動對本來就有）。逐顆寫集極、射極、基極電流（射極 = 集極 × $\frac{1+\beta}{\beta}$，每到一個節點就少 $\frac{2}{1+\beta}$ 之類），整理後：[▶ 21:03](https://youtu.be/Zwg7MGcYu4A?t=1263)
 
 $$

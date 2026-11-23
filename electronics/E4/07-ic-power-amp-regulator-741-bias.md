@@ -177,6 +177,8 @@ $$
 
 [▶ 1:35:43](https://youtu.be/B2cqm9BEkbs?t=5743)
 
+![Widlar 電流源：Q1 二極體接法接 I_REF，Q2 射極串 R_E，V_T ln(I_REF/I_O) = I_O R_E](../figures/E4-07-widlar.svg)
+
 參考電流：上面 PNP、下面 NPN 二極體接法，中間一顆電阻：$\frac{30 - 1.4}{R} = 1$ mA → $R = 28.6$ k（±15 V）。[▶ 1:36:44](https://youtu.be/B2cqm9BEkbs?t=5804)
 
 差動放大器要很小的電流（μA），才能讓輸入電阻很大（MΩ 以上）。用一般電流鏡要很大的電阻；**Widlar 電流源**在輸出那顆射極加一顆小電阻 $R$：[▶ 1:38:14](https://youtu.be/B2cqm9BEkbs?t=5894)

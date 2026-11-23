@@ -153,6 +153,8 @@ $$
 
 [▶ 1:49:51](https://youtu.be/MkpisPznUfU?t=6591)
 
+![主動負載差動對：Q3、Q4 為閘極接 V_B 的 PMOS 電流源，尾電流 I 並聯 R_SS](../figures/E3-13-active-load.svg)
+
 **PMOS 電流源負載**（閘極接固定直流）：交流時電流源開路，只剩 $r_{op}$；尾節點是支點接地：[▶ 1:53:56](https://youtu.be/MkpisPznUfU?t=6836)
 
 $$

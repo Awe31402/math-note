@@ -115,6 +115,8 @@ $$
 
 [▶ 50:39](https://youtu.be/6Atm6UlZqOg?t=3039)
 
+![非反相放大器：op amp（A_d、R_o），R_2 從輸出回到負端、R_1 接地；正端串一個輸入偏移電壓 V_OS](../figures/E3-16-noninv-offset.svg)
+
 以前不敢碰的問題：IC 廠做得再好，兩顆 MOS 不可能完全一樣。第二級放大管和電流源的電流只要差一點點（疊加：$\Delta I\times(r_o\parallel r_o)$），例如第一級輸出從 8 V 偏一點點 0.05 V、乘上第二級增益——**開迴路輸出直流就往上飄 5 V**。這叫**偏移**（offset）。[▶ 52:13](https://youtu.be/6Atm6UlZqOg?t=3133)
 
 **接回授之後** [▶ 1:00:59](https://youtu.be/6Atm6UlZqOg?t=3659)：模型加一項輸出偏移 $V_{\text{off}}$：
