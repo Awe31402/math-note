@@ -1,0 +1,25 @@
+# E2-24 figure: NMOS CS with PMOS current-source load (mirror)
+import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from common import save, drawing, OUT
+import schemdraw.elements as elm
+
+with drawing() as d:
+    m = elm.Dot().label('8 V', loc='top')
+    elm.Line().left().length(1.0)
+    qr = elm.PFet().anchor('gate').reverse().flip()
+    elm.Line().up().at(qr.source).length(0.4); elm.Vdd().label('10 V')
+    a = elm.Dot().at(qr.drain)
+    elm.Line().right().at(a.center).tox(m.center[0]); elm.Line().up().toy(m.center[1])
+    elm.Resistor().down().at(a.center).label('$R$', loc='bottom'); elm.Ground()
+    elm.Line().right().at(m.center).length(1.0)
+    ql = elm.PFet().anchor('gate').reverse().label('$r_{op}$', loc='right', ofst=(0.4, 0))
+    elm.Line().up().at(ql.source).length(0.4); elm.Vdd().label('10 V')
+    o = elm.Dot().at(ql.drain)
+    elm.Line().right().at(o.center).length(1.5); elm.Dot(open=True).label('$v_O$', loc='right')
+    nd = (o.center[0], o.center[1]-1.5)
+    elm.Line().down().at(o.center).toy(nd[1])
+    elm.Dot(open=True).at((nd[0]-1.37-1.5, nd[1]-0.75)).label('2 V $+ v_s$', loc='bottom')
+    elm.Line().right().length(1.5)
+    qn = elm.NFet().anchor('gate').reverse().label('$r_{on}$', loc='right', ofst=(0.4, 0))
+    elm.Line().down().at(qn.source).length(0.3); elm.Ground()
+    save(d, 'E2-24-cs-pmos-load')
