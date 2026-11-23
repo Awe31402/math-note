@@ -95,14 +95,7 @@
 
 `[00:10]` **最上層的詞不是 cryptography，是 cryptology（密碼學 / 密碼科學）。** 它分成兩支：
 
-```
-              Cryptology（密碼學）
-              ├── Cryptography（密碼編碼學）
-              │     ├── Symmetric Ciphers（對稱式）
-              │     ├── Asymmetric Ciphers（非對稱式 = 公鑰）
-              │     └── Protocols（協定）
-              └── Cryptanalysis（密碼分析學）
-```
+![Cryptology 的分類樹](images/lecture01_cryptology_tree.png)
 
 | 分支 | 意思 | 白話 |
 |---|---|---|
@@ -149,14 +142,7 @@
 
 `[00:14]`【口頭】教授提醒：你的學位叫 **IT Security（資訊安全）**，不叫 Cryptography。
 
-```
-  ┌─────────── Security（資訊安全）────────────┐
-  │  安全軟體   安全作業系統   安全硬體   ...   │
-  │            ┌──────────────┐                │
-  │            │ Cryptography │ ← 核心元件      │
-  │            └──────────────┘                │
-  └────────────────────────────────────────────┘
-```
+![密碼學是資訊安全的核心元件](images/lecture01_security_cryptography.png)
 
 兩句話記住這個關係：
 
@@ -194,12 +180,7 @@
 
 `[00:22]` 解法：Alice 先**加密**，Bob 收到再**解密**。
 
-```
-                       Oscar（壞人）
-                          ↑ 只看到 y
-                          │
-Alice ──x──→ [ e() ] ──y──→ 不安全通道 ──y──→ [ d() ] ──x──→ Bob
-```
+![Alice 經不安全通道傳給 Bob，Oscar 只看得到 y](images/lecture01_channel_oscar.png)
 
 - **加密（encryption）** $e$：某種數學函數，把 **plaintext（明文）** $x$ 變成 **ciphertext（密文）** $y$。
 - **解密（decryption）** $d$：反過來，把 $y$ 變回 $x$。解密就是加密的反函數。
@@ -216,11 +197,7 @@ $$y = e_k(x) \qquad\qquad x = d_k(y)$$
 - 加密不只看明文 $x$，也看金鑰 $k$。
 - **Bob 必須有一模一樣的金鑰，才能解密。**
 
-```
-Alice ──x──→ [ e() ] ──y──→ 不安全通道 ──y──→ [ d() ] ──x──→ Bob
-               ↑                                ↑
-               k ←────── 安全通道 ──────→ k
-```
+![對稱式加密：金鑰經安全通道傳送](images/lecture01_channel_key.png)
 
 ### 3.4 五個基本符號
 
@@ -587,15 +564,7 @@ $2^{32} \approx 4.3 \times 10^9$。【口頭】教授口頭說「大約十億倍
 
 所以教授最後要給大家一張「各種攻擊方式」的全景圖。
 
-```
-                Cryptanalysis（密碼分析 / 攻擊）
-        ┌──────────────────┼──────────────────┐
-  Classical            Social              Implementation
-  Cryptanalysis        Engineering         Attacks
-  （古典密碼分析）       （社交工程）          （實作攻擊）
-   ├── Mathematical Analysis（數學 / 分析攻擊）
-   └── Brute-Force Attacks（暴力攻擊）
-```
+![密碼分析的分類樹](images/lecture01_cryptanalysis_tree.png)
 
 ### 8.1 古典密碼分析
 

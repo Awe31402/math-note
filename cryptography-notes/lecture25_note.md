@@ -52,13 +52,7 @@
 
 【口頭】`[00:05]`「有點像**《今天暫時停止》（Groundhog Day，德文 Und täglich grüßt das Murmeltier）**那部電影。誰看過？你們會再經歷一遍：如果你看四週前的影片，我就是這樣開場的。」
 
-```
-   Alice                                Bob
-              ←────── k_pub ──────    (k_pr, k_pub)
-                                      s = sig_{k_pr}(x)
-              ←────── (x, s) ──────
-   ver_{k_pub}(x, s) = true / false
-```
+![數位簽章協定](images/lecture25_signature_protocol.png)
 
 【課堂討論】Alice 做的運算叫什麼？→ **驗證**。
 
@@ -78,14 +72,7 @@
 
 【口頭】「怎麼把金鑰送過去？**不容易**，但這屬於公鑰密碼學的範圍。**接下來兩三講**我們會談金鑰分配。」
 
-```
-   Alice                                    Bob
-     k ←──────── 共享的秘密金鑰 ────────→ k
-                                         m = MAC_k(x)
-              ←────── (x, m) ──────
-   m' = MAC_k(x)
-   m' =? m
-```
+![MAC 協定](images/lecture25_mac_protocol.png)
 
 | 步驟 | 說明 |
 |---|---|
@@ -197,11 +184,7 @@
 
 大部分雜湊函數用 **Merkle-Damgård 結構**（`[00:34]`，「我們最愛的丹麥人的梯子結構」）：
 
-```
-IV ──→ [壓縮] ──→ [壓縮] ──→ [壓縮] ──→ … ──→ [壓縮] ──→ m
-         ↑          ↑          ↑                 ↑
-         k          x₁         x₂                x_n
-```
+![秘密前綴 MAC：m = h(k‖x)](images/lecture25_secret_prefix.png)
 
 每一塊的輸出，就是下一塊的「初始值」。
 
@@ -232,16 +215,7 @@ $$m' = h(k \| x_1 \| \cdots \| x_n \| x_{n+1}) = m_O \;✔$$
 
 → Alice 接受 $(x_O, m_O)$ 為有效，雖然 Bob 只認證了 $(x_1, \ldots, x_n)$。
 
-```
-   Alice                     Oscar                          Bob
-                                                   m = h(k‖x₁‖…‖x_n)
-                         ←────── (x, m) ──── 攔截 ─────
-                         x_O = (x₁,…,x_n, x_{n+1})
-                         m_O = h(m ‖ x_{n+1})
-             ←── (x_O, m_O) ──
-   m' = h(k‖x₁‖…‖x_{n+1})
-   m' = m_O → 有效！
-```
+![長度延伸攻擊](images/lecture25_length_extension.png)
 
 #### 但這有一點簡化
 
@@ -339,15 +313,7 @@ $$\boxed{\text{HMAC}_k(x) = h\left[\,(k^+ \oplus \text{opad}) \,\|\, h\left[(k^+
 - 「1996 年，**比真正的 iPad 早**。」
 - 「（最後兩分鐘了，但**填完教學評鑑才能走**。）」
 
-```
-           k⁺ ⊕ ipad      x₁       x₂     …    x_n
-              │           │        │            │
-   IV ──→ [壓縮] ──→ [壓縮] ──→ [壓縮] ──→ … ──→ [壓縮] ──→ 內層輸出
-                                                              │
-           k⁺ ⊕ opad                                          │
-              │                                               │
-   IV ──→ [壓縮] ──────────────────────────────→ [壓縮] ──→ HMAC
-```
+![HMAC 結構](images/lecture25_hmac.png)
 
 （教授說可以對照課本 Figure 12.2，第一版第一刷在 p.324 或 325，「你們手上的可能是新版」。）
 

@@ -43,12 +43,7 @@
 
 `[00:00]` 退一步看過去一個半學期：
 
-```
-密碼學
-├── 對稱式      ✔（DES、3DES、AES、操作模式、串流密碼、暴力攻擊……）
-├── 非對稱式    ✔（RSA、離散對數、ECC —— 上週三剛結束）
-└── 協定        ← 今天開始（2011 年 5 月 11 日）
-```
+![課程地圖](images/lecture18_course_map.png)
 
 【口頭】`[00:02]`「我昨天看了課程大綱，結果**幾乎剛好各三分之一**：兩學期的三分之一大約是 9 週，對稱式剛好 9 週、非對稱式剛好 9 週。還剩大約 9 週。」
 
@@ -113,16 +108,7 @@
 - 所以：用**有金鑰的密碼學演算法**來產生簽名。**有金鑰的人能簽，沒金鑰的人不能偽造。**
 - 「這當然跟紙本簽名有**根本上的巨大差別**。」
 
-```
-         訊息空間（所有可能的訊息）
-              ┌─────────┐
-              │   • x   │ ──→ [ sig_k ] ──→ y（簽章）
-              └─────────┘
-                                 ↓
-              Alice ── (x, y) ──→ Bob
-                                 ↓
-                         [ ver_k (x, y) ] ──→ true / false
-```
+![數位簽章：簽章與驗證](images/lecture18_sign_verify.png)
 
 **簽章（signing）**：$y = \text{sig}_k(x)$
 - 把訊息 $x$（文件、明文）和金鑰丟進**簽章演算法**。
@@ -306,14 +292,7 @@ $$\text{ver}_k(x, y) = \begin{cases} \text{true} & \text{若 } y \text{ 有效} 
 
 `[00:57]`
 
-```
-   Alice（簽章者）                         Bob（驗證者）
-   產生 k_pr, k_pub
-              ────── k_pub ──────→
-   s = sig_{k_pr}(x)
-              ────── (x, s) ─────→
-                                     ver_{k_pub}(x, s) = true / false
-```
+![數位簽章協定](images/lecture18_signature_protocol.png)
 
 【口頭】課本從這裡開始把簽章叫 **$s$**（不叫 $y$）。
 
@@ -374,16 +353,7 @@ $$\text{ver}_k(x, y) = \begin{cases} \text{true} & \text{若 } y \text{ 有效} 
 - 私鑰 $k_{pr} = d$
 - 公鑰 $k_{pub} = (n, e)$
 
-```
-   Alice（簽章者）                              Bob（驗證者）
-   k_pr = d, k_pub = (n, e)
-              ────── (n, e) ──────→
-   s = sig_{k_pr}(x) ≡ x^d mod n
-              ────── (x, s) ──────→
-                                       x' ≡ s^e mod n
-                                       x' ≡ x  →  有效
-                                       x' ≢ x  →  無效
-```
+![RSA 數位簽章協定](images/lecture18_rsa_signature.png)
 
 #### 【口頭】教授故意寫錯
 

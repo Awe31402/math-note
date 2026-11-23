@@ -175,29 +175,7 @@
 
 `[00:22]`（課本 Figure 4.2，「**非常重要**的圖，相當於 DES 的 Feistel 圖」）
 
-```
-         明文 x（128 bit）
-              ↓
-       ⊕ k₀        ← 金鑰加法層（金鑰白化）
-              ↓
-  ┌─── 第 1 輪 ─────────────────┐
-  │  Byte Substitution（S-box）  │
-  │  ShiftRows                   │
-  │  MixColumn                   │
-  │  ⊕ k₁   金鑰加法             │
-  └──────────────────────────────┘
-              ↓
-             …（第 2 ~ n_r−1 輪相同）
-              ↓
-  ┌─── 第 n_r 輪（最後一輪）─────┐
-  │  Byte Substitution           │
-  │  ShiftRows                   │
-  │  （沒有 MixColumn！）         │
-  │  ⊕ k_{n_r}                   │
-  └──────────────────────────────┘
-              ↓
-         密文 y（128 bit）
-```
+![AES 整體結構](images/lecture08_aes_structure.png)
 
 128 bit 金鑰時：前 9 輪完全一樣，每輪 4 層。
 
@@ -253,23 +231,7 @@ $128 \div 8 = 16$ → state 是 **16 個 byte**。
 
 `[00:35]`（課本 Figure 4.3，「可能是最重要的一張圖」，教授在黑板上慢慢畫出來）
 
-```
- A0  A1  A2  A3   A4  A5  A6  A7   A8  A9 A10 A11  A12 A13 A14 A15   ← 輸入 16 byte
-  ↓   ↓   ↓   ↓    ↓   ↓   ↓   ↓    ↓   ↓   ↓   ↓    ↓   ↓   ↓   ↓
- [S] [S] [S] [S]  [S] [S] [S] [S]  [S] [S] [S] [S]  [S] [S] [S] [S]   ← 16 個相同的 S-box
-  ↓   ↓   ↓   ↓    ↓   ↓   ↓   ↓    ↓   ↓   ↓   ↓    ↓   ↓   ↓   ↓
- B0  B1  B2  B3   B4  B5  …                                   B15
-  ╲   交叉接線（ShiftRows：byte 層級的置換）                ╱
- ┌─────────────┐┌─────────────┐┌─────────────┐┌─────────────┐
- │ MixColumn   ││ MixColumn   ││ MixColumn   ││ MixColumn   │  ← 4 個，每個 4 byte 進 4 byte 出
- │B0 B5 B10 B15││B4 B9 B14 B3 ││B8 B13 B2 B7 ││B12 B1 B6 B11│
- └─────────────┘└─────────────┘└─────────────┘└─────────────┘
-  C0 C1 C2 C3    C4 C5 C6 C7    C8 C9 C10 C11  C12 C13 C14 C15
-  ↓  ↓  ↓  ↓     ↓  …                                  ↓
-  ⊕ k_i（16 byte 的子金鑰，逐 bit XOR）
-  ↓
- 輸出 16 byte
-```
+![AES 一輪的內部：S-box、ShiftRows、MixColumn、金鑰加法](images/lecture08_aes_round.png)
 
 【口頭】命名（輸入 A、S-box 後 B、MixColumn 後 C）是**這門課自己的約定**，不是標準。
 
@@ -354,9 +316,7 @@ $$S(1100\,0010) = 0010\,0101$$
 
 S-box 分**兩步**：
 
-```
-  A_i ──→ [ GF(2⁸) 求逆 ] ──→ B'_i ──→ [ 仿射轉換 ] ──→ B_i
-```
+![AES S-box 的兩個步驟](images/lecture08_sbox_two_steps.png)
 
 #### 步驟 1：在 $GF(2^8)$ 中求反元素
 
@@ -441,11 +401,7 @@ $$\vec{b} = M \cdot \vec{b'} \oplus \vec{c} \ (\mathrm{mod}\ 2)$$
 
 $$S(A) = \text{Affine}\left(A^{-1}\right)$$
 
-```
-C2 ──[Table 4.2：GF(2⁸) 求逆]──→ 2F ──[仿射轉換]──→ 25
-                                                     ↑
-                                Table 4.3（S-box）一步直接給這個
-```
+![S-box 例子：C2 → 2F → 25](images/lecture08_sbox_example.png)
 
 Table 4.3 就是把兩步都先算好的結果。
 

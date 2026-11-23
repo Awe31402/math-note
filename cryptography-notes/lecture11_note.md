@@ -198,14 +198,7 @@ $$\boxed{\gcd(r_0, r_1) = s \cdot r_0 + t \cdot r_1}$$
 
 $$r_i = s_i \cdot r_0 + t_i \cdot r_1$$
 
-```
-  左邊（普通 EA）                    右邊（額外工作）
-  r₀ = q₁·r₁ + r₂          →         r₂ = s₂·r₀ + t₂·r₁
-  r₁ = q₂·r₂ + r₃          →         r₃ = s₃·r₀ + t₃·r₁
-     ⋮                                   ⋮
-  r_{l-2} = q·r_{l-1} + r_l →         r_l = s_l·r₀ + t_l·r₁
-  r_{l-1} = q·r_l + 0      ← 停
-```
+![擴展歐幾里得演算法：左邊普通 EA，右邊額外工作](images/lecture11_eea_columns.png)
 
 **為什麼這樣就贏了？**
 

@@ -36,10 +36,7 @@
 
 `[00:01]` 要解決一個**將近一年來幾乎完全忽略**的大問題：
 
-```
-   Alice ──── e_k(x) = y ────→ Bob
-     k                          k
-```
+![Alice 與 Bob 共用金鑰 k](images/lecture26_shared_key.png)
 用 AES 或 3DES 加解密，又安全又快。
 【課堂討論】這之前缺了什麼？→ **要先把金鑰送過去**。
 
@@ -60,12 +57,7 @@
 
 `[00:04]` **金鑰建立（key establishment）** 粗分兩種：
 
-```
-              金鑰建立
-             /        \
-     金鑰傳送          金鑰協議
-  (key transport)   (key agreement)
-```
+![金鑰建立的分類](images/lecture26_key_establishment.png)
 
 【課堂討論】`[00:05]` 金鑰傳送裡，誰選金鑰？
 → **一方選金鑰，再傳給別人**。可能是 Alice 選、Bob 選，或第三方選再傳給兩人。
@@ -113,22 +105,13 @@ $a$ 是 Alice 的秘密、$b$ 是 Bob 的秘密 → **雙方都貢獻**，所以
 - 方法一：把金鑰建立協定**再跑一次**（有通訊和計算成本，公鑰尤其貴）。
 - 方法二：用已經共享的秘密 $k_{AB}$ **衍生**新的會期金鑰 → **金鑰衍生函數（KDF, Key Derivation Function）**。
 
-```
-   k_AB ──┐
-          ├──→ [ KDF ] ──→ k_ses
-   r ─────┘   （r 不是秘密）
-```
+![金鑰衍生函數 KDF](images/lecture26_kdf.png)
 
 **KDF 必須是單向函數**：就算某把會期金鑰外洩，攻擊者也**推不回 $k_{AB}$**（否則就能算出所有其他會期金鑰）。
 
 **用 nonce 衍生**（nonce = 只用一次的數字）：
 
-```
-   Alice                          Bob
-                                  產生 nonce r
-            ←────── r ──────
-   k_ses = e_{k_AB}(r)            k_ses = e_{k_AB}(r)
-```
+![用 nonce 產生會期金鑰](images/lecture26_nonce_session_key.png)
 
 其他做法：
 
@@ -278,20 +261,7 @@ $$y = e_{k_{ses}}(x)$$
 - Bob 做跟 Alice 一樣的事（`[00:33]`）：
 $$k_{ses} = e^{-1}_{k_B}(y_B), \qquad x = e^{-1}_{k_{ses}}(y)$$
 
-```
-   Alice                         KDC                          Bob
-   KEK: k_A                      KEK: k_A, k_B                KEK: k_B
-          ── RQST(ID_A, ID_B) ──→
-                                 產生隨機 k_ses
-                                 y_A = e_{k_A}(k_ses)
-                                 y_B = e_{k_B}(k_ses)
-          ←──── y_A, y_B ────────
-   k_ses = e⁻¹_{k_A}(y_A)
-   y = e_{k_ses}(x)
-          ─────────────────── y, y_B ──────────────────→
-                                                  k_ses = e⁻¹_{k_B}(y_B)
-                                                  x = e⁻¹_{k_ses}(y)
-```
+![簡單的 KDC 協定](images/lecture26_kdc_basic.png)
 
 【口頭】「（Bob 解密那部非法下載的電影，或你們在幹嘛的東西，Facebook 之類。）」
 
@@ -378,11 +348,7 @@ $$k_{ses} = e^{-1}_{k_B}(y_B), \qquad x = e^{-1}_{k_{ses}}(y)$$
 - 他有 $k_A$ → 解出 $y_A$ 得到 $k_{ses}$ → 解出 $y$ 得到明文。
 - 不只昨天的，前天、**去年的**訊息都可以。
 
-```
-   過去 ─────────────────────── │ ──────────────→ 時間
-   （全部都能被解密！）       k_A 外洩
-                              （之後換新金鑰，未來安全）
-```
+![沒有前向保密：過去的通訊都能被解密](images/lecture26_forward_secrecy.png)
 
 【口頭】`[00:49]`「這是很大的普遍問題。**從現在起**，攻擊者繼續用舊金鑰是傻的，因為你更新了。**問題在過去**：如果你**從不換金鑰**，你就有麻煩。」
 
@@ -418,23 +384,7 @@ $$k_{ses} = e^{-1}_{k_B}(y_B), \qquad x = e^{-1}_{k_{ses}}(y)$$
 
 前提：**Oscar 也是合法（但惡意）的使用者**，有自己的 KEK $k_O$。
 
-```
-   Alice                Oscar                   KDC                    Bob
-   KEK: k_A             KEK: k_O                KEK: k_A, k_B, k_O     KEK: k_B
-      ── RQST(ID_A,ID_B) ──→
-                       換掉成
-                           ── RQST(ID_A,ID_O) ──→
-                                                隨機 k_ses
-                                                y_A = e_{k_A}(k_ses)
-                                                y_O = e_{k_O}(k_ses)
-      ←─────────────── y_A, y_O ────────────────
-   k_ses = e⁻¹_{k_A}(y_A)
-   y = e_{k_ses}(x)
-      ──── y, y_O ────→
-                       攔截
-                       k_ses = e⁻¹_{k_O}(y_O)
-                       x = e⁻¹_{k_ses}(y)
-```
+![對 KDC 協定的攻擊](images/lecture26_kdc_attack.png)
 
 - KDC 以為 Alice 要跟 **Oscar** 建會期；Alice 以為 $y_O$ 是 $y_B$。
 - （就算 KDC 在 $y_O$ 前面加上 $ID_O$ 標頭，Oscar 也可以把標頭改成 $ID_B$。）
@@ -451,30 +401,7 @@ $$k_{ses} = e^{-1}_{k_B}(y_B), \qquad x = e^{-1}_{k_{ses}}(y)$$
 - 主要目的其實是電腦網路中的**使用者鑑別**，不只是金鑰分配。
 - **1993 年**標準化為 **RFC 1510**，廣泛使用。KDC 在 Kerberos 裡叫做**鑑別伺服器（authentication server）**。
 
-```
-   Alice                               KDC                            Bob
-   KEK: k_A                            KEK: k_A, k_B                  KEK: k_B
-   產生 nonce r_A
-        ── RQST(ID_A, ID_B, r_A) ──→
-                                       產生隨機 k_ses
-                                       產生有效期限 T
-                                       y_A = e_{k_A}(k_ses, r_A, T, ID_B)
-                                       y_B = e_{k_B}(k_ses, ID_A, T)
-        ←────── y_A, y_B ──────────
-   (k_ses, r'_A, T, ID_B) = e⁻¹_{k_A}(y_A)
-   檢查 r'_A = r_A
-   檢查 ID_B
-   檢查有效期限 T
-   產生時間戳記 T_S
-   y_AB = e_{k_ses}(ID_A, T_S)
-        ───────────────── y_AB, y_B ─────────────────→
-                                         (k_ses, ID_A, T) = e⁻¹_{k_B}(y_B)
-                                         (ID'_A, T_S) = e⁻¹_{k_ses}(y_AB)
-                                         檢查 ID'_A = ID_A
-                                         檢查有效期限 T
-                                         檢查時間戳記 T_S
-        ───────────────── y = e_{k_ses}(x) ──────────→   x = e⁻¹_{k_ses}(y)
-```
+![Kerberos 協定](images/lecture26_kerberos.png)
 
 **怎麼擋攻擊**：
 

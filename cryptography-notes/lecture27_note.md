@@ -57,16 +57,7 @@
 
 **方法二：金鑰傳送**（`[00:05]`）—— 用**公鑰加密**（RSA 或 Elgamal）：
 
-```
-   Alice                              Bob
-                                      產生 (k_pr, k_pub)
-          ←────── k_pub ──────
-   隨機選 k（例如 128 bit）
-   y = e_{k_pub}(k)
-          ─────── y ─────────→
-                                      k = d_{k_pr}(y)
-   之後雙方用 k 做 AES 加解密
-```
+![混合式金鑰傳送](images/lecture27_hybrid_key_transport.png)
 
 - Bob 是**唯一**能解密的人 —— 這就是公鑰密碼的意義。
 - 【口頭】「某種程度上**比 Diffie-Hellman 簡單**，也許更自然。」
@@ -97,14 +88,7 @@
 
 `[00:12]`（教授在中間留了空間，「因為等一下要把 Oscar 放在中間」。）
 
-```
-   Alice                                  Bob
-   a = k_pr,A                             b = k_pr,B
-   A = α^a                                B = α^b
-          ─────────── A ──────────→
-          ←────────── B ───────────
-   k_AB = B^a                             k_AB = A^b
-```
+![Diffie–Hellman 金鑰交換](images/lecture27_dh.png)
 
 【口頭】`[00:13]`「今天我**不寫 mod p**，黑板上的資訊已經夠多，不想讓你們更混亂。當然**所有運算都是 mod p**，p 是大質數，等等等等。」
 
@@ -133,16 +117,7 @@
 - 【口頭】`[00:17]`「Oscar 很**狡猾**。他**不會**把它叫做『Oscar 的公鑰』，他說：**『嘿，我是 Alice 的金鑰。』**」→ 記作 $\tilde{A}$（「A tilde，A 蛇」）。
 - 對稱地在另一邊也做一次：選**另一個**私鑰 $o_2$，造出 $\tilde{B}$。
 
-```
-   Alice                       Oscar                         Bob
-   a,  A = α^a                                               b,  B = α^b
-          ──── A ────→   攔截
-                         Ã = α^{o₁}    ──────── Ã ───────→
-                         B̃ = α^{o₂}    ←─────── B ────────   攔截
-          ←─── B̃ ────
-   k_AO = B̃^a                k_AO = A^{o₂}
-                              k_BO = B^{o₁}                  k_BO = Ã^b
-```
+![中間人攻擊](images/lecture27_mitm.png)
 
 **步驟 2：Alice 算出的金鑰**（`[00:18]`）
 - 【口頭】「**很不愉快的事**發生了。Alice **不再算 $k_{AB}$** 了。」
@@ -199,14 +174,7 @@ $$y = \text{AES}_{k_{AO}}(x)$$
 | **2. 重新加密轉送** | $y' = \text{AES}_{k_{BO}}(x)$，送給 Bob | 【課堂討論】要怎樣轉送才不會被發現？→ 學生答（德文）：「**要再用這把金鑰加密一次。**」<br>【口頭】`[00:30]`「這裡**不能叫 $y$**，因為兩個密文是**不同的 bit 圖樣**，叫 $y'$。」<br>Bob 用 $k_{BO}$ 解密得到 $x$，**一切看起來正常** |
 | **3. 竄改** | 改掉 $x$ 再加密 | 【口頭】`[00:31]`「這是我**特別喜歡**的，因為它**更顯示這有多糟**。」<br>Bob 是**銀行**，Alice 做網路銀行：「請轉 **10 歐元**到 Oscar 的帳戶。」Oscar 改成 **10,000 歐元**，重新加密，銀行收到**假的轉帳（Überweisung）** |
 
-```
-   Alice                     Oscar                              Bob
-   y = AES_{k_AO}(x)
-          ──── y ────→   x = AES⁻¹_{k_AO}(y)    ← 能讀
-                         （可以改 x）
-                         y' = AES_{k_BO}(x)
-                                    ──── y' ────→   x = AES⁻¹_{k_BO}(y')
-```
+![中間人讀取並改寫訊息](images/lecture27_mitm_reading.png)
 
 【口頭】`[00:32]`「從攻擊的角度看，**這很漂亮**。」
 
@@ -309,15 +277,7 @@ $$\boxed{\text{Cert}_A = \left[\,(k_{pub,A},\; ID_A),\;\; \text{sig}_{k_{pr,CA}}
 
 `[00:51]`（課本 p.345–346，「當然是簡化過的，但實務上大致就這樣」）
 
-```
-   Alice                                    CA
-   產生 k_pr,A, k_pub,A
-          ── RQST(k_pub,A, ID_A) ──→
-                                            驗證 ID_A
-                                            s_A = sig_{k_pr,CA}(k_pub,A, ID_A)
-                                            Cert_A = [(k_pub,A, ID_A), s_A]
-          ←──────── Cert_A ─────────
-```
+![使用者自己產生金鑰的憑證申請](images/lecture27_cert_user_keys.png)
 
 【口頭】`[00:52]`
 - CA 有時是**商業公司**，有時是**政府**。
@@ -328,15 +288,7 @@ $$\boxed{\text{Cert}_A = \left[\,(k_{pub,A},\; ID_A),\;\; \text{sig}_{k_{pr,CA}}
 - 第一次傳送**很關鍵**：$(k_{pub,A}, ID_A)$ 必須經過**鑑別的通道**送出，否則 Oscar 可以**冒 Alice 的名**申請憑證。
 - 另一種做法：**CA 幫使用者產生金鑰對**：
 
-```
-   Alice                                    CA
-          ──────── RQST(ID_A) ──────→
-                                            驗證 ID_A
-                                            產生 k_pr,A, k_pub,A
-                                            s_A = sig_{k_pr,CA}(k_pub,A, ID_A)
-                                            Cert_A = [(k_pub,A, ID_A), s_A]
-          ←───── Cert_A, k_pr,A ─────
-```
+![CA 產生金鑰的憑證申請](images/lecture27_cert_ca_keys.png)
 
   第二次傳送裡有**私鑰**，所以不只要鑑別、還要**安全通道**。實務上可能是**郵寄光碟**。
 - 註：MAC 原則上也能鑑別公鑰，但 MAC 金鑰又需要安全通道分配。
@@ -345,17 +297,7 @@ $$\boxed{\text{Cert}_A = \left[\,(k_{pub,A},\; ID_A),\;\; \text{sig}_{k_{pr,CA}}
 
 `[00:54]`
 
-```
-   Alice                                       Bob
-   a = k_pr,A,  A = α^a                        b = k_pr,B,  B = α^b
-   Cert_A = [(A, ID_A), s_A]                   Cert_B = [(B, ID_B), s_B]
-          ──────────── Cert_A ────────────→
-          ←─────────── Cert_B ─────────────
-   驗證憑證：                                   驗證憑證：
-   ver_{k_pub,CA}(Cert_B)                      ver_{k_pub,CA}(Cert_A)
-   算會期金鑰：                                 算會期金鑰：
-   k_AB = B^a                                  k_AB = A^b
-```
+![有憑證的 Diffie–Hellman](images/lecture27_dh_with_certs.png)
 
 【課堂討論】`[00:56]` Bob 收到 Alice 的憑證，做 Diffie-Hellman 之前**第一件事**是什麼？「**一個動詞**，我在等。」「憑證就只是**公鑰加上數位簽章**，收到數位簽章要做什麼？」→ **驗證**。
 
@@ -450,13 +392,7 @@ Alice 也一樣：用 **CA 的公鑰**驗證 $\text{Cert}_B$，再算 $k_{AB} = 
 **做法：CA 互相認證。**
 例：Alice 的憑證由 CA1 發、Bob 的由 CA2 發。Alice 只有 $k_{pub,CA1}$。
 
-```
-   Alice                                   CA2
-          ────── RQST(Cert_CA2) ─────→
-          ←──────── Cert_CA2 ────────
-   ver_{k_pub,CA1}(Cert_CA2)  ⇒  k_pub,CA2 有效
-   ver_{k_pub,CA2}(Cert_B)    ⇒  k_pub,B 有效
-```
+![交叉驗證憑證](images/lecture27_cross_cert.png)
 
 $$\text{Cert}_{CA2} = \left[(k_{pub,CA2}, ID_{CA2}),\; \text{sig}_{k_{pr,CA1}}(k_{pub,CA2}, ID_{CA2})\right]$$
 
