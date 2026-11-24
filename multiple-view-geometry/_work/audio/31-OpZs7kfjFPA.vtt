@@ -1,0 +1,1247 @@
+WEBVTT
+
+00:00.000 --> 00:04.640
+Hello everyone, welcome to the lecture on 3D computer vision and today we are going to talk
+
+00:04.640 --> 00:10.320
+about 2-view and multi-view stereo. Hopefully by the end of today's lecture you'll be able to do
+
+00:10.320 --> 00:16.080
+stereo rectification and correspondence search along the scanlines to get the disparity map
+
+00:16.080 --> 00:21.920
+in the 2-view stereo and then we'll look at how to compute the dead values from this disparity map.
+
+00:22.480 --> 00:28.480
+Next, we'll look at the scanline optimization algorithm and the semi-global matching algorithm
+
+00:28.480 --> 00:35.920
+to enforce the global consistency on the disparity map for the 2-view stereo. Finally,
+
+00:35.920 --> 00:42.000
+we'll look at the plane sweeping algorithm to perform multiple view stereo to obtain the dense
+
+00:42.000 --> 00:47.200
+3D reconstruction. And of course I didn't invent any of today's material. I took most of the
+
+00:47.200 --> 00:53.200
+content from these two lectures at UIUC and University of Toronto. You may follow these
+
+00:53.200 --> 01:00.880
+four links to obtain the original slides in these two lectures. I followed the CVPR 2007 paper
+
+01:01.520 --> 01:08.400
+on the plane sweeping stereo algorithm for multiple view reconstruction. And finally,
+
+01:08.400 --> 01:13.440
+if you are interested, I will strongly encourage you to look at this tutorial written by Yasu
+
+01:13.440 --> 01:20.160
+Furugawa in the year 2015. It's a very comprehensive tutorial on multiple view
+
+01:20.160 --> 01:29.760
+stereo. You can obtain this tutorial for free online. Now suppose that we are given two images
+
+01:29.760 --> 01:39.120
+which we denote as the left image I L and the right image I R. And we assume that these two
+
+01:39.120 --> 01:47.280
+images have a very large overlapping field of view and we know the relative transformation denoted by
+
+01:47.840 --> 01:54.720
+a rotation matrix and a translation vector between these two images. We further know the camera
+
+01:54.720 --> 02:04.000
+intrinsic values which we denote as K and K' for these two cameras that which we use to obtain the
+
+02:04.000 --> 02:11.840
+left and the right images respectively. The objective of two view stereo is to recover the
+
+02:11.840 --> 02:22.640
+dense 3D point cloud from these two images as well as the information that is given to us
+
+02:22.640 --> 02:29.280
+earlier on. And we'll see in this lecture that an intermediate step to get the dense 3D point cloud
+
+02:29.280 --> 02:39.520
+would be to get what we call the disparity map and this is also equivalent to the depth map.
+
+02:40.480 --> 02:47.200
+And it is interesting to note that stereo vision plays a very important part in most of the
+
+02:47.200 --> 02:54.720
+biological life system in this world and in particular we can see that it's very important
+
+02:54.720 --> 03:04.320
+for the evolution of human being because given a pair of eye we are able to sense the depth in the
+
+03:04.720 --> 03:12.400
+3D environment and this gives us the ability to navigate safely to prevent us from incurring any
+
+03:12.400 --> 03:20.320
+injuries within this environment and this is a very big importance for our evolution. We can
+
+03:20.320 --> 03:28.160
+also see that stereo vision it also uses recreational purposes where as early as 1833 the
+
+03:28.160 --> 03:35.760
+stereogram was invented by this guy over here Sir Charles Wheatstone. So basically what he did was
+
+03:35.760 --> 03:44.400
+to mount two cameras that are very closely mounted together on a rigid rig and images of these two
+
+03:44.400 --> 03:50.560
+cameras were taken at the same time and we can see that because there is a shift in this camera
+
+03:50.560 --> 03:57.600
+location this means that the point on the left image might appear to be slightly shifted on the
+
+03:57.600 --> 04:06.880
+right image for example this here it's on a location of x and y and this particular
+
+04:06.880 --> 04:14.000
+pixel on the right image that corresponds to this left image would be occurring at a location of x
+
+04:14.000 --> 04:22.080
+prime and y prime and we know that since they are both taken at the same time and of the same scene
+
+04:22.080 --> 04:26.160
+what it means here is that if we know the relative transformation between these two
+
+04:26.880 --> 04:35.360
+camera we'll be able to do triangulation to get the exact 3d point of this but in this particular
+
+04:35.920 --> 04:43.040
+stereogram what this guy designed was a special eyeglass where when you look at this particular
+
+04:43.040 --> 04:50.080
+eyeglass it will give you the sense of a depth based on the principle that any two corresponding
+
+04:50.080 --> 04:56.400
+pixels over here in this pair of stereo image is actually offset by a certain amount and we can
+
+04:56.400 --> 05:06.080
+see that interestingly this stereogram evolves to what we know as the 3d movie in today's
+
+05:06.080 --> 05:12.400
+entertainment industry so if you have ever been to watch a 3d movie you'll be given a pair of these
+
+05:12.400 --> 05:17.680
+glasses over here where you'll put on this particular glass and look at the big screen
+
+05:17.680 --> 05:23.600
+the big screen actually looks something like this where the disparity between the two pixels
+
+05:23.600 --> 05:28.720
+that's what i have mentioned earlier on because there is a slight shift between these two pixels
+
+05:28.720 --> 05:34.960
+on the left and right image if i were to put the two images or superimpose the two images together
+
+05:34.960 --> 05:42.640
+i'll see that that is a slight disparity for example we can see here that this point over here
+
+05:42.640 --> 05:48.400
+actually it's from the left image and this which corresponds to this point over here that is in the
+
+05:49.120 --> 05:54.880
+right image for example and by superimposing these two images together and we color the disparity
+
+05:54.880 --> 05:59.920
+between the left and right images with two different colors over here in this example
+
+05:59.920 --> 06:06.240
+over here is a red and blue we can see that by looking at a superposition of the left and right
+
+06:06.240 --> 06:13.440
+images through this particular glasses over here we will be able to obtain a sense of depth
+
+06:13.440 --> 06:20.480
+more mathematically we actually have learned the basic concepts of the two view stereo or how to
+
+06:20.480 --> 06:26.800
+obtain depth from two views when we look at the mathematics of the epipolar geometry in the
+
+06:26.800 --> 06:33.600
+previous lecture so essentially what this means is that given two images which we denote as i
+
+06:33.600 --> 06:39.280
+l and i r over here which is one is the left image and one is the right image as defined
+
+06:39.280 --> 06:46.640
+earlier on and in this particular case in the two view geometry case we are given the relative
+
+06:46.640 --> 06:51.120
+transformation which is the rotation and translation and essentially what this means is
+
+06:51.120 --> 06:56.880
+that we will be able to get the essential matrix as well as the camera projection matrix p and
+
+06:56.880 --> 07:04.080
+p prime and we know from the earlier lecture when we learned about two view geometry in particular
+
+07:04.080 --> 07:10.560
+the epipolar geometry well after we are given the two camera projection matrix which is p and p
+
+07:10.560 --> 07:17.120
+prime we'll be able to do the linear triangulation from pairs of image correspondences between these
+
+07:17.120 --> 07:25.360
+two views in order to get the 3d point in the 3d scene and this is all up to a certain scale
+
+07:25.360 --> 07:30.800
+in the case where we obtain the relative transformation from the computed essential
+
+07:30.800 --> 07:36.880
+matrix but in today's lecture we'll see that if we are given the rotation and translation where
+
+07:36.880 --> 07:43.360
+the translation vector it's with a absolute scale that we know the exact translation between the two
+
+07:43.360 --> 07:49.200
+camera centers using the same form of linear triangulation algorithm we'll be able to do
+
+07:49.200 --> 07:56.800
+triangulation and obtain the 3d point which is in matrix scale and now we can define the problem
+
+07:56.800 --> 08:03.120
+formally as suppose that we are given two cameras with a known baseline rotation and translation
+
+08:03.920 --> 08:12.160
+and they are rigidly fixed onto a rig here's an example of the stereo camera it's a bumblebee
+
+08:12.960 --> 08:19.840
+two fire wire camera which can be purchased off the shelf so here in this particular casing
+
+08:19.840 --> 08:27.120
+over here we can see that there are two cameras that are rigidly mounted onto a rig this
+
+08:27.120 --> 08:36.320
+casing over here it's a rigid rig where the two cameras are seated in this particular rig so
+
+08:36.320 --> 08:44.800
+before this rig is sold to the consumer the manufacturer actually did some calibration
+
+08:44.800 --> 08:50.400
+we will see this actual step of the calibration which we know as the stereo rectification and
+
+08:50.400 --> 08:57.520
+calibration later in this this lecture and now suppose that after the manufacturer has
+
+08:57.520 --> 09:03.920
+manufactured this particular stereo camera we will know exactly what is the relative transformation
+
+09:03.920 --> 09:10.720
+the rotation and translation between these two cameras mounted rigidly onto this stereo rig
+
+09:10.720 --> 09:16.160
+as well as the camera intrinsics of these two camera which we denote as k and k prime after
+
+09:16.160 --> 09:25.360
+the camera calibration process the problem of two view stereo is to find the depth map which gives
+
+09:25.360 --> 09:30.880
+us the dense 3d points of the scene so what i meant by that map here is that uh well the objective
+
+09:30.880 --> 09:37.040
+is that suppose that image one is taken by the left camera over here and image two is taken by
+
+09:37.040 --> 09:44.160
+the right camera over here what we are interested in is that given these two images as well as
+
+09:44.160 --> 09:51.280
+relative transformation the intrinsic values of the camera we want to recover for every pixel
+
+09:52.000 --> 09:58.960
+on the reference view so we can choose either the left image as the reference view or the right
+
+09:58.960 --> 10:05.920
+image as the reference view it doesn't matter but in most cases it's conveniently chosen left image
+
+10:05.920 --> 10:13.840
+as the reference image so suppose that we choose the left image as our reference image the dense
+
+10:13.840 --> 10:22.240
+that map simply refers to for every pixel in this reference image we want to get the depth value
+
+10:22.240 --> 10:29.360
+of this particular pixel for every one of the pixel in the reference image and this is an
+
+10:29.360 --> 10:38.560
+example of the depth map that we see the brighter the pixel it means that the closer the object is
+
+10:38.560 --> 10:43.680
+to the camera so here we can see that this brightness over here and what it means is that
+
+10:43.680 --> 10:49.200
+the 3d object that corresponds to this particular pixel in the reference image which is the grass
+
+10:49.200 --> 10:57.520
+patch over here it's actually much closer to the camera as compared to for example a darker
+
+10:57.520 --> 11:02.800
+pixel that is shown in the depth map over here which corresponds to the 3d object in the scene
+
+11:03.440 --> 11:10.080
+that projects to this particular pixel over here now in comparison with the two view geometry case
+
+11:10.080 --> 11:16.320
+that we have looked at when we studied the epipolar geometry in that particular case what we are
+
+11:16.320 --> 11:23.200
+interested in is just to get a sparse set of correspondences and then once we compute the
+
+11:23.200 --> 11:30.800
+essential matrix the all the fundamental matrix and recover the camera projection matrices p and
+
+11:30.800 --> 11:37.200
+p prime we are only interested in doing a triangulation of this sparse set of correspondences
+
+11:37.200 --> 11:43.840
+and in that case it's easier because we will just stick to these sparse sets of correspondences of
+
+11:43.840 --> 11:50.640
+the image correspondences that we use to compute the essential matrix and as well as the camera
+
+11:50.640 --> 11:55.520
+projection matrix so what this means is that we'll just make use all these sparse image
+
+11:55.520 --> 12:00.320
+correspondences and together with the camera projection matrices and we'll do a linear
+
+12:00.320 --> 12:07.360
+triangulation to give us the 3d point in the scene in the case of a two view stereo which is what
+
+12:07.360 --> 12:12.320
+we are looking at right now as i have mentioned earlier on we want to obtain a dense depth map
+
+12:12.320 --> 12:19.440
+that means that for every pixel in the reference image we want to do a linear triangulation
+
+12:20.080 --> 12:26.400
+on this particular pixel to get the 3d points that corresponds to this particular pixel here
+
+12:26.400 --> 12:32.640
+and what it means here is that for every pixel in the reference image we would have to find the
+
+12:32.640 --> 12:40.400
+correspondence pixel in the right image and this is not trivial because a naive way of doing this
+
+12:40.400 --> 12:49.280
+will lead to a very computationally expensive result so one naive way of looking at this would
+
+12:49.280 --> 12:55.920
+be suppose that in the reference image which is the left image as shown in this figure over here
+
+12:56.720 --> 13:03.360
+we are interested to find the depth of just one pixel in the reference view because we know the
+
+13:03.360 --> 13:09.600
+relative transformation the relative rotation and translation for this particular pair of images over
+
+13:09.600 --> 13:15.840
+here and what this means is that we would be able to compute the fundamental matrix because
+
+13:15.840 --> 13:21.680
+not forgetting that we are also given the camera intrinsic value denoted by k and k prime over here
+
+13:21.680 --> 13:28.720
+together with this we can recover essential matrix as well as applying this camera intrinsic onto the
+
+13:28.720 --> 13:35.040
+essential matrix we'll be able to recover the fundamental matrix and from here we'll be able
+
+13:35.040 --> 13:41.600
+to compute the epipolar line which we denote as l prime over here so l prime is given by f multiplied
+
+13:41.600 --> 13:49.280
+by x which is the coordinates of this particular pixel on the reference image once we compute the
+
+13:49.280 --> 13:56.240
+epipolar line which is shown by this blue line over here on the right image the next thing for
+
+13:56.880 --> 14:05.520
+stereo matching would be to slide the window across this particular epipolar line and we'll
+
+14:05.520 --> 14:13.440
+find the correspondence of this particular pixel over here x with respect to the right image over
+
+14:13.440 --> 14:20.000
+here along the epipolar line and once we have picked the best match which means that based on
+
+14:20.000 --> 14:27.760
+the visual appearance we want to choose a pair of it where the two patches of the left and right
+
+14:27.760 --> 14:34.960
+images that corresponds to x and the other one would be on the epipolar line on the right image
+
+14:34.960 --> 14:41.200
+based on the appearance they must be the most similar and so once we have the closest image
+
+14:41.200 --> 14:47.520
+patch in terms of a visual appearance we'll do a triangulation based on the camera projection
+
+14:47.520 --> 14:52.800
+matrices that we have obtained from the camera intrinsics as well as the relative
+
+14:54.080 --> 15:00.640
+translation and rotation between the two images to get the depth value because when we do a
+
+15:00.640 --> 15:07.600
+triangulation linear triangulation of these two we'll be able to get the 3d point which we denote
+
+15:07.600 --> 15:14.320
+as x over here and as well as the depth value which is z with respect to the reference camera
+
+15:15.040 --> 15:21.760
+coordinate frame and once we get this z value here this means that we have obtained the depth value
+
+15:21.760 --> 15:29.600
+for this particular pixel over here and in the simplest case of course is we know that the
+
+15:29.600 --> 15:35.440
+epipolar line it's the corresponding scan line what this means is that if i have a point here
+
+15:35.440 --> 15:41.200
+which we denote as x that we have defined earlier on and we compute the the epipolar line that
+
+15:41.200 --> 15:47.280
+corresponds to this particular x over here this particular pixel on the reference view the
+
+15:47.280 --> 15:54.080
+simplest case would be that the epipolar line which we denote as l over here it's aligned with
+
+15:54.080 --> 16:00.800
+the epipolar line which we denote as l on the reference view so what this means is that we can
+
+16:00.800 --> 16:10.400
+simply just ignore the computation of the epipolar line and take this particular pixel here the patch
+
+16:10.400 --> 16:16.000
+over here and slide it over this particular scan line which is of the same height this means that
+
+16:16.000 --> 16:24.240
+it has the same y value suppose that we denote the image coordinate as x axis and y axis over here
+
+16:24.240 --> 16:32.560
+so this means that the y value of the reference image is the same as the y value of the right
+
+16:32.560 --> 16:39.360
+image and what we can just conveniently take this particular patch over here and slide it along the
+
+16:39.360 --> 16:46.400
+same y value and check for the patch that is visually most similar to the patch from our
+
+16:46.400 --> 16:53.760
+reference view and notice the difference over here in the general case where we know that this
+
+16:53.760 --> 17:01.520
+is not true where the the epipolar line does not correspond well in the two views so suppose that
+
+17:01.520 --> 17:07.120
+in this particular case here where we have generally a rotation and translation over here
+
+17:07.120 --> 17:12.480
+and we know that this particular point can project to any point on the epipolar line
+
+17:13.440 --> 17:20.640
+on the right image over here so in this particular case we can't do this what it means is that
+
+17:21.280 --> 17:27.840
+it would be more computationally expensive in order to find the dense correspondences of every
+
+17:27.840 --> 17:34.480
+pixel in the reference view because this simply means that for every pixel on the reference view
+
+17:34.480 --> 17:39.840
+what we need to do would be to compute the epipolar line for every pixel and
+
+17:39.840 --> 17:47.360
+recall that in our lecture in epipolar line or in the two view geometry that every particular
+
+17:47.360 --> 17:56.640
+pixel on the left image would be cast as a different unique epipolar line on the second
+
+17:57.360 --> 18:02.240
+image over here in the general case this means that for every pixel we have to compute the
+
+18:02.240 --> 18:07.600
+epipolar line and start searching along this particular epipolar line which means that this
+
+18:07.600 --> 18:13.280
+is going to be more computationally expensive compared to this case over here where we know
+
+18:13.280 --> 18:18.960
+that the epipolar line corresponds to the scan line and this simply means that the two epipolar
+
+18:18.960 --> 18:26.960
+lines on the reference view and the right image they align with each other according to the
+
+18:26.960 --> 18:36.720
+y-axis of the image and this brings us to two cases of the epipolar geometry in the first case
+
+18:36.720 --> 18:43.120
+where the two epipolar lines are aligned from our knowledge in the two view geometry that we
+
+18:43.120 --> 18:49.920
+have learned in the previous lecture we know that this can happen when there is a pure translation
+
+18:50.640 --> 18:55.520
+between the two cameras that means that the relative transformation of these two cameras
+
+18:55.520 --> 19:01.680
+are given by a rotation equals to identity what this means is that the two cameras would have
+
+19:01.680 --> 19:08.720
+their principal axis parallel to each other so these two parallel principal axis of the
+
+19:08.720 --> 19:15.600
+two cameras the left and the right images they must be parallel to each other in order for the
+
+19:15.600 --> 19:23.040
+rotation matrix to be identity and in order for the epipolar lines of the left and right image
+
+19:23.040 --> 19:30.560
+to be aligned with each other this means that as we have defined earlier on that we assign a
+
+19:31.600 --> 19:38.480
+axis to the image let's say we call the columns of the image x axis and the rows of the image
+
+19:38.480 --> 19:44.720
+y-axis what this means is that in order for the two points the corresponding point or the two
+
+19:44.720 --> 19:52.960
+epipolar lines to be aligned with each other the height in the y direction of the two epipolar
+
+19:52.960 --> 20:01.120
+lines they must be equal so what this means is that the relative translation in the y direction
+
+20:01.120 --> 20:08.400
+which we can see from this axis over here would be zero because the two epipolar lines are aligned
+
+20:08.400 --> 20:14.640
+with each other over here and there's only a difference between the relative translation in
+
+20:14.640 --> 20:20.480
+the x-axis what this means here is that suppose that the x coordinate over here in the left image
+
+20:20.480 --> 20:28.000
+which we denote as x and the x-axis coordinates over here which we denote as x prime the relative
+
+20:28.000 --> 20:35.360
+translation between these two this means that x minus x prime would be equals to t this is the
+
+20:35.360 --> 20:42.080
+relative translation in the x-axis given by these two coordinates over here and of course since the
+
+20:42.080 --> 20:48.880
+two image planes are aligned with each other the relative translation in the z axis would also be
+
+20:48.880 --> 20:55.120
+zero and this would be the efficient case that we have seen earlier on because what this simply
+
+20:55.120 --> 21:01.040
+means is that for every pixel in the reference view in the left image we just simply need to
+
+21:01.040 --> 21:07.120
+slide it along the same scan line in the right image to search for the image correspondences
+
+21:07.120 --> 21:15.680
+in the right image and in the general case which we will also look at later that we know that
+
+21:15.680 --> 21:22.480
+the relative transformation could be anything it could be generally be denoted by a relative
+
+21:22.480 --> 21:28.720
+rotation r and a relative translation over here so in this particular case over here
+
+21:28.720 --> 21:34.800
+the naive way of doing this would be for image pixel in the reference view which is the left
+
+21:34.800 --> 21:41.280
+image over here we need to first compute the fundamental matrix from the essential
+
+21:41.280 --> 21:48.080
+matrix as well as the camera intrinsic value of the two images then we need to compute the
+
+21:48.080 --> 21:54.160
+epipolar line corresponding to the one of the pixel in the left image which we denote as l
+
+21:54.160 --> 22:00.480
+prime over here it is given by f multiplied by x and the image correspondence that corresponds to
+
+22:00.480 --> 22:06.320
+this particular pixel x over here on the right image we have to search for it by sliding a window
+
+22:07.440 --> 22:15.200
+along the epipolar line and search for the patch where it has the closest visual appearance to this
+
+22:15.200 --> 22:21.760
+particular patch in the reference view and this is computationally expensive we'll see that we can
+
+22:21.760 --> 22:28.960
+actually transform this particular setting into this setting by doing what we call the
+
+22:29.680 --> 22:40.080
+stereo rectification so in the simplest case the as i mentioned earlier on that the the epipolar
+
+22:40.080 --> 22:46.000
+lines of the two views they align with each other or they will simply say that they align
+
+22:46.320 --> 22:53.760
+uh at the same scan line and in these cases the camera center are of the same height this
+
+22:53.760 --> 23:02.160
+means that uh what i meant uh early early on it would be that this is sine x and y axis they are
+
+23:02.160 --> 23:08.800
+of the same height where they are at the same row of the the image for example given a point over
+
+23:08.800 --> 23:14.560
+here which you denote as x the corresponding point x prime over here it would be anywhere along
+
+23:14.560 --> 23:24.960
+this particular row the same row of the reference image and they would also have a same focal length
+
+23:24.960 --> 23:33.520
+this means that the z value of this relative translation would be zero as a result we we have
+
+23:33.520 --> 23:41.360
+seen earlier on that the epipolar line will fall along the same horizontal scan line so when these
+
+23:41.360 --> 23:49.680
+two epipolar lines coincides or sits at the same row of the with respect to the reference frame
+
+23:50.240 --> 23:59.200
+we say that they fall in along the horizontal scan line of the image we can see this from the
+
+23:59.200 --> 24:06.400
+mathematics of the epipolar geometry that we have learned in the earlier lecture now we know that
+
+24:06.960 --> 24:13.600
+the epipolar constraint is given by this equation over here this is the equation that we have seen
+
+24:13.600 --> 24:21.120
+in our lecture on two view geometry where x prime transpose multiplied by the essential matrix
+
+24:21.760 --> 24:28.320
+and x equals to zero so we know that also from the earlier lecture that the essential matrix
+
+24:28.320 --> 24:35.200
+can be decomposed into the cross product of the translation vector and the rotation matrix hence
+
+24:35.200 --> 24:40.640
+we can replace the essential matrix in this epipolar constraint over here with the translation
+
+24:40.640 --> 24:48.240
+and rotation and since we know in this particular special case over here where the epipolar lines
+
+24:48.240 --> 24:56.800
+of the two images are aligned as well as the principal axis of the two image are parallel to
+
+24:56.800 --> 25:03.280
+each other so this means that the relative rotation matrix between the two views which is
+
+25:03.280 --> 25:10.320
+the relative rotation and translation is between the two view is given by identity and t zero zero
+
+25:10.320 --> 25:18.080
+so t as i have mentioned earlier on would be the difference between x and x prime over here in the
+
+25:18.640 --> 25:28.560
+in the x coordinate axis so x minus x prime would be giving us t over here and we can plug this
+
+25:28.560 --> 25:33.680
+two value r and t back into the essential matrix that we have defined earlier on
+
+25:33.680 --> 25:39.600
+to get this particular three by three essential matrix over here so we can see that it has a
+
+25:39.600 --> 25:46.800
+special structure where only two entries in this particular three by three matrix have a non-zero
+
+25:46.800 --> 25:53.840
+value and by plugging this three by three matrix back into the epipolar constraint that we have
+
+25:53.840 --> 26:01.440
+seen earlier on we can define this particular constraint over here which evaluates to t
+
+26:02.000 --> 26:10.160
+multiplied by v prime equals to t multiplied by v over here t because it's a scalar value it can
+
+26:10.160 --> 26:17.440
+be cancelled away so what this means is that v prime and v they are equal and this simply means
+
+26:17.440 --> 26:25.120
+that because v here represents the y axis of the image so what this simply means is that by simply
+
+26:25.120 --> 26:30.880
+working out the epipolar constraint we can show that when the relative translation and rotation
+
+26:30.880 --> 26:39.280
+follows this relation over here the y coordinates of the two images are simply aligned and hence
+
+26:39.280 --> 26:46.640
+the epipolar line of the two images are also aligned along the same horizontal scan line
+
+26:46.640 --> 26:52.640
+because we know that the two epipolar line are aligned with each other so what this means is that
+
+26:52.640 --> 27:00.240
+given a image pixel from the reference view it actually projects or it actually transfer
+
+27:00.960 --> 27:09.040
+to a epipolar line on the second view l prime which is a line at the same row of the reference
+
+27:10.000 --> 27:16.800
+image point in the left image over here and this means that if we were to back project
+
+27:16.800 --> 27:23.360
+a light ray from this particular reference point in the left image we can see that the
+
+27:23.360 --> 27:30.800
+3d point can lie anywhere on this particular image and hence if we were to project this
+
+27:31.440 --> 27:37.200
+line this light ray that is back projected on from the left image onto the right image
+
+27:37.200 --> 27:43.760
+we can see that it's going to project onto the epipolar line where this epipolar line is aligned
+
+27:43.760 --> 27:51.040
+with the height of this particular reference image point over here and similarly if we were to
+
+27:51.760 --> 27:59.200
+take a back projection of the corresponding point in the right view and project the light ray over
+
+27:59.200 --> 28:05.920
+here onto this reference view we'll get the epipolar line which we denote by l over here
+
+28:05.920 --> 28:11.840
+and we will see that the two epipolar lines actually align with each other on the scan line
+
+28:11.840 --> 28:17.360
+this is simply because the relative transformation between the two views is given by r equals to
+
+28:17.360 --> 28:30.640
+identity as well as t is equals to t0 and 0. Another observation which we will see the
+
+28:30.640 --> 28:38.240
+mathematical proof later is that we know that as i have mentioned earlier on that we can search for
+
+28:38.240 --> 28:44.880
+the image correspondence the match of the image correspondence of x on the scan line in this
+
+28:44.880 --> 28:49.280
+particular special case over here on the right image plane what this means is that we are going
+
+28:49.280 --> 28:55.040
+to slide a window along this epipolar line on the right image plane and search for the patch
+
+28:55.040 --> 29:01.040
+which has the highest similarity at this particular location that corresponds to the image
+
+29:01.040 --> 29:07.680
+point in the left image over here and one interesting observation is that we do not need to
+
+29:08.240 --> 29:14.640
+search along the whole scan line because if we know that this particular point here is the
+
+29:14.640 --> 29:24.160
+actual correspondence to this particular image point over here we will see that x minus x prime
+
+29:24.160 --> 29:30.800
+which is the x coordinate so suppose that we denote this as x axis and y axis as i mentioned
+
+29:30.800 --> 29:37.680
+earlier on and this x coordinate is given by x and x prime so we can see that we do not need to
+
+29:37.680 --> 29:46.720
+search through the whole scan line because x minus x should always be more than zero it cannot be the
+
+29:46.720 --> 29:54.320
+case where this is less than zero or this it's a negative value because we will see later on
+
+29:54.960 --> 30:03.200
+in our derivation of the how to obtain the that value from the disparity so the difference between
+
+30:03.200 --> 30:09.600
+x and x prime over here is what we call the disparity value which we will need to first
+
+30:09.600 --> 30:18.080
+obtain from the comparison of the image patches or in other words the search for the image
+
+30:18.080 --> 30:26.560
+correspondences for the dense image correspondences of every pixel in the reference view to the right
+
+30:26.560 --> 30:33.200
+image plane so this means that for every pixel over here if we are able to find the correspondence
+
+30:33.200 --> 30:38.640
+will be in the right image we'll be able to compute this value and record it down in this
+
+30:38.640 --> 30:46.080
+particular data structure which we call the disparity map so essentially every value in
+
+30:46.080 --> 30:55.840
+this disparity map contains x minus x prime and this value it's obtained from the sliding a patch
+
+30:55.840 --> 31:02.240
+over here in the left image across the scan line or the epipolar line on the right image and then
+
+31:02.240 --> 31:08.960
+once we get the patch with the highest visual similarity with the patch in the reference view
+
+31:08.960 --> 31:15.120
+we'll simply compute x minus x prime and store it in a table of the disparity map and we will
+
+31:15.120 --> 31:20.400
+see that this particular location over here we need not search through the whole epipolar line
+
+31:20.400 --> 31:27.600
+because we know that this disparity value cannot be less than zero otherwise what this means is
+
+31:27.600 --> 31:33.520
+that if it is less than zero then we might end up with a case where we have negative depth negative
+
+31:33.520 --> 31:41.040
+z value and this negative z value simply means that any image correspondences in this region
+
+31:41.040 --> 31:46.640
+over here would mean that the triangulation would end up to have a point behind the camera
+
+31:46.640 --> 31:52.640
+and this is not what we want because we know that we are always looking in front of the camera
+
+31:53.520 --> 32:00.560
+and in the case of the two images are non-parallel what this means is that if we are given
+
+32:00.560 --> 32:09.680
+two images or two camera settings that are fixed rigidly onto a rig and we know after calibration
+
+32:09.680 --> 32:15.200
+that this the relative transformation between these two is in general rotation and translation
+
+32:15.200 --> 32:20.640
+where rotation need not be equals to identity and translation need not be equals to t00
+
+32:21.200 --> 32:26.640
+in this particular case what we can do here is that we can do a process which we call
+
+32:26.640 --> 32:36.320
+stereo ratification stereo ratification to mathematically align these two images into
+
+32:36.320 --> 32:44.560
+the parallel form where every epipolar line falls on the same horizontal line or the horizontal
+
+32:44.560 --> 32:51.280
+scan line and in order to do this we will have to go through a two-step process the first step
+
+32:51.280 --> 32:58.560
+would of course be the stereo calibration so we'll first treat the two images from the two different
+
+32:58.560 --> 33:06.320
+cameras mounted on a rigid rig as two separate cameras and we'll first take a checkerboard
+
+33:06.880 --> 33:11.440
+which is what we have learned in the earlier lecture on camera calibration
+
+33:11.440 --> 33:16.160
+so we'll take a checkerboard and move it around in front of these two cameras
+
+33:16.160 --> 33:22.880
+then what we can do is that we can perform the intrinsic calibration respectively on the
+
+33:22.880 --> 33:29.680
+individual left and right cameras so by doing this particular calibration we'll get the camera
+
+33:29.680 --> 33:37.200
+intrinsic which is k and k prime so here here notice that it's unlikely to happen that two
+
+33:37.200 --> 33:44.640
+cameras even though they might be the same model from the same manufacturer it's quite unlikely
+
+33:44.640 --> 33:51.280
+that they will have the same camera intrinsic value so we need to first obtain k and k prime
+
+33:51.280 --> 33:57.920
+from the camera calibration using the checkerboard and of course we also need to figure out the
+
+33:57.920 --> 34:04.080
+distortion parameters as we have mentioned earlier on in the earlier lectures these are the tangential
+
+34:04.080 --> 34:10.160
+and the radial distortion parameters altogether there are five parameters that we need to obtain
+
+34:10.160 --> 34:18.080
+from here each from the respective left and right cameras so we can do this using the checkerboard
+
+34:18.080 --> 34:24.800
+calibration the junction use method that we have that we have discussed earlier on in our earlier
+
+34:24.800 --> 34:31.360
+lecture then the next thing that we have to do would be after we get the intrinsic parameters
+
+34:31.360 --> 34:38.400
+we can undistort the image because if the cameras in most cases these cameras would be made out of
+
+34:39.680 --> 34:47.360
+real lens well which is which has a to a certain extent radial and tangential distortion so we
+
+34:47.360 --> 34:53.120
+have seen in the earlier lecture that it will appear something like this where it's not exactly
+
+34:53.120 --> 35:00.160
+squarish pixel but it will appear to be radial in the image pixel and we can apply
+
+35:00.800 --> 35:07.840
+the undistortion the distortion parameters to undistort this image into something that
+
+35:07.840 --> 35:17.200
+looks like this where now the pixel appears to be in regular squarish or rectangular shapes
+
+35:17.200 --> 35:23.760
+and once we have undistorted the image we can use the undistorted image pair between the left
+
+35:23.760 --> 35:33.040
+and right camera to compute the essential matrix so this is easy this is simply by computing a set
+
+35:33.040 --> 35:39.840
+of sparse correspondences between the two left and right images and then from here we get the
+
+35:39.840 --> 35:47.760
+correspondence we'll run a RANSAC based eight-point algorithm this is what we have seen
+
+35:47.760 --> 35:54.000
+earlier on in our lecture on two-view geometry to compute the essential matrix and once we have
+
+35:54.000 --> 35:59.120
+computed the essential matrix note that in this case we get the essential matrix because instead
+
+35:59.120 --> 36:05.120
+of the fundamental matrix this is because we already have the camera intrinsic value from our
+
+36:05.120 --> 36:11.360
+calibration process in the first step and another reason why it's better to get the
+
+36:12.400 --> 36:15.920
+essential matrix instead of the fundamental matrix is that because
+
+36:16.480 --> 36:22.400
+recall that in our earlier lectures that for fundamental matrix is subjected to projective
+
+36:22.400 --> 36:28.800
+ambiguity this is because the intrinsic values are taken to be unknown in that kind of setting
+
+36:28.800 --> 36:34.960
+but in the context of a stereo vision we know the intrinsic values already from calibration
+
+36:34.960 --> 36:42.160
+so we can avoid the problem of the projective ambiguity completely by computing the essential
+
+36:42.160 --> 36:48.640
+matrix and once we get this essential matrix we know how to decompose it into the relative
+
+36:48.640 --> 36:55.280
+translation and rotation value we saw in the earlier lecture that we can decompose this into
+
+36:56.000 --> 37:04.080
+four solutions where only one of the solution would have a point that appears to be front of
+
+37:04.080 --> 37:10.720
+the camera so we can use one additional point to check for this and another thing is that we saw
+
+37:10.720 --> 37:18.960
+earlier on from our two-view geometry lecture that after decomposing the essential matrix into
+
+37:18.960 --> 37:24.560
+the relative translation and rotation we know that the translation is only up to scale
+
+37:26.560 --> 37:33.120
+but in this particular case over here since the correspondences here can be obtained from the
+
+37:33.120 --> 37:39.120
+checkerboard and if we know the checkerboard size this means that if we know the size of the box in
+
+37:39.120 --> 37:46.000
+this particular checkerboard over here so if we know the distance between these two points we
+
+37:46.000 --> 37:53.120
+can actually do a triangulation which is up to a certain scale which is up to scale and then from
+
+37:53.120 --> 37:59.120
+the triangulation we can do a similarity transform to just one point pair over here would be
+
+37:59.120 --> 38:07.760
+sufficient to recover the scale of the translation vector over here so this means that the rotation
+
+38:07.760 --> 38:15.920
+and translation can be recovered with full metric scale because since we know the calibration
+
+38:15.920 --> 38:23.680
+parameters of the checkerboard in this particular context over here and once we have obtained the
+
+38:23.680 --> 38:32.960
+stereo calibration this means that we know the intrinsic value as well as the extrinsic value
+
+38:32.960 --> 38:40.080
+of the camera which is the relative transformation between the two cameras the next step would be
+
+38:40.080 --> 38:46.240
+to make use of these parameters that we have obtained from stereo calibration to do what we
+
+38:46.240 --> 38:53.040
+call the stereo rectification so this means that if we have two general views where in general the
+
+38:53.040 --> 39:00.000
+epipolar lines are not aligned with each other so they are they are not aligned in a regular
+
+39:00.000 --> 39:06.320
+horizontal scan line we want to make use of this intrinsic as well as an extrinsic of both the
+
+39:06.320 --> 39:15.440
+cameras to rectify them mathematically such that the two images have epipolar lines that are
+
+39:16.000 --> 39:24.720
+aligned in a regular horizontal scan line now here's a figure that illustrates the whole
+
+39:24.720 --> 39:30.640
+process so given the calibration checkerboard these are the raw images where we can see that
+
+39:30.640 --> 39:36.880
+it contains some distortion from the radial and tangential distortion and once we have
+
+39:36.880 --> 39:43.600
+done the stereo calibration this means that we have obtained the intrinsic values as well as the
+
+39:44.240 --> 39:50.320
+five distortion parameters that we have seen earlier on we can make use of these distortion
+
+39:50.320 --> 39:57.280
+parameters as well as the camera intrinsic to undistort the images which we have seen how to
+
+39:57.280 --> 40:03.360
+do this in the lecture on camera calibration so once we get the undistortion we'll see that the
+
+40:03.920 --> 40:11.200
+square over here looks it looks like a regular square and then from this undistorted image we
+
+40:11.200 --> 40:17.600
+can actually compute the essential matrix the regular ransack 8-point algorithm that we have
+
+40:17.600 --> 40:22.720
+seen earlier on to get the extrinsic parameter which is the rotation and translation from all
+
+40:22.720 --> 40:30.240
+these parameters that we know we can do stereo rectification where now after stereo rectification
+
+40:30.240 --> 40:37.040
+all the epipolar lines of the two views they are going to line up in a regular horizontal scan
+
+40:37.040 --> 40:46.480
+line and finally we can crop these two images and now in this particular case here we would have
+
+40:46.480 --> 40:55.760
+two views or two images from stereo pair of cameras such that they are aligned the epipolar
+
+40:55.760 --> 41:01.200
+lines are aligned and hence in order to get the depth map from the reference view say for example
+
+41:01.200 --> 41:08.480
+the left view over here the left image over here will be able to simply take any pixel from here
+
+41:08.480 --> 41:14.000
+and search along the scan line on the other image
+
+41:16.320 --> 41:21.360
+so as i've mentioned earlier on stereo rectification the goal is to
+
+41:22.000 --> 41:28.400
+mathematically align the two cameras into the same viewing plane what i meant here by
+
+41:28.400 --> 41:35.280
+mathematically align is that the actual camera setting will still be in this setting this means
+
+41:35.280 --> 41:42.320
+that whatever pair of images that we take from the camera it will still give us a relative
+
+41:42.320 --> 41:50.640
+transformation of r and t as before it's physically impossible to tune or to adjust the
+
+41:50.640 --> 41:58.400
+camera setting such that the relative transformation here becomes identity and t equals to t
+
+41:58.960 --> 42:09.360
+0 0 as desired in the rectified case so it's physically impossible to shift the camera or
+
+42:09.360 --> 42:14.800
+to adjust the camera such that it always gives this setting because it has to be so precise
+
+42:14.800 --> 42:22.240
+but what we meant by mathematically align the two images is that if we are able to obtain
+
+42:22.960 --> 42:28.240
+the relative transformation the extrinsics of the two views which we are of course we are able to
+
+42:28.240 --> 42:35.840
+do that from the calibration that we have described earlier on we can make use of this information
+
+42:35.840 --> 42:44.320
+to define a transformation homography on the left and the right image such that we can transform
+
+42:44.400 --> 42:52.240
+these two with a homography h and h prime respectively so by taking every pixel here
+
+42:52.240 --> 42:59.520
+or by taking the from the but this particular image over here suppose that i'm representing
+
+42:59.520 --> 43:05.040
+one pixel here as x over here we'll see that we can make use of this rotation and translation
+
+43:05.040 --> 43:14.240
+to define the homography over here such that we can transform this left image over here every
+
+43:14.960 --> 43:21.760
+this left image to a new pixel over here such that which i call x tilde over here
+
+43:22.640 --> 43:32.800
+such that the new pixel the new image over here is aligned with the new image over on the other side
+
+43:32.800 --> 43:40.720
+of the right image after we have applied the same process to the right image so this means that for
+
+43:40.720 --> 43:46.960
+the right image i'm defining a h prime homography from the rotation and translation and then apply
+
+43:46.960 --> 43:56.480
+every point on the right image which i denote as x prime over here to h prime to get x tilde prime
+
+43:56.480 --> 44:05.920
+so this is the new image such that the image where x tilde and x tilde prime after rectification
+
+44:05.920 --> 44:14.560
+they fall onto the same epipolar line or a regular set of stand lines and this is
+
+44:14.560 --> 44:21.680
+how it looks like now in this particular example over here these two images are taken from two
+
+44:21.680 --> 44:29.440
+camera settings where the camera settings are related by a relative transformation of r and t
+
+44:29.440 --> 44:35.760
+so we can see that for any point here it is going to give a epipolar line which is
+
+44:36.480 --> 44:44.880
+this line over here and we can see that in the this setting in the in practice this is the kind
+
+44:44.880 --> 44:49.920
+of setting that we'll get where we will have a relative transformation rotation and translation
+
+44:49.920 --> 44:58.640
+between these two camera views where the epipolar lines between these two views simply do not align
+
+44:58.640 --> 45:04.880
+in a horizontal setting so the objective of stereo rectification would be to make use of this
+
+45:05.680 --> 45:13.600
+to define a homography between the two views h and h prime over here such that after applying
+
+45:13.600 --> 45:21.200
+the homographies onto this pair of images respectively we'll end up with a pair of images
+
+45:21.200 --> 45:29.840
+where the scan line of corresponding views now becomes aligned to each other and as a result
+
+45:30.480 --> 45:36.800
+what we will get here is that we'll get we'll be able to compute for every point on our reference
+
+45:36.800 --> 45:44.800
+view we'll be able to compute the correspondences or the correspondence in the right view very
+
+45:44.800 --> 45:53.120
+easily by sliding a patch along the corresponding scan line instead of computing the epipolar line
+
+45:53.120 --> 46:00.480
+and it has to be noted that this since we compute the homography over here so what this means is
+
+46:00.480 --> 46:07.920
+that we are mathematically manipulating the image such that into a state where the epipolar lines of
+
+46:07.920 --> 46:15.200
+both images are aligned with each other and what this also means is that we are not physically
+
+46:15.200 --> 46:22.480
+shifting the camera such that it ends up with an image that looks like this and all the rectified
+
+46:22.480 --> 46:29.520
+images after rectification it should satisfy the following two properties as we have noted earlier
+
+46:29.520 --> 46:37.360
+on that is the epipolar lines should be parallel to each other along the horizontal axis so this
+
+46:37.360 --> 46:42.400
+is the horizontal axis what it means is that the epipolar line the corresponding epipolar line they
+
+46:42.400 --> 46:50.080
+should become horizontal to each other and the corresponding points should also have an identical
+
+46:50.080 --> 46:56.160
+vertical coordinate this means that the two views where i have my image point on the reference view
+
+46:56.160 --> 47:02.320
+the left image the it must sit on the epipolar line that is aligned with the epipolar line on the
+
+47:02.320 --> 47:09.440
+other view and we'll make use of these two properties to find a projective transformation
+
+47:09.440 --> 47:15.360
+such that the epipoles in the two images are mapped to the infinite point because in this case
+
+47:15.360 --> 47:22.320
+over here we can see that after we have rectified this particular epipolar line to become horizontal
+
+47:22.320 --> 47:28.080
+to each other or what this means is that for every point on my reference image i'm going to have a
+
+47:28.080 --> 47:33.840
+corresponding epipolar line on the right image such that the two epipolar lines sits on the same
+
+47:34.880 --> 47:42.480
+aligned location this holds true for any point for any epipolar lines so all that what this means is
+
+47:42.480 --> 47:50.080
+that all the epipolar lines after ratification would not intersect at the common point or rather
+
+47:50.080 --> 47:56.560
+they would intersect at infinity and this simply implies that the epipole of the left and right
+
+47:57.280 --> 48:05.440
+images now would have to map to infinity and hence we can define a homography h which is a three by
+
+48:05.440 --> 48:17.200
+three matrix over here to map the original image into the rectified image where the epipolar lines
+
+48:17.200 --> 48:23.120
+of this particular image would be mapped to infinity similarly we'll do the same we'll
+
+48:23.120 --> 48:29.040
+find a homography such that we can map the right image which called h prime over here such that we
+
+48:29.040 --> 48:37.200
+can map the right image into a setting where the epipole will be mapped in to infinity which we
+
+48:37.200 --> 48:44.640
+define as one zero zero over here so the last value over here note that the last value over
+
+48:44.640 --> 48:51.520
+here has to be zero because this is going to be a infinite point zero here means that in homogeneous
+
+48:51.520 --> 48:57.440
+coordinate it means that it's going to be at infinity and one zero over here simply means that
+
+48:58.160 --> 49:05.120
+there's going to be a value for the x coordinates over here at zero means that for the y value it
+
+49:05.120 --> 49:11.200
+means that the two epipoles are going to be aligned at the same location
+

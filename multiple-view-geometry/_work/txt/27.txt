@@ -1,0 +1,507 @@
+[00:00] Hello everyone, welcome to the lecture on 3D computer vision, and today we are going
+[00:04] to talk about structure for motion and bundle adjustment.
+[00:08] Hopefully, by the end of today's lecture, you'll be able to describe the pipeline of
+[00:13] large-scale 3D reconstruction.
+[00:15] It consists of three parts, namely the data association, structure for motion, and dense
+[00:20] stereo algorithm.
+[00:22] In today's lecture, we'll look at data association and structure for motion in more detail, and
+[00:27] we'll look at dense stereo algorithm in more detail in next week's lecture.
+[00:35] You should be able to explain the use of robust two-view geometry and the back-of-words algorithm
+[00:41] for data association, and next, we'll look at how to use the two-view geometry, the PNP
+[00:48] algorithm as well as the linear triangulation algorithm, which we have learned in the previous
+[00:53] lectures to initialise the 3D reconstruction, and finally, we'll look at how to apply iterative
+[01:01] methods such as Newton, Gauss-Newton, and the Levenberg-Macquois algorithm for bundle
+[01:06] adjustment.
+[01:07] Of course, I didn't invent any of today's material, and I took most of the materials
+[01:13] from the tutorial on large-scale 3D modelling, which was a tutorial conducted at CVPR 2017.
+[01:21] Here's the link to all the slides and the content of this particular lecture.
+[01:26] I strongly encourage every one of you to look at these slides and the content after today's
+[01:32] lecture to reinforce your idea on large-scale 3D reconstruction.
+[01:37] And I also took a lot of the materials on bundle adjustment from Richard Hartlick's
+[01:42] and Andrew Zisserman's textbook, Multiview Geometry in Computer Vision, in particular,
+[01:47] Appendix 6.
+[01:49] More information on bundle adjustment can be found in the paper that is written by Bill
+[01:53] Trigg's bundle adjustment, A Modern Synthesis, in 1999, and if you are interested, you should
+[01:59] look at Chapter 11 of my East textbook, An Invitation to 3D Computer Vision, to find
+[02:06] out more about the general pipeline of 3D reconstruction as well as bundle adjustment.
+[02:13] Now, the problem of large-scale 3D reconstruction can be cast as follows.
+[02:20] Suppose that we are given a set of images denoted by I1 to IN.
+[02:25] Let's say if this is the set of images where we have I1, I2, all the way to IN over here.
+[02:35] The objective of large-scale 3D reconstruction is to first find out the motions of the cameras
+[02:42] that have taken these particular images.
+[02:45] This simply means that given a world reference frame, which we denote as Fw over here, what
+[02:51] we want to first figure out would be the camera projection matrices denoted by P1, P2, as
+[02:59] well as Pn.
+[03:01] And we have seen that we can do this using two techniques, which is the relative post-estimation
+[03:06] as well as the absolute post-estimation in our earlier lecture.
+[03:11] And then once the motion of the cameras, that means that the camera projection matrices
+[03:16] of these cameras have been found, the next thing that we want to do would be to recover
+[03:22] the 3D structures from the image correspondences as well as the camera projection matrices
+[03:28] triangulate for the 3D structure.
+[03:32] For example, if I have a correspondence over here, I know P1 and P2, we have seen in the
+[03:37] earlier lecture that we can do linear triangulation to obtain this particular 3D point over here.
+[03:45] And today, we are going to put everything together to see how we can do this for n views.
+[03:51] That means that if I have n images, I want to do the motion estimation of the camera
+[03:57] as well as the linear triangulation algorithm to get all the 3D points that is seen across
+[04:03] every single image in this collection of images.
+[04:08] In the case where we are just interested in recovering the 3D points that corresponds
+[04:12] to these image correspondences, then this would be known as the structure from motion,
+[04:17] which we call SFM.
+[04:18] In fact, the name implies that the steps over here, because we are finding the motion of
+[04:24] the cameras first before we find the 3D structure, hence the name structure from motion.
+[04:34] In next week's lecture, we will also look at the case where we are interested in recovering
+[04:39] the 3D point of every single pixel in the collection of all the images.
+[04:44] As a result, we will get a dense 3D reconstruction, and that would be called a dense stereo algorithm,
+[04:56] which we will look at in more detail in next week's lecture.
+[05:01] As I mentioned earlier on, there are three key parts of the pipeline for large scale
+[05:06] 3D reconstruction.
+[05:08] The first would be to do data association, because we are given a set of images which
+[05:14] are in unordered sequence.
+[05:16] That means that I give you I1, I2, all the way to IN over here, but I do not know how
+[05:23] are all these images related to each other.
+[05:26] So the first step would be to figure out whether they are related to each other geometrically,
+[05:32] in the sense that we want to suppose that I take any pair of the images from this collection
+[05:38] of images over here, let's say I denote this as II and IJ over here, I want to find out
+[05:48] whether these two images are seeing the same 3D scene or not.
+[05:53] So the obvious thing to do here would be to first extract image correspondences, and
+[06:00] then compute the relative transformation using the fundamental matrix or the essential matrix
+[06:08] to see whether these two images are related.
+[06:12] If they are related, this means that the number of image correspondences here after the robust
+[06:17] estimation of the fundamental or essential matrix would be more than a certain threshold.
+[06:23] The next thing that we want, once we have established the image correspondences and
+[06:28] the data association, the next thing that we want to do would be to do the structure
+[06:33] for motion, as I mentioned earlier on, is that given a pair of image over here, we will
+[06:38] first compute the pose, which we have done computing the fundamental or the essential
+[06:43] matrix, we can simply decompose the fundamental or the essential matrix into the camera projection
+[06:50] matrix over here.
+[06:52] So we can decompose this into a camera projection matrix, which means that we have obtained
+[06:57] the motion of the camera with respect to a single frame, and this can be done using what
+[07:04] I have mentioned earlier on here, using the relative pose estimation algorithm, or once
+[07:10] we have the first two poses, for example, and after this we can do triangulation to
+[07:18] get the 3D points.
+[07:19] So in the future, subsequent views where we add in more views, we can actually simplify
+[07:26] the 2D, 3D correspondences and apply a PMP algorithm to find the pose of this or to find
+[07:33] the camera projection matrix of this guy over here, and that would be the absolute pose
+[07:38] estimation algorithm.
+[07:39] And of course, we'll use the linear triangulation algorithm that we have seen earlier on to
+[07:44] do triangulation of the 3D points from the image correspondences and the pose of the
+[07:50] images that we have found from the relative and absolute pose estimation algorithm.
+[07:56] So once we have completed this procedure, the motion, computing it from the relative
+[08:02] or absolute pose estimation algorithm, and then followed by the linear triangulation
+[08:08] algorithm to get all the 3D points in n views, the final thing that we want to do would be
+[08:15] the bundle adjustment algorithm, where we simply optimise over all the parameters in
+[08:21] the camera projection matrices, over all the views, as well as the 3D points, such that
+[08:27] the re-projected 3D points onto the image, the re-projection error of this is minimised.
+[08:36] And as a result from this structure for motion, we'll be able to get a sparse 3D reconstruction
+[08:44] of the scene.
+[08:45] And next week, we'll look into more detail that the final step to this large scale 3D
+[08:50] reconstruction pipeline would be to do a plane sweeping algorithm or a dense stereo.
+[08:58] This is actually a dense stereo algorithm, a multi-view dense stereo algorithm, where
+[09:02] we simply, given the pose of the camera, we simply try to get the depth of every single
+[09:10] pixel in every image.
+[09:13] So as a result, because we are doing this for every single pixel in every single image,
+[09:18] so as a result, what we will get would be a dense 3D model of the scene.
+[09:23] We'll look at this in more detail in the next lecture.
+[09:27] Here's an illustration of the large scale 3D reconstruction pipeline.
+[09:31] So as mentioned before, we start off with a collection of unstructured image, which
+[09:35] we denote as I1, all the way to IN.
+[09:39] So in the beginning here, this is a collection of unstructured image.
+[09:43] What it means is that we do not know the relation between any of these images.
+[09:48] They are simply treated as independent collection of images in this unstructured collection
+[09:55] of images over here.
+[09:57] The first step that we need to do would be to do what we call the data association.
+[10:03] As I mentioned earlier on, we will take every pair of images in this collection of unstructured
+[10:10] images and apply the image correspondences, extract the image key points and establish
+[10:17] the correspondences from this pair of images.
+[10:20] Then we will do a relative pose estimation or a robust two view estimation using the
+[10:27] RANSAC algorithm that we have seen earlier on.
+[10:30] From here, we will be able to establish how many inlier correspondences are there between
+[10:36] the two images.
+[10:37] If this set of image correspondences is more than a certain threshold, then we conclude
+[10:43] that there is an overlapping field of view between this pair of images.
+[10:47] As a result, what we will do would be to build what we call the scene graph over here,
+[10:53] where if the number of inlier correspondences from the robust two view geometry exceeds
+[11:00] a certain threshold, we will add an edge between the two images.
+[11:05] And the nodes of this graph, the scene graph, are simply all the respective images from
+[11:12] the collection of unstructured images here that we are given.
+[11:19] Once we have established the scene graph, the next thing to do would be to do structure
+[11:24] for motion and of course the first step that we want to do would be to estimate the camera
+[11:30] poses, the camera projection matrix P1, P2, P3 of every single camera view from the collection
+[11:39] of the images that are related in this scene graph.
+[11:43] We do that using the relative pose estimation algorithm as well as the perspective endpoint
+[11:48] algorithm that we have seen earlier on in the lectures.
+[11:54] And then once we get the poses of all the cameras from the scene graph, from the pose
+[11:59] estimation algorithm, the next thing that we can do would be to apply the linear triangulation
+[12:06] algorithm on the image correspondences to obtain what we call the sparse 3D model over
+[12:14] here.
+[12:15] It's sparse because we are extracting key points, sparse sets of key points from the
+[12:21] image to do linear triangulation.
+[12:25] So here, in contrast to the dense modelling, we are not doing it for every single pixel,
+[12:30] hence the number of 3D points that we will obtain would be a sparse set of 3D points.
+[12:38] So in next week's lecture, we'll look at how to recover a dense 3D model and the example
+[12:43] is shown here from the structure for motion pipeline.
+[12:48] So just very briefly now is that given a set of multiple images where we know how they
+[12:56] are related to each other, so denoted by P1, P2, the camera matrices, P3 and P4 for
+[13:02] example, what we want to do here in this dense modelling would be to obtain the 3D depth
+[13:09] of every single pixel in every one of these images.
+[13:14] So as a result, we will get a dense 3D model from here.
+[13:22] So an illustration of the structure for motion algorithm is shown in this figure over here.
+[13:28] Suppose that we are given I1, I2 and I3 over here, three images.
+[13:35] So the first step that we need to do would be to establish the data association that
+[13:39] these three views are related to each other.
+[13:43] And then the next thing would be to recover P1, P2 and P3 by doing the relative and the
+[13:52] absolute pose estimation algorithm.
+[13:54] And finally, from the set of sparse image correspondences, we'll do apply the linear
+[14:00] triangulation algorithm with the known camera projection matrices to get the sparse set
+[14:07] of 3D points as illustrated in this particular figure.
+[14:11] And one thing to note is that all these camera poses, the camera projection matrices as well
+[14:17] as the 3D points, they are all expressed with respect to a consistent world reference frame,
+[14:24] which we call FW over here.
+[14:28] Here's some examples of the structure for motion.
+[14:31] The first example here is taken from open source pipeline, which is called COMAT.
+[14:38] This is an open source structure for motion pipeline where you can actually input all
+[14:43] the images and you will output something like this where each red point over here denotes
+[14:50] a camera pose and the colored point cloud over here denotes the structure that is being
+[14:56] reconstructed from the structure for motion pipeline.
+[15:00] And here's an example of the city hall in San Francisco, which is done in an earlier
+[15:09] work that I was involved in.
+[15:11] It was published in CVPR 2016.
+[15:14] And here's an earlier work by Samir Aragao and Noah Snavely where they reconstruct the
+[15:24] Colosseum of Italy.
+[15:26] You can see that every single camera image and the pose is respective pose with respect
+[15:33] to a 3D world frame, a fixed world frame, which we call FW over here.
+[15:39] It's illustrated in this figure over here.
+[15:41] And the reconstructed 3D point is simply the 3D model that we want of the Colosseum.
+[15:51] Now the first step in large scale 3D reconstruction, as we have mentioned earlier on, would be
+[15:57] to do data association.
+[16:00] So starting from a collection of unstructured images as illustrated in this figure over
+[16:06] here, the final thing that we want to get would be the scene graph where the node represents
+[16:12] every single image in the collection of images that we are given.
+[16:16] And all the edges over here simply represents that the pair of image that is being connected
+[16:24] by this particular edge over here has overlapping field of view.
+[16:30] And the first step over here would be to establish what we call the connected components.
+[16:37] So a connected component simply means that all of this, the whole set of images that's
+[16:43] in a connected component, has overlapping field of view.
+[16:50] And we'll make use of what we have learned earlier on in the earlier lectures, the two
+[16:55] view geometry to establish the connected component.
+[17:00] So we'll choose any pair of images from the collection of unstructured images and we'll
+[17:08] first extract key points, the sift or key point correspondences, and then we'll establish
+[17:16] the correspondences between this set of key points and followed by computing the fundamental
+[17:23] matrix or the essential matrix in the RANSAC algorithm.
+[17:27] And then we'll check the number of inliers to establish whether this should be a link
+[17:32] or not.
+[17:33] So here is the slide where I illustrate the three steps of data association, as I mentioned
+[17:40] earlier on.
+[17:41] Suppose that we are given a pair of images that is shown in this diagram over here, we'll
+[17:47] first extract key points, image key points, which I will, unfortunately, I will not go
+[17:52] too much into the detail of image key points extraction, the algorithms for sift or op.
+[17:59] If you are interested, you should refer into these two papers, sift, which is a very famous
+[18:07] image feature that has been used for in computer vision very extensively.
+[18:14] And the first step over here would be to extract the image key points as well as the descriptor.
+[18:21] So every one of this key point over here, the key point represents a single pixel or
+[18:25] single location within the image.
+[18:28] And every one of this single, this key point over here, it comes with a descriptor, which
+[18:34] is usually 128 dimension for sift, for example.
+[18:39] So this 128 dimension, you can think of it as a signature or a thumbprint for this particular
+[18:46] location in the image.
+[18:48] And we will use this image descriptor to match across two images.
+[18:55] So I'm going to use this and this feature over here, this key point over here.
+[19:00] I have two, I'm going to extract the image descriptor, the key point descriptor for this
+[19:07] particular key point in this image, which I call i1, and then I have another image over
+[19:12] here, i2.
+[19:13] I'm going to extract this image descriptor, which is also a 128 dimension if I'm using
+[19:21] sift descriptor.
+[19:24] So I'm going to match them, a dot product, which will tell me whether they are similar
+[19:28] to each other or not.
+[19:30] And if they are similar, then I will say that this is going to be a match, and hence I will
+[19:36] be able to establish these correspondences as illustrated in this particular figure over
+[19:42] here.
+[19:43] So a line over here simply means that I'm going to say that these two key points over
+[19:48] here are a match.
+[19:51] So I'm going to say that this is a punitive image correspondence in my pair of images
+[19:58] over here.
+[19:59] And we all know that since image correspondences are obtained purely based on appearance, that
+[20:06] means that I do not make use of any geometrical information to establish these image correspondences
+[20:13] up to this particular step over here.
+[20:16] Hence we know that by only relying on the visual appearance, we are bound to get outliers
+[20:24] matches, which means that some of these matches, for example in this case over here, they are
+[20:29] not correct match.
+[20:31] Visually we can tell that the correct match should be somewhere here, for example.
+[20:35] But the sift key points that we extracted and the descriptor that we extracted gives
+[20:40] us a wrong match over here.
+[20:45] So the next thing that we want to do would be to apply our robust two-view geometry estimation
+[20:52] in order to do what we call the geometric verification algorithm.
+[20:58] So geometric verification algorithm simply means that given a putative set of correspondences,
+[21:05] I1 and I2, I have all these correspondences, so some of them might be wrong.
+[21:11] Some of the image correspondences might be wrong.
+[21:14] And what I want to do here would be to apply the RANSAC starting from this set of image
+[21:20] correspondences, which I denote as Xi and Xi'.
+[21:27] So this set of image correspondences, and I want to run the RANSAC fundamental metric
+[21:40] algorithm or the essential metric algorithm, depending on whether this is an uncalibrated
+[21:46] camera or calibrated camera.
+[21:53] So calibrated camera means that I know K, the intrinsic, and uncalibrated camera means
+[21:59] that I do not know the intrinsic of the camera.
+[22:03] So I can choose either one of these two-view geometry algorithms to apply RANSAC on this
+[22:10] set of correspondences, and at the end, I will get the set of inliers based on either
+[22:16] the fundamental metrics or the essential metrics model.
+[22:21] And from here, we can see that after applying the algorithm, we'll be able to distinguish
+[22:28] which are the inliers, which we illustrate colored here as the green lines, and the outlier
+[22:34] set will be colored as the red lines over here.
+[22:38] So once we get this, we will be able to count the total number of inliers.
+[22:43] And if this total number of inliers exceeds a certain threshold, what this means is that
+[22:47] there are a lot of correct image correspondences to support the two-view geometry, to support
+[22:55] the fundamental metrics or the essential metrics that we compute.
+[23:00] So in other words, what we are trying to do here is that we are, in addition to the establishment
+[23:07] of the putative correspondences purely based on appearance, we are applying geometry, because
+[23:15] this is two-view geometry that we are applying.
+[23:18] So now we are applying geometry to further determine whether a set of image correspondences
+[23:25] are inlier or outliers.
+[23:27] And if there are more than a certain number of inlier counts, then we say that this fundamental
+[23:36] metrics or the essential metrics is correct.
+[23:39] And what it also implies is that these two views are actually seeing the same common
+[23:46] scene where all these points are being projected onto the two views as image correspondences.
+[23:55] And once this is determined, so if the total number of inliers exceeds a certain threshold,
+[24:00] we will add an edge to link the two images in the scene graph.
+[24:06] So one of the problems of doing this is that it's exhaustively searching through the pairs
+[24:12] of images in the set of n images over here, where we are given i1 all the way to i n.
+[24:19] So by doing this, we have to exhaustively take every pair of image from these n combinations,
+[24:26] from all these given set of n images to establish the geometric verification, and it could become
+[24:35] intractable when n here is too large.
+[24:40] So the complexity of just querying one image, suppose that we have a collection of n images
+[24:46] over here, and we want to pick one image and query through all the other images in
+[24:52] the unstructured set of images that we are given, the complexity will be in the order
+[24:58] of n k squared, where n here is the number of images in my collection, k here is the
+[25:04] number of key points, because for every pair of images, I have to check through k number
+[25:11] of key point correspondences in this particular pair.
+[25:15] So altogether, for one query image, if I were to take one image out here, which I call
+[25:21] i query, I would have to query this n times, and for each pair of this query, I have to
+[25:29] go through the correspondences in the order of k squared, hence each one of these query
+[25:35] images would incur a complexity of n k squared.
+[25:39] Now, let's look at an example of how computationally expensive would this be. Suppose that we have
+[25:47] 1000 C features per image, and this means that given one image, we are going to extract
+[25:53] 1000 C features over here, and hence k would be equal to 1000, and suppose that we have
+[26:06] 100 million images in our database that we want to query against, so n over here would
+[26:14] be equal to 100,000 images. Now, given this particular query image, what we want to do
+[26:22] here is that we have 100 million of these database images. We want to query every single
+[26:38] pair over here, and this simply means that we have to do a comparison of 100,000 million
+[26:48] features, and if we further assume that it takes 0.1 ms to compare each pair of features
+[26:57] in the query image and the database image, then this means that one query image would
+[27:05] take about 317 years to compute. And imagine that if we were to exhaustively compare all
+[27:14] the pairs of images in the database, then this would even take a much exponentially
+[27:21] longer time. So the solution here would be to use what we call the back-of-words image
+[27:28] retriever approach, and the goal here is that instead of using a case where a brute
+[27:35] force way of comparing every single image correspondence in the pair of images that
+[27:42] we are given the query image as well as one of the images from the database, this would
+[27:48] incur k-squared complexity, we are going to build an efficient tree-based search algorithm
+[27:55] for the matching of the query image features with the image features in the whole database.
+[28:01] Now, I will briefly go through the algorithm to do this. The first step here is that we
+[28:09] are given a set of training images, which we call the training data. So note that this
+[28:15] set of training images can be any collection of images that you have. It could be simply
+[28:21] a set of images that you randomly crawl from the web. So suppose that we have this set
+[28:29] of images over here, and the first step of this image retriever algorithm would be to
+[28:37] extract key points and the respective descriptors of these key points and store them in the
+[28:46] computer. So now, suppose that for illustration purpose, I'm going to illustrate these key
+[28:54] points as two-dimensional key points. So suppose that we are able to visualize or we are able
+[29:00] to plot the distribution of these key point descriptors that is extracted from each one
+[29:08] of these single images in our training data set, it would look something like this. Of
+[29:13] course, in reality, in the case of a sieve, we would have 128 dimensions. So you can think
+[29:20] of it this way, that now I'm going to visualize these 128 dimensions. If I can plot 128 dimensions
+[29:29] from X1, X2, X3, and all the way to X128. So each sieve feature will lie somewhere in
+[29:37] this 128-dimensional space. But for the sake of simplicity, to illustrate this, I'm going
+[29:43] to just use a two-dimensional feature where it's going to be shown as X1 and X2. So I'm
+[29:49] going to plot all these features as shown in this diagram over here. For every training
+[29:54] image, I'm going to extract the key points, the descriptor that associates with every
+[30:01] single key point from this set of training images. And suppose that I'm going to consolidate
+[30:08] everything together, all the key points, I'm going to consolidate them all together. And
+[30:13] this is the final set of key point descriptors that I have plotted out in the two-dimensional
+[30:21] space, X1 and X2. And the next thing that I will do is that I will perform a hierarchical
+[30:28] clustering. In particular, I will do a hierarchical k-mean algorithm over here. I wouldn't go
+[30:36] into the detail of the k-mean algorithm because this algorithm, you should have learned it
+[30:43] from your undergraduate classes. But very simply over here is that what I want to do
+[30:51] here is that given the set of all the descriptors that I've seen, that I've talked about earlier
+[30:58] on here in the two-dimensional space, what I want to do would be to hierarchically cluster
+[31:05] them into k different clusters per level. So we start off from a root node, for example.
+[31:12] The root node here would simply be the centroid of this descriptor. So here, this guy over
+[31:18] here is the root node. One of the choices would be simply to compute the centroid of
+[31:23] all the descriptors and assign it as the root node. Then in the second level, suppose that
+[31:32] in this particular hierarchical k-mean tree over here, I'm going to define it as a three-level
+[31:41] tree, and for each level, I'm going to perform a k-mean, and that k would be equal to three
+[31:48] for each level. And what this means is that starting from the root node, which I can choose
+[31:58] it as my centroid of all the features, the next level I will, based on this root node
+[32:06] over here, I would look at all the features and perform a k-mean. That means that I want
+[32:12] to split them into three sets, each assigned by a centroid over here. And in this particular
+[32:20] example over here, we can see that the second level is actually denoted by these three nodes
+[32:27] over here. So three nodes over here, they are the mean of the three clusters at the
+[32:34] second level. Then the final level that we have would be the leaf nodes over here in
+[32:41] this particular example over here. So in this particular example over here, for each one
+[32:47] of the clusters that I have in the second level, that is shown here, illustrated in
+[32:53] this figure over here, for each one of the clusters that is represented by these centroids
+[33:00] at the second level, I want to further split them into three clusters using the k-mean
+[33:07] algorithm. So in this case here, I will have one, two, and three clusters that is each
+[33:13] represented by a centroid node in the leaf level of this three level tree over here.
+[33:23] So similarly here, I will split them into three clusters, and this guy over here, it
+[33:29] will be also split into three clusters. And as a result, what I would get here would be
+[33:34] a k-mean tree over here. It is a three level, three cluster, or three mean tree. And now,
+[33:53] what it means here is that each one of these descriptors will be referenced to the closest
+[33:58] leaf nodes. That is a representation of each one of these descriptors in our original collection
+[34:06] over here. And the next thing that we want to do is that once we have built the k-mean
+[34:11] tree from the training data, we can discard the training data. That's no longer useful.
+[34:19] And what we will make use of for the image retrieval algorithm would be simply this k-mean
+[34:28] tree that we have learned. You can think of it this way, that this k-mean tree here would
+[34:34] be a representation of all the possible image descriptors that we can extract from the training
+[34:40] data. And the next thing that we need to do would be to build what we call the inverted
+[34:46] file index. This would be the set of images from the database that we wish to query upon.
+[34:54] And so for every one of these images, we'll first extract the image key points, the image
+[35:01] features. So these are the images in my database. I'll first apply the sift or opt feature algorithm
+[35:16] to extract all the key points from every single one of these images in the database,
+[35:23] as well as to get the descriptor. And then for each one of these image key points, I
+[35:31] will make use of the descriptor and search for the closest leaf nodes in this tree over
+[35:39] here. So what it means here is that starting off from a key point descriptor, which is
+[35:44] 128 dimension, if I'm using sift, for example, I'm going to start to query because each one
+[35:53] of these nodes over here represents a centroid location in the actual 128 dimensional space.
+[36:00] So every time when I started querying, so I will check for the node that is closest
+[36:07] to this query descriptor. So for example, here, the first step over here, the first
+[36:14] branch, I'll check whether this node is closest to this, this or this. If it is closest to
+[36:20] this, then I'll forget about the subtrees from this to all the descendants from these
+[36:27] two branches over here. And I will further query whether this particular node over here,
+[36:33] is closer to this, this or this. And if this turns out to be this particular node over
+[36:39] here, it turns out to be closest to the query feature as shown here, then I will ignore
+[36:45] these two and say that this particular feature, it has a closest match to this particular
+[36:51] leaf node over here. So once we have gotten the closest leaf node for each one of the
+[37:00] image feature that is extracted from the database, we will store the frequency count
+[37:08] of the image feature and the image ID on each leaf node as a global descriptor. So what
+[37:15] it means here is that once I have this query image, because this query descriptor, it comes
+[37:22] from one of the images in the database. Say for example, I have my database image number
+[37:29] one, for example, so this has an ID of one. Once this feature, it's when I query with
+[37:36] this k-min tree over here, and suppose that this leaf node is found to be closest to this,
+[37:43] what I will store at the end would be the image ID. So this would be the image ID number
+[37:49] one in this particular leaf node over here, as well as I would have to also store the
+[37:55] number of times that this image ID one is coming to this particular leaf node over here.
+[38:04] Suppose that there's another key point that is extracted from the database image number
+[38:10] one. After querying, it also comes to the same leaf node as the first key point over
+[38:15] here. Then I would have stored the image ID over here as number one. The first image in
+[38:22] my database would come to this particular leaf node over here, and I would also store
+[38:27] another number over here, which is the count that belongs to this. So the count would be
+[38:33] equal to two over here, because two of the image key points from image ID number one
+[38:38] are closest to this particular centroid over here in the leaf nodes, in the k-min tree.
+[38:45] Here's an example to illustrate the building of the database. Suppose that this is image
+[38:53] number one in my database. I'm going to first extract all the key points and the descriptor,
+[39:00] and then I'm going to pass this, every one of this single key point descriptor into the k-min
+[39:08] tree that I built earlier on from my training data. And suppose that I have this particular
+[39:14] image key point that found the closest leaf node to be this. I will store the image ID over here,
+[39:22] as well as the count of how many times the image key points from image number one in the database
+[39:28] ended up in this particular leaf node over here. And in this case over here, suppose that it's
+[39:35] going to come to this node, and this node over here, and this node over here. So in this case,
+[39:42] the count would be equal to one, and here's ID one, and count would also be equal to one.
+[39:48] But we can see that in this example, two of the image key points come to the same node over here.
+[39:56] This could happen because we can see that every single of this leaf node, it actually represents
+[40:03] a space, a cluster of space in the 128-dimensional space. So it could happen that some of the key
+[40:11] points that is extracted from the images could lie somewhere inside here. So if they lie somewhere
+[40:17] inside this cluster over here, then we say it all belongs to this particular centroid, which is the
+[40:23] case illustrated here. So we have two key points that is extracted from this particular image over
+[40:31] here, and most probably that these two key points come from the eye over here, because they look
+[40:36] visually similar over here. So they're going to end up in the same leaf node in the k-mean tree.
+[40:44] And here, what we are going to do here in this particular node is that we're going to store an
+[40:48] ID of one, image of ID of one, and a count of equals to two over here. Then in this case here,
+[40:55] it's image one and a count of one in this case over here. So we'll do this for every single image
+[41:03] in our database, and we can see that what we'll build out here would be a file, an inverted file,
+[41:10] that contains for every single leaf node, it contains a list of IDs of the images in the
+[41:18] database that has features that corresponds to this particular leaf node over here, as well as
+[41:26] for each single image, we'll also count the frequency of the image key points that
+[41:34] corresponds to this particular leaf node over here. And once this is built, the final step is
+[41:41] that given a query image, we'll first extract the key points from this query image over here,
+[41:50] and then for each one of these query images, we'll query the visually most similar
+[41:57] correspondence using the k-mean tree and the inverted index file that we have built earlier on.
+[42:05] So the exact steps to do this would be for every single image key point that we have extracted from
+[42:14] the query image, we're going to query through the tree and find the closest leaf nodes for each one
+[42:23] of these particular image key points that we have extracted from the query image. Then we'll keep a
+[42:29] counter and we'll increase the counter because just now in this particular step over here,
+[42:35] we know that for every leaf node, it's associated with a list of images as well as a count of how
+[42:42] many times this particular image contains an image key point that is visually similar to this
+[42:50] particular leaf node over here. So we'll do the same thing. We'll make use of this file, which is
+[42:57] the inverted index file, to increase the counter for each one of these image key points in the
+[43:03] query image. Once it reaches the leaf node in our k-mean tree, we'll retrieve the whole list of
+[43:10] database image ids that is stored in that particular leaf node and increase the counter
+[43:17] for those images that contains an image correspondence closest to that leaf node.
+[43:22] So for example, let's say for this particular key point over here, once it reaches a leaf node,
+[43:28] the closest leaf node, and this leaf node over here, and this particular leaf node,
+[43:33] suppose that it contains image number one, image number three, for example, this means that
+[43:39] this particular key point is visually similar to suppose that this is image number one, number two,
+[43:46] number three, and number four. So suppose that it reaches a leaf node over here, contains a list
+[43:52] that says that number one and number three are in the list that corresponds to this particular node
+[43:57] over here. Then I will increase a counter for one and three respectively for this particular
+[44:05] feature. Finally, what we will see is that once we have done the query for every single key point
+[44:13] in the query image over the k-mean tree database that we have built up earlier on,
+[44:21] then we will be able to conclude that the image id in the database that has the highest counter
+[44:27] will be the visually most similar image to this particular query image over here. The reason is
+[44:33] because in that case what it simply means is that it has the highest count where for every one of
+[44:40] this to be in the same leaf node as the respective image in the database. So here's an example.
+[44:48] Suppose that we are given this query image over here, we will extract the key points from this
+[44:56] from this query image over here, and we'll make use of the existing database k-mean tree that we
+[45:04] have built from the database as well as the affiliated inverted index file that is illustrated
+[45:12] over here in this particular figure. For every single key point that we extract from the query
+[45:20] image, we'll put it through the k-mean tree. So suppose that the first key point finds that
+[45:25] this particular leaf node over here is the closest to this particular key point over here.
+[45:31] Then we will look at the associated id in the database that is found in the inverted index file
+[45:40] over here. Suppose I'm calling this number one, image number one, image number two, image number
+[45:45] three, and image number four, for example. So the first query key point from the query image
+[45:52] over here, it is the closest to this particular leaf node. We will see that this particular leaf
+[45:58] node contains image number two and image number four from the database, hence we'll increase
+[46:04] the count by one over here. And then the second key point over here, we'll do the same thing,
+[46:12] put it through the k-mean tree, the hierarchical k-mean tree. Suppose that it comes to this
+[46:17] particular leaf, what we'll do here is to check the image ids that is associated with this
+[46:22] particular leaf node over here. And in this case, number one corresponds to this particular leaf
+[46:29] node, so we'll increase this by a count of one. And image number two, we'll increase this by a
+[46:35] count of one as well. And then the third key point that we see over here, suppose that it
+[46:41] comes to this particular leaf node, we'll do the same thing, and we'll see that image number two
+[46:47] receives a count of one, and image number three receives a count of one. When you build the
+[46:54] inverted index file, in addition to storing the image id in each leaf node, we are also storing
+[47:01] the frequency, the count of the image feature. For example, this guy here, the ids, it's seen
+[47:07] twice here, for example. So in the case of this guy over here, if I found a key point that is
+[47:15] closest to this particular leaf node, I would normalize it by the count. So the count here
+[47:21] is equal to two, for example. So what I would do here is that I would normalize the count,
+[47:28] because this is a commonly seen feature in this particular image. I don't want it to be
+[47:33] double counted or to be counted twice. In some implementation of the image retriever algorithm,
+[47:41] people will simply divide by the number of counts or the frequency that I've seen this image
+[47:48] feature in the database image to avoid confusing, because this means that this particular feature
+[47:56] is seen too many times and is not discriminative enough in this particular image. So instead of
+[48:02] adding a counter by one, I will, in this case, if the count is two, I'll simply add the counter
+[48:09] by one over two. I'll normalize it by two, because I've seen this feature two times in the training,
+[48:15] in the database image. Now we'll see an example on how this helps in mitigating the computational
+[48:22] complexity to establish the scene graph. Suppose that we're querying an image in a database of
+[48:29] 100 million images. This is the same case as what we have seen in the example that we have seen
+[48:33] earlier on. We are querying in a database of 100 million images, and we will do the same. Suppose
+[48:40] that each of the query image has 1000 C features, or the query image has 1000 C features, and
+[48:48] similarly for every image in the database, there's also 1000 CIF key points, which we denote as k
+[48:56] equals 1000 over here. Now in this example, we further assume that we build a k-min tree
+[49:03] with 10 branches and 6 depth, which we denote as b and l over here. The number of branches would
+[49:08] be 10, and the number of depth level would be 6. So in total, we would have 1 million
+[49:14] visual words. That would be equal to 10 to the power 6. That would be equal to 1 million
+[49:22] visual words. And then the number of comparisons that we will take would be simply equal to
+[49:29] k multiplied by b multiplied by l, and that's equivalent to 60,000
+[49:36] comparisons for one single query image in the whole database. The reason is for each query image
+[49:45] I have k number of features, and each one of the features I'm going to put it through a tree
+[49:54] with l levels and b branches. So at every level, I would have to compare with b branches,
+[50:04] and I'll have to compare with b branches over here, and I'll have to repeat this for l different
+[50:10] levels. So it will be b multiplied by l to compute the complexity, and that will be equal
+[50:15] to 1000 multiplied by 10 multiplied by 6. And we assume that it takes 0.1 milliseconds
+[50:23] for a pair of feature comparisons. So this means that for each image query, it will only take 6
+[50:30] seconds to compute. And this is so much faster compared to the 317 years that we need in the
+[50:39] earlier example. Now, in summary, the image retriever, it has a much reduced complexity
+[50:49] compared to the brute force naive way of pairwise matching that we have seen earlier on. So instead
+[50:57] of using for one query image, instead of having a complexity of nk square, we now reduce it to
+[51:04] k multiplied by b and l. So as a result, what we'll do here is that we'll first apply the image
+[51:13] retriever algorithm to eliminate the infeasible edges in the scene graph. More specifically,
+[51:20] what it means is that given a set of this unordered or unsequenced
+[51:28] images, which we denote as i to i n over here, we'll first apply the image retriever algorithm
+[51:39] to figure out whether these images are linked to each other, whether they are visually
+[51:48] similar to each other or not. So hence, as a result, what we will get is that we will get an
+[51:54] initial candidate set of scene graph that is computed from the image retriever algorithm.
+[52:02] So if these two images from my image retriever algorithm, there's very few matches over here,
+[52:09] the score over here, they are all very low, then I can conclude that there is no correspondence
+[52:16] over here. And the next step that we need to do is that because image retriever is still based on
+[52:24] visual appearance, so the next step that we need to do would be, for those links that we add to
+[52:31] the scene graph after the image retriever step, we would have to also apply the geometric
+[52:36] verification. That means that for each pair of these, I have to use RANSAC to compute the
+[52:43] inlier counts, and then if it is more than a certain threshold, then I will let this edge
+[52:47] remain in the scene graph, otherwise I will remove the edge in the scene graph.

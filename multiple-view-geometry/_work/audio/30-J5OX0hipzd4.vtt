@@ -1,0 +1,992 @@
+WEBVTT
+
+00:00.000 --> 00:05.440
+So, if we were to naively make use of the Löfverberg-Macquardt algorithm, we will find
+
+00:05.440 --> 00:12.440
+ourselves quickly running into a cubic complexity at every iteration, since we are going to
+
+00:12.440 --> 00:20.760
+solve for the normal equation given by J transpose J delta equals to minus J transpose epsilon
+
+00:20.760 --> 00:26.640
+over here. And this, we have seen that this is equivalent to an inhomogeneous linear equation
+
+00:26.640 --> 00:35.000
+of A X equals to zero. And we all know that when we solve for this inhomogeneous linear
+
+00:35.000 --> 00:40.960
+equation for X, which is equivalent to delta over here, we have to invert this guy over
+
+00:40.960 --> 00:49.360
+here, the A matrix, in order to solve for A, which is equal to inverse of A multiplied
+
+00:49.360 --> 00:58.040
+by B. And this incurs a cubic complexity where n over here can be very large. And this is
+
+00:58.040 --> 01:03.880
+actually in the order of the total number of camera parameters over all camera, so it
+
+01:03.880 --> 01:10.000
+would be 12 multiplied by the total number of camera in our 3D reconstruction, as well
+
+01:10.000 --> 01:15.080
+as the total number of 3D points, that would be three coordinates of X, Y, Z multiplied
+
+01:15.080 --> 01:24.160
+by the total number of 3D points in the scene. In a 3D reconstruction problem, this can easily
+
+01:24.160 --> 01:34.080
+be up to an order of millions of 3D points. So fortunately, we will exploit the sparse
+
+01:34.080 --> 01:40.840
+block structure in this A matrix, which is equivalent to the J transpose J matrix over
+
+01:40.840 --> 01:49.560
+here, in order to mitigate the computational complexity. More specifically, we first divide
+
+01:49.560 --> 01:57.800
+or partition the set of parameters P, which is an m-dimensional parameter, into two sets
+
+01:57.800 --> 02:03.880
+of parameter vectors which we call A and B. So what this means is that I'm going to rewrite
+
+02:03.880 --> 02:14.480
+P into P1, P2, all the way to Pm here, and I'm going to partition this set of parameters
+
+02:14.480 --> 02:19.760
+into two sets, where I call the first set of parameters over here a vector of A, and
+
+02:19.760 --> 02:26.320
+the second set would be a vector of B over here, and I'm going to rewrite this P as A
+
+02:26.320 --> 02:33.960
+transpose, B transpose, and altogether transpose. So this, in the context of our bandai adjustment
+
+02:33.960 --> 02:42.680
+problem, A could represent all our camera parameters, and B here could represent all
+
+02:42.680 --> 02:48.880
+the parameters from the 3D points, so we can partition them into two sets of parameters
+
+02:48.880 --> 02:56.520
+that we wish to optimise over. And now the Jacobian J, which is defined as del X over
+
+02:56.520 --> 03:02.680
+del P, where X hat here represents the non-linear function that we want to optimise over, that
+
+03:02.680 --> 03:08.200
+would be our reprojection function in the context of bandai adjustment, it would now
+
+03:08.200 --> 03:15.600
+form a block structure of the form of A and B, where A and B here are respectively given
+
+03:15.600 --> 03:22.280
+by the partial differentiation of X, the non-linear function, with respect to the first
+
+03:22.280 --> 03:32.540
+partitioned parameter A and the second partitioned parameter B respectively. Now, after we computed
+
+03:32.540 --> 03:38.760
+the Jacobian in the partitioned way, we can put it together into the normal equation to
+
+03:38.760 --> 03:44.660
+compute J transpose J, which is this guy over here, and we will see that it has a very nice
+
+03:44.660 --> 03:52.500
+structure over here. And delta would also have a partitioned structure where the first
+
+03:52.500 --> 03:59.280
+set of this vector would be representing A, and the second set would be representing the
+
+03:59.280 --> 04:05.060
+delta increment of B. And similarly, for the right side of this normal equation, which
+
+04:05.060 --> 04:11.700
+is given by minus J transpose of epsilon, we can see that the structure would also be
+
+04:11.700 --> 04:17.620
+the first part here is only dependent on the parameters of A, and the second part will
+
+04:17.620 --> 04:23.340
+only be dependent on the parameter of B. And we can rewrite this block over here, the J
+
+04:23.340 --> 04:29.380
+transpose J block over here into this form, where we saw that the off-diagonal here, it
+
+04:29.380 --> 04:34.500
+consists of the same parameters, but just a transpose of it, so we will rewrite this
+
+04:34.500 --> 04:41.420
+part as W, and the lower left part as W transpose over here, and then we will write this block
+
+04:41.460 --> 04:48.980
+over here as U*, and this block over here in the diagonal block as V*, in this particular
+
+04:48.980 --> 04:56.380
+form over here. Now, we further observe that if we were to multiply the normal equation
+
+04:56.380 --> 05:01.700
+with, the left and right side of the normal equation with this particular matrix over
+
+05:01.700 --> 05:08.900
+here, we will be able to get this equation over here, where we can see that in the first
+
+05:08.900 --> 05:16.500
+row, the top right entry, the top right block over here, would become zero, because we have
+
+05:16.500 --> 05:24.860
+this element over here, which will act as a subtraction over here to eliminate W in
+
+05:24.860 --> 05:30.980
+this particular block over here. So once we have arrived at this particular equation where
+
+05:30.980 --> 05:37.180
+the top right block over here is equal to zero, we can make use of this to solve for
+
+05:37.180 --> 05:46.380
+delta A, because we can see that after multiplying this row over here into this column over here,
+
+05:46.380 --> 05:54.380
+delta B is being eliminated, so we will get the equation of this block multiplied by delta
+
+05:54.380 --> 06:01.220
+A equals to this particular block over here, and the only unknowns in this case would be
+
+06:01.220 --> 06:08.740
+dependent on the parameters of A, so in this particular form over here. And this is also
+
+06:08.740 --> 06:17.500
+known as the Shear's Complement, which we can use to solve for a partial block of the
+
+06:17.500 --> 06:24.380
+parameters that we are interested in optimising over. And we can also see that this form of
+
+06:24.380 --> 06:31.820
+equation, it becomes an inhomogeneous linear equation where it's equivalent to Ax equals
+
+06:31.820 --> 06:38.260
+to B, this whole block here is B, and this block here is A, and delta A here becomes
+
+06:38.260 --> 06:46.460
+X, where if we were to compare this with the original normal equation over here, now we
+
+06:46.460 --> 06:54.500
+have a smaller block of X over here to solve for as compared to this, because this X over
+
+06:54.500 --> 07:01.060
+here, it is the original parameter which consists of the parameters of A and B, that means that
+
+07:01.060 --> 07:07.620
+it's actually a delta A and delta B all together, and what this means is that J transpose J
+
+07:07.620 --> 07:15.380
+in the original form is much larger than the form that we are, the inhomogeneous linear
+
+07:15.380 --> 07:21.060
+equation that we are trying to solve for here. And we will also see that another advantage
+
+07:21.060 --> 07:27.900
+of this is that A, this particular block here, it's much sparser, and this can be solved
+
+07:27.900 --> 07:36.660
+efficiently using several linear algebra factorisation techniques. So once we have found delta A,
+
+07:36.660 --> 07:43.460
+we can subsequently solve for delta B using back substitution by the following equation
+
+07:43.460 --> 07:49.620
+that is shown here. This equation is in fact obtained from the second row of this particular
+
+07:49.620 --> 07:56.740
+equation over here, where we multiply this guy to delta A and this guy to delta B, and
+
+07:56.740 --> 08:02.740
+that would be equal to epsilon B. Since we already know delta A, we will have one equation
+
+08:02.740 --> 08:10.900
+that consists of the unknown of delta B, and this particular equation over here would again
+
+08:10.900 --> 08:18.860
+be equivalent to A X equals to the inhomogeneous linear equation, which we can solve efficiently
+
+08:18.860 --> 08:27.980
+for X. Now, once we have computed the delta A and delta B, the update vectors of delta
+
+08:27.980 --> 08:34.380
+A and delta B, we can put it back into this equation over here to get the updated equation
+
+08:34.380 --> 08:44.900
+of P. So this is simply equivalent to P i plus 1 is equal to P i plus delta, where delta
+
+08:44.900 --> 08:51.260
+is the value that we have solved for in the normal equation. So since here we split this
+
+08:51.260 --> 08:56.820
+delta into two parts of delta A and delta B, we can put it back into the equation by
+
+08:56.820 --> 09:02.980
+adding it back into the respective part of A and B to get the new vector of P. And we
+
+09:02.980 --> 09:12.540
+will never do this iteratively until convergence. So we will also follow the way that we increase
+
+09:12.540 --> 09:19.780
+or decrease lambda in the naive Leuverbert-Marquardt algorithm that we have seen earlier on. And
+
+09:19.780 --> 09:27.460
+here is a table that summarises the sparse Leuverbert-Marquardt algorithm that I have
+
+09:27.460 --> 09:34.020
+talked about earlier on. Now we will look at the application of the sparse Leuverbert-Marquardt
+
+09:34.020 --> 09:40.220
+algorithm on the multiple image bundle adjustment. In particular, we will take advantage of the
+
+09:40.220 --> 09:47.180
+lack of interaction between the parameters of the different cameras to obtain the sparse
+
+09:47.180 --> 09:53.740
+structure in our normal equation. So we will define the measurement data as capital X over
+
+09:53.740 --> 10:00.900
+here, where each one of these X1 to Xi represents a set of observations on the images. So we
+
+10:00.900 --> 10:06.620
+can think of it this way, that each one of these X is actually a 3D point in the scene,
+
+10:06.620 --> 10:13.020
+which we call capital Xi over here. And it actually also contains a set of corresponding
+
+10:13.020 --> 10:21.860
+2D points on the image. For example, Xi1, that means that I'm observing this Xi, this
+
+10:21.860 --> 10:28.380
+3D point in image number 1. So I'm going to call this Xi1. This means that there is
+
+10:28.380 --> 10:33.660
+a correspondence from the first image, and there is also a correspondence in the second
+
+10:33.660 --> 10:44.140
+image, which I'm going to denote as Xi2 over here. So note that this 1, 2 and these indexes,
+
+10:44.140 --> 10:50.540
+it need not be consecutive, it need not be continuous here, because what this means is
+
+10:50.540 --> 10:56.380
+that we are allowing for missing data. That means that it's not possible to observe the
+
+10:56.380 --> 11:02.820
+same point over all the image frames. So it could be image number 1, image number 2, and
+
+11:02.820 --> 11:11.180
+then it jumps to image number 5, for example. So we are going to have i1, i2, and then Xi5
+
+11:11.180 --> 11:18.340
+transpose over here, and all the way to Xim. This means that this particular 3D point,
+
+11:18.340 --> 11:29.060
+Xi, is being seen in m number of images, and we are denoting xi,j as the image 2D point
+
+11:29.060 --> 11:35.060
+that corresponds to the 3D reconstructed points. And as mentioned earlier on, we are going
+
+11:35.060 --> 11:44.300
+to denote the camera parameters as a, which is denoted by a1, a2, all the way to am, where
+
+11:44.300 --> 11:52.340
+they are all together m images in our bundle adjustment context. And each one of these
+
+11:52.340 --> 12:02.180
+parameters ai represents the jth camera in the scene. And this could be a 12 by 1 vector,
+
+12:02.180 --> 12:08.340
+which represents all the parameters in our projection matrix. So suppose that we are
+
+12:08.340 --> 12:17.620
+given a re-projected point which we call xij hat here. We know that this xij is a result
+
+12:17.620 --> 12:25.020
+of the re-projection of a 3D point xi in the 3D scene. And we know that this particular
+
+12:25.020 --> 12:32.060
+3D point would only be seen in the jth camera. That means that if I have a camera a, k for
+
+12:32.060 --> 12:41.500
+example, we will only see this particular 3D point as xij if k is equal to j. What this
+
+12:41.500 --> 12:54.180
+means is that the partial differentiation of xij hat over xaj will not be equal to 0.
+
+12:54.180 --> 13:02.420
+And in general, if k is not equal to j, what this means is that this particular 3D point
+
+13:02.420 --> 13:09.540
+will not be re-projected onto this particular image if this is ik over here. And in a similar
+
+13:09.540 --> 13:15.540
+way, we can see that the partial differentiation of the re-projection will not be equal to
+
+13:15.540 --> 13:22.620
+0 if we partially differentiate with respect to the 3D point that is re-projected onto
+
+13:22.620 --> 13:30.500
+that particular image. Suppose that I have an image which I see the re-projection of
+
+13:30.500 --> 13:38.540
+x hat i and j, I know that the 3D point whose parameter is b of k over here, it would be
+
+13:38.540 --> 13:47.100
+re-projected onto this particular image if k is equal to i over here. And what this means
+
+13:47.100 --> 13:54.220
+is that if I take a partial differentiation of x hat ij with respect to the partial differentiation
+
+13:54.220 --> 14:01.660
+of b of i, then this in general will not be equal to 0. But if I have a case where k is
+
+14:01.660 --> 14:07.220
+not equal to i, this means that this particular point will not be re-projected onto this particular
+
+14:07.220 --> 14:14.000
+image where I see a re-projection of x hat ij over here. And in this particular case,
+
+14:14.000 --> 14:20.120
+x hat ij over here will be independent of bk, and this means that the partial differentiation
+
+14:20.120 --> 14:30.840
+will be equal to 0. And the form of the Jacobian after we do this partial differentiation would
+
+14:30.840 --> 14:36.620
+be shown in this particular figure over here. We can see that the projection matrices which
+
+14:36.620 --> 14:46.100
+we denote as the vector of a and the 3D points which we denote as the vector of b over here,
+
+14:46.100 --> 14:56.020
+it's only affecting the re-projected points when we can see that it's in that particular
+
+14:56.020 --> 15:04.280
+respective camera or it's in that particular respective 3D point. For example, in this
+
+15:04.280 --> 15:10.560
+case here, x1 and j, this 3D point is seen in the first camera. So let's say this is
+
+15:10.560 --> 15:18.840
+my a1, which is denoted by the parameters of p1 over here. And I'm going to see in this
+
+15:18.840 --> 15:28.320
+example over here 4 points inside here. So this 4 point is going to be x11, x12, x13
+
+15:28.320 --> 15:36.500
+and x14. And we can see that these 4 points, it's only affected by the variable a1 or p1
+
+15:36.500 --> 15:44.600
+that is denoted in this particular diagram over here. And since p1 is the parameter of
+
+15:44.600 --> 15:51.080
+the first image, we can see that in the second image, if we were to see also 4 points in
+
+15:51.080 --> 15:57.680
+this particular case over here, 4 points that is projected onto this particular image over
+
+15:57.720 --> 16:03.760
+here, which is denoted as a2 over here or p2 in this case, we can see that the p1 over
+
+16:03.760 --> 16:08.520
+here is not going to re-project that point in the second image. Hence, all the entries
+
+16:08.520 --> 16:17.800
+over here, the partial differentiation of del x2j over del p1 is going to be 0 in this
+
+16:17.800 --> 16:23.480
+block over here. But it's not going to be 0 in the first block over here because we
+
+16:23.480 --> 16:29.880
+can see that the first camera matrix is affecting the points that is re-projected onto the first
+
+16:29.880 --> 16:35.840
+image. And similarly, the first camera matrix is not going to affect all the re-projected
+
+16:35.840 --> 16:41.360
+points in this particular example here. There are 4 re-projected points onto the third image
+
+16:41.360 --> 16:46.040
+which is denoted as a3. So there are 4 of these points. We can see that the first camera
+
+16:46.040 --> 16:50.880
+matrix is not going to affect this and hence the partial differentiation of this block
+
+16:50.960 --> 16:59.640
+over here is going to be equal to 0 as well. And we can also see this in the 3D points
+
+16:59.640 --> 17:05.800
+which is denoted as the vector b here. So in this particular case, in the first image
+
+17:05.800 --> 17:12.240
+over here, we have 4 re-projections which we denote as x11, x12, x13 and x14 over here
+
+17:12.240 --> 17:18.480
+as mentioned earlier on. And we can see that capital X1 which is the first 3D point, so
+
+17:18.480 --> 17:23.960
+this means that I have a 3D point here which I call x1. It's only going to be affecting
+
+17:23.960 --> 17:31.840
+one of the entries, one of the re-projected points which is x11 over here. What this means
+
+17:31.840 --> 17:39.880
+is that x11 is the re-projection of x1, the first 3D point, into the camera image of the
+
+17:39.880 --> 17:46.280
+first camera. So we can see that it's affecting this only, hence taking a partial differentiation
+
+17:46.280 --> 17:54.400
+of the re-projection over here with respect to x1 is going to be a certain value over
+
+17:54.400 --> 18:00.840
+here, a non-zero value over here. But at the same time, if we look at all the other entries
+
+18:00.840 --> 18:06.560
+over here, the other 3 entries over here which represents the 3 re-projected points in the
+
+18:06.560 --> 18:12.280
+first image, it's not going to be affected by x1 because these are caused by some other
+
+18:12.280 --> 18:17.320
+3D points in the scene, hence the partial differentiation of this is going to be equal
+
+18:17.320 --> 18:24.680
+to zero over here. And we can see that in the first image over here, the second point
+
+18:24.680 --> 18:29.840
+which is x2 over here, which is caused by a re-projection of x2, the second point over
+
+18:29.840 --> 18:36.680
+here, it's going to be a non-zero value when we partially differentiate x12 with respect
+
+18:36.680 --> 18:42.560
+to x2, and it's going to be zero everywhere else. And we can see this trend happening
+
+18:42.560 --> 18:48.640
+in all the other entries in this block as well. So once we have computed this, we would
+
+18:48.640 --> 18:53.400
+have obtained the Jacobian matrix in this particular form, and we can see that this
+
+18:53.400 --> 18:59.880
+is indeed a very sparse matrix, where most of the entries here are equal to zero, and
+
+18:59.880 --> 19:07.560
+it's only sparsely filled in the white parts, as illustrated in this particular figure.
+
+19:07.560 --> 19:16.280
+So once we obtain the Jacobian matrix, we can continue to get the normal equation where
+
+19:16.280 --> 19:23.840
+we can compute the Hessian of J transpose J, which is in this particular format over
+
+19:23.840 --> 19:30.760
+here as what we have described earlier on. We can also see that this is a sparse matrix
+
+19:30.760 --> 19:36.600
+in the diagonal block over here, where all these entries over here are going to be equal
+
+19:36.600 --> 19:44.440
+to zero. And now, delta over here would be divided into two parts. The first part here
+
+19:44.440 --> 19:50.760
+would be dependent on A, which is our camera matrix, and the second part over here would
+
+19:50.760 --> 19:56.680
+be dependent on the 3D point entries, which corresponds to the partition of the blocks
+
+19:56.680 --> 20:05.360
+over here in the Jacobian matrix. And similarly, epsilon A and epsilon B, denoted by this term
+
+20:05.360 --> 20:12.480
+over here, would be divided into two parts. The first part is again dependent on the camera
+
+20:12.480 --> 20:18.480
+matrices, and the second part would be dependent on the 3D point.
+
+20:18.480 --> 20:25.720
+So we can see more clearly this illustration over here, that the first block over here,
+
+20:25.720 --> 20:31.240
+taking the second camera where i equals to 2, taking this block over here, we can see
+
+20:31.240 --> 20:41.060
+that partially differentiation of this point x2j for the four points that is being reprojected
+
+20:41.060 --> 20:48.040
+onto the second image, where i equals to 2. So in this case here, I'm looking at P2.
+
+20:48.040 --> 20:57.020
+So I'm looking at four points over here, where each point represents x21, x22, x23, and x24.
+
+20:57.020 --> 21:04.300
+And in the case where I'm partially differentiating with respect to the first camera matrix, this
+
+21:04.300 --> 21:10.340
+would be zero. And it would be the same for the case where if I'm partially differentiating
+
+21:10.340 --> 21:14.700
+this with respect to the third camera matrix over here, it will also be equal to zero.
+
+21:14.700 --> 21:19.100
+And the only case is that it won't be equal to zero is when I partially differentiate
+
+21:19.100 --> 21:26.740
+this reprojection with respect to the camera matrix P2 or A2 that I denote over here. This
+
+21:26.740 --> 21:32.940
+is because this is the camera projection matrix that affects this particular image, and in
+
+21:32.940 --> 21:38.300
+turn it will affect the reprojection onto this particular image over here.
+
+21:38.300 --> 21:44.180
+Here's an illustration on how the 3D points affect the Jacobian. We can see that this
+
+21:44.180 --> 21:49.060
+is the reprojection onto the second image, the four points onto the second image. And
+
+21:49.060 --> 21:55.740
+we can see that it's non-zero when we partially differentiate this, the respective reprojection
+
+21:55.740 --> 22:02.540
+with respect to the 3D points that causes this particular reprojection over here.
+
+22:02.540 --> 22:09.420
+What's interesting here is that if we look at the Jacobian matrix, where we obtain the
+
+22:09.420 --> 22:15.860
+Hessian matrix as J transpose J over here, and it's interestingly that J transpose J
+
+22:15.860 --> 22:23.780
+or the Hessian matrix, it actually represents the adjacency matrix of the graph that relates
+
+22:23.780 --> 22:28.300
+the relation between all the parameters. So in this particular case over here, we can
+
+22:28.300 --> 22:36.420
+see that there is a connection between A to 2 and 1. So here in this example, in this
+
+22:36.420 --> 22:42.500
+example over here, these are the 3D points, and these are the cameras. So what this means
+
+22:42.500 --> 22:52.580
+is that this particular 3D point A is seen by camera 1 and 2, and it's not seen by camera
+
+22:52.580 --> 23:02.140
+3 and 4. And the second point B over here is seen by camera 1, 2 and 4. So what it means
+
+23:02.140 --> 23:14.100
+is that if I have an image here, which I call A and B, and I have a point where I call X1
+
+23:14.100 --> 23:18.980
+and then another point which I call X2. So in this graph over here, it simply means that
+
+23:18.980 --> 23:27.220
+X1 is seen by both images and X2 is also seen by both images, but X3 for example is not
+
+23:27.220 --> 23:34.060
+seen by neither of these images, but X3 over here is actually seen by C and D, that is
+
+23:34.060 --> 23:40.620
+the third and fourth camera. So X3 over here would be seen by these two cameras, and X1
+
+23:40.620 --> 23:46.300
+over here is actually also seen by C concurrently with A. So this means that this is going to
+
+23:46.300 --> 23:51.580
+reproject into C as well. And we can see that this graph over here that relates the camera
+
+23:51.580 --> 23:58.420
+parameters as well as the 3D point, it's well represented as an adjacency matrix in the
+
+23:58.420 --> 24:06.780
+Hessian matrix over here that we compute in the normal equation. And as mentioned earlier on,
+
+24:06.780 --> 24:14.260
+once we have computed this, the Hessian matrix, and the Jacobian matrix that we have seen earlier
+
+24:14.300 --> 24:21.420
+on, it's equivalent to this structure over here, which is represented by this diagram over here.
+
+24:21.420 --> 24:28.100
+So we can see that the W and W transpose is just a transpose of each other, and the diagonal over
+
+24:28.100 --> 24:35.860
+here, it's actually a sparse matrix. And we can rewrite this into this form over here that we have
+
+24:35.860 --> 24:43.420
+seen earlier on when we look at the sparse Lebesgue-Macquaire algorithm. And we also mentioned
+
+24:43.460 --> 24:50.780
+earlier on that we can compute the shear complement by multiplying this block of matrix over here on
+
+24:50.780 --> 24:57.460
+both sides of the normal equation, where we can see that the first half, or the first block over
+
+24:57.460 --> 25:02.180
+here, it represents the camera parameters, and the second block over here represents the 3D
+
+25:02.180 --> 25:08.540
+structure. So by multiplying this, we obtain the shear complement equation of the first row,
+
+25:08.580 --> 25:14.300
+because there's a zero here. So it effectively decouples out delta B from A. We will have an
+
+25:14.300 --> 25:22.500
+equation that with only delta A that is remaining. And we also know that this can efficiently speed
+
+25:22.500 --> 25:30.900
+up, or effectively speed up the computational power, because the number of cameras is far
+
+25:30.900 --> 25:38.180
+lesser than the number of 3D points in the normal 3D reconstruction problem.
+
+25:38.180 --> 25:44.180
+And here is what I have mentioned earlier on. We get the shear complement equation,
+
+25:44.180 --> 25:50.060
+which is equivalent to Ax equals to B, an inhomogeneous linear equation that we can
+
+25:50.060 --> 25:58.100
+solve for delta A in this particular case over here. And it is easy to invert this guy over
+
+25:58.100 --> 26:05.780
+here, because when we compute this from this block over here, it will become a block diagonal
+
+26:05.780 --> 26:13.460
+matrix, and it's both sparse and symmetric positive definite. This means that the inverse
+
+26:13.460 --> 26:20.580
+of this guy exists, and once we have computed for delta A, we can back substitute it into this
+
+26:20.580 --> 26:27.060
+equation over here, multiply by this, and when delta A now is a known vector, and which we can
+
+26:27.060 --> 26:38.100
+solve for delta B. And to solve for the non-homogeneous linear equation, which is
+
+26:38.100 --> 26:45.620
+equivalent to Ax equals to B, we can make use of many linear algebra techniques such as the LUD
+
+26:45.620 --> 26:52.820
+composition, where we factorize this into this A matrix over here into a lower and upper triangular
+
+26:52.820 --> 26:58.580
+matrix. So once we have a lower and upper triangular matrix, for example, we can easily
+
+26:58.580 --> 27:07.460
+solve for x over here by doing this. So LU, which represents A, multiplied by x and B over here.
+
+27:07.460 --> 27:14.660
+So we can collectively call this U as a y and solve this equation as Ly equals to B,
+
+27:14.660 --> 27:20.340
+where this is a lower triangular matrix. So if this is a lower triangular matrix, that means
+
+27:20.340 --> 27:26.420
+that the upper triangular part of this matrix is equal to zero, multiplied by a vector of y
+
+27:26.420 --> 27:32.660
+and equals to B, what we can do here is that we can simply solve for this element multiplied by
+
+27:32.660 --> 27:40.100
+the first entry of y, and then solve for this first entry, and gradually do a back substitution
+
+27:40.100 --> 27:47.620
+to solve for all the other entries in y. So once we have obtained y over here, we can see that
+
+27:47.620 --> 27:53.060
+y is actually equal to U and x. We'll solve for another homogeneous linear equation where
+
+27:53.060 --> 28:01.940
+this becomes an upper triangular matrix. So what we will have here would be an upper triangular
+
+28:01.940 --> 28:10.980
+matrix over here multiplied by x, where y is now a known value. We can do a back substitution,
+
+28:10.980 --> 28:14.660
+solve for the first value over here that corresponds to the last element of x,
+
+28:14.660 --> 28:20.820
+and do a back substitution to solve for all the elements over here. Similarly, we can also apply
+
+28:20.820 --> 28:27.380
+the QR decomposition and the Cholesky decomposition, where QR decomposition here
+
+28:27.380 --> 28:33.620
+simply means that the Q matrix is an octagonal matrix, and the inverse of an octagonal matrix
+
+28:33.620 --> 28:39.780
+is simply the transpose. So we can solve for this as QR multiplied by x equals to B,
+
+28:39.780 --> 28:47.060
+and then we can do a Rx equals to Q transpose or B, which can be easily computed by taking
+
+28:47.060 --> 28:53.300
+the transpose. We do not need the inverse of this, which is easier to compute in this case.
+
+28:53.300 --> 28:58.500
+So once we have computed this, then we'll end up with another system or linear equation,
+
+28:58.500 --> 29:06.100
+which we call this collectively as y. We will end up having to solve Rx equals to y,
+
+29:06.100 --> 29:11.940
+where R here is a lower or upper triangular matrix that we can take advantage of the same
+
+29:12.500 --> 29:19.060
+method to solve for the unknowns of x over here. And similarly for Cholesky decomposition,
+
+29:19.060 --> 29:25.380
+which is probably the most commonly used decomposition or factorization technique
+
+29:25.380 --> 29:31.300
+to solve for the normal equation in the Loevenberg-Markov algorithm, where we simply
+
+29:31.540 --> 29:39.540
+factorize A into a square root matrix L multiplied by L transpose, where L here
+
+29:40.660 --> 29:48.500
+is a lower triangular matrix that we can then solve for the x in the similar way as
+
+29:49.460 --> 29:55.300
+what we have seen in the LU factorization. For more information about this, because you should
+
+29:55.300 --> 30:01.940
+have learned this in your undergraduate Linear Algebra course, I won't go through in very much
+
+30:01.940 --> 30:09.140
+detail except for what I have just talked about just now. And for more detail of this, I advise
+
+30:09.140 --> 30:16.100
+you to look into this textbook by Gilbert Strang, An Introduction to Linear Algebra. There's also
+
+30:16.100 --> 30:24.660
+very nice video lectures online that is taught by Gilbert Strang himself, and I strongly encourage
+
+30:24.660 --> 30:32.260
+every one of you to look into this if you forgot some of the basic background knowledge of linear
+
+30:32.260 --> 30:38.740
+algebra. And there are also other techniques to solve for this non-homogeneous linear equation
+
+30:38.740 --> 30:46.660
+in an iterative method such as conjugate gradient and Gauss-Snyder algorithm, and I also strongly
+
+30:46.660 --> 30:51.460
+encourage you guys to look into this. Part of this can also be found in this particular textbook.
+
+30:52.420 --> 30:59.380
+Now unfortunately, the normal equation cannot be solved in a naive way of just
+
+30:59.380 --> 31:07.060
+taking the LU decomposition, Cholesky decomposition, or other form of decomposition,
+
+31:07.060 --> 31:16.420
+because we'll more than often face what we call the problem of fill-in in this kind of factorization
+
+31:16.420 --> 31:22.980
+techniques. So what it means here is that if I were to have a matrix A in the homogeneous
+
+31:22.980 --> 31:31.300
+linear equation of A X equals to B, I would, one technique that I have mentioned earlier on here
+
+31:31.300 --> 31:37.540
+would be to solve this using the Cholesky factorization technique by decomposing this
+
+31:37.540 --> 31:47.940
+or factorizing A into L multiplied by L transpose. But more than often, if given a sparse matrix of A
+
+31:47.940 --> 31:55.060
+by simply naively doing a Cholesky decomposition on the sparse matrix A, we will end up with a
+
+31:55.060 --> 32:04.020
+lower triangular matrix that is much more denser than the original sparse matrix itself. And this
+
+32:04.020 --> 32:11.140
+will not be good because we will end up taking more time in solving for the equation in the
+
+32:11.140 --> 32:18.500
+back substitution steps. And one way to resolve this is to reorder the sparse matrix of A by a
+
+32:18.500 --> 32:27.860
+permutation matrix. So permutation matrix simply means a matrix that is with entries of 1 or 0
+
+32:27.860 --> 32:35.940
+in the matrix, and every column and every row of this particular matrix has to sum up to 1.
+
+32:35.940 --> 32:43.780
+So this means that I have to have only 1 once in a particular row as well as a particular
+
+32:44.420 --> 32:52.020
+column over here. And what this means is that I'm going to reorder the permutation matrix given
+
+32:52.980 --> 32:59.060
+square matrix over here. All the entries in this particular matrix would be reordered,
+
+32:59.060 --> 33:05.940
+that means that I will have to sort some of the entries by simply applying the permutation matrix
+
+33:05.940 --> 33:12.740
+on the A matrix. I'll not go into the detail of this, I will just simply give you a flavour of
+
+33:14.100 --> 33:20.980
+how to do the reordering or what does the reordering mean over here. So unfortunately,
+
+33:20.980 --> 33:26.740
+this particular problem to reorder the sparse matrix is an NP-complete problem,
+
+33:26.740 --> 33:35.940
+and this means that it could become intractable to compute for the best permutation, such that
+
+33:35.940 --> 33:44.420
+we reorder the A matrix to minimise the amount of fill-in after, for example, Kolosky decomposition.
+
+33:44.420 --> 33:50.580
+There are some approximation algorithms such as the minimum degree, the column approximate minimum
+
+33:51.220 --> 33:57.060
+permutation, reverse, McCutcheon-Mckee algorithm and the nested dissection algorithm.
+
+33:57.060 --> 34:01.780
+I will not go into the detail of this algorithm, if you are interested you should read the
+
+34:02.740 --> 34:13.060
+related text. But we will see the effect of applying this fill-in, the permutation algorithm
+
+34:13.060 --> 34:20.500
+or the reordering algorithm to prevent fill-in. Given a sparse matrix where we have 18,441
+
+34:21.220 --> 34:28.340
+non-zero entries, for example, after applying the reordering, we will see that we reorder
+
+34:28.340 --> 34:36.180
+these elements to become something like this, for example, by applying P transpose and P on A.
+
+34:36.820 --> 34:42.180
+So we will still get the same number of non-zero because we are simply just reordering the entries
+
+34:42.180 --> 34:50.260
+in the sparse matrix of A. Then after Kolosky decomposition, we applied Kolosky decomposition
+
+34:50.260 --> 34:56.020
+on this matrix over here after reordering, we can see that the total number of non-zero,
+
+34:56.020 --> 35:04.980
+it becomes 78,120, which is lesser than what we began with and it's also lesser than this example
+
+35:05.060 --> 35:13.620
+over here, where we simply naively apply a Kolosky decomposition on the sparse matrix of A,
+
+35:13.620 --> 35:22.900
+and will lead to a 8.28% increase of the non-zero elements as compared to this particular
+
+35:24.340 --> 35:31.460
+guy over here. So similarly, if we were to apply a minimum degree reordering on the sparse matrix,
+
+35:31.460 --> 35:36.100
+this is what we will get. We will still get the same number of non-zero elements because we are
+
+35:36.100 --> 35:43.620
+simply reordering the entries in the sparse matrix of A. And after applying Kolosky decomposition,
+
+35:43.620 --> 35:54.340
+we can see that we are, we end up to have 52,988 non-zero elements over here. This is still much
+
+35:54.340 --> 36:03.860
+lower than what we have over here, which is about 606,000 non-zero entries. We can see that we have
+
+36:03.860 --> 36:10.340
+the same effect by applying column count as well as nested dissection, where we will end up with a
+
+36:10.340 --> 36:18.580
+much lower number of non-zero elements after applying the Kolosky decomposition. So here's
+
+36:18.580 --> 36:26.580
+a comparison of the non-zeros after factorization. We can see that the original factorization, the
+
+36:26.580 --> 36:34.740
+naive Kolosky decomposition on the original sparse matrix, will lead to many non-zeros over here.
+
+36:34.740 --> 36:41.940
+And it seems like, apparently it seems like nested dissection has the best performance in this
+
+36:41.940 --> 36:49.300
+particular example, where it gives the least number of non-zero after Kolosky factorization.
+
+36:49.300 --> 36:55.940
+And what this means is that because Kolosky decomposition, it turns A into LL transpose,
+
+36:55.940 --> 37:02.260
+which I have mentioned earlier on that we are going to solve this equation by grouping this
+
+37:02.260 --> 37:10.420
+together as Y and then solve it as LY equals to B. So L over here is our lower triangular matrix
+
+37:10.420 --> 37:16.180
+over here. So what this means is that if I have very few non-zero entries over here,
+
+37:16.180 --> 37:23.220
+then the number of operations that I need to do by back substitution would be far lower than the
+
+37:23.220 --> 37:31.300
+number of computations that I need in the naive Kolosky decomposition of the original sparse matrix.
+
+37:31.300 --> 37:37.380
+And this would lead to a much more efficient computation of the normal equation, which has to
+
+37:37.380 --> 37:46.260
+be done at every iteration in our Leuvenberg-Makur algorithm. And finally, here's some open source
+
+37:46.260 --> 37:53.220
+software that is capable of implementing Leuvenberg-Makur algorithm for bundle adjustment.
+
+37:53.220 --> 37:58.420
+So you don't have to code everything from scratch. These three libraries which helps you to
+
+37:58.980 --> 38:05.700
+do this bundle adjustment, and particularly for the problem of structure for motion.
+
+38:06.020 --> 38:13.620
+Google series is most commonly used in the computer vision community for structure for
+
+38:13.620 --> 38:20.660
+motion, and g2o and gtsam is more commonly used by the robotics community for visual
+
+38:21.380 --> 38:28.740
+slam, visual simultaneous localization and mapping. As a summary, we have looked at in
+
+38:28.740 --> 38:35.060
+today's lecture how to describe the pipeline of large scale 3D reconstruction in particular.
+
+38:35.060 --> 38:39.780
+We looked at data association and the structure for motion. We'll leave that
+
+38:39.780 --> 38:47.700
+stereo to the next week's lecture. And then we have looked at how to do data association
+
+38:47.700 --> 38:54.820
+using robust 2-view geometry as well as the back-of-words algorithm. And we looked at how
+
+38:54.820 --> 39:01.300
+to do the initialization of 3D reconstruction with 2-view geometry, PMP as well as the linear
+
+39:01.300 --> 39:07.620
+triangulation algorithm. In fact, these three algorithms are what we have learned in the past
+
+39:07.620 --> 39:14.100
+lectures. And finally, we look at the definition of a bundle adjustment and how to do bundle
+
+39:14.100 --> 39:24.020
+adjustment using the iterative methods such as Newton, Gauss-Newton and the Leuvenberg-Makur
+
+39:24.020 --> 39:27.700
+algorithm. And that's all for today's lecture. Thank you.
+

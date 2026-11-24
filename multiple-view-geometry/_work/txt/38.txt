@@ -1,0 +1,1200 @@
+[00:00] Shall we start? How's everybody doing?
+[00:03] Okay and today we are going to, as promised,
+[00:08] I'm going to talk about 3D point cloud processing and we are almost reaching the end of the
+[00:15] semester. So next week will be the last lecture where I'm going to today I'm going to talk about
+[00:22] 3D point cloud processing and next week I'm going to talk about neural fields representation.
+[00:28] And yeah there is also some learning outcomes here. I will start off by talking about what's
+[00:37] the definition of implicit and explicit surfaces. So today we are only focusing on one type of
+[00:46] representation that's 3D point cloud representation and the 3D point cloud representation is actually
+[00:52] an explicit representation. Actually the regular 3D point cloud meshes, they all belong to explicit
+[01:00] representation. And I'll also talk about implicit representation next week. So implicit
+[01:07] representation, the sign distance field and the well-known radiance fields, neural radiance fields,
+[01:16] that's nerve. That's just one type of representation, one type of
+[01:20] implicit representation. I'll define them mathematically today and then next week we'll
+[01:25] look at the different examples and how we are going to learn them using neural networks.
+[01:32] I'll also talk about briefly talk about what are the pros and cons of point cloud representation.
+[01:37] Then of course this is something that you guys are looking forward to. I will describe how deep
+[01:43] learning can be used on 3D point cloud processing. And then once I talk about how I'll introduce
+[01:51] PointNet, that's actually the landmark work in 3D point cloud processing by a guy from Stanford
+[02:00] University in 2017. And then I will talk about some tasks on 3D point cloud processing,
+[02:09] particularly place recognition, key point detection, descriptor, 3D object detector,
+[02:15] and then 3D semantic segmentation, point cloud registration, and image-to-point cloud registration.
+[02:22] Okay so these are several tasks but it's not limited to just this task. It's just that I'm
+[02:28] already accessing 100 overflights so I have no more time and energy to go on. There are actually
+[02:36] many more tasks in 3D point cloud processing which actually that we are also researching on.
+[02:44] I have several publications on some other tasks such as point cloud completion or point cloud to
+[02:50] dense surface completion. So these are the stuff that we are currently still actively working on.
+[03:00] Okay and I'll talk about just this six or seven tasks over here. Alright so
+[03:08] nonetheless, even though it's just not limited to this task, I'm already covering quite a
+[03:15] number of papers here. So today's content is not from any textbook. They are all from the
+[03:24] publications and from these conferences in computer vision and machine learning
+[03:29] over the past five or six years. They are mostly from the last three or four years actually.
+[03:37] So it all started from this landmark paper here which is actually a very very simple
+[03:44] concept. We'll look at how this can be done. Then I strongly encourage all of you to
+[03:52] look through all the papers after today's lecture. You will probably be able to appreciate more
+[04:00] because one disclaimer is that I'm just going to touch on the surface of most of them because
+[04:06] it's really too much. I won't go into too much of the detail and I won't prove anything because
+[04:13] there are some theorems here right in some of these words here but I won't go too much into
+[04:20] those details. I won't also because this is not a deep learning class so I'll just assume that
+[04:25] you guys already know how to train a deep network. I'll just talk about the concept and how is it
+[04:33] related to 3D. As I mentioned that there are two types of 3D surface representation, two major
+[04:45] classes. The first one is what we call the explicit representation or otherwise known
+[04:51] as the parametric representation. The second type would be the implicit representation
+[04:59] or otherwise known as the volumetric or volume representation. Here's some examples of the
+[05:06] explicit representation. In the discrete form it could be point cloud which is what we are going
+[05:12] to cover today and it could also be measured. These are essentially just triangular structures
+[05:19] that form a graph and it actually helps to define some surfaces. It could also be continuous
+[05:33] representation, explicit representation. In terms of neural adults, implicit representation
+[05:40] would be what we in the discrete form would be boxes or grids or more commonly
+[05:48] you guys might have heard of this occupancy grid. So that means that we split the world
+[05:55] into a constellation of regular grids where each one of these grids will assign a value inside
+[06:03] there. It's either zero or one. It's either empty or occupied. But usually we will just relax this
+[06:11] as a range of number from zero to one to indicate whether this the occupancy of that particular grid
+[06:19] in the three new worlds. Of course it could also be in continuous form. In the discrete form it
+[06:27] will be occupancy grid. In the continuous form it will be called the neural fields.
+[06:33] We'll definitely talk about this next week. The two types of neural fields that is popular
+[06:39] right now would be the side distance function and also the radiance field. These are the two types
+[06:47] that are interesting right now. Hopefully I will also find some
+[06:58] that I will have some time to talk about the most recent papers that links these two together.
+[07:03] There are several papers because radiance field you can only do volumetric rendering
+[07:09] and side distance field you can only do surface rendering. But then it would be cool to...
+[07:15] Most of the earlier works on side distance field requires the 3D surface for supervision but the
+[07:22] radiance field would allow you to render from one view into another view so that you can
+[07:30] actually use the image itself as a self-supervision. But there are some works that actually
+[07:36] tie these two together. There are some formulations that allow you to
+[07:44] convert SDF into the radiance field and first you will be able to render the side distance
+[07:53] view into a novel view for supervision. Right now there are three papers which dominated this
+[08:04] conversion here. I will talk about hopefully I have some time to
+[08:07] talk about this but at least I will cover one or two of them. Mathematically, parametric
+[08:15] surfaces are defined by a vector value parameterization function. This function
+[08:22] is actually mapping a 2D parametric domain represented by omega into a 3D
+[08:29] surface represented by S over here. So this 2D to 3D mapping is possible
+[08:41] since all the 3D surfaces are too many folds. So what I meant by too many folds is that
+[08:48] regardless of whatever surface that you have, when you are walking on that surface,
+[08:54] it's always two-dimensional locally just like Earth. Earth is actually living in a 3D world
+[09:01] but locally when you stand on Earth, anywhere else, you are actually looking at
+[09:07] you are actually on too many folds where everything is you can move everywhere.
+[09:14] So there are some problems with this representation although intuitively it
+[09:20] seems to work. We'll look at what's the problem next week in more detail but an intuition is that
+[09:28] because the intuition here is that you would always be able to have a 2D domain omega that
+[09:38] is living in the R2 space. So if I have some coordinates which I call u and v,
+[09:44] whatever coordinates over here, the assumption is that I'm able to always map it, map every
+[09:51] single point into a surface. This is actually a too many fold over here but this assumption might
+[09:58] not always be true and vice versa. So in P2 space, when we look at P2 mapping to P2 mapping, we say
+[10:08] P3 mapping to P3 mapping, we say that that is a homography. When we look at a topology like this,
+[10:15] we say that there is a homeology. We'll look at it next week. So it's not always true here
+[10:23] such as for example it's impossible to actually map a plane onto a sphere such as Earth. That's
+[10:32] why when you unroll the map, the world map, some parts of it are actually distorted.
+[10:38] And examples of this are coin clouds because when you look at the 3D surfaces on the coin
+[10:45] clouds, if you are actually locally, it's actually a 2D, it's actually a too many fold.
+[10:51] So it's theoretically you should be able to map this and that meshes and also spline surfaces.
+[10:59] So you can represent each one of these using some control points and then you do a linear
+[11:07] combination of it, spline surfaces or atlas maps which I'm going to most likely talk about
+[11:14] next week. There's also another major type which is called the implicit or volumetric
+[11:23] surface representation and this is defined to be the zero set of a scalar value function.
+[11:31] So on 2D, what this means is that let's say I have a surface over here,
+[11:39] I can easily represent this by either occupancy grid, occupancy value or a sign distance value.
+[11:50] Sign distance value means that everything here would be zero. It's a level set or zero level set
+[11:58] over here. Then as you move out from the surface, when you're inside the object, it becomes
+[12:07] negative. Let's say this is inside the solid, it becomes negative. When you're outside, it becomes
+[12:12] positive. At any point continuously, the sign distance value here would be the
+[12:20] closest distance that you meet with the closest surface. Therefore, we are looking at
+[12:27] any point that you sample from the renewal. The surface is defined such that
+[12:37] this implicit value is equal to zero. Examples are occupancy grids, sign distance view,
+[12:45] radiance view or adaptive data structures such as Op3. You can actually represent Op3
+[12:52] such that you don't waste space. I mean in the 2D space, it will be called 3D.
+[13:01] So you can divide the world into, that means that you have a root and then every time you go
+[13:08] down there's four of these data structures. Let's say all these are empty space, only something here,
+[13:15] then you can further divide it again. Then you further divide it into this level.
+[13:21] So all the rest you can stop because there's no, you can represent one whole empty space here.
+[13:28] Then this is the Op3, but in the 3D space you would have a cube and then you partition it into
+[13:34] eight parts every time at every level you go. So that's Op3 over here. If you look at this
+[13:42] this two definition here, mathematically it also makes sense because mathematically this is really
+[13:49] your implicit and explicit functions. When you talk about implicit functions,
+[13:55] when you talk about for example, I didn't include this in the slides, but
+[14:00] let's say I talk about a circle, just a 2D circle. I can use polar coordinates to represent it.
+[14:07] So you'll be sine t cosine t and then t where t is the angle and radius for example. So these are
+[14:16] implicit representations because you're implicitly representing the function.
+[14:27] That function here is directly mapping your input to the surface itself. So that's the
+[14:35] implicit representation. You can also represent this via x square plus y square equals to r
+[14:41] square. This is actually an implicit function. You need to solve for the root
+[14:50] in order to get the surface. That's your zero level set actually. The way that we say implicit
+[15:00] and explicit representation is not for no reason. It's because mathematically it's as such.
+[15:11] So any question on the 3D representation? I'm giving a very brief introduction to this.
+[15:20] All right, so today we are going to look at just the 3D point cloud in detail, which is a
+[15:27] type of explicit representation. As I mentioned, you can see that why is it explicit representation
+[15:34] because, for example, this forest shape over here. When you walk on the surface, it's actually
+[15:42] a 2D manifold. But then you are mapping it on the 3D surface. We are actually representing
+[15:54] every sample. That means that we're sampling from that surface in terms of a 3D point cloud.
+[16:02] And this would be just simply, if you think of it in a more computer science way, this is nothing
+[16:08] but just a data structure for 3D representation. And that would be n by 3 matrix that looks like
+[16:16] this. Every point here would be x, y, z. And you have n number of points that forms the whole
+[16:23] 3D point cloud over here. But that's not stopping you from having a higher dimension
+[16:29] representation. That means that you can have the first three dimensions that represent the spatial
+[16:35] coordinates of each point. But you could also have the next d dimension as any other features
+[16:43] that you have. It could be surface normal. That means that I can take any point here and compute
+[16:49] the surface normal and then append it to my x, y, z. It could also be RGB information. That means
+[16:56] that it's a textured point cloud and you can have RGB information on it. You can also include
+[17:04] everything. You can have the surface normal as well as the RGB value. So this d here is up to
+[17:13] your imagination. And the usual data sources that we have for 3D point cloud is usually LiDAR or
+[17:22] LiDAR. It's a type of laser sensor. So what's happening is that it's emitting out
+[17:30] laser beams and then it's measuring the time of flight. Of course, you cannot really measure the
+[17:38] time of flight. I mean you cannot really measure the reflection and then it's actually over phase
+[17:44] shift. So there is some sensor inside the LiDAR sensor that measures when you are emitting out
+[17:54] some laser readings or laser beams onto this thing here. It's reflecting and there is a phase shift
+[18:04] when it's reflected back. So when you measure this phase shift, you are able to measure what's
+[18:10] the distance away from here. And there's also an RGB camera. As I mentioned in one of the lectures
+[18:18] that your Kinect is actually the RGB camera. And what it's doing here is that it's actually
+[18:24] projecting out certain patterns of infrared light. And then based on the distortion,
+[18:32] it's actually measuring what's the shape of the or what's the distance away
+[18:40] the depth of the surface to the camera. And in fact, one of the very old topics in
+[18:51] 3D computer vision, very early 3D computer vision, I think unfortunately I don't have time to cover
+[18:59] this in the lecture. But if you are interested, you could actually look at things like shape from
+[19:07] I mean shape from X or shape from silhouette. So this actually talks about how to measure some
+[19:16] kind of projection and then what's the distortion that you can actually infer the 3D shape.
+[19:24] All right, it could also be in terms of CAD model. That means that you can actually create it
+[19:29] using things like SOLIDWORKS or Pro-E or AutoCAD. So CAD model can also help you to create this,
+[19:39] but it's usually in the .obj format or apply format. And you can also sample from these surfaces
+[19:51] and to generate a 3D point cloud. And of course, we can also do this by
+[19:57] acquire the 3D point cloud by structure for motion, which is what we have already
+[20:01] seen previously. And then depth of images, etc. All right, so some of the important
+[20:10] applications of 3D point cloud are land surveying. So you can have terrain. So this is actually
+[20:17] part of photogrammetry. A lot of the stuff that we are doing in 3D computer vision
+[20:23] are actually stolen from photogrammetry. So land surveying, photogrammetry, urban planning.
+[20:31] So if you do things like city planning and so on, you can actually send a drone to map the terrain
+[20:40] and do things like this. Or architecture, you can actually do buildings and survey the buildings or
+[20:50] even monitor the integrity, the structure integrity of buildings. Actually, it can also,
+[20:59] things like 3D computer vision, not just point cloud, but also what we have learned before,
+[21:06] in images. It can also be used in all these applications here. And I didn't put another
+[21:13] one which I'm actually personally very interested, which is actually forensic science. So you can
+[21:20] actually use this kind of technology to preserve a crime scene, for example, or to even tell you
+[21:29] things that are beyond what you can see. So because it's actually picking up all the
+[21:38] structural details, or you can use another type of cameras that actually picks up things that
+[21:44] you cannot see using the eye. So these are actually things, something that I'm always very interested
+[21:52] in. But I have no chance to do this in detail. So you can also do archaeology preservation of,
+[22:02] for example, this is actually the statue of David that is carved by Michelangelo.
+[22:12] This was actually a SIGGRAPH project by Stanford University in 2002 or 2003. They actually took
+[22:21] the whole project and then they digitized the whole Michelangelo using this. But nowadays,
+[22:27] I think you can just use images and apply nerves on it. Maybe you can already get that kind of
+[22:33] detail. And also metrology, where you do some structure or manufacturing kind of stuff. And
+[22:45] also the robotics that you can map the world and then do planning and sound driving on this
+[22:53] map on roads. So there are also pros and cons of 3D Point Club. It's not the ideal case or
+[23:04] it's actually not the only choice. So the pros of 3D Point Club is that it has 3D information.
+[23:11] There's no depth in the 3D. That means that you know every point in the 3D space. Unlike images
+[23:17] where you do structure for motion but you lose the scale. You don't know how big is the object
+[23:25] unless you know something about the scene. And as well as in terms of coding or in terms of
+[23:31] mathematics, this is mathematically simple and concise because all you need is that you need
+[23:37] XYZ for every point. And you can actually represent the surface, any surface, regardless
+[23:44] of how complicated or how sophisticated it is. But there are also a bunch of weaknesses for 3D
+[23:51] Point Club. First is that it's very sparse. So even though you can have very dense point
+[24:00] club, it's still sparse compared to meshes for example. Because meshes is just watertight.
+[24:07] Okay and it's also irregular. That means that every point in the, there's no structured format
+[24:18] to this. So you don't know where is your nearest neighbor or in order to find the nearest neighbor
+[24:23] it's actually computationally much more expensive than to find the nearest pixel on the image.
+[24:30] Because pixels in the image is actually arranged in a regular tessellation of
+[24:37] array. So you know where's the nearest neighbor, all the eight neighbors. But for 3D Point Club,
+[24:45] if you want to do this in a very efficient way, probably you would have to use like kd3 or
+[24:51] things like this. Okay I want to talk about what is kd3. I hope all of you know what is kd3.
+[24:58] Oh in this assignment? Yeah. Oh really? I can't remember. Okay good.
+[25:06] All right so good that you know that what kd3, it can also be used to do fast search.
+[25:16] There are also libraries that do fast search. There's this fast approximate nearest neighbor
+[25:21] library. But this is irregular. It's nonetheless compared to an image counterpart. It's much more
+[25:27] difficult to search. And there's a lack of texture information because at the rawless form,
+[25:36] what it means is that you only have every single point. There's no extra or no RGB information to
+[25:43] it. And we'll see that what's interesting about this is that or what PointNet, which is the next
+[25:53] thing that we'll talk about, is interesting is that because points are actually unordered.
+[26:00] That means that if you take x1 x2 x3 okay x1 x2 and x3 and you flip it around you do some
+[26:12] permutation. That's all all together. Let's say you only consider three points. There are
+[26:19] three factorial six combinations here. So you can do x1 x3 x2. They are still going to be the
+[26:27] same point. But this will have some detrimental effect impact on our deep learning. We'll see why.
+[26:38] And the last problem here which is we also did some work on this. We have a paper on this but
+[26:45] I'm not going to mention this. That is rotational, equivariant, and invariance. But I'm going to give
+[26:54] you some insight behind this. Let's say I have this chair. It's upright. I look at different
+[27:03] types of chairs. They are all upright. And then I train a network that is upright. That network
+[27:10] will not be able to work well if I rotate the chair upside down for example. Because deep
+[27:17] networks are not rotationally invariant. CNNs itself is translational invariance or equivariant
+[27:25] but it's not rotational invariant. The difference between invariant and equivariance is that
+[27:34] invariant means that you take the input upright, you rotate it, it's still going to give you the
+[27:40] same result. Equivariance simply means that there is a very deep mathematical formulation. We
+[27:48] actually wrote all this in the paper as well. But I'm just going to give you a very quick insight.
+[27:53] Equivariance simply means that if you take this chair, you flip it upside down,
+[28:00] the output will also be flipped upside down. You have to undo it and then it will still match up
+[28:06] with the original upright chair. That's equivariant. Invariant means that you flip it upside down,
+[28:16] the output will still be the same as upright. You don't have to do any undoing of the rotation. But
+[28:22] this is a very tough problem. Actually it's very tough in deep learning. We did something
+[28:29] in this direction and we follow most of the works in studying the group theory. Because
+[28:39] SO3 is actually a group and we make use of some group theory to actually study this equivariance
+[28:48] and equivariance. But I won't say that we have fully solved the problem. I also don't think that
+[28:54] the problem has been fully solved yet. Nonetheless, I won't go too much into this.
+[29:03] You can also see that LIDAR actually directly gives that it's much more accurate than the image
+[29:09] based reconstruction. The city is actually using some LIDAR to map out. This is somewhere in
+[29:19] Germany. Here you can see that during structure for motion, the reconstruction is usually
+[29:28] less precise. Also, you don't get absolute scale from structure for motion if you don't know
+[29:35] anything about the scene. But for 3D point cloud, you get the absolute scale. Everything is one to
+[29:41] one. That's the advantage of this 3D point cloud. Let's look at now after I define
+[29:56] what is the 3D point cloud and the pros and cons. Let's just go into how deep learning can be used
+[30:03] for this 3D point cloud. The pioneering work for this is actually PointNet
+[30:11] by this guy Steve Adloff from CVPR 2017. This is the pioneering work and what it does is that
+[30:24] you it takes in n by three point cloud and then it inputs into the PointNet and it does three things
+[30:31] classification. Given any point cloud of an object, it's able to tell you the
+[30:37] semantic class of the object and then it's able to also do semantic segmentation of a scene.
+[30:44] Each color here represents a semantic class of a scene and then it's also
+[30:51] able to do part segmentation. This means that given this model of an aeroplane, for example,
+[30:58] it's able to tell you where are the wings, where's the body, and where are the tails for the 3D point.
+[31:06] But the main problem that this PointNet has to resolve when it's actually taking in point
+[31:14] cloud is that for all the neural networks that we know, it's MLP or CNN. I'm elaborating here
+[31:22] using an MLP, just one neuron. CNN also works in the same way actually.
+[31:30] You can see that they are not permutation invariant. What I meant by not permutation
+[31:35] invariant is this. I have a neuron here which is a function. This is just a
+[31:43] non-linear activation. It's a linear mapping followed by a non-linear activation.
+[31:51] So I'm going to represent it as H and then this would be a non-linear activation function F and
+[31:58] linear mapping of W transpose X. You can see that basically what happens here is that
+[32:06] let's just take the simplest case that the activation function is also linear in its identity
+[32:12] so we don't care about it. I'm going to just evaluate the inner term to become this part over
+[32:18] here and you can see that if I were to swap the order because I have three points here. I'm going
+[32:25] to swap the order from X1, X2, and X3. I'm going to swap into X3, X1, X2. But they are still the
+[32:33] same point. They are still the same point cloud regardless of how you swap them. In 3D, in the
+[32:39] spatial relation, it still remains the same. Nonetheless, you can see that if I were to train
+[32:46] the MLP using this way, the width is actually trained for X1, X2, and X3 in this order.
+[32:54] During inference time, if I were to sort the point cloud even using the same training data,
+[33:00] the output is totally different. This means that the network is not permutation invariant.
+[33:07] And in contrast to our image, you can see that the convolution here,
+[33:15] it's always in a regular, arranged in a regular order. So there's no such problem
+[33:22] for the image. There's no permutation problems in the image counterpart.
+[33:30] And nonetheless, if you look at the point cloud, it's actually orderless. You look at
+[33:38] if I have X1, X2, X3 to Xn number of points over here, I can arrange them in n factorial
+[33:46] combinations. And each one of these combinations, it still represents the same point cloud.
+[33:52] Group 4's way to make it permutation invariant is that you augment the training data with all
+[33:59] these n factorial combinations. But each sample that you give, you're going to permute the n
+[34:05] factorial number of times. So this is a serious way of doing it because what it means is that
+[34:10] you will end up with factorial complexity. That's not good. So this is not a correct way to do it.
+[34:19] So nonetheless, for PointNet, what they propose here is that they propose something that's
+[34:25] super simple. So since it's permutation, I mean, since a point cloud is orderless,
+[34:32] there's no order to it. And you want to make the network permutation invariant. Then what they do
+[34:39] here is that they just treat every point separately, independently. So if you have n
+[34:46] number of points, then I would put each point through an NLP, the same NLP. So these are
+[34:52] basically shared NLP. I'll put each point inside the same NLP. So I process each one of them
+[34:59] independently until I get the final feature here. So I will get n by 1024. That means that
+[35:07] each point that I have from R3, now I'm mapping it into R1024. And I have n number of them
+[35:18] that go through the same network n times. But these are all shared weights. That means that
+[35:27] essentially there's only one network that goes through here. Alright, then finally you end up with
+[35:33] this 1024 dimension, each one of the features. Then what happens here is that they cleverly use
+[35:42] a max-pool operation, which is permutation invariant, to get the global feature. Then after
+[35:49] that, you do all the semantic segmentation and also classification over here. So there is a proof
+[35:57] in the paper, but I'm going to just simplify it into a diagram like this to show you why
+[36:04] is it permutation invariant. Because the max-pool operation, if you have x1, x2, x3, let's say the
+[36:11] max-pool operation will be going along the rows and picking up the element that is the maximum
+[36:18] among all the inputs. And then you concatenate it into the final output over here. So you can see
+[36:25] that if I were to input x1, x2, x3, and x2, x1, x3, my output is still the same because I'm taking
+[36:34] the max operation. And max operation is regardless of the order. Therefore, because I maintain
+[36:43] every feature independently at the beginning, then I do a max-pool here, which is
+[36:50] permutation invariant. Therefore, the whole thing here is actually permutation invariant. That means
+[36:55] that whatever inputs that I give in whichever order, it will still work the same. It will still work
+[37:03] the same way. And that's the point. It is very simple, but he came up with this idea. Now I think
+[37:11] this paper has been cited like 10,000 times. It's a truly nice work, I think. After this work,
+[37:23] a lot of people actually started working on Point Cloud. We were one of them. Actually,
+[37:30] when we first saw this paper, we were so excited that we did a lot more work in this area here.
+[37:42] But one of the, although it's nice, there's a limitation of PointN. And that limitation is that
+[37:52] so if you compare with CNN, CNN has many receptive views because it's actually
+[37:58] convolving the kernel at many layers. So that means that if you look at one point here at the
+[38:05] end, you are not surprised that it actually maps back to a large patch of the image. So it actually
+[38:13] has a very large receptive view. And the larger the receptive view means that you gather more
+[38:18] information and the more powerful your network will be. But then if you just look at PointN,
+[38:24] because we are treating every single point independently, and then we just do a max-pool
+[38:28] at the end. So essentially there's only one receptive view. And that's all the points.
+[38:36] That's not good. That means that it lacks what it has in it. It has a global knowledge
+[38:44] of the global shape, but then many structures, 3D Point Cloud, many shapes, it also depends
+[38:51] on locally what's the structure. So it actually completely ignores this because it treats every
+[38:58] single point independently. It doesn't take into account the neighbors. And there are many papers
+[39:07] and one of them that follow up, which is PointN, by the same guy again. So we also have a paper on
+[39:16] this. We call it the SolNets. They came up with this PointN pass pass to resolve this because
+[39:21] the limitation of PointN is that they treat every single point independently. So what this suggests
+[39:28] is that let's just do some clustering. So from the input here, it's all going to do some
+[39:35] local sampling using the FPS, the furthest point sampling. Then it's doing some k-nearest neighbor
+[39:42] locally and grouping. And then it's passing through the PointN for every cluster here.
+[39:50] So that means that the PointN, although it's independent, it's treating every point
+[39:55] independently. It's now treating the cluster, every point inside the cluster independently.
+[40:02] But what it means is that you have the local feature because each PointN is local now. And then
+[40:10] you end up with a coarser output over here. And we do sampling and grouping again. So FPS again,
+[40:19] and then the k-nearest neighbor again, and we do this. So as a result, this becomes very similar
+[40:27] to your multi-layered CNNs. That means that your hierarchical CNN. So first, we just simply do
+[40:38] further point sampling. What it means is that given the set of points, we're going to choose
+[40:43] a subset of n points such that each one of the points in the furthest point sampling,
+[40:52] it's actually furthest from the rest of the points. And this is a very standard algorithm
+[40:58] in computer graphics, actually. And then next, for each one of these furthest points,
+[41:05] we treat it as the local centroid. And we find the k-nearest neighbor around the neighborhood
+[41:11] and cluster it together. Then we put it into the PointNet. But now, each PointNet here,
+[41:17] because we know the cluster, we're going to center it locally with respect to the centroid.
+[41:25] That means that I'm going to subtract every point in the cluster with its respective centroid.
+[41:31] Then I put it into the PointNet. And I'm also going to do a multi-resolution grouping. That
+[41:36] means that at every layer, I'm going to group this together and then I'm going to put it into
+[41:43] a PointNet, a local PointNet. And I get the final output over here. So let's say I have three outputs
+[41:49] over here. But the final output here, I'm going to take the last layer, the output of the last layer,
+[41:57] and concatenate it with the outputs of the first layer. That means that the first three points here
+[42:03] are all going to be concatenated together. You can see this something like your skip link
+[42:10] architecture, the ResNet or skip link architecture in ResNet. It's actually very similar
+[42:19] to that kind of concept. So this is the upgrade of PointNet into PointNet++. But of course,
+[42:33] there are many other variants to do this. And usually if you now do this kind of work,
+[42:41] you would need to cite a whole bunch of papers and to do benchmark again. This has been very popular
+[42:50] for the last five years or so. Now of course the type has changed. Now it changes to the
+[42:59] Radians view, the 3D representation. But PointCloud was very popular. And I believe
+[43:06] that it's still popular. Right now people are actually looking at how to do self-training
+[43:12] representation learning. So using contrastive laws and all these things.
+[43:17] So after defining or introducing you to the two tasks or the two networks that have pioneered
+[43:30] the PointCloud processing, I'm going to next tell you about various PointCloud-based tasks.
+[43:38] So essentially I'm going to talk about six different tasks over here. The place recognition,
+[43:45] viewpoint detector, descriptor, 3D object detection, 3D semantic optimization,
+[43:50] PointCloud registration, and image to PointCloud registration. So I'm going to introduce you to
+[43:57] some of the pioneering work in all these respective areas over here.
+[44:04] So let me talk about the first task, which is PointCloud-based recognition. So this is the
+[44:11] where am I problem. It's the same as the vocabulary tree that I talked about the last
+[44:19] time when I talk about structure for motion. That means that you have a bunch of images.
+[44:23] A given one query image, you want to find which one is the most similar one.
+[44:28] But now I want to do this. I give you the whole map of the terrain. This is actually Oxford City.
+[44:35] They have a data set from Oxford University. Let's say I give you the whole Oxford City
+[44:45] map. These are all 3D PointCloud. And then I give you a local 3D PointCloud. This means that I'm
+[44:52] maybe driving a car or a self-driving car is operating in this city. But the LIDAR sensor
+[45:00] that is mounted onto the car can only see the local view of the scene. So this is the local
+[45:07] view. So when I'm building up this map, I happen to have every part of the point with the GPS
+[45:18] coordinate, GPS INF coordinate. And the question here is that the query PointCloud, if I can find
+[45:26] where this query PointCloud is most similar inside this map, then I would have successfully
+[45:33] localized myself. I would know where am I. According to where am I, let's say this part
+[45:39] here, I found that it's actually this piece over here. Because this is the reference map,
+[45:46] I know the GPS INS coordinates here. So this means that at the end, I'll be able to know
+[45:54] what's my coordinates, where am I in the world. So this is the where am I problem.
+[46:02] It's the most important problem in robotics or navigation. And so the idea in this paper here,
+[46:14] is that you can actually create a database of some maps that are geotech. That means that
+[46:21] instead of looking at the whole terrain like this, the whole 3D map,
+[46:27] what I can do is that I can split this into many chunks of some maps. And each chunk of some map
+[46:34] is georeferenced. That means that I know the GPS INS, and then I can down sample it for the sake of
+[46:40] efficiency. Because computational efficiency and storage efficiency, then this is what it
+[46:48] looks like after I split this into different chunks. And I'm going to geotech it using my GPS
+[46:57] INS. Then now the question becomes a retriever problem. You can see that this query submap
+[47:07] is just like your querying image. And then the reference map now becomes chunks of submaps over
+[47:16] here, which actually looks like this one chunk of this. It becomes your database of submaps or
+[47:26] analogously it becomes something like your database of images where you want to do the
+[47:32] retriever. That's what we have mentioned in the structure promotion lecture. The problem now
+[47:39] simply just becomes a retriever. In this paper here, this is the first work to actually
+[47:46] talk about point cloud retriever. It's called point net vlab because we took point net and then
+[47:54] there's another thing called the vlab structure. I'll talk about this very briefly. The first part
+[48:01] here is just point net where we take the point cloud and then we put it into a point net.
+[48:09] And finally, we remove the part of max pool. So instead of doing max cooling, we replace the max
+[48:17] cooling with a more powerful architecture, which is the vlab architecture. And vlab architecture,
+[48:23] I will talk about it very briefly. It's actually very similar to the visual works. So what it's
+[48:30] actually doing here is that it's actually learning a vlab core. So this is actually
+[48:36] all the visual works, the centroid. It looks something like this. The equation is this here,
+[48:44] but this is part of the proof that is permutation invariant. So this is p prime here where I'm
+[48:54] taking all these points here and putting it in. So what happens here is that every one of these
+[49:00] is going to be assigned to a centroid. This is exactly how the visual works. If you still
+[49:08] recall, I actually mentioned about this, that we learn the visual works and then during inference,
+[49:14] I'm going to count the frequency. But here, instead of a hard assignment by counting frequency,
+[49:20] we're going to do a soft assignment. So this is actually a soft assignment here. It's a soft max
+[49:25] function here. So w, b, and the centroid here, which is a visual work, they are all parameters
+[49:32] of the big network. So we are going to learn c, w, and b. Basically, this is the soft assignment.
+[49:39] This part here is a soft assignment. And then these are all the visual works. So this means
+[49:44] that we would have, in the end here, the output here is similar to the frequency count,
+[49:53] the histogram that we have when we talk about the visual work or image retrieval.
+[50:01] If you look at the origin, there's basically another paper called NetVLAT. That's also
+[50:10] published in 2017, I think, or 2016 in CBPR. So that paper here basically do image and then
+[50:21] propose this VLAT architecture. And then we were the first to actually combine them together and
+[50:25] say that this is point net VLAT. So today, this is still a popular task, although we stopped
+[50:32] working on this. But it's still a popular task that you still can see occasionally.
+[50:38] There are actually almost every conference, you can see papers coming out with new techniques to
+[50:46] solve this. And what's interesting here is that we also provide proof that, because point net uses
+[50:54] a softmax to make this part permutation invariant. But we're replacing it using NetVLAT. So NetVLAT
+[51:03] has to be permutation invariant as well for this to work. Otherwise, it won't work for 3D point
+[51:09] cloud because NetVLAT was first proposed using images. Then we actually show a very simple
+[51:16] proof. So if you have the points that order in this way, p1 prime to pn prime,
+[51:22] and we have outputs of this vk over here. So you have to put it into the soft assignment.
+[51:30] So this is the assignment with the centroid and then you have to sum everything together into
+[51:38] k. And what happens here is that because there is a summation, even if I were to
+[51:44] permutate this point over here, we can see that basically the sum is permutation invariant.
+[51:52] So you will still end up with the same feature at the end. So this actually
+[52:00] means that it's actually a permutation invariant network. So it shouldn't have any problem
+[52:09] working for a 3D point cloud. The way to train this PointNetVLAT would be to use
+[52:17] metric distance learning because we are going to compare the similarity of two features.
+[52:25] So what happens here is that you would have the same network, the same PointNetVLAT network.
+[52:33] Okay you will repeat it. So we will have three of these. It's a triplet network.
+[52:43] But they are all the same thing. So we will have an anchor point cloud, a positive point cloud,
+[52:50] and a negative point cloud. And then what happens here is that you know that the positive is the
+[52:58] same or roughly taken at the same place as your anchor point cloud.
+[53:03] And what we want here is that we want to create a purpose of training data where we have the
+[53:12] positive pair and also a bunch of negative pairs. I know this is let's say taken from here.
+[53:21] And then this would be my positive pair. The negative pair would be all the other points
+[53:27] that are not taken at the same location. And it better not be the same thing. So in this
+[53:34] illustration is bad because it's actually the same thing. But we actually need to traverse the
+[53:40] route a few times. I still remember when we were doing this paper because we have the car set up
+[53:46] with all the lidars and all this, a self-driving car actually. So we actually were on the road
+[53:53] for like 30 over hours driving around non-stop to collect all the data sets
+[54:02] within NUS and also in west coast. So you need to traverse several times the same route such that
+[54:13] the positive pair cannot be exactly the same thing. But it has to be taken at the same location
+[54:19] over a different time such that there is some subtle changes or some changes in the
+[54:27] point cloud. Otherwise it will work. Otherwise you are just simply overfitting because it's
+[54:33] exactly the same thing. Then that loss is always zero. You are not training the network at all.
+[54:42] That's why we take the positive pair and also the negative pair. It has to be from a different
+[54:48] location and it can be taken at the same time. That means that it's in the same route
+[54:54] but at a different location. So we have this triplet or a couple of triplets.
+[55:02] These are the features. P are the features. So we propose what we call the lazy triplet loss.
+[55:10] So the idea here is just this. Because the positive pair, when you feed in the positive pair
+[55:19] the output here, the positive feature and the angle. So these two pairs should be as similar
+[55:26] as possible. That means that the distance between f plus and f a needs to be minimized.
+[55:34] And the distance between f minus and f a needs to be maximized because they are the negative
+[55:46] pair. So this distance has to be maximized over here and what you can do is that you can put them
+[55:54] into the same function here such that you're maximizing the positive pair and the negative
+[55:59] pair. But if you simply just do this, that can be a trivial solution because both are outputs
+[56:05] of the network. The network can just simply learn everything to be zero. But then that's why you
+[56:13] then that's why you need a L1 here, a margin and put it into a hinge loss. Hinge loss simply
+[56:19] means that it's max of this or zero. And I'm not going to into a detail because I'm not teaching
+[56:27] deep learning here. So the ideal case here is this. The ideal case is that when you do a triplet loss,
+[56:39] the negative should be the hardest negative. So what do I mean by hardest negative?
+[56:47] The hardest negative means that there's only one positive but when you do negative, ideally you
+[56:53] should select from all the other samples that are not that anchor. And then you select the one that
+[57:00] is closest to the anchor. That's the hardest negative because it's more similar to it but
+[57:08] it's actually not that angle. You want to push it as far apart as possible. So that's the hardest
+[57:14] negative. But the network is continuously updated every iteration in your training. So what it means
+[57:24] is that the hardest negative always move around. It always changes. And at every iteration,
+[57:30] you cannot just do it at the... because during the training, if given a batch, you have to iterate
+[57:37] within that batch. Then after that, you escape. You need to go back to an epoch and keep on
+[57:43] iterating. So what it means is that at the final level of iteration, after every iteration, you
+[57:50] need to basically search through the whole database of training data in order to get the
+[57:56] hardest negative. But this is not good because this is slow, very slow. But that's the most
+[58:02] effective. So we just we call it lazy triplet because we're just going to take the hardest
+[58:08] negative within that batch size. And it seems to be efficient. There's also a triplet loss where
+[58:19] you have the negative. When you push the negative apart or pull the positive
+[58:27] close to each other, you could unknowingly have a third pair that is supposed to be a negative one.
+[58:37] But you could unknowingly push the anchor towards that pair. So it's actually then what is suggested
+[58:44] that you just pick the two hardest negative such that you actually do both concurrently
+[58:52] and make sure that they are all pushed apart. And this is the quadruplet loss. But of course
+[58:58] it's computationally effective. And what we are doing here is that we are also searching for the
+[59:04] hardest negative and the second hardest negative in the batch size. And here's some results that
+[59:14] we have where we basically use the Oxford data set and then this the university, this data set
+[59:23] is actually NUS residential area is the west coast area. Actually people cite us so many times
+[59:36] they always use this abbreviation in the data set but nobody knows exactly where it is and what it
+[59:42] stands for. So we have the training and the test lead and here's the result. Of course at that time
+[59:54] we just need to compare to point net because we were the first to define this task actually.
+[1:00:03] So before this paper there's no such task. There's only image retrieval, there's no point out
+[1:00:10] retrieval. We were the first to do this. Now we are heavily beaten by
+[1:00:26] like the state of the art they might have already or saturate the whole thing by a lot. But what's
+[1:00:34] interesting here is that we unknowingly solved this problem where the same scene, if you do a
+[1:00:42] image retrieval, the same scene day and night and winter versus spring for example, then you
+[1:00:51] can see that even with our idea if I don't tell you that these two are actually the same place
+[1:00:56] you probably wouldn't be able to find out. So a vocabulary tree or any form of
+[1:01:03] netvilak, the original netvilak itself, it will not work under this kind of situation.
+[1:01:10] But we unknowingly solved this problem using point out retriever.
+[1:01:15] So this is cool because structurally it remains the same. But of course there are other
+[1:01:21] other cases where you can see that such as this I query this and I have a wrong match,
+[1:01:27] wrong retriever. Whereas the true match is this because what happens is that it's after
+[1:01:32] some time this car that's parked here, it's actually driven away. So there's no more car
+[1:01:39] here. So this is actually the same location but then you can see that it actually wrongfully
+[1:01:46] retrieved something that is structurally similar. So what this means is that the network is picking
+[1:01:53] up the structure. It's actually picking up some structure. It's learning the structure
+[1:01:58] of the 3D point cloud to have a similarity comparison over here. Any question?
+[1:02:08] I guess this is kind of straightforward. All right, so let me go into the next part which
+[1:02:14] is keypoint detector and descriptor. So for image-based keypoint detector and descriptor,
+[1:02:26] I think in your assignment you might have used SIP feature and SIP descriptor. So image,
+[1:02:33] it's interesting. I mean you can, because you have texture RGB information, you have
+[1:02:40] RGB information that you can actually use to form the descriptor. So basically key points are
+[1:02:48] corner points or key points are stable points in the image such that when you have a viewpoint
+[1:02:56] change, you are still able to detect the same stable set of key points. And for each one of
+[1:03:03] the key points, we are going to assign a time print, a signature to it and that's the descriptor.
+[1:03:08] So in SIP, it's 128 dimension such that when we have a different viewpoint, we still can
+[1:03:15] detect the same set of key points with the same descriptor and then we can match it over the
+[1:03:23] image pair here. So this would be the image counterpart. But for 3D point cloud,
+[1:03:34] this would be difficult because there's no texture at all and the point clouds only contain,
+[1:03:41] only consist of xyz input. There were works on learning the descriptors of the key points
+[1:03:51] but there weren't any, there are not any point key point detector works. The reason is because
+[1:04:00] before us, we were actually the pioneer to propose key point detector here and for 3D point cloud.
+[1:04:08] So using deep learning but before us, there are some traditional methods to do it but then before
+[1:04:14] that, there's no one actually did it. The reason, the primary reason is because you cannot supervise
+[1:04:21] this. There's no full supervision, you cannot. If I give you this point cloud, can you tell me
+[1:04:27] where are the key points? No. Even if you can, you are probably not going to label every key point
+[1:04:36] for the full supervision. So before us, nobody actually knew how to do this.
+[1:04:44] So the question is how to actually bring the network such that it's able to detect the key
+[1:04:50] point. So we came up with what we call the 3D FITNET and this is actually a weakly supervised
+[1:05:00] triplet network. That looks like this. So we are going to use, why is it weakly supervised?
+[1:05:07] Because we only know, we only need to know the chunk of submaps such that it's the same
+[1:05:14] as net relaps where we know we need to know triplets of anchor and the positive pair.
+[1:05:22] That means that this needs to be taken at the same place but at a different time. And then
+[1:05:29] we also need to, with the anchor, we need to know where are the negative pair. So this is the
+[1:05:36] information that we need only to actually train the network to detect key point. We don't have to,
+[1:05:43] we don't require any labeling at all. So before this, before our 3D FITNET,
+[1:05:49] all the previous work, they used the traditional approach of computing surface normals and all this
+[1:05:57] to get the stable key points. But we were the first to actually propose this method to use
+[1:06:03] weakly supervision. And the idea is that we give a point clock. So we do FPS, the further
+[1:06:10] point sampling to randomly sample on the pointer. And this FPS is actually inspired by,
+[1:06:20] FITNET also uses this, but the original place where this algorithm was proposed
+[1:06:27] is actually in computer graphics. In computer graphics, they propose FPS. The reason is because
+[1:06:33] on a surface structure, the furthest point is actually the most representative points
+[1:06:40] of that structure of the 3D point clock. So we do further point sampling here. And then
+[1:06:46] for each point that we sample, we do clustering, we cluster the k nearest neighbor. And then
+[1:06:54] after that, we formed those clusters, we would dump it into a detector. So this,
+[1:07:03] basically this detector here is just a small point net over here. It's just a point net
+[1:07:08] where at the end here, we output two things. One is the attention weight, the other one is the
+[1:07:15] orientation. And so the attention weight over here, we'll see that it's actually used to weigh
+[1:07:25] the triplet loss later. But this attention weight will also tell us whether this randomly selected
+[1:07:34] cluster here, n by three, that point over here is a key point or not.
+[1:07:41] So this is essentially how we actually get the output to tell us whether this is a key point or
+[1:07:48] not a key point. Then orientation, because we have to make it slightly permutation invariant.
+[1:07:55] Because at least locally, we have to make it permutation invariant. So this orientation
+[1:08:02] will tell us where is the upright direction. So we will learn this using the workout.
+[1:08:08] This is the detector part. We also have the descriptor part. This is just something like
+[1:08:16] a time frame for each one of the key points that we are learning. And we'll just put this
+[1:08:22] orientation into the cluster so that we can rotate it upright. And then this is also something like
+[1:08:29] a point here. There's a max pooling and we concatenate it together. So finally it comes,
+[1:08:37] it will output a descriptor over here. So this descriptor, we will have one descriptor per cluster
+[1:08:45] in all the positive, anchor and negative pair. Then finally, once we have this,
+[1:08:52] we will put it through a similarity matrix that looks like this. So what happens here is that the
+[1:08:58] anchor here, it will go into each row of it in these two matrices over here. Then
+[1:09:06] the positive point cloud will come in here. So each entry here would be the positive distance
+[1:09:18] between the anchor and the positive point cloud. So what happens here is that for each row,
+[1:09:25] we are going to take the minimum distance. This means that between the positive and anchor,
+[1:09:33] for each one of the key points in the anchor, I'm going to take the closest one
+[1:09:44] that is from my positive pair. And this will give me my final
+[1:09:51] losses. So I'm going to sum this and this will be the distance. It's the closest match. Similarly,
+[1:09:57] between the anchor and the negative, I'm also going to take the closest match over here.
+[1:10:04] It's also the minimum. But instead of minimizing it, which is because this positive and anchor,
+[1:10:11] they are supposed to be a match. They are from the same area. So the descriptors that we take
+[1:10:16] it better be the minimum, the closest one. It better be minimized. I want it to be as
+[1:10:22] close as possible. But I'm also going to take the minimum over here. This forms my hardest negative
+[1:10:29] between the anchor and the negative. So I want to maximize it. So I take minus of this distance over
+[1:10:38] here. And then I dump everything into a triplet, a marginal loss or a hinge loss here. Then
+[1:10:46] finally, what happens is that I'm going to weigh this with my weight that I have found over here.
+[1:10:56] I'm going to normalize this. Then I'm going to weigh this with w prime over here. So this
+[1:11:03] attention will tell me whether this key point is significant or not, whether it should be a key
+[1:11:10] point or not. If it is not a key point, then I should reduce this. So in the end, we learn this
+[1:11:19] using the same, actually the same data set for PointNet VLAP. And we can see that.
+[1:11:27] So basically before us, our key point is this 3D peanut key point. And then all these key
+[1:11:36] points that are existing ISS or RS or RSTF, they are all standard geometrical approaches.
+[1:11:44] Because we are the first to learn this using deep learning. And we can see that we actually outperform
+[1:11:50] all of them. So if we compare, we can see that this attention that we have learned, it's actually
+[1:12:02] more yellow, the brighter it is, the higher the attention. You can see that it's actually focusing
+[1:12:10] all on the structural meaningful places. But on the road, for example, there's nothing because
+[1:12:17] it's flat. So our focus is really not there. And then the key point that's obtained here is all on
+[1:12:25] the structural interesting places. Whereas look at ISS, the standard conventional approach,
+[1:12:34] you guys see that there are many false positives on the road, which is not meaningful at all.
+[1:12:39] Yeah, so we published this at ECCB 2018. There are of course at that time, we no need to compare
+[1:12:46] with all the, any other deep learning methods because we are the first. But for descriptors,
+[1:12:52] there are many other methods already at that time. So there's 3Dmatch, there's CGF,
+[1:12:59] FPFH, I think it's also a deep learning method, if I didn't remember. So all these are a lot of deep
+[1:13:04] learning methods over here. Then we are the first to actually come up with this or to cover them
+[1:13:10] together. Actually, we do both simultaneously. But we are not satisfied with this. So later on,
+[1:13:20] we came up with the second approach to, because this is a weekly supervised,
+[1:13:25] then we thought that we might as well do away with the INS and GPS. We do it
+[1:13:30] fully self-supervised. So yeah, some of the results. So we do unsupervised learning
+[1:13:39] in the next work, which is the next year in 2019 ICCB. We did this. So
+[1:13:48] the idea here is that this is just for key point detection. We do an unsupervised key point
+[1:13:54] detection, table key point detection. And what we want to do is that even we will just train,
+[1:14:02] we will just design a network to do training without any labels of the key points,
+[1:14:08] as well as we wouldn't do any labeling of where the key point is taken as compared to the previous
+[1:14:15] one. We will just take that, any key point, any set of points up and do self-supervised learning
+[1:14:20] on it. So nowadays, this has become quite a norm already. People will do contrastive learning
+[1:14:29] where they man the same data, they rotate it or whatever, then they do some form of
+[1:14:35] augmentation. But at that time, we were also one of the first to actually use this kind of idea.
+[1:14:42] So given a point cut here, what we do here is that we're going to randomly generate a
+[1:14:51] transformation and transform this into from x here, transform it to an x tilde. Then we put
+[1:14:59] it into the feature proposal network, which is this guy over here. It's not complicated,
+[1:15:05] but then I think there are many points. Actually this was taken, this was actually done or inspired
+[1:15:15] by SONET. At that time, we thought of this and then the feature proposal network.
+[1:15:25] Then the output here would be that from the original point out, I would get a set of key
+[1:15:30] points. I'll talk about what sigma is later. Sigma is just an uncertainty and it acts as the same as
+[1:15:38] the attention that we saw earlier, the uncertainty. Then when it's rotated or transformed,
+[1:15:45] I would have another set of q tilde here, so the key point here. When you undo this q tilde
+[1:15:55] via t inverse over here, this t inverse, then the two sets of key points should match up.
+[1:16:03] Then this means that it can be fully self-supervised. What I didn't show in this
+[1:16:15] slide here, we need some proof, a formal proof actually in the paper, to show that
+[1:16:23] actually if you do this, just naively do something like this. That's a degenerate case
+[1:16:30] because you can actually learn the centroid or learn anywhere in the principal axis.
+[1:16:38] No matter how you transform it, you will still get the same point.
+[1:16:44] We found a very trivial solution to this. You just limit the receptive field.
+[1:16:54] What happens here is that we found out that if you don't limit the receptive field,
+[1:16:59] that means that the network has a global knowledge of the shape of the point and the centroid and
+[1:17:05] the principal axis are actually very good representation of the global information.
+[1:17:10] It can actually degenerate. We also show experimentally it does degenerate to that
+[1:17:16] if we open up, if we widen the receptive field. You have to select a narrow enough receptive field
+[1:17:25] such that it's not sufficient to degenerate into the principal axis or centroid. But it's still
+[1:17:36] able to give us meaningful outputs over here and it does work quite well here. So a straightforward
+[1:17:43] way is that we just take the chamfer long. But then if we just do this, this is a hard
+[1:17:49] assignment. It's not meaningful or it's not equally. We know that the m-proposals here
+[1:17:56] from the feature proposal network, they are not going to be equally salient.
+[1:18:02] So they are not going to be equally salient. So the receptive field here can be featureless
+[1:18:07] surface. What we propose here is that we also output sigma which is the uncertainty.
+[1:18:17] You can see it as an uncertainty. So we put it into exponential distribution here such that
+[1:18:23] when we minimize it, it's actually characterized by a distribution instead of a hard assignment.
+[1:18:32] So this sigma here, since it's also learned, but there's no need for any supervision. The
+[1:18:38] supervision is actually to minimize this long likelihood here. So together with the sigma here,
+[1:18:43] it's just the output. So if you do this, then we realize that actually the sigma will
+[1:18:50] measure the uncertainty. And it's telling us how likely or how salient that particular point
+[1:18:59] is as a feature. So one way that you can do the feature, the key point, which is actually in our
+[1:19:11] 3D feednet. In 3D feednet, we just propose the key point using one of the points in the point
+[1:19:19] clock. But the key point need not necessarily be from one of the points because you are representing
+[1:19:26] a continuous surface and the key points are just sampled on the surface. So it could be somewhere
+[1:19:33] in between actually. But then if you force that key point to be on one of the samples of the point
+[1:19:42] clock, then you are subjecting the whole thing to quantization error. So because you are quantizing,
+[1:19:48] I mean when you draw samples of points from the surface, this is a form of quantization.
+[1:19:54] So we would be subjected to quantization error. And therefore we say that let's not constrain
+[1:20:02] the feature proposal network. We'll just let it output any point in the 3D space.
+[1:20:09] But if you just do this, then that 3D point might be very far off. It might be floating away.
+[1:20:14] So we enforce the point-to-point law. That means that whatever that we output, it should be the
+[1:20:21] chamfer distance to the closest point should be minimized. So we don't force the output to be one
+[1:20:30] of the points in the point clock, but we force it to be close to the point clock itself.
+[1:20:38] And if we have the point-to-point law, it's actually all that close to the surface.
+[1:20:49] And then if we don't have it, you can see that they are all floating around.
+[1:20:54] So this is the whole idea here. And it turns out that this works far better than,
+[1:21:04] in terms of repeatability, it works far better than our own 3D feednet. Because this
+[1:21:13] 3D feednet was published at ECCV 2018. This work was published at ICCV 2019.
+[1:21:25] But we want the second work to compare with ourselves. That's the 3D feednet.
+[1:21:35] And then you can see that actually the in terms of repeatability beats everything by a huge
+[1:21:41] margin here, even though it's self-supervised.
+[1:21:46] And here are some other results. We call this method the UCIT. It stands for
+[1:21:51] unsupervised interest point, stable interest point. And yeah, so you can see that all this
+[1:22:00] after registration is very stable. All right, any question up to this point?
+[1:22:05] If not, then let me talk about the next task, which is 3D object detection.
+[1:22:13] So the task is this, the objective is just this. Given the 3D input point cloud,
+[1:22:19] that looks like this. And then what I want to do here is that I want to detect where are the
+[1:22:26] objects and put the tightest bounding box around each object. So I want to put a bounding tightest
+[1:22:35] bounding box that's parameterized by seven parameters. So X, Y, Z, which is the center
+[1:22:40] of the bounding box, H, W, L is height with length of the tightest bounding box, as well as
+[1:22:48] we always assume that it's upright. So there's only a yaw angle, which is theta. And that's the
+[1:22:55] heading. So this is what we want to assign, as well as around each object and as well as the
+[1:23:04] semantic mark of each of the bounding box. So this is the task of a 3D object detection.
+[1:23:10] It's much more difficult than the 2D object detection counterpart. Although there are many
+[1:23:20] methods already in 2D object detection, like FASTA, CNN, things like this, I think the
+[1:23:28] latest state-of-the-art is data using the transformer. So the visual transform,
+[1:23:38] the 16 by 16 transform. So things like this already, but 2D object detection is much more
+[1:23:44] difficult because you have very sparse point cloud. And some of the objects, you can see that
+[1:23:51] because of our perception. So if you use a laser sensor or you use a RGB camera,
+[1:24:02] we're all subjected to what we call the A-modal perception.
+[1:24:09] So A-modal perception means that when I look at you, I cannot see what's behind you.
+[1:24:14] Okay, I only see what's in front of you. And when I look at this, from this point of view,
+[1:24:21] I only see the front part of the chair that is in my view. But the back, I don't see at all.
+[1:24:27] There's no points at all. You will basically cast a shadow on anything that is behind.
+[1:24:34] So that's the difficult part of when you do 3D object detection, that is the main difficulty
+[1:24:43] there. And then this guy, the same guy who proposed PointNet, he came up with this VoteNet.
+[1:24:55] It was one of the first works in 3D object detection. It's pretty cool, this work. So
+[1:25:02] the idea is very simple. The idea is that I give you this 3D point cloud. It's actually generating
+[1:25:10] votes to the object center. So it first generates a set of seats. Then in each seats,
+[1:25:18] it's actually casting a vote that points towards the object center, the closest object center.
+[1:25:25] Then what we do is that we aggregate those votes. And then finally, each vote also contains a
+[1:25:32] feature. Then finally, it uses that aggregated feature to request for the bounding box.
+[1:25:40] So 3D object detection is challenging because it's both a regression and a detection problem.
+[1:25:49] The reason is because this part here is regression and this part here is classification.
+[1:25:58] Classification is easier than regression. That's why I won't talk about the details of the losses,
+[1:26:07] but the detail of the losses here is actually greatly inspired by the line of works in
+[1:26:15] like FastRCNN, FasterRCNN kind of work where you would need to do anchor box.
+[1:26:24] So basically you have a proposal and then you actually subtract from the anchor or from the
+[1:26:31] proposal because deep network also has a problem when you are going to ask it to predict unbounded
+[1:26:39] numbers. Let's say in this 3D scene, if I just tell the network to say that or predict a bounding box
+[1:26:51] given that point cloud of the order chance out of nowhere, you ask it to regress xyz
+[1:26:59] all the seven parameters that are not bounded at all. Because it basically ranges from minus
+[1:27:04] infinity to infinity. Then deep network is very poor at doing this. That's why the idea
+[1:27:11] of anchor boxes. So you treat it as like you discretize the whole space into anchor boxes.
+[1:27:18] Actually, FastRCNN just for every point you have nine anchor boxes. Then you actually check what
+[1:27:26] is the deviation and this becomes relative instead of absolute. Deep networks are
+[1:27:36] better at doing this because when you do relative, it becomes more bounded in a bounded space.
+[1:27:44] And the room margin for error is actually better. So probably you would have learned all this in
+[1:27:51] deep learning classes because all these are classic in deep learning.
+[1:28:01] They use the same thing but in 3D object detection, there is an additional challenge
+[1:28:07] which is A-modality because you see only parts of the object. But whereas compared to the 2D
+[1:28:15] part image, you see everything is dense. Although the A-modality perception also
+[1:28:21] exists, it's not so severe there because you are just putting a 2D bounding box.
+[1:28:26] The parameter is far lower than this. All right so the idea here is this.
+[1:28:33] So vote net looks like this. So the first part here is the voting for is a seed to generate seed.
+[1:28:41] For input point count, you generate a set of seeds. Then for each seed, you cast a vote.
+[1:28:49] So basically you output what is the delta distance from every seed here to the nearest object center.
+[1:28:59] So these are the illustrations after you point those delta distance to the object center.
+[1:29:09] Then finally we cast the vote and then that is of a certain nearest neighbor away.
+[1:29:16] Then we use these votes to regress for the output here. So these are your proposers actually.
+[1:29:23] Once you have your proposers, the regression would be more or less anchored at a certain part.
+[1:29:30] So here's some details. For the input points, we just use 0.8++ to generate m seeds.
+[1:29:37] Okay and plus a feature. So you still have the xyz of the location of the seeds and then plus
+[1:29:44] a feature that we learn from a c-dimensional feature. Then after that, we do half voting
+[1:29:52] with the deep network. So what it means is that I have the seed m number of seeds here.
+[1:30:00] Then I'm going to, for each seed, I have the seed location xyz as well as a feature that's
+[1:30:08] learned from 0.8++. Then I will use an mlp to take in f and output a delta x such that
+[1:30:20] y equals to x plus delta x. Because I have a seed, I'm going to plus delta x and this part
+[1:30:30] here is y. So this is delta x and this is x. So this y here would be the object center.
+[1:30:37] It would be pointing towards the object center as well as I'm going to generate a delta f such
+[1:30:43] that I have a new feature which I call g. So these are the votes that I'm going to
+[1:30:52] generate and I'm going to supervise this delta because I have the ground truth. So
+[1:30:59] I'm going to supervise this such that the delta can compute and then have a vote regularization
+[1:31:07] loss here. And this is supposed to be this. What happens is that for the set of votes,
+[1:31:15] I'm going to, because I have n number of votes here, I'm going to sample k votes,
+[1:31:21] which is k subset, using the ftf. I'm going to use the furthest point sampling to get the
+[1:31:29] k number of votes. Then I'm going to form k clusters. So each one of these k votes that I
+[1:31:38] selected using the furthest point, I'm going to use it as a centroid and then find all those
+[1:31:47] points that are within a radius of r, all those other votes that are within radius of r for me.
+[1:31:54] Then this will form my k cluster. Given the k clusters, that means that I have k number of
+[1:32:09] clusters now and each cluster there will be all the votes inside there. Now suppose I'm looking
+[1:32:14] at one cluster where all the votes inside that I'm going to now call w in i equals to one to n,
+[1:32:21] where I have the w is actually the vote center, the spatial location and the vote feature.
+[1:32:31] And I'm going to now center with respect to the centroid because I can compute the centroid here
+[1:32:40] inside the cluster. I have all the spatial locations. I can compute the centroid, which
+[1:32:45] I'm going to call zj here. Then I can actually centralize it divided by the radius because
+[1:32:51] I'm selecting it based on the radius here. So I will take it as z prime to make it local.
+[1:32:58] Then finally, I'm going to put these votes, all these votes into an MLP and I'm going to
+[1:33:08] two layers of MLP here. Finally, the output will be just an m-dimensional vector where this p
+[1:33:21] vector here is the objectness score. That means that it's zero to one. Closer to one means that
+[1:33:28] there is an object there. If it is zero, there's no object. Then I'll ignore all the parameters.
+[1:33:34] It doesn't matter anymore. If there's an object in p here, it will also output my bounding box
+[1:33:43] parameters and the semantic classification score. Note that the way that they parameterize this
+[1:33:51] is this. Now I have all this z already. I know roughly where are the votes.
+[1:33:58] So the bounding box parameters are all parameterized with respect to the
+[1:34:05] these votes. That means that you don't have to predict. You will never predict the absolute
+[1:34:10] coordinates. Otherwise, it's unbounded and also the semantic classification score.
+[1:34:19] I didn't write down the log function but the log function here,
+[1:34:22] since this is just a clock entropy and then this bounding box here is a regression
+[1:34:29] loss but anchored around the ground truth. So you are actually predicting just the delta
+[1:34:34] or you are actually supervising the delta away from the ground truth.
+[1:34:42] Here's the result. Any questions? This is all for the vote net.
+[1:34:51] It's a very useful framework. I think up to today is still one of the best. If I'm not wrong,
+[1:34:59] there's another one which is the 3D transformer. I think it's using 3D detail if I didn't remember
+[1:35:07] wrongly. That is based on 2D. I mean detail for 2D object detection and it seems to perform better
+[1:35:16] than vote net. But otherwise vote net is also not that much worse. It still remains
+[1:35:23] one of the most powerful 3D object detector up to now.
+[1:35:33] Of course you need to weigh. I mean if you have different objectives in different scale,
+[1:35:40] you need to weigh. It's very important. Let's say you have two objective functions.
+[1:35:52] My objective function is just in one dimension. That means I only have one variable and this is
+[1:35:56] my cost, my objective function. Let's say I have l1 and l2 and if l1 is
+[1:36:03] of this scale and l2 is of this scale, then you better scale up l2 to be the same as l1.
+[1:36:19] Otherwise, you are not going to meet both objectives. You are forever optimizing just
+[1:36:25] the dominant one. This is important. One of the important things, it's not just deep learning but
+[1:36:39] also in general optimization. In computer vision, especially 3D computer vision, because you can
+[1:36:46] actually be optimizing in the 3D space. If you have a point cloud, you optimize in a 3D space,
+[1:36:53] then when you project it back onto the pixel, you minimize those errors on the pixel space.
+[1:37:00] Pixel space is that no dimension. It's unitless. You just know how many pixels are weighed.
+[1:37:06] But in 3D space, there might be metric distance. If you are going to optimize both together,
+[1:37:14] one is in the 3D space, one is in the pixel space. Obviously, they don't live in the same world.
+[1:37:19] So you cannot optimize them together like that. You have to scale it. Any other question?
+[1:37:27] All right, if no other question, then let's go for five minutes break. Shall we continue and
+[1:37:34] then try to finish everything? All right, so the next task that I'm talking about, I will talk
+[1:37:42] about is 3D semantic segmentation. So the idea here is that for each point in the point cloud,
+[1:37:51] I want to label one of k classes. So this is the most naive way of semantic labeling because now
+[1:38:01] there are more sophisticated definitions of this like panoptic segmentation, instant segmentation
+[1:38:08] and all this. Basically, we don't differentiate the naive way of doing segmentation here. We
+[1:38:15] don't differentiate between different instances. For example, if I have a chair class or books,
+[1:38:23] for example, then I will just label every book as that in that class. I don't differentiate between
+[1:38:31] different instances of books. So instant segmentation does that. And then there's also
+[1:38:39] panoptic segmentation where basically panoptic segmentation is just instant segmentation. But
+[1:38:45] anything that's in the background that you cannot have the final definition into instances,
+[1:38:53] you'll just let it remain as segmentation. So this 3D segmentation, there are many works
+[1:39:03] in the early days of when this Hoi Net was introduced. So many that I forgot which one
+[1:39:09] is actually the most significant one. Because I was actually putting all the slides together
+[1:39:16] only yesterday. I should have done it better to try to recall which is the earliest work.
+[1:39:28] Then in the end, I did it last minute. So I decided that instead of finding the most
+[1:39:35] significant work in the fully supervised one, I'll tell you which is the most significant work
+[1:39:40] in the non- or weakly supervised one. This is actually the first work for weak supervision,
+[1:39:48] weakly supervised learning in 3D semantic segmentation. Because when you do segmentation
+[1:39:54] in 3D compared to 2D images, it's actually a lot more tedious to label in 3D. So suppose I give
+[1:40:01] you a point out that looks like this, or looks like this, allows you to label every point.
+[1:40:06] This is actually kind of tedious compared to an image. An image is already tedious,
+[1:40:13] but at least it's just an array on a plane. You can actually ask anyone to go and label it.
+[1:40:20] And to an untrained eye, that means that if you don't look at point clouds very frequently,
+[1:40:28] actually our eyes are not accustomed to, we are not meant to look at point clouds.
+[1:40:33] We are more looking at, so in terms of deep learning, when you look at
+[1:40:41] different layers of deep learning, because they discover that at different layers,
+[1:40:45] you are looking at the finest, finest feature, lowest level feature, and then
+[1:40:51] subsequently higher level feature. So at some level, it's the lines and curves and contours.
+[1:40:58] So actually you and I actually function at that level. We are better in terms of looking at the
+[1:41:04] contours rather than the point clouds. So it's actually very difficult to
+[1:41:08] labor using, I mean to go and do this kind of tedious job of labeling every point.
+[1:41:17] So for 3D shape segmentation, the problem is that you need 1k to 10k points of labor,
+[1:41:28] and it's even worse for indoor scene segmentation. It drastically changes to millions of points
+[1:41:35] that you need to labor for every scene. So it's kind of tedious to do that. Therefore,
+[1:41:42] this was also the first work that we proposed in 2020 to do with supervision in the
+[1:41:52] semantic point cloud labeling. So we discovered that actually by doing even full supervision,
+[1:42:02] it's 100% labored, and then you know the, sorry, sidetracked a little bit, you know why we
+[1:42:09] decided to do this. Besides the whole idea of it's really genuinely very tedious to labor
+[1:42:20] large amounts of training data. So it actually makes more sense to reduce this and such that
+[1:42:28] you can actually make use of unlabeled data as well, because there is a lot of unlabeled data
+[1:42:34] in the world. So we can easily collect all this data. And nowadays, people are also looking at
+[1:42:45] how to use synthetic data. So synthetic to real, that's actually a volume shift.
+[1:42:53] That's why we came up with this to provide. So instead of having a full labor training data,
+[1:42:59] we only have a few points. And to the extent that we discovered that even just one point
+[1:43:06] is sufficient. Semantic class, I mean, as far as it continues, so one point is actually sufficient
+[1:43:14] in our framework. So basically it consists of four components inside here. Of course,
+[1:43:21] that is this component of feature extraction. So from the point cloud, we augment it, and then
+[1:43:27] this is just by random flipping, rotation, and so on. And then we have two, the same encoder
+[1:43:36] network that gives the features of the point cloud. And we would have an incomplete supervision
+[1:43:44] branch, because this is the, we only have weak labors. That means that we have incomplete labors,
+[1:43:54] very sparsely labored. And here, what we do here is that we will just add a mask. All those with
+[1:44:00] labors, we will have the mark of one, and all those without labors, we will have a mark of
+[1:44:05] zero, or meet this law here. So we only supervise on those parts that there are labors. But this
+[1:44:13] itself is not sufficient. So we would also have, in today's world, because at that time,
+[1:44:20] people don't use contrastive learning yet. But actually what we are doing here is similar to,
+[1:44:28] it's not to the extent of contrastive learning, because contrastive learning,
+[1:44:32] besides the positive, you also divide by all the negatives to normalize, to push it apart.
+[1:44:39] But here, what we use is just a naive L2 divergence. Of course, you can also use
+[1:44:46] KL divergence, or things like this, and the minimum distance,
+[1:44:54] and other forms of divergence to measure this. So we just use the L2 loss, and we realize that
+[1:45:03] it actually works pretty well. So it's just a Siamese loss. And then we also have a third branch,
+[1:45:10] which is the inexact supervision branch. This is inspired by multi-instance labor. This is
+[1:45:18] actually a bag of labors. Because you have the very sparsely labored, and you can actually
+[1:45:26] propagate those labors to everywhere else in the labors. So you can actually group them together,
+[1:45:33] and then do a supervision by saying that every one of the whole bunch of it is actually,
+[1:45:43] if they are similar in the features, then they should take the same labors. So this is what we
+[1:45:50] call the multi-instance labeling here. And the fourth one, which is actually probably the most
+[1:45:58] important one, that is some form of propagation. So when you look at semi-supervised learning,
+[1:46:04] because semantic segmentation is essentially a classification task. So what you want to do here
+[1:46:12] is that we introduce a smoothness law. So basically this term over here is just saying that
+[1:46:23] we form this width over here, ij, because it's a point cloud. So we have a lot of points
+[1:46:31] in the point cloud. And we form what we call the k and n tree. That means that for every point,
+[1:46:39] I'm going to take the k nearest neighbor and adjust the width. So ij here would be the
+[1:46:46] every edge in the k and n tree. And the way that we take the k and n tree adding edges is by
+[1:46:56] spatial and color smoothness. That means that if they are spatially close to each other,
+[1:47:02] k nearest neighbor spatially, we add the edges there. Of course you can also have a fully
+[1:47:08] connected graph, but the fully connected graph is expensive. So what you need to do is that
+[1:47:16] then the computational complexity will increase. Basically you use this as a weight. It's a
+[1:47:26] weighted graph. So let's say between f xi and xj, you have xi and xj here. So the feature that
+[1:47:36] we extracted is the output. Actually this is the output f here. It's a feature over here that we
+[1:47:44] extracted. We want it to be because we are minimizing this smoothness loss. So if they
+[1:47:51] are very close to each other spatially, then ideally the feature should be the same.
+[1:47:58] Because what we are saying here is that neighboring points are likely to take the same
+[1:48:05] semantic labor. Because otherwise they are neighbors because of the reason,
+[1:48:11] not because it's fated to be that way. It's because semantically they are most
+[1:48:18] likely going to be related. And also we are also introducing a color smoothness. So that means that
+[1:48:23] if they take the same color and the same spatial relation, then we would have w to be almost the
+[1:48:31] same. So what we did, if you look at the paper in detail, what we did is that we compute this
+[1:48:37] k and n graph twice. One for spatial, the other one for color. Then we have two weights
+[1:48:43] and we will take an average of it. We take the sum and then we take an average of it.
+[1:48:50] Then the reason why we can take an average is because it's exponential a
+[1:48:54] squeeze to become zero and one. And then we put it inside here. So
+[1:49:03] what happens here is that, in our paper we also show this, that you can actually evaluate this
+[1:49:10] further. What happens is that it's equivalent to labor propagation in semi-supervised learning.
+[1:49:18] So what happens here is that in semi-supervised learning, if I form this graph
+[1:49:24] k and n graph. Let's say I have a k and n graph where all the edges tells me
+[1:49:30] either they are spatially related or semantically related. So if I have a labor here
+[1:49:38] and I don't have the labor for other points, then basically labor propagation means that
+[1:49:46] I can start from any unlabored point and then I take random walks. That means that I will
+[1:49:54] do random walks. Let's say these are actually Markov matrix because when you do this w,
+[1:50:01] you can turn it into a Markov matrix to do random walks along the edges.
+[1:50:08] What happens here is that you can walk like a drunken man according to the Markov matrix. Then
+[1:50:14] when you first end up, you start at a point where you're unlabored. But when you hit the first
+[1:50:22] labeled node, you take that labeled, that's labeled computation. It ends up to be an
+[1:50:33] eigenvalue eigenvector problem. Actually the way that we do pitch rank algorithm is the same.
+[1:50:44] It's conceptually the same thing. It turns out that this function here can be evaluated
+[1:50:54] to that function. You can actually evaluate it and form a Laplace matrix and then you do random
+[1:51:01] walks on it. L0 simply means that we only count those because w here will be turned into one or
+[1:51:12] zero. We force it to become one or zero and L0 means that we only count the total number of
+[1:51:20] those entries with one inside there. With this smoothness constraint, then what happens here is
+[1:51:28] that you are propagating the labels with all the labeled data to the unlabored
+[1:51:37] points. Therefore at the end of this, all the four branches work together to actually
+[1:51:44] turn it into a weak supervision 3D semantic segmentation. Of course there are some
+[1:51:52] results. We can even see that with 10% of the label points, we are almost
+[1:52:00] equivalent to the fully supervised learning or even some of them actually are even better.
+[1:52:08] The reason is because it is largely due to this complication and also because we are doing
+[1:52:18] something similar to contrastive learning at that time. It's self-training. This branch here
+[1:52:24] basically is a self-training branch. But now of course, because you have to take that discount
+[1:52:31] of three years. That was in 2020. But now of course people look at contrastive learning. It's
+[1:52:39] much more powerful than this. At that time, we were still quite unaware. I don't know
+[1:52:44] when was contrastive learning introduced. Probably also around that time. But now in today's term,
+[1:52:52] you probably won't do this anymore. You will replace this with just contrastive learning.
+[1:52:57] It's much more powerful because you have a positive pair and then you have all the negatives
+[1:53:03] and you try to do it. This is quite effective and here's some qualitative design.
+[1:53:15] So you can see that even one point supervision, we are almost close to the full supervision.
+[1:53:23] In fact, if you look at the comparison here, we might be actually better than the full supervision
+[1:53:28] even with just one point supervision. This shows that the self-training is actually good.
+[1:53:35] It's actually excellent. I think that now we also have many follow-up works that are on this.
+[1:53:46] I think recently there are also quite a few of the works that actually benchmark against us
+[1:53:51] because we also leave room for others. When we did this, we didn't do it to the maximum.
+[1:53:59] No, I'm just kidding. That's the best that we can do at that time. That's the reality.
+[1:54:11] I think that now it gets a lot better because of all the more sophisticated techniques.
+[1:54:17] This is the semantic customization. Here's the part-based semantic segmentation. You can see
+[1:54:26] that even one point looks visually quite good compared to the draw-through.
+[1:54:35] Any questions on segmentation? If not, then I move on to the next task which is the point cloud
+[1:54:44] registration. Point cloud registration is also an interesting task for 3D
+[1:54:54] point clouds. The idea here is that the task is given two point clouds, any pair of point clouds.
+[1:55:04] It's defined in their own respective local frame. What you want to do is that you want to find what
+[1:55:13] is the relative transformation, the rotation and translation, such that you register this.
+[1:55:20] Let's say I find the registration of all this and then I can put it into the registered ones
+[1:55:30] to form a room, for example, this whole scan of a room. Of course, the expansion to this problem
+[1:55:40] is rotation averaging. That's what we have mentioned in the global structure from motion
+[1:55:48] case. But in this case, you don't have the translation ambiguity because the point cloud
+[1:55:56] is with absolute scale. There are some robust ways to do this where you can actually enforce
+[1:56:05] low-rank constraints because rotation always is rank-free. So you can actually enforce a
+[1:56:12] low-rank constraint here. What we are going to focus on in today's lecture is just a pair of
+[1:56:22] points clouds. Here are some applications where you can use this for localization of autonomous
+[1:56:28] vehicles. There are actually two steps to the localization. The first step is that because
+[1:56:35] let's say you are given a very big map, the whole of Singapore, then you give a local query.
+[1:56:42] You want to narrow down the search first before you find a post of where it is. So you narrow
+[1:56:49] down the search. In fact, I already talked about it that the place recognition, you treat it as
+[1:56:54] a retriever. But after the retriever, basically you just get a very cross localization. You know
+[1:57:01] that it's roughly there, but you don't know what is the exact post with respect to the point cloud.
+[1:57:08] So the point cloud registration would be the second step to do that, to get the precise
+[1:57:14] location. Contrast this to image-based retriever and post estimation. So we know PMP perspective
+[1:57:22] endpoint algorithm. We learned this already in the lecture. We also saw vocabulary to the retriever.
+[1:57:30] So let's say I give you the whole database of NUS. I have a map or I geotag every image
+[1:57:38] of NUS. That would be in my database. I might have millions of images there. And then I'm in
+[1:57:44] one location. Let's say I'm in LT15 right now. I take a picture and I want to find out where is my
+[1:57:50] exact location. Or I have done structure promotion already using all the database. Now I take one
+[1:57:57] picture and I want to find where am I inside that location. The first step is obviously not
+[1:58:03] to do PMP because to get that 2D, 3D correspondences, how are you going to search over the whole
+[1:58:10] database? You have millions of images. That means that you could have hundreds of millions of
+[1:58:17] key points. So that would be basically impossible or intractable to do. So the obvious choice is
+[1:58:23] that you do a place recognition, a retriever. So that would be the vocabulary tree that we have
+[1:58:29] learned. You do a retriever or NetV lab actually that can do it using deep learning. Then after
+[1:58:36] you narrow down a cost location, you do the 2D, 3D correspondence search and do PMP. So it's
+[1:58:45] exactly the same idea here. So you do point card registration, the point card retriever, then you
+[1:58:52] do a registration. So localization of autonomous vehicles can do this and we can also do change
+[1:58:59] detection from here. So if you have two, so if you traverse the same location by number, you can see
+[1:59:06] that there are basically two splitting image of the map. But what you really want is to align them
+[1:59:13] like this. So this is if I pass the same road here, if I pass the same road here, by the way,
+[1:59:20] this is one north. This is one part of one north. We actually took some data sets from there.
+[1:59:28] So you can see that if you traverse over two times over a very long period of time,
+[1:59:37] some part of the scene has changed and it's hard to register them together. So what you want to do
+[1:59:45] is that you want to be able to do this registration such that it becomes like that and then comparing
+[1:59:50] once it's registered together, you can compare the two and detect all the changes in the scene.
+[1:59:59] So we actually did a paper on this to do change detection in the scene, but the registration
+[2:00:06] will be the first step. All right, so when we talk about registration, point card registration,
+[2:00:15] we cannot, don't mention this, the iterative closest point is the
+[2:00:22] classic of the classic in point registration. This is also called the, in short, the ICP.
+[2:00:31] So the idea here is that given a source point and a reference point cloud, what we want to do is that
+[2:00:38] we want to find the rotation and translation that this is a rigid registration. That means that the
+[2:00:44] point cloud doesn't move. Eternally, it doesn't change. 3D vignette is white baseline matching.
+[2:00:51] This is iterative, some kind of iterative registration. So the idea here is that we have
+[2:01:01] the rotation and translation over here. And so iteratively, we'll do this starting from the
+[2:01:08] beginning. Let's say the red points are here and the blue points are here. I'll find the closest
+[2:01:14] points for every point in the reference. I'll find the closest point in the source. This can
+[2:01:21] be done effectively by using the kd tree. You basically use a kd tree to search for the nearest
+[2:01:27] neighbor. And then one iteration, you find this, the closest neighbor. Then you basically for every
+[2:01:35] pair of the closest neighbor, you minimize the error, the point plus. So you have to rotate this
+[2:01:46] source into the reference. And then plus a t. So this should be minus. So you want,
+[2:01:53] essentially you want to minimize this error here. You transform this, you rotate this point,
+[2:02:03] you transform the source into the reference and you minimize the total error.
+[2:02:11] But you do this iteratively because we are just basing it on the nearest neighbor.
+[2:02:18] So we do this iteratively. So after the next iteration, once you finish finding this,
+[2:02:26] basically this is just solving the SVD. We actually talk about this when we do the PNP.
+[2:02:32] After you found the depth, we actually do this. So if you still remember. But that's just one step
+[2:02:42] because the correspondence here is just the nearest neighbor. So you iterate, you move a
+[2:02:46] little bit and then you recalculate the nearest neighbor again. Then you do this minimization
+[2:02:52] again and you find the nearest neighbor again iteratively until there's no more change in this
+[2:03:00] error or it stabilizes. Then you reach a local minima. So finally it will look like this. But
+[2:03:08] the main limitation is that it's susceptible to local minima. That means that what it means is
+[2:03:14] that it has a very narrow range of convergence, a very narrow basin of convergence. This means that
+[2:03:22] because it's iterative, it's susceptible to local minima. When you talk about local minima,
+[2:03:28] let's say one-dimensional, this is my global minima here. I have a local minima. If I start
+[2:03:34] here, then I end up here instead of here. Because it's some sort of gradient descent,
+[2:03:41] I will end up to get stuck in a local minima. So this means that the initialization needs to be
+[2:03:47] close to the correct solution. It has a very narrow basin of convergence. So this is not good.
+[2:03:57] That's where deep learning or learning from data can potentially help. So what we did here is that
+[2:04:06] we proposed this RPM net. By the way, there's also one problem with this. If there is an outlier
+[2:04:15] anywhere, then it might potentially screw up everything. So we proposed this RPM net,
+[2:04:23] the robust coin matching network. So basically it's based on RPM. There's an old work called RPM.
+[2:04:40] What happens here is that we have a rigid source and reference. So we will do some form of feature
+[2:04:49] extraction first. Then we get for source, we get fx and for reference, we get fy. The next step is
+[2:04:58] that we compute a match matrix here. This match matrix can be seen as an assignment matrix. So
+[2:05:07] basically our assignment matrix is just a permutation matrix in the hard case. So this
+[2:05:12] means that if you have, I believe that most of you know the job assignment problem. You have
+[2:05:20] n number of workers and n number of jobs. So only one worker can take one job. So that means that
+[2:05:27] you can treat it as that you have n number of jobs here and then n number of workers here.
+[2:05:36] You want to assign each worker to one job. That means that
+[2:05:44] the row and the column must sum up to one and every entry can be only zero and one.
+[2:05:52] So this is a permutation matrix. But that's the hard assignment case. Soft assignment case means
+[2:05:59] that it just needs to sum up to one. It just needs to sum up to one, the row and the column,
+[2:06:11] but every entry can be any number. The only constraint is that it needs to sum up to one.
+[2:06:20] So this is what we call the double stochastic matrix
+[2:06:27] in contrast to permutation matrix. So double stochastic matrix is also a
+[2:06:33] Markov matrix because it sums to one. So it can be left-right stochastic
+[2:06:40] or it can be double stochastic. So in this case it has to be a doubly stochastic
+[2:06:46] matrix. What's interesting here is that if it is a hard assignment, that is not differentiable.
+[2:06:53] But fortunately there's something called a Sinkhorn layer or Sinkhorn matrix.
+[2:07:01] So what it says is this. I just briefly give you the idea. Sinkhorn matrix or Sinkhorn layer says
+[2:07:11] that if I start off with a matrix that has positive numbers inside that,
+[2:07:17] and then I keep on normalizing the rows and columns, I keep on iteratively normalizing it,
+[2:07:26] eventually it will settle down to become the double stochastic matrix. And this process
+[2:07:34] is actually differentiable. So that means that the Sinkhorn layer can double as my
+[2:07:42] matching matrix or my permutation matrix in a relaxed form. And therefore we introduce this.
+[2:07:50] So the two main components is that first we use this PPSNet feature. These are local features.
+[2:08:01] We do FPS to select all the further sample points and then we take the Sinkhorn and
+[2:08:10] compute all the delta x, y, z. And then we compute the angle between the normal and
+[2:08:17] between every one of these delta x, y, z. So this will form the PPS. It's actually in this
+[2:08:23] paper here. So this is good for local features because it's taking locally the geometrical
+[2:08:34] structure into account. So it actually captures that essence of it. So once you have this,
+[2:08:41] then we would have the feature. And the next thing is actually to compute the match matrix.
+[2:08:46] As I mentioned, what we want is a doubly stochastic matrix. That means that it just
+[2:08:51] needs to sum up to one, the rows and columns. So what happens here is that you can start off
+[2:09:02] with computing the distance and then put it into a Sinkhorn layer because the distance here is
+[2:09:09] always positive. So it eventually will evolve into summing up, everything summing up to one
+[2:09:17] that looks like this. So the good assignment means that there won't be conflict between the
+[2:09:26] row and column. It becomes a doubly stochastic matrix. If you take the maximum and just put it
+[2:09:34] as one and all the rest putting it as zero, then you would see a permutation matrix occurring.
+[2:09:41] So this is a good assignment. And this is the objective. We want it to be like that.
+[2:09:49] And what happens here is that this can be done using a Sinkhorn layer. So basically the score
+[2:09:56] inside here can be exponential negative of the distance so that you know that it's always going
+[2:10:02] to be more than zero and equals to be zero to one. So there is a weight here that we need to learn.
+[2:10:12] We set it as a learning parameter in the deep network such that when you evolve through the
+[2:10:19] Sinkhorn layer, eventually it will give you something like this, the doubly stochastic
+[2:10:24] matrix. But what happens here is that some points they might not have correspondences.
+[2:10:32] Because it's not always equal number on both sides. And it might also be outliers.
+[2:10:40] So the idea here is that we create a dustbin column and dustbin row. We call it the slack
+[2:10:49] column or slack row such that anything that cannot be assigned to the rows and columns here
+[2:10:59] in the main part, we can dump it inside the slack column or slack row such that the constraint
+[2:11:07] it can still be put into the Sinkhorn layer such that the constraint will still sum up to one.
+[2:11:14] But now what happens is that it need not necessarily be the main portion of this
+[2:11:19] summing up to one anymore. So you can actually push everything to the slack column and let all
+[2:11:26] the rest become zero. But there might be a degeneracy here. So everything can get dumped
+[2:11:34] into the dustbin column or dustbin row. So there's a threshold here. That's why there's a threshold
+[2:11:40] here to prevent. And that threshold, we also don't set it as hyperparameter. We dump it inside there
+[2:11:50] and define a loss on it and let it learn. So this is the way that we make it robust
+[2:11:59] such that it allows for outliers to occur. But it's still able to do it. And interestingly,
+[2:12:10] this is how it looks like when you... There's a toilet bowl actually. Then the table.
+[2:12:17] Though if you compare with ICP and all this, you can see that our error is much lower. We are not
+[2:12:24] the first one in this. So like RPM. RPM is the original one. And when we compare, we actually
+[2:12:31] visit by quite a bit because it's data-driven. We're actually learning the features. So it's
+[2:12:39] actually kind of interesting here. And PointLK and ICP, these are big learning methods. We're
+[2:12:49] not the first to do this. But at that time, we actually did that. And actually, this is also not
+[2:12:57] the latest work that we have. We also have another one, but I didn't include this. That was Zhen's
+[2:13:05] last work before he defended his cases. That was at CBPR last year. We call it RECTOR. R-E-G-T-R.
+[2:13:17] It sounds similar to D-TOG. As you guessed, it's actually Transformer inside there.
+[2:13:25] So it's actually a very, very simple thing because we thought that the Transformer with
+[2:13:31] self-attention and cross-attention actually captures both the internal, because you have
+[2:13:38] a source and a reference point cloud. The self-attention will capture for every point,
+[2:13:42] it will capture its relation with every other point in that respective point cloud. And the
+[2:13:49] other one as well. Because they are doing registration, the cross-attention here will matter
+[2:13:55] a lot. So what happens here is that instead of doing, in this case here, we are doing matching.
+[2:14:04] We are doing matching explicitly here. We have a match metric. This is something like an
+[2:14:09] assignment metric. But in RECTOR, what we do here is that for the source point cloud,
+[2:14:15] because each one of them comes with a reference to its own frame, reference frame. So what we do
+[2:14:22] here is that we directly predict how the source point cloud will transform into the reference
+[2:14:28] and then how the reference will transform into the source point cloud using just the Transformer.
+[2:14:35] And it actually works very well. That was actually the last work done before the
+[2:14:44] graduates. And that was published last year in CVPR. So these are the works that we have done
+[2:14:51] in the registration. And then finally, you can also see that the weights here,
+[2:14:59] the reference weights here, it tells you something. It actually, when we visualize the
+[2:15:06] weights on the reference and source, we can see that it's actually the parts where they overlap
+[2:15:15] gives the highest weight. It should be true because this is where
+[2:15:22] fx is assigned to fy as a match. When it's assigned to fy and fx as a match,
+[2:15:29] then there must be an overlap. That's why when you visualize the weights, there's no surprise that
+[2:15:38] it shows up as the overlapping point. So this is quite intuitive here.
+[2:15:47] Any questions on the registration, point cloud registration? So this is also one big task in
+[2:15:53] 3D point cloud, the point cloud registration. Then the last thing that I want to talk about is
+[2:16:03] also registration, but you might find this slide familiar. So this slide here,
+[2:16:13] this slide is actually from our lecture slide PMP. So the idea here is that when we do perspective
+[2:16:22] and pose, we want to, given the 3D, 2D correspondence here, we want to find what is the
+[2:16:30] 3D points is defined with respect to a world frame, but the image is defined with respect to
+[2:16:37] a camera frame. So given the 2D, 3D correspondence here, we want to find what is the rotation and
+[2:16:44] translation that register this. The camera pose with respect to the world frame.
+[2:16:54] This involves two different modalities. I recall that during the lecture, someone actually asked
+[2:17:00] me, how do we, actually before this lecture, someone actually asked me, how do we, when you
+[2:17:06] have the 3D point clouds, how do you actually register this to check that the 2D, 3D is actually
+[2:17:14] a correspondence? So usually what we do in structure for motion is that we will store
+[2:17:19] all the SIP or SERP key points into the 3D point. Then in the image, we will extract the same key
+[2:17:28] points and then we will match it using the, but this is actually not that robust. The thing is
+[2:17:36] that if you have a drastic change in the appearance, then it becomes difficult. So this
+[2:17:43] comes back to the same problem as the place recognition. I mentioned that
+[2:17:48] if I have day and night, place recognition is difficult. This 2D, 3D key point correspondence
+[2:17:55] of such is even more difficult. So the thing is that, let's say I have my map that is taken,
+[2:18:02] that is built in the daytime. Let's say I go out in the 3Pm in the afternoon to map out the thing.
+[2:18:12] I do structure for motion and I do this key point with the descriptor in the afternoon.
+[2:18:19] But at night, I go into the same route again, or even heavy rain without rain, sunny, cloudy.
+[2:18:27] So the 2D key point that I'm extracting here, the SIP features, it might not match because
+[2:18:33] there's an appearance change already. That is the key challenge here. And it's very difficult
+[2:18:41] to learn this because again, it's also because of the data limitation. You don't know how to label
+[2:18:48] it. And then also at the same time, you don't have so much data to capture the variation.
+[2:18:57] So anyway, this is difficult. This is known as the PMP problem.
+[2:19:05] So this triggers me to think about, or triggers us to think about at some point of time. I actually
+[2:19:12] also wrote this in my PhD. Ten years ago, I wrote this inside there. And then it took quite a while
+[2:19:21] before we came up with this. So the thing is that the question is this, whether we can establish
+[2:19:29] the 2D, 3D correspondences directly using point cloud. Let's say my point cloud is built based
+[2:19:36] on laser sensor. That originally or inherently, there's no such thing as descriptors or SIF
+[2:19:43] descriptors anymore. Because I don't no longer build that point cloud from
+[2:19:48] images. And as I've mentioned or motivated earlier that 3D point clouds for the models,
+[2:19:55] the digital models that is constructed from LiDAR lasers are actually much more accurate.
+[2:20:02] So why don't we just use that map as a reference map? But then the problem here is that now we live
+[2:20:09] in two different modalities. So the advantage of LiDAR is that it's very accurate, but the
+[2:20:15] disadvantage of it is high maintenance because there's rotating parts. Anything that's rotating
+[2:20:22] is no good. It's hard to maintain. It breaks down very easily. Trust this with your camera,
+[2:20:31] like this camera over here, no matter how I break it or I drop it, it still works.
+[2:20:36] So the thing is that, and it's also much cheaper, LiDAR Velo 964 costs about $70,000.
+[2:20:47] Camera like this cost about, I don't know, like $100, $100 Singapore dollars. Probably less than
+[2:20:54] $100 USD. So then it actually makes more sense to use LiDAR for the acquisition of large scale
+[2:21:04] model, digital model, because it's more accurate. But for the deployment, you just need one LiDAR
+[2:21:12] to do that mapping. But for the deployment, you have the reference map already, very accurate
+[2:21:18] reference map that is obtained by your very expensive LiDAR once. Then your deployment,
+[2:21:26] you can send out all your autonomous vehicles. You have many of those, let's say you have a
+[2:21:31] full fleet of taxi or full fleet of self-driving buses mounted. You don't mount one of those,
+[2:21:37] every one of those with a 60 or 70,000 USD LiDAR sensor that's so hard to maintain.
+[2:21:43] The obvious choice is that you mount camera on it. So now then it comes to the question of,
+[2:21:50] there is a cost modality challenge here. How to establish the 2D, 3D correspondences.
+[2:21:55] Right. So that if you cannot do this, the next step here, which we have learned will fail badly.
+[2:22:03] Okay. Because wrong correspondence means that nothing can be computed anymore. Right. So
+[2:22:10] we actually did also the first work on this, that we thought that we just use at that time,
+[2:22:17] it was triplet loss, the triplet network. So we thought that we just register because
+[2:22:26] this data set here has LiDAR and camera calibrated, it's mounted rigidly on the car.
+[2:22:34] So according to that transformation, the calibration, we will know how to back project
+[2:22:40] the 3D LiDAR points onto the image. And then what happens here is that we can extract the
+[2:22:47] image key point. We can extract the image key point and find the corresponding ones on the
+[2:22:56] 3D point card. So basically the 3D point card will use ISS or whatever key point detector,
+[2:23:02] our 3D feednet. And then the 2D ones we use SIP and we try to minimize the, we try to do
+[2:23:10] some sort of a triplet loss to learn a new descriptor that can work across modality.
+[2:23:19] But the problem with this is that although we show the initial work here, this was the first
+[2:23:25] work to actually show this. And the matching count is quite low here because we are inherently
+[2:23:36] living in two modalities. What happens here is that we increase the idea a little bit
+[2:23:42] instead of doing 2D, 3D matches here because they live in different modalities. So why you
+[2:23:49] force them together, right? So now we are going to say that each camera here, we would have a
+[2:23:58] bottom of the camera. We know where the, which points are in the view of the camera. They are
+[2:24:05] projected into the camera. So instead of learning the descriptors across modalities, we twist the
+[2:24:13] problem to become this. We just twist the problem to become that given a set of point clouds,
+[2:24:18] we want to do a 1-0 binary labeling. If it is 1, that is in the view of the camera. If it is 0,
+[2:24:28] that is not in the view of the camera. So as simple as that. So it becomes a classification
+[2:24:38] problem in the first. So once you give, that means that I give the point clock and I give the camera
+[2:24:46] image at the same time. So we would have to design a network that fuses the two modalities in terms
+[2:24:52] of features, but it will output for every point a label of 1 or 0, whether it is inside the view
+[2:24:59] of the camera or outside the view of the camera. Then once we have this, so we design an
+[2:25:08] optimization. So this is just a Gauss-Newton solver. But in contrast to what we have learned
+[2:25:14] in bandai adjustment that we minimize the reprojection error, now we formulate this such
+[2:25:19] that if you are having a camera, you know where are the points that should be inside the view of
+[2:25:25] the camera, but you don't know what is the pose of the camera with respect to the point cloud.
+[2:25:30] So what we want to optimize is that we want to optimize for the pose such that when we do our
+[2:25:35] optimization, the cost function is that we want to move the camera such that all those points that
+[2:25:41] are labeled 1 should be reprojected back onto the image as much as possible. So that becomes our
+[2:25:48] cost function. This is the tool step. Of course it's not so trivial. We need a lot of, we actually
+[2:25:54] need to use the exponential map and the logarithmic map. Actually all these are part in class.
+[2:26:01] So the bodies are actually part in class and so the point classification would be simple.
+[2:26:11] We just let it be every point would take lnc over here. It would be inside 0 or 1.
+[2:26:18] Okay so it's either inside or outside. Then this is a network. We have a point cloud encoder
+[2:26:24] and also a image encoder. Then we do attention fusion here. So this is the fusion. We just
+[2:26:33] attention fusion. But nowadays if you want to do this, I guess you do it using transformer. So you
+[2:26:41] have a point cloud encoder. Actually you can just use the VIT as well. VIT works for image
+[2:26:49] 16x16 patches. Point cloud you can do the same too. You can actually cluster it. You can do a FPS
+[2:26:58] and make it into 16 clusters or whatever. Then you make it into a 16x16 cluster.
+[2:27:05] Then you dump it inside the transformer. Two different sets of tokens and then you output
+[2:27:11] whatever stuff that you want, the features. So in today's context that will be what we
+[2:27:17] should be doing. But this was published 2019. Then we put it inside a decoder and where this
+[2:27:25] will just simply be a binary classification 1 or 0. Once we know this 1 or 0 label,
+[2:27:34] given the point cloud 1 or 0, we design our optimization algorithm to find out the probe.
+[2:27:42] So this would be the cross function optimal probe. There are two terms to it. One of them is that
+[2:27:49] we want to shift the probe G over here such that if the points are inside the
+[2:28:02] viewpoint, then it would be 1 if it is outside the viewpoint. When we shift this thing,
+[2:28:10] the reproduction, if the point is inside, we will give it 1. If it is outside, then we will give it
+[2:28:16] 0. So 0.5 here. And then the other part here is that we want to take the label, every point
+[2:28:25] that is the label that we have seen. That is given by the network and minus it by 0.5.
+[2:28:36] Then what happens here is that if you maximize this term over here.
+[2:28:42] So what you want to do, because this term here, if it is wrong, if it is wrong, it could be minus.
+[2:28:51] It becomes negative. And this term here, if it is wrong, it will also be negative. So there is only
+[2:28:58] one combination where both must be right. Then it's positive. Then you maximize it. So we want
+[2:29:04] to optimize it over G, the point, such that this term, say when you multiply together,
+[2:29:11] they must all be positive. They must be all maximizing it. And this, we turn this into
+[2:29:20] unconstrained optimization, but the derivation is kind of complicated. So I omitted all the details
+[2:29:27] if you are interested, you look at the paper. And you should be able to understand right now.
+[2:29:32] I hope so. So yeah, so the, and you can easily use the Gauss Newton
+[2:29:43] solver to do it. So this is just an idea here. You can see that the labor point is in green. So
+[2:29:53] the network can predict pretty well the labor point. Then as the Gauss Newton optimizer
+[2:29:59] from zero, we do three checkpoints over here. So zero, 40 and 80. Zero, 40, 80 iteration. So
+[2:30:08] you can see that it gradually moves towards the correct post such that the whole labor point is
+[2:30:16] inside the viewpoint of the camera. Then we know that we find the correct post here. We cleverly
+[2:30:25] just make use of deep learning to give us one view, but all the rest are still done in the
+[2:30:32] correct way of optimization and mathematics. So this is the thing that I think that we should be
+[2:30:42] looking at in this way, because it doesn't make sense to dump everything into a deep network
+[2:30:50] and treat it like a black box. Including like just now the RPM net, you can see that
+[2:30:57] the synchronous layer that is a relation is actually doing the assignment matrix.
+[2:31:03] So these are the things that we try to do. Any questions so far? If not, then I guess I'm at the
+[2:31:12] end of the video. We are the first method to actually do this. Although it's not perfect,
+[2:31:22] there's still a large room to improve this. So this is a cool idea that
+[2:31:29] we thought of. Here are some results after the correct optimization. Any questions?
+[2:31:41] If no questions, then that's it for today's lecture. In summary, I talked about implicit
+[2:31:47] explicit surface. I'll talk more about this next week. Then I'll talk about the representation of
+[2:31:53] point cloud and how deep learning can be used for point cloud representation. Finally,
+[2:31:59] I talked about the six different tasks of point cloud, but note that it's not limited to these
+[2:32:05] six different tasks. There are more other tasks like point cloud completion, scene flow, and
+[2:32:11] things like this that I didn't talk about. That's it for today's lecture. I'll see everyone again
+[2:32:19] next week for the last lecture and I'll talk about neural fields representation. Thank you.

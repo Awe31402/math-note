@@ -1,0 +1,1312 @@
+[00:00] Hello everyone. How's everybody doing? So today we will talk about neural fields representation.
+[00:08] It's going to be our last lecture of the semester. So hopefully at the end of today's lecture,
+[00:17] you will be able to appreciate what neural radians view is and the concept of volume rendering.
+[00:23] I also talk about the limitations of the vanilla nerve, which is the original nerve that was
+[00:32] published at ECCB 2020. Basically it has two limitations. One is that it's not able to
+[00:40] generalize the nuisance and then the other thing is that its efficiency is very very slow to train
+[00:48] the original version of nerve and it's also very very slow to render it during the inference time.
+[00:56] Okay and then I'll talk about what are the different methods because it has been
+[01:03] two plus years since the original nerve was proposed at ECCB in 2020. The paper was actually
+[01:12] put on archive in June 2020 and at that time it was already attracting quite a lot of attention.
+[01:21] Because this was actually the first work that they showed that they are able to use neural networks
+[01:27] to encode the whole 3D scene and this was quite a big thing at that time. It's still a big thing now
+[01:35] because a lot of people, including myself, we are all looking at actively looking into
+[01:42] this area of research and one thing that I will also talk about is that I'll talk about the
+[01:50] difference between volume rendering. So because neural fuse or neural radians fuse is just one
+[01:58] type of neural fuse to represent the 3D scene and in fact I'll explain to you why is it that
+[02:07] neural radians fuse is not so effective in capturing the 3D surfaces or the 3D
+[02:16] information. It's actually very good to do novel view synthesis but it's actually not that good to
+[02:23] do 3D reconstruction. So on the other hand, that was in year 2019, I think one year earlier before
+[02:32] NERF was presented, there was a work called the SDF, sign distance view. So sign distance view
+[02:38] is also a type of neural fuse that can represent the 3D scene with higher fidelity. We'll see why
+[02:47] later. But the problem with this is that you need the 3D ground truth. That means that you need the
+[02:53] 3D surfaces, the real 3D object to do the supervision and therefore it actually limits it
+[03:00] in terms of the screening or the real usage. One year ago in the end of 2021, I think there were
+[03:12] several works that I will actually mention two of them in particular, the volume SDF as well as news
+[03:19] where they mentioned how to or they propose something to convert the sign distance function
+[03:27] to volume density because when you have side distance function, the best that you can do is
+[03:32] surface rendering and surface rendering requires the precise knowledge of where the surfaces are.
+[03:39] So therefore most of the techniques before this, they require some form of mask to tell you
+[03:46] where are the objects in the 2D image in order for it to work. And then these two works here,
+[03:53] volume SDF as well as news, it actually mentioned something that without the use of mask,
+[03:59] it's able to convert the sign distance function directly into volume density which is the type of
+[04:06] gradients view. And then you can directly do a volume rendering instead of a surface rendering
+[04:14] from the sign distance function to the images and therefore this revolutionized the whole
+[04:20] game altogether. This means that you now by using these two techniques, either of these two
+[04:25] techniques, there is no need to do, there's no need to have the 3D goal group anymore
+[04:30] but you just have multi-view images and that will be self-supervised. Then finally at the end,
+[04:36] I'll talk about how we use NERF and the sign distance view to learn animatable and generalizable
+[04:43] dynamic humans. So basically this will be also a different game because those works that I will
+[04:51] talk about from one to four, they are all covering the static scene. So we'll talk about how
+[05:02] this animatable and generalizable dynamic humans, that means that if I have human beings in the
+[05:07] scene, I want to actually use NERF or SDF to capture the human and animatable means that I
+[05:15] can then use it as a digital avatar. That means that in metaverse or augmented and virtual reality,
+[05:24] I can actually after I capture the human, I can actually control the human into different poses.
+[05:32] And similarly, I want it to be generalizable. That means that I train the network for a specific
+[05:39] human, for you for example. Then I want it to be able to generalize to me and without further
+[05:47] training, we'll see how this can be done. And today we have an unprecedented number of papers
+[05:57] that I'm going to talk about. So much that I have to use two pages, two slides to list all of them.
+[06:04] So I'm going to talk about all together 14 different papers today covering all the
+[06:12] topics that I want to talk about. So just a reminder, I showed these slides last week that
+[06:21] the 3D surface representations, there are two types of it. The parametric or explicit and
+[06:28] implicit representation. Unfortunately, I realized that because I wanted to also talk about
+[06:35] explicit representation, I mean I'm already like 110 slides. So too bad. Unfortunately, I won't be
+[06:44] able to cover this but probably if there's time, I might just briefly tell you about it. So I will
+[06:51] still focus on the implicit representation today. But today we are going to talk about
+[06:59] two types of, actually we talked about the explicit representation last week which was
+[07:05] point cloud. But I want to actually talk about this. Unfortunately, I don't have enough space or time
+[07:12] to talk about it. So today I'm going to talk about this neural field in particular. It's
+[07:17] implicit representation and it's continuous in space. So in particular, I'm going to talk about
+[07:22] two types of implicit representation, the neural radians field as well as the sign distance field.
+[07:30] Okay so then just a quick recap of what's the parametric surface. So it's from 2D to mapping to
+[07:39] 3D. So this is obvious because you have any planar surface, you can actually map it into a 3D manifold
+[07:49] which is actually a 2D manifold. Any surface is a 2D manifold because if you stand locally on the
+[07:54] surface, you are actually looking at just two-dimensional space locally. And this is
+[08:03] what we are going to focus on today which is the implicit or volumetric surface representation.
+[08:08] So the definition that is written here, this is actually the sign distance view or
+[08:15] a form of distance view where you have at any point, these are all the points that you can
+[08:24] sample in the 3D space. Any 3D space you sample x which is in the R3 space. And then what happens
+[08:32] here is that you would define the surface to be on the level set. So you have a function which
+[08:42] takes in the centered point and that function will output whatever distance view that is at
+[08:49] that point. And sign distance view simply means that you have a surface and this, let's say this
+[08:55] is your x, it will actually tell you what is the closest distance to the surface. And once you have
+[09:04] zero which is the level set, the zero level set, then you know that that is actually the surface
+[09:11] itself. Sign distance view is one of them and today we are going to look at two of them in
+[09:17] particular, the sign distance view and the gradient view. And these two are currently the most popular
+[09:24] two types of representation of implicit representation which people in the computer
+[09:31] vision community and the graphics community, they are both actively looking at right now.
+[09:38] And so the idea of a neural gradient view is to do this. It's to do a single view normal synthesis
+[09:49] and this is actually not a new concept. It has been existing for a very very long time.
+[09:56] So what happens here is that what you want is that you want to give a single input image
+[10:03] and then you really want to, because this image single view image is looking at the
+[10:10] scene for one viewpoint. So you want to use a deep network or to design a deep network
+[10:18] such that you can actually look from other viewpoints. So these are the normal views and
+[10:25] what you want is to synthesize those novel views. So take note of this that although we are
+[10:32] synthesizing the novel views in contrast to the generative models, probably you are familiar with
+[10:43] GANs, diffusion model right now, things like this. I mean normalizing flows and VAEs and so on.
+[10:52] There is a big difference because in novel view synthesis, although you are synthesizing a novel
+[10:59] view, this novel view has to be correct to that scene that you're looking at. But generative
+[11:07] model, you can generate anything. You can generate anything that is fancy or imaginary. That means
+[11:15] that you're actually hallucinating something. But in novel view synthesis, we are not hallucinating
+[11:22] anything. We are trying to figure out what is hidden from that view. Or you can also think of
+[11:30] it as interpolating or extrapolating between views. So that is novel view synthesis where by
+[11:38] no means trying to do anything or trying to hallucinate anything. So another example is that
+[11:46] probably you guys have, I think this is a very old movie, The Matrix. So there is a
+[11:59] classic scene in this movie where that guy jumps out and then it's frozen in the mid-air and the
+[12:07] camera actually pans to do a surround view. So you know that by doing cameras or by taking
+[12:17] cameras in, so let's say this is the guy there, and then you won't be able to smoothly pan the
+[12:24] camera from this view to this view. Because while he is actually frozen in the mid-air,
+[12:32] this means that you need all the camera views to take this, all the cameras to take that same view
+[12:40] while he is static in the mid-air at the same time. So basically this is not possible because
+[12:47] no matter how you do it, you can have a set array of synchronized camera here. But these cameras
+[12:54] are discrete. That means that you are sampling at a discrete view. So the way to actually hand
+[13:02] the camera to render it such that you are able to pan the camera smoothly from one view to another
+[13:09] view, that's actually normal view synthesis. Because you are actually trying to interpolate
+[13:15] between the view and this is by no means hallucinating the scene. You are actually
+[13:20] interpolating or extrapolating the scene and that's normal view synthesis. And this actually
+[13:28] is not new. It has been around for as long as 3D computer vision existed. So it's only recent
+[13:37] year that people realize that it can be done using neural networks. So of course the most significant
+[13:48] paper in this area would be NERF and that's the Neural Radiance View which was published at ECCB
+[13:58] 2020. So what it suggests is that it proposes to encode the entire 3D scene
+[14:06] in the weights of an MLP. So that means that it's actually a very simple architecture.
+[14:13] That means that you can actually train an MLP just this function itself. And it's not even a CNN,
+[14:20] it's just an MLP that takes in five parameters. So the input is a five-dimensional vector which is
+[14:31] the 3D position x and a 2D viewing direction. So let's say you are at this view here.
+[14:39] You would have a viewing direction which is 2D. Let's call it phi and gamma. And then
+[14:47] so this viewing direction here is a spherical coordinate that tells you where the ray is
+[14:51] pointing to. And then what you do here is that you sample any point that is on the ray
+[14:59] which we denote as x. And x here is going to be in R3. And then what we do here is that all
+[15:06] together we would have five dimensions and you input into a function MLP. And the output would
+[15:14] be a four-dimensional output which consists of the first three dimensions would be the RGB
+[15:21] value or the color. And then the last value would be what we call the volume density. So what's
+[15:30] interesting here is that the color it actually let's say you are looking from at this point
+[15:40] from this view and if you look at the same point from the other view from the other viewpoint here
+[15:47] the color will change slightly. Let's say if I'm looking at this point here
+[15:54] from my viewpoint and from your viewpoint because the way that light is being reflected
+[16:01] into both our respective eyes is actually different because of the different angles
+[16:08] that we're looking at it. So we will see the radiance the color radiance to be
+[16:13] slightly different. I'm not going to into the detail because the details of this actually
+[16:19] if you're interested you can actually look at what is called a DRDF.
+[16:24] That's a function rendering function. That would be computer graphics. That's why it's an
+[16:31] interesting thing that now everybody is looking at or people are looking at into this is both
+[16:37] a combination of 3D computer vision and computer graphics. So then what happens here is that
+[16:44] these outputs here would be the color and volume occupancy density. So sigma here simply means that
+[16:54] at that point when you look at this at this point what is the what is the probability
+[17:01] or what's the rate that light is actually being blocked from this point. So you can think of it
+[17:09] as whether this point how occupied is this point. If it is fully occupied then what it means is that
+[17:18] light is actually fully blocked. So the volume density will be very high or you can also
+[17:25] actually normalize it from zero to one. So it can be thought of that when you're either hitting a
+[17:32] opaque object then the volume density could be one. It's actually highest at that point and
+[17:42] so this is all that we actually propose in this neural radius field. And what happens here is that
+[17:51] the interesting thing here is that once you do this you are able to actually render.
+[17:58] That means that if I train the function here from multiple views I have many many views here
+[18:06] and then I just simply train this function f data here by sampling all the points from different
+[18:13] views. And I want this function here to predict what is the RGB and sigma value of that particular
+[18:22] pixel. I can do a cell supervision because I can actually render this color
+[18:31] or back onto the image and do a cell supervision. And I'll talk about the rendering equation later
+[18:39] because this see here the color is actually specific to a certain point and a certain direction
+[18:49] but the color that you actually see on the pixel is actually accumulated from every single
+[18:57] model. You have to sample along the ray many of these c and sigma and then you take a accumulation
+[19:04] you have to integrate over the transmittance and it will actually form this the color and this
+[19:10] pixel. So that would be the final rendered value here that you take away with the ground truth.
+[19:17] You compare it with the ground truth but before I talk about the rendering equation
+[19:22] let's look at the because as I mentioned that the color would differ from different perspective
+[19:30] from different direction but the volume density will remain the same because at any point if it
+[19:35] is occupied from your viewpoint and from my viewpoint it's still going to be occupied.
+[19:41] So this means that the whole network architecture of this nerve is just this MLP over here.
+[19:49] And what's interesting here is that you would take in x and then d and we know that x is the
+[19:57] 3d point but as I mentioned that sigma which is the volume density is independent of the
+[20:05] ray direction. Only the color is dependent on the ray direction and the volume density as well. So
+[20:13] what happens here is that we'll see that the network will directly output your sigma from
+[20:21] x alone and then the RGB value would have to add a direction to it because
+[20:34] it differs from different viewpoints. And it was also realized in this paper,
+[20:41] the neural resonance view paper, that if you simply just input x and d into the network
+[20:49] and train it like this, what happens is that the network wouldn't be able to capture high frequency
+[20:55] components. Because just a five-dimensional input wouldn't be that expressive at all.
+[21:05] So what they realized is that instead of directly inputting x and d here, it's better to actually
+[21:15] put it inside a positional encoder. So this positional encoder is just a Fourier basis
+[21:23] function. So what happens here is that all these are the two zero pi and two
+[21:32] l minus one pi. These are the cosine and sine here. These are actually your basis functions
+[21:41] from Fourier transform. And what happens here is that if you do this, because given the input x
+[21:48] or p here, in this case here p, you are able to extend the dimension into very high dimension
+[21:56] by just encoding because these will be the low frequency components and these will be the high
+[22:02] frequency components from p. So you are able to actually expand it to be a very high dimension and
+[22:09] thus making it more expressive in a sense. So by just doing this, that means that you
+[22:18] take x each one of the dimension inside x, you plug it into this and then it becomes a vector.
+[22:26] So you concatenate these vectors together and then put it into the network. And they realize
+[22:31] that by doing this and training the network with this, you are actually able to capture the higher
+[22:36] frequency components as well. And first of all, the whole rendering becomes very sharp. Otherwise
+[22:43] it will be blurry if you lose the high frequency component. So any target view by training this
+[22:56] network, the MLP, you can actually render any target view by doing ray tracing and
+[23:05] volume rendering. So this would be the equation here. If you have a view here,
+[23:11] imagine that you already encode everything into f data, where f data is taking in x and d and
+[23:17] outputting c and sigma here. So what happens here is that you have a, let's say you want to render
+[23:25] a new view here. So you know the camera position and you know where is the camera position.
+[23:33] And then you have to specify the ray direction here by specifying d. And what you can do is
+[23:40] that you can sample many points from here and then get all the c and sigma and the expected color
+[23:49] of this particular pixel here, which we are going to call cr, where r here is the parametric
+[23:56] representation of this ray. So this ray would be parameterized by d, which is the camera center
+[24:05] o and plus pd. d is the direction. So you are taking the parameter t. So that means that you
+[24:13] are sampling points of that particular ray. So it will be a function of cr. And this will be
+[24:19] the rendering equation where you integrate from t near to t far. Let's say you want to integrate
+[24:28] from here to here. So this would be t near and this would be t far. So we are going to
+[24:34] sample all the points from here to here. And then we're going to integrate them together
+[24:39] into this particular rendering equation where there are three terms inside here.
+[24:47] So the first term here that we'll see is actually the color. This is directly the output from your
+[24:56] NERF neural network because NERF neural network outputs c and sigma. But note that this c and
+[25:05] this final c here is different. They are different in terms of this c here, the small c here,
+[25:13] is just how that color would look like on that 3D point when you are looking at this view.
+[25:21] But the final rendering, if you just back project this point, one single point,
+[25:28] and then you back project it onto the image, you will not get a very high fidelity rendering.
+[25:35] Let's say you have a translucent object or whatever, you won't be able to do that kind
+[25:40] of rendering. A very good example is that I bet that everyone would have like when you look up
+[25:47] into the sky, you see clouds. Clouds doesn't appear to be flat. There is some kind of layering
+[25:56] effect. And that is actually this effect here because the layering effect is that because
+[26:03] clouds itself is not fully opaque. You can actually see through the layer, it's translucent
+[26:12] at some, I mean not fully opaque, but it's translucent to some degree. And what you are
+[26:18] trying to do, what is coming into your eye is actually all the sample of the colors when you
+[26:24] are looking at the light wave through the cloud. So when you accumulate this, you'll be able to
+[26:30] see the layering effect. And that's actually what this equation is trying to do here. So this term
+[26:38] here would be just the color at one point. And then the second term here would be the
+[26:44] this sigma here. It would be the volume density. And this volume density means that what is the
+[26:52] chance because we are looking at one point, which is RT here. So it's actually the probability of
+[27:00] that you are hitting a particle at that particular point. Which can also be thought
+[27:07] of as how occupied this particular point is in 3D space. Then there's also the term here,
+[27:16] which is the transmittance. This is the probability that light travels from
+[27:22] B near, because you're starting to integrate from the near point to B to that point that you are
+[27:29] interested in along that ray without hitting any particle. That's why it's called a transmittance.
+[27:38] This means that if you are going to pass a light ray, pass a light from the source
+[27:44] across along the light ray, this is actually the probability of how much it can be transmitted
+[27:51] across. That light source can be transmitted across. And this is cumulative. That means that
+[27:58] you are actually accumulating the transmittance across until you hit an object. And without
+[28:06] hitting another object. This is the probability. But the problem with this is that
+[28:15] if you simply do this, because what we are doing here is that we are sampling from the 3D space.
+[28:22] That means that you cannot do the integration. Although everything is formulated in a continuous
+[28:30] manner here, the whole thing is actually when you implement it on the computer,
+[28:36] it's actually not continuous. You would have to sample along samples along that ray
+[28:44] before you can do the integration. And this is also the reason why NERF is so slow,
+[28:48] because for every pixel, you need to sample so many samples along that ray in order to just get
+[28:54] one pixel. And imagine that you have a mega pixel image. There will be millions of pixels inside
+[29:04] here. So during the rendering, you need to sample so many points on so many light rays in order to
+[29:13] render the whole image. And so the integration is not possible. So one way of resolving this
+[29:22] problem here would be to actually numerically estimate this or approximate this continuous
+[29:28] integral using uniform samples along the ray. So this means that we can actually convert the
+[29:35] integration into a summation. And I will skip the derivation, but if you are interested, you can
+[29:42] look at the supplementary material of that paper. They actually prove how to derive from here to
+[29:48] here. You can actually use the Portugal rule because when you are integrating, you can
+[29:55] approximate under the curve as some kind of rectangle. And then this would be the final
+[30:06] equation that we are going to look at. So the transmittance here would be given by this equation
+[30:13] over here. And then there's a second term here, which is one minus exponential of this guy. And
+[30:21] ci here will be the output. So basically, ci and sigma i here, they are the outputs of the MLP,
+[30:30] which we talked about just now. And you can actually dump it into this equation.
+[30:36] Once you get n number of samples along that ray, you will be able to render it into the
+[30:42] other ray. So this is why the rendering from the from radians field, neural radians field,
+[30:51] it looks realistic. It's not flat at all because you are actually accumulating the color samples
+[30:59] over the volume density. That means that how transparent or opaque that particular point is
+[31:08] across that light ray. So you are stacking everything together. That's why you get that
+[31:14] 3D rendering effect. And also delta here is actually the distance between the adjacent sample.
+[31:22] So if you have a light ray between sample i and sample j, the distance between this would be delta
+[31:29] i. And so this would be everything about NERF, where it's actually very simple.
+[31:40] But what's shocking here is that the quality is so good that when they do the rendering,
+[31:47] and that actually amazed the whole community of computer vision at that time. And it's actually
+[31:55] very simple, but the result is so good that it really just revolutionized the whole community.
+[32:06] Because I would say that in the past 10 years or so, it was first AlexNet that took everybody,
+[32:14] I mean, it started the revolution on deep learning. And then later on,
+[32:21] there was this people are obsessed with GAN generative model for quite some time.
+[32:28] Then later on, 3D Point Club also took quite a bit of effort from, I mean, interest in the
+[32:38] community. And now it's the URL 3D, I would say. So a lot of people now are rushing into this.
+[32:51] They suddenly all got interested in 3D computer vision, but it's not easy to
+[32:59] start because you need the foundation, background foundation, in order to be able to comprehend.
+[33:05] And I would say that even though now the result is good, there are still many concepts in 3D
+[33:11] computer vision and computer graphics. It's actually not applied yet because 3D computer
+[33:17] vision and computer graphics is far more than just this. So it's still not really,
+[33:23] and I would say that many of the people, I mean, you can take NERF and then you play around with
+[33:28] it, but you can make some tricks to it. But then in order to make some significant changes to it,
+[33:35] you really need the deep knowledge on the 3D computer vision. And yeah, it's so simple. And
+[33:43] then that's why it's taking everyone by surprise and it's quite amazing. Despite the very cool
+[33:52] results from NERF, there are limitations to it. So basically it does not generalize to unseen
+[34:00] scenes. Once you are actually optimizing the network over that scene and you're overfitting
+[34:08] to the scene, the reason why it does not generalize to unseen scenes is that,
+[34:14] because you have a network here, it takes in just 5D input. And that 5D input helps you
+[34:21] nothing about that scene. It actually doesn't contain anything from the image.
+[34:28] So it's only telling you an XYZ and a direction. So there's nothing about the image. So giving it
+[34:34] new images won't help. It won't be able to tell you what is in the scene. It's just memorizing.
+[34:41] But one problem with this, the significant problem with this is that it doesn't generalize to
+[34:46] unseen scenes. So at the same time, at almost the same time, there is another work called
+[34:57] multiplane images, which is essentially representing the scene with a discretized
+[35:04] version of planes. So this is very closely related to plane sweeping algorithm. It's actually
+[35:14] inspired by plane sweeping algorithm. And this multiplane image is actually generalizable. I'll
+[35:20] tell you why, but let's look at how it represents the entire scene with a single input image.
+[35:28] So in short, this is called MPL. The representation is, so if you have an image,
+[35:34] given an image, what it's trying to do here is that it's trying to learn a deep network
+[35:40] that produces, so D equals to one, D equals to two, all the way until D equals to
+[35:50] N. For example, you have N number of planes. So this is your original image.
+[35:56] What it's trying to do is that it's trying to, the network that is designed,
+[36:01] it outputs a set of D planes. And these D planes represent a slice of that scene.
+[36:10] So you can think of it that way that when I'm looking at this scene, the image is here.
+[36:17] When I'm looking at the image, it's looking at this scene here. What happens here is that
+[36:22] if you take a step forward and D equals to one, you slide it here. That will form another image.
+[36:29] And then you take a step forward, you will form another image slice.
+[36:33] So what it's trying to do here is that even a single image is trying to output
+[36:40] all these deep planes of image from D equals to one to D equals to N.
+[36:47] So once you have this, then what happens is that you can do novel view synthesis from here.
+[36:54] And you guys know how to do this using homography. So when you have a view here,
+[37:00] then you can actually look at this by simply projecting all these things back onto this image.
+[37:08] And the reason why you need the DAP planes to form this image and render it back onto a novel view
+[37:20] is also because of the same thing, because of the translucent
+[37:24] transmittance and the volume density. Otherwise, if you just take one plane
+[37:33] and then you project it back onto the novel view, you will get very flat images.
+[37:37] You won't get the kind of depth inside your, you won't be that realistic.
+[37:46] That the shadings and all this won't be there anymore.
+[37:49] So this is basically the idea behind multi-plane images. So this is how it looks like.
+[37:57] Even a single view image is going to produce this multi-plane. And when you have
+[38:05] this multi-plane, you have a novel view, it's going to, you are going to be able to render
+[38:11] this back onto the scene. And the rendering back would be just simply the new one.
+[38:19] This is what we have seen already. It's in your plane sweeping algorithm that we saw how to derive
+[38:26] this as well. And the network is actually giving one source image. You are going to have all the
+[38:36] colors and everything, basically the image as well as the alpha density.
+[38:42] So this is something like the volume density. And it actually tells you what is the composition,
+[38:49] the alpha composition of that particular deck plane. And then once you know how to do this
+[38:57] warping from the source view to the target view, then you can essentially render an image onto the
+[39:05] target view. So if you look at this, it's actually very loosely similar to the rendering equation.
+[39:15] There are many different versions. The original version is the BRDF version. And that actually
+[39:20] is kind of complicated because it takes all into account. So we're coming back to your question.
+[39:26] If you take into account the surface normal, the reflection,
+[39:32] and you stay very close to the original BRDF function, then you will be able to capture
+[39:38] everything. But it's going to be computationally expensive and it's difficult to train the,
+[39:46] to design a network to do that. In fact, Raphner and even our paper, we actually all start from
+[39:53] that equation and then we simplify it. But there are different ways of simplification.
+[40:00] Just now that version, I mean the result, it's also a form of simplification from the BRDF
+[40:08] function. So this is also one of the, this is actually just a weighted sum. You are actually
+[40:14] just taking the alpha composition and then you're weighting the sum of this by alpha. You can see
+[40:22] alpha here as a weight. And then it renders back to the image. You can do the same thing for
+[40:28] disparity image as well. Because you actually have the det now. And so what happens here is that in
+[40:38] this multi-plane images, although it's able to generalize, the reason why it's able to generalize
+[40:45] is simply just this here. Because F is your deep network. It's now taking in the image.
+[40:53] So after training, you give it a new scene, a new image, it will still be able to work because you
+[41:00] are taking the image directly as an input. And then therefore this particular network here, the
+[41:09] NPI network here, it's able to generalize to new scene. But it has a problem here.
+[41:15] The problem here, the limitation here is that it directly outputs, it designs a deep network
+[41:22] and directly outputs a set of planes of images that sweep across the frontal parallel views of
+[41:31] that reference camera position. And what happens here is that when you render it
+[41:41] from other view here, because of the quantization error, then the quality of the rendered view might
+[41:51] not be that good because there is a quantization error. Because there is a gap between each
+[41:59] individual in here. Therefore, it's not going to be that good. And therefore, in this paper here,
+[42:11] what we did here is that we simply combine the two to get the best of both worlds at that time.
+[42:20] I still remember that this was the second world event that we talked about.
+[42:25] Because when NERF first came out, they were put into archive in June 2020. So I actually
+[42:31] told him about this paper. And then I said that this is going to become the next big thing,
+[42:36] we should do something about it. But what I also told him is that it's not generalizable.
+[42:42] When I read the paper, I say that this is not generalizable. It cannot generalize the new view.
+[42:47] Then the first version that we thought of is actually very simple. The first version that
+[42:51] we thought of is that instead of just having an MLP that takes in X and D,
+[42:59] then it gives out the color and sigma. What you can do here is that because you have a view,
+[43:08] instead of just this view here, I'm going to put this image through a CNN first.
+[43:16] Then I'm going to get a feature map. From this feature map, when it passes through this pixel,
+[43:25] I can actually take this pixel here and input the feature that corresponds to this pixel
+[43:33] into the MLP. It potentially can make it generalizable. After we discussed this,
+[43:42] we went back and tried it out and it works. It actually can generalize very well.
+[43:51] Then we were about to write the paper because this was in ICCD. Actually, we wanted to submit
+[43:58] to CBPR. Then as we were beginning to write the paper, we realized that just a few days
+[44:07] ago, before we started writing the paper, someone put the paper out into
+[44:13] archive and that paper is actually pixel. It's actually exactly the same idea.
+[44:22] Then we had to throw that away and think of another idea. Then finally we came up with this
+[44:28] idea that why not? Because I remember that I saw this MPI. That was before COVID 2019.
+[44:44] It was the last author and second author of the MPI paper. He actually talks about
+[44:55] during CVP or ECCV 2019. I remember this paper here. Then we discussed about this.
+[45:08] Then finally we came up with this version that the limitation of MPI is that the planes are discrete
+[45:16] and the limitation of NERF is that it's not generalizable.
+[45:22] So then why not do this? The concept here is very simple. NERF is taking a direction
+[45:32] and it's sampling points on the ray. It's actually continuous. Why not just take MPI
+[45:44] instead of sampling a ray? Instead of sampling a ray, we sample a depth. That means that
+[45:54] we have this bottom here and then we still have the direction. It's fundamental,
+[46:01] so we know the direction. But instead of sampling every point on a ray, we sample the whole depth
+[46:08] and then at any continuous depth, we output the whole image plane. Therefore, our network is
+[46:18] actually behaving like NERF. But it's not a ray sampling NERF. It's a plane sampling NERF.
+[46:29] But at the same time, we are inspired by MPI because we take the whole source image. That
+[46:35] means that we design a network that takes in the source image as well as taking in the depth,
+[46:43] a continuous depth, and then this outputs the whole image at that depth. That's just it.
+[46:50] So as a result, we are both generalizable. That means that we mitigate the problem from NERF
+[46:58] and then we also solve the quantization error from MPI because now we are continuous.
+[47:06] So that's the whole idea and I probably won't go through all the details, but I just want to tell
+[47:12] you the general idea here. We call this a planar neural radians because now we are no longer
+[47:23] sampling at a ray. We are sampling at the plane instead of the ray. So this is the idea here.
+[47:32] We would have a encoder. It's also very simple. We have a soft image and then the decoder here
+[47:39] will be conditioned on the inverse depth. Notice that we use the inverse depth because
+[47:45] if you use the depth itself, then you will not be able to represent
+[47:52] a very far away point. This would be very bad for the network. So we use the inverse depth
+[48:01] and then what happens here is that now we just did that condition on any of the depth. We will
+[48:07] be able to output the whole image plane here, which is exactly the same representation as MPI.
+[48:13] Then the render room would be the same as MPI as well. So we actually overcome the two problems
+[48:21] respectively from NERF and MPI. This is why we call it MI because it stands for
+[48:34] multi-plane images or MI and then NE actually stands for NERF.
+[48:41] This is a cool writing. Some details about the architecture, but I don't think
+[48:55] if you are interested, you should read the paper or play around with it. Then we also have the
+[49:02] encoding to capture the high frequency components. These are all the same where the inputs here
+[49:10] besides because now we no longer have x and d in the direction. Now the d here represents the depth
+[49:20] but we also do this frequency encoding such that we will make the depth more expressive. Otherwise,
+[49:29] it's just one value. If you will have just one value, then it's not so expressive. We tested
+[49:35] this and you would end up to have a very blurry rendering or the output images here would have
+[49:44] lose the high frequency component. This is actually a very big discovery actually.
+[49:50] That's another paper on this. It's actually related to spectral biases but also unfortunately
+[49:57] I won't have time to talk too much about that. If you are interested, you should look at the paper.
+[50:03] It's actually a very interesting thing here to capture the high frequency components.
+[50:09] Then the rendering would also be the same as MPI. Once you have the rendering here,
+[50:18] we don't do MPI. Once you have this thing here because what we output here is not alpha.
+[50:25] We output here is sigma. We are actually closer to
+[50:31] that. We output the volume density directly here. What we do here is that we output the whole 2D
+[50:39] image at that plane instead of just one color and one volume density on the ray on a point on the
+[50:48] ray. What we do is that we output the whole image and we output every pixel on the image,
+[50:54] a corresponding color and a volume density. Our rendering equation here directly uses the
+[51:03] rendering equation from NERF instead of MPI because MPI is just now that rendering equation
+[51:10] here. As I said, they make a lot of assumptions here and this is an oversimplification because
+[51:16] they don't take into account the transmittance and the radiance field here. It's just with the
+[51:21] sum of the stack of images. Therefore, the rendering here might not be as good as
+[51:30] the one that you've seen with NERF. Here we adopt the NERF rendering and then we are able to
+[51:38] get we do the same thing as NERF as well because we are not able to do the integration. We have
+[51:46] to sample near and far. I forgot to mention that in NERF because what happens here is that
+[51:55] you have an image and then you want to do a sample. It would be silly to sample
+[52:04] very densely along every ray because this would be intractable. It would take a very, very long
+[52:10] time to train the neural network because if you have megapixel image just to render that image
+[52:16] and if you sample so densely along the ray then you will need to, you'll get an astronomical
+[52:24] amount of samples that you need to sample in the entire scene to form this image. So
+[52:32] to form this image. So what they do here is that they actually split the training into two steps,
+[52:39] two stages, from coarse to fine. Because the obvious choice of where to sample
+[52:48] is that you need to sample near the surface. Let's say I see this monitor here. I have a ray
+[52:56] that passes through here. It doesn't make sense to sample the empty space. You should be sampling
+[53:01] around the light ray that intersects here. You should be sampling close to the surface.
+[53:07] But the problem is that when you first initialize the network, it won't give you anything. You don't
+[53:13] know where are the surfaces. You only know where is the image. So you don't know where to sample
+[53:19] first. This is the reason why they split it into two stages of training. The first stage is that
+[53:27] you sample falsely. So you do a very coarse sampling to save the computation.
+[53:34] But when you do a coarse sampling, you won't have such a good render of the image.
+[53:42] But then what it will help you is that it will help you to initialize your network
+[53:46] such that it knows roughly where the surfaces are. Then in the second stage, you do a fine
+[53:53] sampling because you know falsely where are the surfaces. Then the fine sampling in the
+[53:58] second stage will sample near those surfaces, densely near those surfaces. That actually helps
+[54:04] to speed up the training and also improve the quality of the final result. We do the same thing
+[54:14] as well. So all these are the math. I will skip this because you already know all this.
+[54:26] When you have a new view, you just walk it and then you render it back using the rendering
+[54:31] equation here. Here are some of the losses that we use where you have a random view and the
+[54:39] ground truth view. So we use a video. That means that you have a video that takes around the scene.
+[54:47] It's a static scene that we see. And then what happens here is that you just need to take any
+[54:54] source view from one frame. And then you try to render it onto a target view or many target views
+[55:03] in the scene to train your network using this loss function. So there are several loss functions.
+[55:08] There's this reconstruction loss which is the L1 loss between the photo consistency two views.
+[55:15] And then the SSIM which is the structural similarity loss. And we also have a depth
+[55:22] smoothness loss. I actually mentioned all this before when we talk about the stereo
+[55:28] using deep network left right consistency stereo. So what this means is that I want to actually
+[55:35] make sure that the color gradient and the depth gradient are smooth. So therefore I want to
+[55:42] minimize this gradient here. And also we first perform structure for motion of the scene.
+[55:53] And then we supervise the depth based on the sparse depth that we get from structure for motion.
+[56:02] And then we also take the scale from the structure for motion to
+[56:11] fix it at a certain unit scale. And then we try to normalize away the depth
+[56:18] with the scale calibration. So this would be the scale calibrated loss. And here's some
+[56:25] logs that we get. You can see that compared to MPI, because MPI has depth quantization error
+[56:34] as I mentioned that along the planes there are gaps in between. But ours is continuous.
+[56:42] So that means that you can sample densely along the ray and you render it into a target view.
+[56:47] Therefore we are able to actually render better quality of the image compared to the ground truth
+[56:55] with MPI. However, it is actually better. So here are some results of the normal view synthesis.
+[57:03] And in fact the street view data set, this kitty data set is actually very difficult to train.
+[57:12] Because the reason why it is difficult to train is that because the car is always traversing in
+[57:18] a straight line. And when you do the straight line traversing, you don't see too much parallax
+[57:25] of the scene. And therefore this rendering here actually, because you are always moving forward,
+[57:35] so this rendering here can be highly subjected to degeneracy. But yet we still managed to get it
+[57:44] pretty much nicely. So here's mine, which actually makes it generalizable as well as
+[57:56] mitigating MPI. And I think this is a very nice work, a very neat work, which is called the
+[58:03] IDRNet. It's actually generalizable. It also has the same concept. In order to make it generalizable,
+[58:21] you need to make the input as the image or the image feature. You can see that what they are
+[58:29] doing here is that instead of, so you have a target view here, they have multiple source views
+[58:36] that are close by. And what happens is that they take the image feature, so they put each one of
+[58:43] this image into a deep network, 2D deep network to process the image into a feature map. And then
+[58:53] you have this, if you are looking at the render of this picture here, so you will sample many
+[59:01] points along the way as well. So let's say you are sampling this point. So what it does is that
+[59:06] because it also needs known poses. So this is also one of the limitations of the known poses.
+[59:17] So far, whatever that I talk about, it needs a known pose. I'll talk about buff later,
+[59:26] which does bundle adjustment together with null. But buff is also not perfect. I will tell you why
+[59:38] later on. What this IDRNet does is that you process and then you collect all the features
+[59:45] from multiple views and you aggregate it here. And then you aggregate it here and you collect
+[59:53] multiple samples along this way in the same way after you aggregate for multiple views. Then you
+[59:59] dump it into a ray transformer. So essentially you dump it into a ray transformer to aggregate
+[1:00:08] based on the self-attention and cross-attention, you put it into a ray transformer here.
+[1:00:14] So in the paper that we have to make the structure for bundle adjustment generalizable,
+[1:00:23] we actually leverage IDRNet. And I also have a third paper in TCS-INPR. And that is actually
+[1:00:34] from synthetic to real transfer. We also leverage this. So instead of ray transformer, what we did
+[1:00:43] was that we actually do concussive learning on the ray over multiple views. That's why we call
+[1:00:51] it contrainer. So anyways, we're coming back to this. So we can aggregate this and then put it
+[1:01:01] into a ray transformer such that this ray transformer here will output the sigma over
+[1:01:08] the different locations of the ray. And this sigma here, the reason why they put it through a
+[1:01:18] ray transformer is that because the the opacity or the volume density across the same ray,
+[1:01:28] it should be influencing each other in a way that because when you have an object
+[1:01:35] at that point, you need to know where the free space are and where are the other objects on that
+[1:01:43] ray. So in order to produce the smooth volume density across the full ray, that's why it needs
+[1:01:52] to be placed into this ray transformer because this has got to do with occupancy. Whereas the
+[1:01:59] color will be just based on the direction and that point in space. So the color will be
+[1:02:05] predicted first. You don't have to put it through the ray transformer. And so I have already told
+[1:02:13] you about this overall view. But what's interesting here is that, so this is the architecture
+[1:02:20] of the, it's very simple. And what's interesting here is that this is the reason why it's
+[1:02:26] generalizable, as I mentioned, is that it's actually taking in the feature from the image.
+[1:02:31] There's no more, just purely based on the direction and the 3D point. And it's also,
+[1:02:42] IVRNet, it's also leveraging the multiple views that you can see that at the end here,
+[1:02:51] it's actually aggregating the colors from the multiple views. But let's look at the detail
+[1:02:56] of every step. So first, as I mentioned, that given a source view or a target view,
+[1:03:04] you look at the point on the ray and then you check all the corresponding code,
+[1:03:11] given this source view here, you look at a point, you check all the nearby views, the nearby source
+[1:03:18] views. And then I'm going to collect all the image features here, which I'm going to call it
+[1:03:23] F1 to Fn, n views all together, n source views all together. And mu here would be the mean
+[1:03:34] of all these features. And V here would be the variance or the standard deviation of the,
+[1:03:43] actually it's the variance of the feature. So you can easily compute from a d-dimensional
+[1:03:51] feature map, a feature vector here. So what we do here is that, what they do here is that
+[1:03:56] we concatenate these together. So this actually gives the local information of the pixel,
+[1:04:03] as well as the global information from multiple views. Because F is local to each image
+[1:04:11] review. But mu and V, they are aggregated across all the multiple views.
+[1:04:19] So by concatenating them together, you have both the global and local information.
+[1:04:24] And therefore it's multi-view aware. And then this, you input it into an MLP, you will give you
+[1:04:33] this, this is something like a point net. It's something like a point net where MLP,
+[1:04:39] where you leave the dimension of F into the input vector here, into a higher dimension,
+[1:04:47] which is into another dimension, not another dimension, it's the same dimension,
+[1:04:52] but you map it into another feature here, F prime. And then we will also output it,
+[1:05:01] we will also output a set of weights, corresponding weights here, where we concatenate
+[1:05:07] the new feature with the weight and we'll do weighted pooling. That means that instead of
+[1:05:13] max pooling or min pooling, we do a weighted pooling. That means that you take a weighted
+[1:05:19] sum and pool them together. Before you input into another MLP, which gives you F sigma,
+[1:05:26] that's the density feature, which we will then use it to predict the volume density.
+[1:05:32] Okay, so now you have this density feature from one single point on the ray. We'll do
+[1:05:42] it for multiple points on the ray, the same way to predict. So we'll have many F sigma here.
+[1:05:47] Then we'll put it into the ray transformer here to get the density. We'll get the density for other
+[1:05:54] samples as well on the same ray. Because it's a ray transformer, whatever that you input,
+[1:06:01] you output the same dimension. And that's the idea behind a transformer. So the position
+[1:06:08] line holding and the multi-hit and self-attention here in the ray transformer will tell you the
+[1:06:14] relation along that ray, all the features along the ray. And finally, and then the color prediction
+[1:06:25] here would be because you have the weights here. So what we will do here is that we'll
+[1:06:29] concatenate the feature with the delta d i. Delta d i is simply the viewing direction. So
+[1:06:40] you have a source view, a target view. So this direction here is d. Then from another view,
+[1:06:49] you are looking at that point. From another view, this direction here, which will be d i. So I'm
+[1:06:55] going to take the delta between these two views and then concatenate it with this feature over
+[1:07:03] here. Before I put it into mlp, and this mlp here will output a new set of weights. This new set of
+[1:07:12] weights would be what I use to aggregate the color. So I will not predict the color. I will not
+[1:07:19] design a network to predict the color. Instead, what it's trying to do here is that for every
+[1:07:26] view here, I'm going to collect those source views here that corresponds to this point in 3D.
+[1:07:35] I'm going to collect all the color c1, c2. This is my target view. And then what I'm going to do
+[1:07:41] is I'm going to predict the weights for each one of the pixels that corresponds to this. And I'm
+[1:07:46] going to take the weighted sum. This point here would be taking the weighted sum of all the colors
+[1:07:56] that I'm going to collect from the multiple views. But this weighted sum here, this color,
+[1:08:02] is not the color that I'm going to render here. It's just the point because it's the direction.
+[1:08:07] It's just that point, the color on the point. Because in order to render this pixel here,
+[1:08:14] I still need to do this. And I still need to do this where this c here is the weighted sum
+[1:08:22] c here that I'm looking at. But in order to compute this, which is this guy here,
+[1:08:27] I need to sample many points here, which is the aggregation. And then I integrate it with
+[1:08:32] together the volume density and the transmittance. Then I'll get the final color here. So this is
+[1:08:38] how IBRNet does it. It's leveraging on the multi view. But IBRNet also has a disadvantage.
+[1:08:47] It is that it does not work on one view because if you only have one view, then you won't be able to
+[1:08:56] compute all these mu and v. It will not be robust. So it needs to have many nearby views in order to
+[1:09:07] make it robust. So I think that we tested this. You need at least three nearby views in order to
+[1:09:16] make it work nicely. So the loss would be just this. It's the same training. You have a cost
+[1:09:28] stage and then you have a fine training stage. And you gradually do this. You can see that the
+[1:09:37] IBRNet is actually rendering everything very nicely, even compared to the original
+[1:09:44] none. And the cool thing is that it's actually generalizable. And the reason why,
+[1:09:52] one of the biggest reasons why it's robust to the, I mean, it's able to produce higher quality
+[1:10:00] rendering is because it's not creating the color, it's aggregating the color. So it won't deviate
+[1:10:08] too much away from the nearby views. And therefore it's actually kind of robust here.
+[1:10:18] And we saw that the first disadvantage of NERF was that it's actually not generalizable. So we
+[1:10:28] saw that from using MPI, you can generalize it. Using mine, you can also generalize it.
+[1:10:34] And IBRNet, you can also generalize it. The other disadvantage of NERF is that it's very time
+[1:10:43] consuming to train and render, train and test. Both are very time consuming because during
+[1:10:52] training, you have to sample so many points. Then you have to render. The rendering is also
+[1:10:58] very expensive to render the whole image. And usually during training, the original NERF,
+[1:11:04] they don't sample the whole image. They don't render the whole image.
+[1:11:08] For image, they only sample 1000 points. And that will actually mitigate the computational complexity.
+[1:11:14] But then it's still very expensive. It takes at least like 3 days to train
+[1:11:21] NERF. Then it came in 2021. There are many papers to speed up NERF.
+[1:11:33] So this 10.3 is one of them. This is for rendering. But the training is equally slow.
+[1:11:42] I'll tell you why. Then the follow-up of this, which is the 10.0, both the training and
+[1:11:52] the testing is fast because there's no deep network in that. I'll tell you after this.
+[1:12:00] So NERF is very slow because it requires 10 samples where every point needs to be sampled.
+[1:12:07] And the reason why rendering is slow is because the query depends on the viewing direction as
+[1:12:15] well as the spatial position. You need to sample every point. And what happens here is that,
+[1:12:23] because as I mentioned that the color is dependent on the viewing direction,
+[1:12:34] therefore, you cannot cache the color. You cannot store it somewhere. You cannot just take one view
+[1:12:41] and then try to compute the color. So the color here, C1, C2, and so on. You cannot just
+[1:12:53] put it through. You cannot just take the direction and the point X and then use the deep network of
+[1:13:01] NERF to output the whole set of colors and store it somewhere and then reuse this color
+[1:13:08] when you are trying to render another view. This is not possible in NERF because the color is
+[1:13:15] view dependent. It depends on the direction. So that means that every image that you render,
+[1:13:22] that it's a new direction of the view, you have to resample everything again and do the
+[1:13:27] rendering equation. But it would be different for the volume density. Volume density is
+[1:13:37] direction dependent. That means that you can actually take this, just one view, and then
+[1:13:47] for every point on the ray, you sample the volume density. You can store it somewhere because you
+[1:13:53] know the spatial location, the spatial location X. You store it somewhere, you cache it in
+[1:14:00] somewhere. Then given another view, because it's view independent, given another view,
+[1:14:07] you can still use back that same volume density. But this is different from color. Color,
+[1:14:13] you can't do this. So the idea here is that if you can find a way to decouple the direction
+[1:14:20] with the color from the color or decouple the color from the direction, that means that you
+[1:14:28] make color independent of the viewing direction. Then you can cache it and make rendering fast.
+[1:14:38] That means that you just need to do it once. You store it somewhere, then you can actually
+[1:14:44] render it from any other view by reusing all the color and volume density.
+[1:14:52] So this is exactly what 10.3 does. So what they realize is this. They realize that,
+[1:15:03] just how I talk about the Fourier series, the Fourier encoding. So Fourier series of,
+[1:15:10] Fourier transform actually. This Fourier encoding is actually a formal basis, a linear combination
+[1:15:20] of the Fourier basis. But there is something called spherical harmonics in 3D. This is
+[1:15:28] equivalent to Fourier series in 2D or when you do signal processing. But in 3D, when you render
+[1:15:43] the color of the sphere, there's something called spherical harmonics. So basically,
+[1:15:50] you can decompose the color into a linear combination of coefficients k.
+[1:16:01] So you can actually take a linear combination of the coefficient k and the spherical harmonics
+[1:16:06] basis. Where the interesting thing is that now the spherical harmonic is the one that is dependent
+[1:16:17] on the view direction. But it can be computed in closed form. So there is no need to learn
+[1:16:23] the basis. It's a set of basis that you can predefine and compute it in closed form.
+[1:16:31] So what happens here is that if you are viewing it in this direction,
+[1:16:36] and then all you need to do is that you sample at any point here. So you would have a direction,
+[1:16:45] you would have a direction and a 3D point and an x here. But what they do is that they redesign
+[1:16:52] this network to output k, which is the coefficient of your spherical harmonics.
+[1:17:00] And k is actually independent of the viewing direction because they shifted the viewing
+[1:17:06] direction to the spherical harmonics basis, which can be computed in closed form.
+[1:17:14] So now there's no need to learn the whatever that is output from your network is totally
+[1:17:21] independent of the viewing direction. And the part that is dependent on the viewing direction
+[1:17:29] can be taken out and computed in closed form. So what happens here is that if you train it
+[1:17:35] based on this view, you have k here, the coefficient. And then now you decide to look
+[1:17:40] at it from another view. This point here, that k that you compute from this view still remains.
+[1:17:48] Because the spherical harmonics here, you will take in the viewing direction. So that means
+[1:17:54] that you use the same k, but when it's going to be a linear combination, you have k and then
+[1:18:03] i and spherical harmonics i depending on what's the order of the basis that you use.
+[1:18:09] So it becomes a linear combination. The color will become this. But this now, the k here is
+[1:18:16] view independent, which means that you can cache it together with your volume density. Just given
+[1:18:22] one view, you cache everything in the 3D space. And then when you change a different viewpoint,
+[1:18:28] all you need to do is that you recompute the spherical harmonics. There's no need to put it
+[1:18:34] through any network anymore. So it becomes very fast during rendering because you decoupled
+[1:18:41] the viewing direction now. And what is even interesting is that they make it even faster
+[1:18:48] by saying that given one viewpoint here and one image here, if you want to do normal view,
+[1:18:56] you just use this and then you put it through a network. You put it through a network and you give
+[1:19:01] all the density and k of every single point. So you can think of it that this way that
+[1:19:08] I will do this and then I will sample densely on this all the points and compute all the density
+[1:19:15] and k which are view dependent or view independent. And I'll cache it somewhere,
+[1:19:20] but I don't cache everything because not all the points here in the 3D volume is occupied.
+[1:19:29] So what they did is that they store it as a top tree. That means that they store directly
+[1:19:36] only those points, the k and the volume density, where it corresponds to a surface,
+[1:19:46] where the object is. And when you have a new view, when you decide to query
+[1:19:56] normal view, then you can actually search through the octree very efficiently.
+[1:20:03] So not only that this thing here can be cached, it can be also cached and retrieved very efficiently.
+[1:20:14] And this is how they manage to... this is the function here. So k is coefficient,
+[1:20:21] this is the spherical harmonics which can be computed in closed form. So now they can
+[1:20:29] actually render this in a very nice way. But then the problem with this
+[1:20:40] panel tree is that although the rendering is fast, the training is still the same.
+[1:20:45] The training is still the same because there's no change in the output dimension.
+[1:20:52] k is still in three dimension. You still have the RGB coefficient and you still have the...
+[1:21:00] that means that you still have the 4D output and the 5D input. So the network here, there's
+[1:21:06] no change to it. It's just that the very subtle change is that now it becomes view independent.
+[1:21:14] So that actually helps to reduce a little bit of the training complexity because
+[1:21:19] now your network doesn't have to learn something that complex anymore.
+[1:21:23] And the document in the paper, they claim that there's about 10% faster. So the panel tree
+[1:21:35] is about 10% faster. But the training is not as fast. So in the follow-up paper by the same guy,
+[1:21:44] which is CVPR 2022, the panel tree still requires training time. So what they do here is that
+[1:21:52] they say that forget about deep networks. We don't have any deep network at all. So there is no more
+[1:22:02] training time at all. But instead they do optimization. So what happens here is that
+[1:22:10] instead of a panel tree, because now there's no need to patch the
+[1:22:15] coefficients and the volume density anymore. But what they do here is that they discretize
+[1:22:21] the world into a regular constellation of boxes. And at every action, they attach spherical harmonics.
+[1:22:32] And this spherical harmonics is still dependent on the viewpoint. So this spherical harmonics
+[1:22:37] is dependent on that viewpoint. And then given a training image,
+[1:22:44] although it's saying that training image, but actually there's no training.
+[1:22:49] It's just an optimization. You don't train any network at all. So what happens here is that
+[1:22:53] you still have that linear combination from this view here. But because you have a quantization
+[1:23:00] error, which is you have the spherical harmonics for this four point. So what happens here is that
+[1:23:06] let's say this point here intersects at this point here. This would be a linear interpolation
+[1:23:16] of all the spherical harmonics from the four corners, from the eight corners of the boxer.
+[1:23:26] And they optimize over that volume density here, as well as the finer spherical harmonics that you
+[1:23:35] can get here from the linear interpolation of all these eight nearby spherical harmonics in that
+[1:23:46] view. So once you optimize this, you minimize this over the reconstruction error and the total
+[1:23:53] variation error, I'll talk about this, the total variation error is just that you make sure that
+[1:23:59] the nearby boxes have the same deviation away. The deviation of the color shouldn't be too much.
+[1:24:10] So what they do here is that once you have done this, you would have gotten the coefficients
+[1:24:17] for this particular point over here. So you can sample from this view, you can sample everything.
+[1:24:26] And then if you have a new view, you just need to project everything back or render everything
+[1:24:34] according to the coefficients that you have computed from the optimization here. And also
+[1:24:42] the spherical harmonics will change, will be recomputed based on the new direction. And this
+[1:24:51] means that since there's no more training, everything will become super fast.
+[1:24:59] And it only takes 11 minutes to do this optimization because it's just interpolation,
+[1:25:05] it's sparsely across the scene. And therefore, actually, this paper was also kind of impressive
+[1:25:14] when it first came out. It's 11 minutes of optimization time and it renders at 15 frames
+[1:25:21] per second. It's so fast. So those who are doing robotics, we always say something is running at
+[1:25:29] real time when it's more than or equal to 13 frames per second. So this is 15 frames per second.
+[1:25:37] It's amazing. It's really amazing. And it takes 11 minutes to optimize. So here's the
+[1:25:45] total variation and the reconstruction error. The reconstruction error basically is the same thing.
+[1:25:50] And yeah, so here's some results of an offset. Even though there's no training at all,
+[1:25:58] you can see that it actually gives better results than the result. The reason is very simple.
+[1:26:05] The reason is because of the spherical harmonics, it's able to capture the variation of the color
+[1:26:12] very well. And that's why it gives actually very good results. Despite Plano 3 and
+[1:26:23] Plano 3 being so fast, there is still a downside of it. Because of Plano 3, there's no training.
+[1:26:40] What it's trying to do here is that basically it's optimizing. It's kind of impressive. But
+[1:26:48] what happens here is that you still need to do some form of frequency encoding,
+[1:26:54] all these kind of things. So just very recently, which is SIGGRAPH last year, 2022,
+[1:27:02] there was this paper called Instant NGP. It managed to speed up the training because
+[1:27:11] comparing with Planoxer, which there's no training, it's just optimization. So what
+[1:27:17] happens here is that for every scene, you need to optimize. You need to do this kind of optimization
+[1:27:25] and the result that it gets will not be as good as if you use data to, I mean, MLP or any neural
+[1:27:36] network to learn something and then you try to render it into a novel view.
+[1:27:42] So it kind of defeats the purpose of having a data-driven approach or deep network.
+[1:27:51] There is still something lacking there where you are not utilizing the strength of deep network.
+[1:27:57] So Instant NGP, not only that it's able to speed up tremendously, it also, what it's doing is that
+[1:28:07] it's able to speed up both the training and the testing tremendously. So you still train
+[1:28:13] a network, but now instead of a few days, it reduced to a few minutes to train the whole thing
+[1:28:19] or a few seconds, I think the whole network can be. And what's interesting here is that
+[1:28:25] in the original NERF, when they do the NERF, they realize that if you don't encode no encoding,
+[1:28:36] that means that you don't do the frequency encoding, as I've mentioned earlier on,
+[1:28:41] right? The Fourier series, if you don't do that, then you only have an MLP. The MLP will be 4,000
+[1:28:50] and let's say you have 411k, they train this network for 11,000 steps and they compare that
+[1:28:57] to with frequency encoding and without frequency encoding. This was the original NERF and this was
+[1:29:03] you remove, just simply remove the frequency encoding. Then you can see that the quality of the
+[1:29:09] result is very different because all the high frequency components will be lost,
+[1:29:15] okay? Because the reason is because now you only purely have a five-dimensional input.
+[1:29:21] It is not so expressive anymore. But if you encode it, you're actually equivalent to lifting
+[1:29:30] the five dimension to a higher dimension using the frequency encoding, right? You are actually
+[1:29:36] using the Fourier basis to encode it into a higher dimension. So it helps to make it more expressive
+[1:29:42] and thus you'll get more details capturing the higher frequency components.
+[1:29:49] And therefore, in this paper, they observe this thing here. So they thought that why not?
+[1:29:58] Because encoding makes the input more expressive. But encoding, frequency encoding itself,
+[1:30:05] there is no learning. So why not? Let's shift the learning path to the encoding,
+[1:30:13] okay? So what it means is that you can have an MLP. This MLP remains, this is the original
+[1:30:21] NERF MLP. But the original NERF MLP is that it takes X, let's call the input as X, then it does
+[1:30:28] an encoding here, okay? Before it puts into this MLP and outputs the color and sigma. So by doing
+[1:30:38] a fixed encoding here, it's already able to make the whole thing improve the result by so much.
+[1:30:46] So in instance MLP here, they say that why not? Let's also do an MLP here and learn the encoding,
+[1:30:53] right? And so nearly this taught itself, they did some experiments here and the result was
+[1:31:05] amazing. So you can see that here there's zero parameters, but this is with the frequency
+[1:31:13] encoding. MLP is this amount of parameters to be learned. So what they say is that, let's say if I
+[1:31:23] if I do this, because up to this point here, they are all spatial.
+[1:31:32] Because what you have here is that you have all the points spatially in the 3D point along that
+[1:31:38] ray, okay? So what they are, so this part here, if I were to take a volume in the 3D space that
+[1:31:50] I'm interested in, and then they say that oh let's sample very densely on every single ray
+[1:32:00] on this volume, right? Then we put all these points and encode it into an MLP here. So that's
+[1:32:09] another MLP here. We sample very densely and then put it inside here, right? Then we can reduce the
+[1:32:17] number of parameters. So the first parameter here becomes 10k, which means that the original NERF
+[1:32:23] network becomes 10k parameter and this MLP, let's let it be 33.6 million. And what they show here
+[1:32:33] is that the result is amazing. You get almost the same quality as this counterpart here, the
+[1:32:42] frequency encoding here. But now you are actually shifting the burden towards the spatial encoding
+[1:32:55] rather than the actual MLP. And I'll tell you later why is this so amazing, why is this so
+[1:33:03] important, right? So now they also try on dense multi-resolution. That means that you
+[1:33:12] form an image parameter and then you will sample along the ray. And you can see that
+[1:33:19] again the MLP, the original NERF MLP drops to 10k. But you have 16.3 million
+[1:33:28] in this spatial encoding here. You will get almost the same performance. And the training time
+[1:33:35] now drops significantly. So this value here is the training time. It drops significantly.
+[1:33:42] And the reason why it drops so significantly is this. Because in the MLP here, if you have
+[1:33:51] all your parameters in the original NERF MLP, whatever input that you have,
+[1:33:59] because these are all in feature space, in the feature space of your deep network.
+[1:34:05] So when you do a backpropagation, you have to backprop to every single parameters inside
+[1:34:13] the NERF MLP. But imagine that you have a dense, because this encoding here is spatially arranged.
+[1:34:26] So when you have a ray that passes through, you only need to update the weights along that ray
+[1:34:35] of this MLP here because it's spatially arranged. So that's why the training time drops. Because
+[1:34:42] when you do backprop, when you shift the number of parameters from here drop to 10k and you shift it
+[1:34:50] to the MLP of the spatial encoding, during every backpropagation, you don't have to update all the
+[1:34:57] 33.6 million parameters. You just need to update those that are spatially along that ray. I'll
+[1:35:07] show you an illustration later that is shown in the paper. So therefore the training time
+[1:35:13] becomes significantly faster and as well as the inference time. Because when you do inference
+[1:35:19] forward propagation, you also only affect those that are on the ray spatially.
+[1:35:27] So every time you do this, it's going to be... Whereas if there are a lot of parameters here,
+[1:35:33] then it will affect all the parameters when you do backpropagation.
+[1:35:41] Instead of even doing a dense grid, they make it even faster because when you want to retrieve
+[1:35:48] those parameters that are along this ray, if it is just a regular grid, then basically you have to
+[1:35:56] search through everything. The searching, the retriever is not so efficient. So what they say
+[1:36:01] is that they propose a hash table. It becomes a query and key. You do a hashing, that means that
+[1:36:10] along this ray, you just need to retrieve the parameters, spatial parameters that are along
+[1:36:16] that ray, using the hash table. And when you update, you also use the hash table to update
+[1:36:22] those parameters. And therefore the training time, you can actually have a significant number of
+[1:36:30] parameters here, but then the training time drops. And what happens here is that they even make it
+[1:36:42] into a hierarchical way. So the multi-grid, there's a multi-resolution of the grid.
+[1:36:49] So you can imagine that, let's say this is the... We are looking at 2D now for illustration. This
+[1:36:58] is actually shown in the paper. So imagine that if I have X and X passes through this point here.
+[1:37:05] So what I want to do is that I want to retrieve the feature of this point
+[1:37:09] because I'm storing all the features as a multi-resolution grid. So I would have...
+[1:37:16] Now it's showing two levels. There are two levels here. A more fine level as well as a
+[1:37:26] coarse level. And if you have a point here, X is here, then what you want to do is that you
+[1:37:32] want to actually retrieve at every level 2, 0, 3, 6, which is actually the four points where
+[1:37:42] the encloses that X that you want to retrieve. Then from here, you interpolate, you get a feature
+[1:37:50] here. And at the other level, you also retrieve 0, 4, 1, 7 using a hash table. Then you interpolate
+[1:37:59] and then you get the other part of the feature that you retrieved from the interpolation of this
+[1:38:07] and you concatenate them together. There's also a bias term here. So there's also a bias weight here
+[1:38:13] that you learn. And then from here, you can notice that now your features, this is the encoding part.
+[1:38:23] So what happens here is that the parameters that you need to update when you want to update this
+[1:38:28] point here, it's only these few parameters that is close by to that query point.
+[1:38:37] Whereas all the other points, all the other features of this network, the encoding network
+[1:38:44] data here, it won't affect this point. So it becomes very efficient. The retriever becomes
+[1:38:53] very efficient. The update also becomes very efficient because you have a hash table.
+[1:38:58] And it only affects locally that point because everything now is arranged in a spatial manner.
+[1:39:06] And whereas because you have, you are shifting the burden to this encoder because it will make
+[1:39:16] why here more expressive now. You are learning it to be more expressive, but at the same time,
+[1:39:21] it's so efficient to update it. And what you can then do is that you can reduce the size of this.
+[1:39:29] This is the original NERF MLP. You can actually reduce the size of it because you can see that
+[1:39:34] this is fully connected. If you have a feature here, which imagine that now let's say I encode
+[1:39:40] using frequency encoding, the original NERF, then I have to have a big MLP here. And this big MLP
+[1:39:46] here, there's no way to decouple them. One forward pass and one backward pass will affect everything.
+[1:39:51] All the neurons inside there, right? So in this way, it becomes very, very effective
+[1:39:58] and very fast. And this paper is so cool. It actually speeded up by
+[1:40:05] so many times that now I think a few seconds the NERF is done training.
+[1:40:13] And it's really, it's really amazing. So this is how all the parameters that they have
+[1:40:21] and the memory, the complexity. And you can see that they have a gigapixel image
+[1:40:33] where if you train for one second, this is what you get. And then if you train for 60 seconds,
+[1:40:41] you can actually zoom it into a very fine resolution. So megapixel or gigapixel means
+[1:40:50] that you have to do all the sampling, all the race so many times. And this is just too amazing.
+[1:40:59] Whereas NERF will not be able to do this, but that is a disadvantage of this.
+[1:41:05] Anyone can tell me what is the disadvantage before we go for a break? No one sees the disadvantage.
+[1:41:12] Yes. It's not generalizable. That's the disadvantage. But why,
+[1:41:18] why is it so difficult to generalize this? Any thoughts on why is it so difficult to generalize?
+[1:41:27] Because now you learn the thing between your head and your head.
+[1:41:33] Yes. You will see the head and head of the brain.
+[1:41:36] Yes, you are correct. So the reason is because of this. That's how I mentioned that
+[1:41:46] NERF is not generalizable because it takes in x and the direction. But now,
+[1:41:53] so the way to generalize NERF is that you make it dependent on the input image instead.
+[1:42:01] But now you are actually entangling the whole thing here, especially to x and the direction.
+[1:42:10] So all the parameters that is learned, because you are actually, this is the encoding,
+[1:42:15] is actually dependent on the viewing direction and the 3D point. So it no longer becomes so
+[1:42:21] easy to disentangle this. And that's the reason why it is not generalizable and not so easy to
+[1:42:30] generalize it. Okay, any questions? If not, then let's go for five minutes break. Then I will talk
+[1:42:40] about the remaining parts. We come back at the 3035. So there is another category of this, the
+[1:42:48] neural fields. And that's actually the sign distance function or sign distance field.
+[1:42:52] And what this sign distance field is, is that given any point on the 3D space, let's say you
+[1:42:58] have this, this actually has a name. It's called the Stanford bunny. What happens here is that,
+[1:43:04] let's say I look at one slice, just the two dimensional area over here. And what you get
+[1:43:10] is that, let's say I query any points on this, any point and I call it x. The sign distance field
+[1:43:18] will tell me the closest distance from this point to the surface, to this surface boundary. Let's
+[1:43:25] say if I have a surface boundary, the sign distance field will tell me the closest distance.
+[1:43:32] And it will be more than zero positive when it's outside the surface. And when it's inside the
+[1:43:38] surface, it will be less than zero, it will be negative. So you can actually figure out whether
+[1:43:43] you are inside or outside the surface. But there will be problem if your surface is open surface.
+[1:43:49] So, when you're exactly on the surface, it will be the level set of zero. It can be also,
+[1:44:02] there are also other representation, like the occupancy representation,
+[1:44:06] where it ranges from zero to one. The level set will be either a one or 0.5.
+[1:44:12] So that's also, but in terms of the occupancy probability, there won't be a distance. You
+[1:44:21] won't know exactly what is the distance of that point to the nearest surface. But sign distance
+[1:44:26] field has this. And in some other representation, you might also have unsigned distance. That means
+[1:44:33] that you don't care about whether you're inside or outside the surface. You just care about the
+[1:44:39] distance away. And there is also a truncated sign distance. That means that you only care
+[1:44:44] about up to a certain point. The distance will go infinitely large if you go very far away from the
+[1:44:52] surface. So you truncate it at a maximum value and all the rest of the value will remain the same.
+[1:44:58] That would be the truncated sign distance function. And so in 2019, this paper, the
+[1:45:05] SDF, was the one that pioneered the learning of the sign distance function using deep network.
+[1:45:13] Because essentially, sign distance function is just a function that takes in x, which is a 3D
+[1:45:19] point in the volume, and that outputs the sign distance value, the SDF value. And what you can
+[1:45:28] do is that you can parameterize this f with a deep network. And then you can train the deep
+[1:45:35] network to directly regress the sign distance function. It's a continuous sign distance function
+[1:45:40] given any query point. But there are challenges if you do it blindly like this. Because deep
+[1:45:46] network essentially is very bad in doing regression. And you do x and then it outputs
+[1:45:54] SDF unbounded. This is really going to be challenging to let the deep network learn this.
+[1:46:01] But if you can do this directly regression, then the zero level set would be actually your
+[1:46:10] object surface. But the challenge, as what I've mentioned, is difficult to learn this.
+[1:46:18] So in this deep SDF paper, they mentioned a few variants of the network. So the most direct one,
+[1:46:28] which is the most naive one, is that directly I learn a network here where I give x, y, z
+[1:46:40] a point in 3D. And then I use it to regress the SDF where the level set when it's equal to
+[1:46:49] zero is actually the surface. So you need to parameterize the network using data,
+[1:46:56] and then you need to train this to make sure that it outputs the request value.
+[1:47:02] And the training is usually done by you need to have the real SDF values. That means that
+[1:47:08] I need to use the 3D object as a supervision. So this is also the disadvantage of SDF because
+[1:47:18] you need the 3D object to the 3D ground truth in order to do the supervision. Because there's
+[1:47:24] no way to render this back. What you have here is just the level set of the surface. There's no
+[1:47:34] volume density or transmittance. Because the transmittance is actually a function of the
+[1:47:40] volume density. So once you don't have the volume density, it's not possible to do volume rendering.
+[1:47:47] You can only do surface rendering here. But surface rendering won't give you the realistic
+[1:47:54] image. What is commonly used is that you can do sphere tracing or ray tracing.
+[1:48:03] That means that you trace across the ray and then you check whether it actually sheets the
+[1:48:10] surface or not or the level set. And then you render it back. But then it will be a flat image.
+[1:48:17] You won't be able to get because there's no volume density. So training is usually done by clamping
+[1:48:24] it. So this is a form of truncated transmittance actually, where any value more than delta,
+[1:48:31] you don't care about it anymore. Otherwise, it will become unbounded. When it becomes unbounded,
+[1:48:37] basically it's not possible for the network to learn well. So here, if you do it naively like
+[1:48:43] this, the sheet information is actually contained inside the network. So that means that you are
+[1:48:48] overfitting the network to just one shape only. And there's no chance of doing any refinement
+[1:48:58] anymore. So basically you overfit to that shape. You cannot actually use it for other shapes after
+[1:49:04] you train the network. Therefore, they also propose a second variant where instead of just
+[1:49:11] inputting XYZ, they have a code here, a latent code here, where this latent code can help to
+[1:49:21] capture the shape information. So it transfers the encoding of the shape information in the
+[1:49:34] network to the code. And what happens here is that we wish to adapt this network to the new shape.
+[1:49:40] But you don't have to retrain everything. You can keep the network fixed and refine over the
+[1:49:46] latent code. So you can optimize over the latent code itself. So this is the second variant that
+[1:49:54] they introduced. The third variant that they introduced would be the ortho decoder. So this
+[1:50:02] is a really close to ortho decoder where this is basically the decoder. You are encoding this code
+[1:50:08] into the SDF value and you are concatenating XYZ with the code. But you can actually condition
+[1:50:17] the X on the decoder itself. The latent code would be the input. So if you do this, what it means is
+[1:50:27] that you can supervise using the outputs, which is your 3D surfaces, the SDF value that you have for
+[1:50:34] the ground truth. And then for every point that you condition in the decoder, you optimize over
+[1:50:40] the latent code. And this itself during inference time, what happens here is that you can actually
+[1:50:50] given a new shape, you can actually keep the parameter fixed as well. And then you just refine
+[1:50:57] it over by optimizing this latent code. And that will be much more efficient to do. And that's the
+[1:51:03] ortho decoder based deep SDF. So the training would be just doing this. You basically optimize
+[1:51:11] over the network parameter. So the network parameter is this. And then you also optimize
+[1:51:16] over the latent code. But in this case here, you still need the ground truth. So this is the output
+[1:51:21] of the SDF value, output of the network. This is the ground truth value. And you still need this.
+[1:51:29] But the advantage of doing this is that now you have a latent code to actually
+[1:51:36] contrast this with this. Contrast this with this. So if you have X, Y, Z,
+[1:51:43] that you want to capture the whole shape because the whole shape is actually captured inside the
+[1:51:48] network. So what it means is that you need a complete shape in order to train this well,
+[1:51:55] such that the network can capture it. But if you do this, this or this, this version here,
+[1:52:02] the ortho decoder, because it's a latent code, it's in the latent code form, right? So you're
+[1:52:08] shifting the shape information into the latent code. You can actually have incomplete shape.
+[1:52:14] So you can have many pieces of incomplete shapes here, right? Many pieces of incomplete shapes up
+[1:52:20] to K only. Then you have N number of samples and you will still work because you are optimizing
+[1:52:27] over the latent code. You are not capturing the information inside the network weights.
+[1:52:34] And there is also a regularization here. Basically, you want to minimize the variation of
+[1:52:42] within the latent code itself. And this is during training time and during inference time,
+[1:52:49] given the new shape, if you want to adapt the network to the new shape, you don't have to
+[1:52:56] optimize over data anymore. Basically, you just optimize over the latent code.
+[1:53:02] And that will be much easier to do because it's d-dimensional compared with the whole
+[1:53:09] network that contains many parameters inside that. And you just need to do a refinement.
+[1:53:14] Basically, this means that it can handle any form of partial observation, as I mentioned,
+[1:53:19] and it can also be easily adapted to new unseen shapes. So here are some results of the
+[1:53:29] deep SDF. Basically, it can actually encode the surface very well.
+[1:53:36] So in contrast to volume rendering, there is no concept
+[1:53:49] of 3D inside there. So basically everything is rendered onto the image. That's why after you
+[1:53:55] train a nerve, you can also look at the volume density. Because as I said that the volume
+[1:54:04] density will hit the highest value when it's on the surface and then you will draw. So the
+[1:54:10] thing is that you can also treat this as the level set. If you view the level set of a nerve,
+[1:54:17] after you train a nerve, you take the volume density and then you view the level set. You
+[1:54:22] will still get the 3D reconstruction. You'll still get something like this, but it's very noisy.
+[1:54:27] The reason is because they don't explicitly model the surface at all. Nothing in the nerve
+[1:54:35] formulation that I mentioned just now captures this part. But SDF explicitly captures the surface
+[1:54:44] and it trains on the surface. So that's why it's actually
+[1:54:48] much better for surface representation. But there's also a problem with SDF.
+[1:54:59] That is deep SDF and all the variances requires the ground truth 3D shape to move for supervision.
+[1:55:09] But then the nerve doesn't need this. And therefore, very recently, the last one year
+[1:55:15] or so, people let's marry SDF and radians view. So basically the idea behind this is that
+[1:55:24] we will, because SDF cannot do volume rendering because there's no volume density.
+[1:55:30] So what happens here is that if I give you a SDF value and somehow I have a function
+[1:55:37] that takes in the SDF value and convert it into volume density,
+[1:55:41] then I will be able to do the volume rendering from there. And that's exactly what volume SDF
+[1:55:48] does. So basically this is the SDF function. So when you are, this x is the point on the 3D,
+[1:55:57] y is on the surface. So this is the minimum distance of x to the surface. When you are inside
+[1:56:03] the object, it's going to be negative. When you're outside the object, it's going to give you a
+[1:56:08] positive value. And what happens here is that in this SDF and neural volume rendering,
+[1:56:16] what you are having is that you have an x value. You're going to convert it into a positive scalar
+[1:56:22] value. The rate that the light is occluded at the point x. We want to have a function
+[1:56:28] that takes in this and then maps out to be sigma. So if we can do this, then we successfully
+[1:56:39] combine the two. And that's exactly what we've done here. So they say that let's do this. Let's
+[1:56:47] have a learnable function with two learnable parameters, beta and gamma. And psi here,
+[1:56:57] so in the paper they propose, of course, there's a long proof that they show. I skip all the proof
+[1:57:02] if you are interested in looking at the paper. They show that this can be a cumulative
+[1:57:09] distribution function CDF of the Laplacian distribution. So basically this is the thing
+[1:57:16] here. And so if you input the sign distance function here, inside here, inside this CDF
+[1:57:26] of the Laplacian distribution, then you convert it into a volume density. Let's see if we see why
+[1:57:33] is it true. When it's inside the object or when any point that is far away from the object,
+[1:57:43] it should peak at the object. So when it's far away from the object, this distance is large
+[1:57:51] because there's a minus. When it's far away from the object, this guy here is positive and the
+[1:57:56] term here is negative. So basically you are looking at the left side of the axis. So when I move
+[1:58:02] closer to the level set to zero, then you are actually increasing this sigma, the volume density.
+[1:58:10] So it actually becomes a distribution that gradually increases. And what's
+[1:58:16] interesting here is that this whole thing here is differentiable. That means that you can
+[1:58:23] plug it into the network and let it learn. What is the alpha and beta here. And when it's inside
+[1:58:32] the object, because when it's inside the object, the volume density should peak because it's
+[1:58:39] hidden inside the solid surface. This means that it will obstruct the particle from being transmitted
+[1:58:46] at all. So that means that when it's inside the object, it's going to become even higher
+[1:58:52] the volume density. So this is the way that they propose how to convert an SVM. So basically,
+[1:59:01] this is an SVM and they convert it into a volume density here. And then basically when you have
+[1:59:10] this, you plug it into this. So x here, the sigma here, this is the transmitter. And then
+[1:59:20] basically they derive the rendering equation in the paper. So the transmitter means that how much
+[1:59:26] light you can pass through, you can be transmitted across. The opacity would be the complement of
+[1:59:31] this subtraction of this with one. And then that means that you can think of the O as the cdf and
+[1:59:42] the probability density as how. So you differentiate this, you get this, and then you put it inside
+[1:59:47] this. This is the rendering equation of your neural radians of your nerve. But now what happens
+[1:59:55] here is that, so this is the color actually, and what happens here is that this guy here,
+[2:00:02] your sigma, the inner terms will be replaced by psi. And then this is actually a function of your
+[2:00:12] SDF. So everything becomes a function of your SDF now and it becomes differentiable. If you
+[2:00:22] look at this term here, sigma is this is a function of SDF and a point and you plug it
+[2:00:28] inside here. So now your volume density becomes a function of the SDF and everything can be learned
+[2:00:36] based on the SDF. So what it means is that you actually transform your SDF into the volume
+[2:00:44] density and it becomes, now you can do volume rendering to render it back onto the image
+[2:00:52] for supervision. So what it means is that you can actually learn the SDF without a need for
+[2:00:59] the 3D model tool anymore. You render, basically you render it back. And you can see that if
+[2:01:06] compared to nerve, as I mentioned that it's going to be very noisy because it doesn't explicitly
+[2:01:11] model the, there's no regularization. So one regularization of that I didn't mention here,
+[2:01:20] but it's well known in all the papers with SDF, is that the regularization of SDF is that the
+[2:01:29] gradient of the SDF must be equals to one. Because when you move, let's say you move discretely
+[2:01:38] across to the surface, it will keep on dropping by one. So you want to make sure that the gradient
+[2:01:47] of the SDF is going to be one. And what happens here is that if you have a network that outputs
+[2:01:53] the SDF, you just need, when you do back propagation, you need to compute that gradient
+[2:01:58] anyways. So that back propagation, you compute the gradient of nearby points and you just
+[2:02:06] set it to one. And therefore you can actually explicitly regularize the surface to make sure
+[2:02:16] that it's smooth when it's a SDF. But compared with the volume density, because you don't know
+[2:02:23] where the surface is, it's just the transmittance and the opacity of the scene. So you don't know,
+[2:02:32] there's no concept of levels set here. That's why in the end, it becomes very noisy. But SDF,
+[2:02:38] you can explicitly regularize it. That's why at the end, it's going to be smooth. And in contrast,
+[2:02:45] actually before this, you can also do, there are actually works like IDR, for example, what they
+[2:02:52] do is that they directly render from the SDF. But because they are not doing accumulating,
+[2:03:03] they are not accumulating the colors according to the volume density. So what they are doing
+[2:03:10] here is that they render directly from the surface. That's why to apply the, before this
+[2:03:18] paper, actually there's another paper before this called UNICEF. It actually also mentioned this,
+[2:03:26] there are three papers on this. UNICEF is another one. But before these three papers, IDR,
+[2:03:34] what they need is that, because they need to know where the surfaces are. So what it means
+[2:03:40] is that on the 2D image, they need a mask to do the training. That's why you can see that
+[2:03:46] the result of IDR is different from the other. The background are all missing because it knows
+[2:03:52] where the mask is. It knows exactly where the objects are on the pixel. And that's not so useful
+[2:04:00] because you need a mask. You need to know as exact mask. So volume SDF circumvent the whole problem
+[2:04:08] by saying that, oh, we just converted into volume rendering and then we can train it the way NERF
+[2:04:15] does it. And as well as we can regularize the SDF values. Okay. Any questions up to this point?
+[2:04:24] Okay. Good. So then from currently, there's also another paper called UNICEF. When I looked at
+[2:04:31] both carefully, I realized that they are actually proposing almost the same thing. Okay. So I'll
+[2:04:38] tell you one. So what they say here is that it's the same thing. This is the rendering equation.
+[2:04:44] So they say that the width, this is basically a weighted sum of the colors and the width is
+[2:04:50] actually the transmitter multiplied by the volume entity. This is nothing new. It's just the NERF
+[2:04:56] rendering equation. And then given the level set of S here. So they say that there are two
+[2:05:04] requirements on this weight, this weight here. Inside this new space, they claim that there must
+[2:05:11] be two conditions. These two conditions must be satisfied in order for this thing to hold or in
+[2:05:18] order for the SDF to be put inside this volume rendering equation. First, it must be unbiased.
+[2:05:27] That means that because you are looking at the weights here, unbiased means that when the weight
+[2:05:33] peaks, so let's say you have certain distribution of the weight. When the weight peaks, that must
+[2:05:39] correspond to your sine distance value. That means that this T star here, which corresponds to your
+[2:05:47] sine distance value of zero on the surface, that is where the weight must peak. And the second
+[2:05:55] thing is that it must be occlusion aware. That means that if you have two depths, T0 and T1,
+[2:06:02] and T0, T1, where T1 is further away from T0, if the SDF value are the same,
+[2:06:11] then the weights of T0 must be greater than T1 because you will pass by T0 first.
+[2:06:20] And what this means is that you have T here, T0 is here, T1 is here. And what this means is that
+[2:06:28] you have two objects here. So if you pass by this, you have a ray passing by this,
+[2:06:36] then the weights here better be higher than the other one. The reason is because it's already
+[2:06:43] occluded by the first object, the first value here. So there's no point of accumulating so much
+[2:06:51] of this, whatever that is behind the first object. So these two conditions must be satisfied.
+[2:06:58] And basically in the paper, they say that if you choose the conversion value, so F here now is the
+[2:07:07] SDF, X goes into F and outputs the SDF value. And then let's say I call the psi function as
+[2:07:16] a transfer function that transforms the SDF value into the volume density.
+[2:07:23] Basically T is also a function of sigma. So weight becomes a function of sigma as well as
+[2:07:30] a function of the psi distance value. So they claim that if you choose the weight
+[2:07:38] to be very similar, that means that this distribution of sigma here to be very similar to
+[2:07:46] what NERF is doing. Then with respect to the depth values, then you have an offset between
+[2:07:56] the surface. So this is T star is where it corresponds to the surface. That's the level set.
+[2:08:05] So they say that if this is the same as NERF, then basically there is an offset between
+[2:08:11] where the weights peaks and the level set. And this is not correct because what it means is that
+[2:08:19] your radians view the accumulation of your colors and it doesn't correspond to that surface.
+[2:08:27] By right, the color that you are looking at should be from the surface. So if you choose it to be
+[2:08:35] the weights to be this unimodal distribution, for example, a logistic density distribution,
+[2:08:42] then that is basically the offset between the weights. It doesn't peak at the surface.
+[2:08:47] So that means that the color that you render back is actually offset from the surface.
+[2:08:52] It's the volume rendering. And what they do is that they propose that instead of using
+[2:09:01] this sigma here, they propose rho. And rho should be computed from this function.
+[2:09:09] But what I observed when I was looking at this carefully, so basically they say that if you
+[2:09:16] replace this rho here, the sigma with rho here, then instead of having this green curve here as
+[2:09:25] the weight where there's an offset, now the peak of the weight corresponds to the surface.
+[2:09:31] But what happens here is that your sigma will no longer be unimodal like this logistic function.
+[2:09:39] It becomes an S-shaped curve here. So in this paper, they claim to be this. Then when I look
+[2:09:46] at this curve, it isn't the same as this curve here. It's the same thing. Volume SVI already
+[2:09:53] tells you that there's no need to choose this directly. And the Laplacian, which is exactly
+[2:09:59] the same as what they have chosen here. So now everything coincides. So condition one is satisfied
+[2:10:06] in the paper. This means that the weight must peak at the surface. Condition one is satisfied
+[2:10:13] if you choose this. And there's also a long proof in the paper, but I will not show the proof. I'll
+[2:10:20] just show the elaboration and example here. So what happens here is that if you choose rho to be
+[2:10:25] this here, then if you have two surfaces and a 1D dimension of that, suppose that T0 is here
+[2:10:37] and T1 is here. So T0 is here and T1 is here. When you are looking at this grade,
+[2:10:45] you hit this one person. So that means that if you imagine that this object is not there,
+[2:10:52] you hit the other surface. So both this SDR value and this SDR value would be the same.
+[2:10:59] They will be equal to each other, which means that I'm actually looking at this condition here,
+[2:11:04] where this is satisfied and this is also satisfied. And then what happens here is that
+[2:11:12] if you use rho and compute the weight here, you will get these weights where both weights
+[2:11:20] are actually more than zero. Actually, it's more than zero everywhere. So this condition is
+[2:11:26] satisfied. And because you are looking from here to here in this direction here. So the weights,
+[2:11:38] don't forget that the weights are actually the cumulative weights of the color. So the first
+[2:11:44] surface should contribute most to the rendered color because the other one is occluded
+[2:11:51] already. So the weights of T0 must be more than T1. And they show that this is true.
+[2:12:01] Actually, they prove it in the paper. But here is just one case, one illustration. And therefore,
+[2:12:08] the last condition here is also true. Therefore, the second condition is satisfied here.
+[2:12:17] Let me quickly go through the remaining parts. So this is how they marry SDF and volume
+[2:12:27] rendering together. But they still want this advantage of NERF. That is, it requires
+[2:12:36] known camera poses. So in BARF, what they do here is that they assume imperfect camera poses,
+[2:12:45] and then they do bundle adjustment together with NERF. But actually BARF still requires
+[2:12:55] some initialization. It cannot be totally rendered with poses.
+[2:12:58] So basically, if you look at 2D image alignment, you can have two views, i2 and i1. You can have
+[2:13:08] a warping function that takes a pose of the image and any point on the image. You can warp this.
+[2:13:18] What this means is that you are warping one patch here into the other patch, the other view.
+[2:13:24] And then you basically minimize this error. This is the photo consistency error between
+[2:13:32] the two views. And this can be iteratively solved because you are trying to optimize for the pose.
+[2:13:40] If you know the pose, you can actually do this warping by just minimizing the
+[2:13:47] photo consistency. So if you do a Gauss-Newton, then A here would be simply J transpose J.
+[2:13:55] By now, all of you should know this already. This is what we learned during bundle
+[2:13:59] adjustment. And then delta P will update this. And the Jacobian here is the warping function.
+[2:14:05] So this can be obtained numerically. That means that you set a point and then you take a delta
+[2:14:12] and put it into the function. You subtract the two and divide it by the delta.
+[2:14:16] That will be the Jacobian. So if now this is that you have two images to optimize for the
+[2:14:26] photo consistency. But now let's replace one image with a neural network. That means that you are
+[2:14:33] going to render that image using a neural network. So what happens is that one of the image becomes
+[2:14:40] a neural network. You can do it for the other image as well. So you can consider two both of
+[2:14:50] the images as well. And now one of the image becomes a neural network. That means that you
+[2:14:57] render it onto the other view and you take the subtraction of it. So you can also optimize over
+[2:15:06] that neural network and minimize the photo consistency over the pose. So if you consider
+[2:15:12] two images on both sides, this is what you can do. Basically with summation 1 equals to m equals to
+[2:15:20] 2. And now the Jacobian, if you take the partial differentiation and update it this way, the
+[2:15:28] Jacobian now here is no longer obtained numerically. This is simply your backpropagation.
+[2:15:37] This is a network. So you can do a backpropagation, compute the Jacobian and update it.
+[2:15:44] What's interesting here is that you are replacing it with a general network. But if you replace it
+[2:15:51] with N. So you render this image using N from one view to another view. This is what you render.
+[2:16:01] Basically if you have multiple views, you can take any view and render it across all the other views
+[2:16:09] and optimize over the poses. So now this thing here is going to become a function of
+[2:16:17] the network parameters, which is what you are going to learn using the as well as the camera
+[2:16:23] poses. So the camera poses can be computed. It can be used to compute any pixel and the depth.
+[2:16:33] When you know the pixel and the depth, meaning that you know the 3D point, you can render it back.
+[2:16:40] What this simply means is that
+[2:16:46] you have a nerve. What you are doing is that you need to know the direction.
+[2:16:51] You need to know this point x. So this d and x is actually dependent on the camera pose.
+[2:17:00] So now you can actually express this x as a function of p. And if you don't know that,
+[2:17:06] you can optimize it together inside that. So basically you need the correct p in order to
+[2:17:13] know this x. And you also need to know the pose of this in order to render it back here.
+[2:17:20] So that's what this warping function is all about. Because you can consider this integration.
+[2:17:26] This integration becomes a summation as what we have seen earlier. You can consider this as
+[2:17:32] a function g. Basically, your network outputs c and sigma, which is four-dimensional. You have
+[2:17:41] n of this. And then it's going to map into RGB value. It's going to map into this RGB value onto
+[2:17:48] your image. So you can actually put it inside here and then do the Jacobian, compute the Jacobian.
+[2:17:54] You'll be able to do and basically you are able to optimize this then.
+[2:18:05] You're optimizing over your honor as well as the camera poses of all the multiple views.
+[2:18:12] So this allows bundle adjustment to be incorporated into that.
+[2:18:17] So instead of minimizing the reprojection error, you are minimizing the photo consistency.
+[2:18:25] The render image and the source image from that view. And you can do this over multiple views.
+[2:18:32] But there is one problem with this. Because in order for NERF to be with high fidelity,
+[2:18:38] you need to do the frequency encoding. But what happens here is that if you do a
+[2:18:44] partial differentiation, you compute the Jacobian over the frequency encoding here. Then what
+[2:18:50] happens here is that you can see that the Jacobian is affected by the order of your Fourier basis.
+[2:19:01] So that means that the very high frequency part of your Fourier frequency will dominate the
+[2:19:08] Jacobian. And if it dominates the Jacobian, basically this is what you are trying to do.
+[2:19:14] i plus one and i plus delta p. So the Jacobian will be used to compute this.
+[2:19:22] Delta p would be equals to j transpose j inverse multiplied by j transpose the error.
+[2:19:33] So if your high frequency component is there, that means that this guy here is going to be
+[2:19:39] dominated by the high frequency components. It's always there because you encoded this way.
+[2:19:47] So the initial training would not be good because it's all taken over by the
+[2:19:55] there's no chance of minimizing the low frequency part. And therefore, they weigh this frequency,
+[2:20:02] they propose this to weigh the frequency. So it's a 0 to L controllable parameter
+[2:20:08] where they use this to control during the initial phase of the training, they weigh it down.
+[2:20:14] So that means that all the higher frequency components are not there initially. They only
+[2:20:20] use the low frequency to control it to train the network. And then thereafter, they gradually
+[2:20:29] increase, they added back the higher frequency. Because at the end, it's going to be already
+[2:20:37] well trained and then you add back the higher frequency. So it wouldn't affect the training
+[2:20:43] so much. And that's BAR. BAR also has a disadvantage that is not generalizable
+[2:20:50] because the encoding is still taking in x the 3D point and the direction. So in our work,
+[2:20:59] we actually use IBRNet to substitute this. We combine the two together and they are
+[2:21:09] updating the absolute poses. So all the P here are absolute with respect to a global frame.
+[2:21:15] That's why they still need to have substantially good initialization in order for it to work.
+[2:21:23] But what we did is that we are inspired by the global structure for motion. I actually talked
+[2:21:30] about this in the bundle adjustment lecture. So we instead update the relative pose.
+[2:21:38] So relative poses is easier to, it's also bounded and the network can actually learn this
+[2:21:45] better. So that frees us from the good initialization that we show in the paper
+[2:21:53] that we don't need any initialization at all. Just some random initialization and it still works.
+[2:22:00] And this is the result. So you can optimize and then the camera poses optimize and it will work.
+[2:22:07] All right, so the last part that I want to talk about, I might go over time a little bit,
+[2:22:12] but let me finish this. The last part that I want to talk about is dynamic scene,
+[2:22:20] specifically for human. So because this is interesting, because if I can model the human
+[2:22:27] and I can manipulate the human, I would have a digital avatar. So if I take a scan of you
+[2:22:35] using this and I built a digital model, a NERF digital model or SDF digital model of you,
+[2:22:42] then basically and if I can control this become animatable, then I can actually
+[2:22:49] make a metaverse out of this. I can put you into the metaverse and control how you look like inside
+[2:22:57] the metaverse. But the problem here is that how do we, because it's dynamic, the human,
+[2:23:07] for example, this guy is dancing. So at this point on the hand here, because you know that
+[2:23:15] in the NERF, you need a static scene and a known poses of the camera because you need to
+[2:23:23] do this. Every point you need to know where it renders back. But then if this point moves
+[2:23:29] in the 3D scene, how do you know that this point is the correct point correspondence?
+[2:23:35] At time t goes to one, it's here. Time t goes to two, it might be here. Despite that the camera
+[2:23:43] stays fixed, how do you actually model the correspondence? So the way to overcome this
+[2:23:53] is to construct what we call the canonical space. You have an observation space which
+[2:24:00] can be any pose, but the canonical space would be a t pose.
+[2:24:08] It will be a t pose. So what you want is that given an array at any point on the observation space,
+[2:24:15] you want to map it into the canonical space. And then what you want to learn is that in the
+[2:24:22] canonical space, you want to look all the features that corresponds to that canonical space and map
+[2:24:27] it back onto the image as a radiance view. So this means that you are storing, you are actually
+[2:24:38] storing all the features on the canonical space, the corresponding features on the canonical space.
+[2:24:45] And once you are given observation space, you know that this point here corresponds
+[2:24:51] to this point here, for example. Then you want to retrieve that feature from the canonical space
+[2:24:58] and use NERF to map it back to retrieve the color and radiance view and the volume density.
+[2:25:08] And that color and volume density of this point in the canonical space will correspond to the
+[2:25:15] observation space. And then you place it back into the corresponding observation space. So this is
+[2:25:21] how they do it. But the question is that how do you know that this point corresponds to this
+[2:25:27] point, for example, from the observation space to the canonical space. And that can be done using
+[2:25:34] what we call the linear blend skinning. So suppose that I want to map canonical to observation
+[2:25:40] space. This is a point on the canonical space. This point here, which I have a canonical space
+[2:25:51] and I want to map it into observation space. So it will be a linear combination.
+[2:25:57] This will be basically the transformation that I want to know. There will be a linear blending
+[2:26:05] weight, the blending weight that I need to blend. And this blending weight is actually a function
+[2:26:10] of V itself. And then if I want to do the opposite, if I want to do the opposite, I simply
+[2:26:16] take this whole part here and invert it. And then I'll get it from the observation space
+[2:26:22] back to the canonical space. I think there is a hypo error here.
+[2:26:30] This should be the, because this is the opposite. And the x prime should be here.
+[2:26:41] So you can take this and then what they do here is that, what they propose here is that
+[2:26:47] they propose to design a network such that it outputs the blending weight over here.
+[2:26:56] And this outputs of the, because G here is nothing but just the
+[2:27:02] bone transformation between the joints. And it stays fixed. You can actually use SMPL.
+[2:27:11] There's a model called SMPL, a simple model. And to estimate all these parameters over here,
+[2:27:18] even any image or a bunch of multi-view images, you use this too. But SMPL has the problem of,
+[2:27:30] it's actually a model of the human with minimal clothing. But if you want to model the human,
+[2:27:39] you also want to model the clothing as well. But the coatings are deviation from the
+[2:27:46] minimal clothing human model. This is what we want to learn here,
+[2:27:54] would help to encode the deviation from the SMPL model. So you can see that that's why there's a
+[2:28:01] delta W here. This is the human model that we can, the SMPL model weights that we can compute
+[2:28:11] directly from the image. And then we want the network to actually predict the deviation away
+[2:28:16] from the SMPL model to give us the final weight over here. So this would allow us to compute the
+[2:28:25] mapping from the observation space to the canonical space. And then the next part here
+[2:28:31] is that we need to learn this part here. So once we know the canonical space, we need to learn
+[2:28:38] how to map every one of this into the color and volume density. And basically that's just a
+[2:28:46] nerve equation over here. And here, this part here would also be, we also have another part
+[2:28:54] over here where it helps us to invert the, it actually learns from the canonical space back
+[2:29:03] weights here, back into the observation space. So that means that this weight here is actually doing
+[2:29:11] the inverse is actually this W0 here and compared to W over here, which is this part here.
+[2:29:18] So you can see that if W canonical takes in the transformation of X transformed into the,
+[2:29:27] from the observation space, we can, if we can transform it into the canonical space,
+[2:29:33] then we put it into this weight here. Basically the outputs of this two, the output of these two
+[2:29:40] blending weights should be the same thing because we are inverting it. And therefore this can act
+[2:29:47] as a regularization to our network here. But there is a problem with this. If you do this,
+[2:29:56] there's a problem with this. That is, it's not generalizable because once you train it,
+[2:30:02] basically you have a network that outputs one canonical space. And that canonical space is stuck
+[2:30:10] with the identity of this person. So you cannot generalize into another identity. But this is
+[2:30:17] animatable. What I meant by animatable is that, because if you change the observation space,
+[2:30:24] because if you change the observation space, if you, let's say I animate this host,
+[2:30:32] I give it a different X over here. And I think that I want a different view over here.
+[2:30:39] It's able to pick it up from the canonical space and map it into this X that I desire.
+[2:30:47] Okay, so that means that this whole thing, I can actually control the rendering into a different
+[2:30:54] human host. And you can see that from here in the novel view, and you can do novel synthesis,
+[2:31:04] and you can also do a novel post. That means that you can control the post and you will render back
+[2:31:12] to a new post over here, which is pretty much like the novel group over here. But again,
+[2:31:20] these things are also actively researched now. So it's still not fully solved. You can still
+[2:31:26] see that the quality of the rendering is not yet. So it's still actively being solved here.
+[2:31:37] And there's two limitations to this. The first limitation is that it requires
+[2:31:41] the post optimization. That means that if you want to render it to a new post,
+[2:31:49] you need to optimize over the latent code, over the new post. So S here is actually the new post.
+[2:31:55] It's computed from SMPL. I'm leaving out quite a lot of details in the slide,
+[2:31:59] but this is actually from the SMPL new post. So you can input this new post and then you
+[2:32:05] optimize over the latent code, the new latent code. And then you can actually use this
+[2:32:11] refinement of the new latent code to infer the person in a new post over here.
+[2:32:22] First, it requires proposed generalization and it cannot generalize to new identity.
+[2:32:27] So it's not generalizable per se. And the first problem here for
+[2:32:33] a post optimization, we have a solution here. That means that we, because the blend weights here,
+[2:32:42] the blend weights here is dependent on the observation space, which means that it takes
+[2:32:47] in X as your input over here in order to give the X prime over here. That's why
+[2:32:56] it cannot be generalizable to different poses. What you can do is that you can actually make
+[2:33:07] the blend weights over here post independent of the canonical space instead of the observation
+[2:33:15] space. That means that instead of this W here to be a function of X in the observation space,
+[2:33:22] you make it a function of X prime in state in the canonical space. Now it becomes independent
+[2:33:32] of the input pose and therefore it will be able to generalize it. But what happens here is that,
+[2:33:39] actually this is a more correct version. If you do this, what happens here is that it involves some
+[2:33:45] form of root finding here. Because now you realize that the weight over here, you are using
+[2:33:54] this weight here while you're using this weight here to find X star or X prime over here. But
+[2:34:04] then you realize that the weight now is a function of your output. So what it means is that you need
+[2:34:14] to solve for the root of this equation. Because now your X prime here becomes a function of...
+[2:34:26] So you see that X star is here. That's your final canonical space pose. But W here is a function of
+[2:34:34] X star which is actually your output. So in the end, what you need to do is that you need to solve
+[2:34:40] for the roots of this equation over here. It cannot be solved in closed form now.
+[2:34:51] The way that we solve for the root would be to use the... You can either use the Newton-Raphson
+[2:34:58] method or you use a quasi-Newton method as proposed in the paper. This would involve some
+[2:35:07] root solving of the... Basically this is W which is a function of... Which is actually your network
+[2:35:14] here. So what you want to solve is that you want to solve for this X here. And that X should be the
+[2:35:20] same as this output X prime over here. And you will involve a lot of iterations over here. Then
+[2:35:29] you can also do multi-correspondences. That means that this will become... You initialize with a
+[2:35:36] vector over here of all the X. That means that you can solve for multiple of these X, multiple
+[2:35:42] points at the same time. But you will all be inside this Newton-Raphson or quasi-Newton method.
+[2:35:50] And this is snuff. So in the end, what they do here is that once you have this, now the blending
+[2:35:58] weight is independent of the pose. That your input here is independent of the pose. And therefore,
+[2:36:05] you can make it generalizable because now you decouple this input from the canonical space
+[2:36:13] here. So whatever input that you give, you just need to solve for the root and you will give you
+[2:36:19] the X bar over here. And you can retrieve that point directly from here. And once you retrieve
+[2:36:28] this is where it stores all the features. So once you retrieve the feature, you can actually
+[2:36:34] output it on X prime, which is actually at this point over here. Therefore, you will be able to
+[2:36:41] infer the output SDF over here. And by the way, snuff is only meant for SDF. When they design this,
+[2:36:49] they design it using SDF. So there's no normal view synthesis over here. But what happens here
+[2:36:57] is that you can now control the pose of the human. By inputting a different pose parameter,
+[2:37:06] you can actually infer the final surface output over here using a different pose.
+[2:37:18] It's fairly computationally expensive here. Because what you do here is that when you do
+[2:37:24] the log function, you partially differentiate with respect to the
+[2:37:28] two parameters. One is the one that you learned the features to infer the occupancy,
+[2:37:35] which is sigma F. The other one is the weight parameter over here. So when you infer the weight
+[2:37:42] parameter over here, you need to partially differentiate delta X star with delta sigma W.
+[2:37:49] But this guy over here requires you to solve this
+[2:37:54] root mining equation because you need to solve for X star where this X star here is actually
+[2:38:01] the input of your deep network. And there is no closed form equation here because this is a deep
+[2:38:08] network. Because what you are doing here is that you are actually taking the output as input to
+[2:38:15] this network. And then that will output the weight for you to compute X star or X prime
+[2:38:21] written here. So basically there's no closed form here and it becomes this equation over here. So
+[2:38:28] every time you do the back propagation, you need to compute this partial differentiation. And that
+[2:38:34] will involve you in solving this root mining equation. And what happens here is that you can
+[2:38:43] actually evaluate this and you will require to do something called the implicit differentiation.
+[2:38:51] Because this is an implicit function over here. So you need to do an implicit differentiation.
+[2:38:57] And then the operating point in order to find this, you need to find X star. The operating
+[2:39:04] point to compute this Jacobian over here, you need to do a root finding in order to find the
+[2:39:11] operating point before you can do the back propagation and update it. But this is a more
+[2:39:16] correct method. This is a more correct method because the reason is because of this equation
+[2:39:22] over here. Because this equation over here, you can see that you shouldn't actually invert the
+[2:39:30] whole thing. You shouldn't actually invert the whole thing. But if you bring this towards this
+[2:39:38] side without inverting it, you can see the X actually appears on both sides. And you need to
+[2:39:45] actually solve for the X in order to get the correct bending weight. This means that in order
+[2:39:52] to get X, so without inverting this, you bring this whole thing here. In order to get X, you need
+[2:40:01] to know X in order to solve it from here. So this means that it's actually there's no closed
+[2:40:08] form equation. And by doing this, it's actually a very big approximation. You are simply just
+[2:40:15] assuming that this whole thing can be inverted. And then you are replacing this weight over here
+[2:40:22] as a parameter of X prime, which is what is done here. So this is not correct. Or mathematically,
+[2:40:29] this is not so correct in terms of the linear bending weight. So this is actually a more
+[2:40:35] correct way to start, but it's actually extremely slow because it requires the root finding. But
+[2:40:42] the result is actually better and you can actually do it for extreme poses. You input the extreme
+[2:40:48] pose and you will output the correct pose over here. The second limitation is that you cannot
+[2:40:56] generalize a new identity. The reason is because, as I mentioned, that it actually relies on the
+[2:41:02] T pose. So what you are learning is that you are learning a T pose and that stores all the
+[2:41:09] features on the T pose. And this is not generalizable. So instead of using the T pose,
+[2:41:17] let's relax it to no T pose at all. But then the problem of doing this is that now you have
+[2:41:23] to find all the correspondence. This can be done if you have multi view, multi over multi
+[2:41:30] time step. This can be still done because using a multi view, you can output the SMPL model here.
+[2:41:37] So every multi view that you have over different time, although the person is moving, you can output
+[2:41:44] for every single time step. You can output the human SMPL model and you know the indices.
+[2:41:52] You know which vertex corresponds to which other vertex in the different time step.
+[2:41:58] So you can have a rough idea of where this is going to be. And then what happens here is that
+[2:42:05] now you can do away with the T pose. You can link this up and directly pick up the features
+[2:42:13] from the image itself. Instead of storing it using a T pose, you can directly pick up these
+[2:42:20] features. And now in this neural human performance, which was published in
+[2:42:26] Nurex last year, I think, or the year before, I can't remember. So there are two steps to it
+[2:42:33] because it's multi view, multi time step. So you need to fuse these features together over multi
+[2:42:39] view and multi time step. So what they do is that they introduce two transformer. One is the
+[2:42:43] temporal transformer and the other one is the multi view transformer. So temporal transformer
+[2:42:49] is that this point that's seen over multiple views over different times that I want to
+[2:42:55] fuse all these points together in a temporal transformer. So basically,
+[2:43:02] this is just introducing a transformer where you can finally fuse all the multi time steps,
+[2:43:09] features, correspondence into the output features over here. So basically you're fusing it over
+[2:43:18] multiple times and it's the standard transformer that we have. So once you have this feature over
+[2:43:24] here, the next thing is that we can actually put these features into multi view because you have
+[2:43:30] multiple views. You also want to fuse the multiple views features together. That will be another
+[2:43:37] transformer. So they just input the, this is the output from the temporal transformer. They just
+[2:43:45] put this and then you have multiple camera views. So this other from each re-projected
+[2:43:52] picture onto each image, you pick up the feature over here and then you use it inside here.
+[2:43:58] Basically you are doing a cross-attention over the temporal features as well as the multi view
+[2:44:06] features over here. Then finally you get a final view-wise feature over here.
+[2:44:12] And then you learn the MLP from this final feature to output the volume density and the
+[2:44:20] color. So as a result, this is probably one of the best results now.
+[2:44:30] And I think that this is kind of interesting, but they still require multi views. That means
+[2:44:40] that a lot of views and in order to produce the good quality result over here. Any question
+[2:44:49] to this point? If not, then I guess this is the last thing that I want to talk about for the
+[2:44:55] entire course. So today we look at the neural radiance field, volume rendering, and I talk
+[2:45:02] about the issues of neural radiance field, which is the generalizability, the efficiency, and I
+[2:45:09] talk about some methods to mitigate this. Then I also talk about the sign distance field and
+[2:45:15] compare the two. Then finally we look at how to marry the two together such that you can do a
+[2:45:22] cell supervision, which is volume rendering, but yet maintaining the surface accuracy with
+[2:45:29] using sign distance field. Then finally I talk about how to use NERF and STF to do animatable
+[2:45:36] and generalizable dynamic humans. So with this, I conclude the whole semester and thank you.

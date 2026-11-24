@@ -1,0 +1,298 @@
+[00:00] So after obtaining the 3D structures as well as the camera poses from the initial reconstruction
+[00:06] as mentioned in the earlier slide, the next thing to do would be to apply bundle adjustment on these
+[00:11] estimates to obtain a better 3D reconstruction. More specifically, we achieve this by minimizing
+[00:19] the total reprojection errors which we denote as delta Zij over here. And this can be illustrated
+[00:26] using this particular figure over here. Suppose that we are looking at one particular image in
+[00:33] the multi-view reconstruction as seen in the earlier slides, and we denote the camera matrix
+[00:39] of this particular image as Pi. And suppose that there is a 3D point which is reconstructed and
+[00:45] seen by this particular image which we denote as Xj over here. Its corresponding 2D point,
+[00:53] which is the 2D point used to reconstruct this 3D point Xj in the initialization step.
+[01:01] Since we know that Xj as well as Pi over here, they are estimated from the algorithms such as the
+[01:10] two-view geometry algorithm, PMP algorithm, and the linear triangulation algorithm. And this means
+[01:17] that they contain uncertainty. And what it also means is that if we were to reproject this 3D
+[01:24] point back onto the image using the 3D point itself, of course, and as well as the estimated
+[01:32] camera pose, the reprojected point would not end up to be the same as the observed point Xij over
+[01:41] here. And there would be an error which is denoted by this delta zij over here, which is the
+[01:47] Euclidean distance between the observed point Xij and the reprojected point, let's call it X hat
+[01:56] ij over here, that is being reprojected from this reprojection function over here. So the task over
+[02:03] here in bundle adjustment would be to minimize this reprojection error over all the views as
+[02:10] well as all the 3D points that is being reconstructed from the initial reconstruction.
+[02:18] And we do this optimization over the camera poses as well as the 3D point. And mathematically,
+[02:29] this can be expressed in this particular cost function over here. We do an arc min over the
+[02:34] camera projection matrices of all views and the 3D points that is being reconstructed from all
+[02:41] the camera images. And by minimizing the square norm of this reprojection error that is given by
+[02:50] Xij, which is the 2D points that is observed in the image, minus away the corresponding 3D points
+[02:58] that are being reprojected onto the image over here. So pi over here represents the reprojection
+[03:05] where we compute this by simply multiplying pi and Xj over here. We have seen this in the earlier
+[03:11] lecture but we shouldn't forget that this has to be normalized by the third element of the
+[03:18] multiplication over here in order to make it a valid homogeneous coordinates of X, Y and 1 in the
+[03:25] third element. W over here represents a measure error covariance that is used to weigh this
+[03:34] particular error function over here. And now the cost function can be rewritten as a product of the
+[03:43] error transpose multiplied by the weight and multiplied by the error itself. And this is a
+[03:50] simple rewriting of the square norm equation over here since everything inside this square norm is
+[03:57] a vector. And here we can rewrite the error function into g of p where p here is the variable
+[04:07] to be optimized as written in the arc min over here. And in the case of bundle adjustment,
+[04:14] p would be a 12m by 3m vector because we have 12 parameters in the camera projection matrix
+[04:22] where we saw that it's actually a 3 by 4 matrix in the earlier lecture. This means that there
+[04:27] are altogether 12 elements in here and if we have n cameras this means that all together we have 12
+[04:33] n camera parameters as well as a 3m point coordinates where m is the number of points.
+[04:44] 3 means that we have X, Y and Z for each one of the points. We'll use the iterative
+[04:51] estimation methods to optimize the cost function. Now let's rewrite the function in a more general
+[04:58] way. Suppose that we are given a hypothesized non-linear functional relation which we call
+[05:04] f of p over here. p here represents the parameters to be optimized and x here would be our measurement
+[05:13] vector. This is an n-dimensional measurement vector where p here is the parameter vector
+[05:19] that I mentioned earlier on to be optimized in the Euclidean space and let's assume that this
+[05:24] has m dimension. A measured value of x approximating the true value x bar is provided.
+[05:33] So what this means is that we can measure the value of x that approximates a true value x
+[05:40] denoted by x bar and we wish to find the vector p hat that most satisfies this functional relation.
+[05:50] So in the case of the bundle adjustment x the measured value of x would be the image coordinate
+[05:58] point that we have observed and we want to find the vector p which is the all the parameters
+[06:05] in the case of bundle adjustment here that would be equivalent to all the camera poses as well as
+[06:11] all the 3D points from the initial reconstruction and we want to find this particular vector over
+[06:17] here that best satisfy this relation over here x equals to f p hat minus epsilon where epsilon
+[06:28] is the error between x and f p so we can rewrite this equation over here this particular relation
+[06:36] over here into epsilon equals to f p hat minus x and since f p x is what we predicted from the
+[06:46] parameters that we wish to optimize over and x is a measurement vector that we have defined earlier
+[06:51] on. What this means is that we want to minimize the error between what we have predicted and what
+[06:57] we have observed as denoted as epsilon and we do this by defining another function g of p hat to
+[07:06] be equals to the half of the norm square of this error function that we have defined earlier on
+[07:13] here. This can be rewritten into a vector form where it's simply equivalent to half of epsilon
+[07:22] transpose epsilon where epsilon here is actually a vector that we obtained from these two guys
+[07:30] over here. Now we'll look at four different methods to minimize the error function and in
+[07:38] particular we'll look at the Newton's method, the Gauss-Newton method, the gradient descent as well
+[07:43] as the Leuvenberg-Macquaire algorithms.
+[07:48] So we'll start by looking at the Newton's method and this requires us to define what is known as
+[07:54] the Hessian matrix. So suppose that we let p0 be the initial estimated value. So recall that
+[08:04] earlier on in the this slide we denote p as our parameter vector that we wish to optimize over.
+[08:12] Now let's let p0 over here be the initial estimated value and this means that we would
+[08:19] have an error of g of p0. We may expand this g of p the function which this is actually the error
+[08:27] function that we have defined earlier on and since this is a non-linear function with respect to p
+[08:35] we can linearize it using the Taylor series to get this function over here. So we will just use
+[08:42] the operating point of the which is the initial estimate p0 plus delta. This means that there is
+[08:49] a delta change in the parameter p0 and it would be equals to g that is defined in p0 plus the
+[09:00] first order derivative of the function g with respect to p multiplied by delta. Delta is the
+[09:06] small change of p0 over here plus the transpose of delta multiplied by the second order derivative
+[09:14] of the function g multiplied by delta divided by 2. And there are many smaller order terms over
+[09:19] here that we can ignore where here more specifically the first order derivative
+[09:24] noted by g p over here is given by del g over del p expressed at the point of p equals to p0.
+[09:33] Similarly for the second order derivative of the function g it would be del squared g over del p
+[09:41] squared expressed at the point p equals to p0. The first order and the second order derivatives
+[09:47] they are called the Jacobian and the Hessian matrix respectively. Now suppose that we have
+[09:53] a function fx which maps an n-dimensional vector into an m-dimensional vector and we further assume
+[10:01] that the first and second order derivatives exist on the n-dimensional space then the
+[10:07] Jacobian matrix is given by a m by n matrix of this particular form over here. So what we do here
+[10:15] is that f takes in an n-dimensional vector and outputs an m-dimensional vector. What we will do
+[10:23] here is that we will take f and simply take the partial differentiation of f which is an
+[10:30] m-dimensional vector partially differentiated by every single entries of the input. So there
+[10:38] will be altogether n columns over here and there will be m number of rows simply because the output
+[10:47] of f is an m-dimensional vector so we are going to take this this whole column over here with respect
+[10:55] to the partial differentiation of this column here with respect to the first variable the first
+[11:02] entry in the variable over here x1 and this would form the first column of the Jacobian matrix. We
+[11:11] can also simply denote the Jacobian matrix as jij which in short will be del fi over del xj. Similarly
+[11:23] for the hessian matrix it's going to be a n by m matrix in this particular form over here. So what
+[11:31] we will do here is that we will take the second order derivative of this function f with respect
+[11:37] to every single entry in this x vector over here and we will subsequently we will do partial
+[11:50] differentiation with respect to every i and j coordinate of the x vector over here so it will
+[11:58] be del square f over del x1 square del square f over del x1 and then multiply by del x2 and so on
+[12:07] so forth until we get del square f over del xn multiplied by del x1 square or in short we can
+[12:15] write every entry in the hessian matrix hij it will be equal to del square of f over del xi and
+[12:25] del xj. Now after the Taylor series expansion we seek a point g of p1 where p1 is the new
+[12:34] vector that we estimate such that we minimize the this function over here g of p1 where p1
+[12:44] equals to p0 plus a delta change in it. We'll do the same thing we saw earlier on that p1
+[12:51] since it's equals to p0 plus delta over here we can expand this using the Taylor series
+[12:58] expansion which will give us this particular equation over here where g0 is evaluated on p0
+[13:09] and gp is the first order derivative which is also the Jacobian of g and gpp is the second
+[13:17] order derivative of g and that's also the hessian matrix of g and we'll seek the minimization of
+[13:26] this particular function over here with respect to delta so in order to achieve this we differentiate
+[13:34] this Taylor series expansion over here with respect to delta and set it to zero to get
+[13:41] this function over here so we can see that if we take this del gp1 over del delta because this is
+[13:51] independent of delta this will go to zero and this term over here is also independent of delta
+[13:57] we take this over del delta this is going to be zero as well and this guy will become g of p
+[14:05] since it's a function of delta and this is a square function of delta so this will become gpp
+[14:14] multiplied by delta and the whole thing will be equals to zero which is this equation over here
+[14:19] we can shift gp over to the other side of the function to get this particular equation over here
+[14:27] and we can see that this equation that we have obtained earlier on is an inhomogeneous linear
+[14:34] equation that is equivalent to ax equals to b where we can solve for delta using the pseudo
+[14:42] inverse or the inverse of gpp over here so once we have obtained delta we'll do an update of the
+[14:50] vector p in the next step by simply adding delta that we have found from this step
+[14:56] to the p vector in this particular step and we will do this successfully until convergence
+[15:05] so a remark about the newton's method and using the hessian is that intuitively what this method
+[15:13] is trying to do would be can be visualized by here where suppose that we look the variable
+[15:19] that we wish to optimize for let's denote it as a one-dimensional scalar value p and this is our
+[15:27] cost function g of p over here so what this newton method is trying to do would be at every operating
+[15:36] point suppose that this is my first p zero over here what it's trying to do in this step is that
+[15:43] it's trying to approximate this particular point over here of this cost function using
+[15:50] the quadratic curve over here and then it's optimizing in that direction of this quadratic
+[15:55] curve to get the minima over here and so since this is the point at the minima this would be
+[16:01] the next p1 we are looking for and here it will approximate another quadratic curve on this
+[16:08] particular operating point p1 and then you will move to the next minima over here and so this
+[16:14] will be done successively until we finally reach the local minima which is shown in this particular
+[16:22] curve over here so what this means is that since newton iteration is based on approximating a
+[16:29] quadratic curve near the operating point it's going to work best when this particular estimate
+[16:36] p is already close to the optimal point it's also further based on the assumption that
+[16:42] the optimal point is quadratic so once it's quadratic it's going to converge very fast
+[16:48] towards the local minima and but this particular assumption might be invalid especially when
+[16:59] we are very far away when p0 is very very far away from the local minima so at the very far
+[17:07] away point this might not be well approximated by a quadratic function and hence the convergence
+[17:16] would be very slow at the beginning and another disadvantage of the newton's iteration method
+[17:23] would be that the computation of the hessian matrix is difficult because it involves the
+[17:29] second order derivative of the non-linear function that we are interested in so a way to mitigate
+[17:36] the computation complexity that arose from the hessian matrix would be to use the gauss
+[17:41] newton method we have seen earlier on that since this function g of p represents the square norm
+[17:50] error of the cost function that we now denote as epsilon bracket of p so to denote that this
+[17:58] epsilon over here is actually a function of p we have seen earlier on that this is nothing but just
+[18:05] x minus f of p where f is the non-linear function that we are interested in looking at we also
+[18:12] further seen that this square norm can be rewritten into a vector multiplication dot products given
+[18:19] by this particular equation over here we'll add a half over here for the convenience when we
+[18:24] differentiate this two that's the square over here and this the first order derivative which is del
+[18:33] g over del p over here given by this guy over here gp is equals to the first order derivative
+[18:40] of epsilon transpose multiplied by epsilon i'm going through the exact way of computing this
+[18:47] because this simply follows the chain rule of differentiation which you should know by now
+[18:52] and uh where epsilon here epsilon p over here is the first order derivative of the function
+[19:01] f that we have defined earlier on here we can see this way that uh the differentiation of
+[19:09] epsilon over del p is simply equals to the differentiation of x f of p
+[19:18] divided by del p over here since x over here is independent of p it becomes zero so we are all
+[19:26] we are left with will be del f p over del p which is given by this guy over here and this is nothing
+[19:34] but the jacobium of this non-linear function f that we have defined over here and in the
+[19:40] bandai adjustment case not to forget this non-linear function is simply referring to the
+[19:46] reprojection function which is denote as pi earlier on and we do this similarly for the
+[19:54] second order derivative so this would be del square of g divided by del p square we denote
+[20:01] this as g p p and by applying the chain rule of differentiation we'll get this particular term
+[20:06] over here where epsilon p p over here would be uh equals to the del square epsilon the second
+[20:13] order derivative of epsilon which is equals to del square epsilon divided by del p square over here
+[20:21] and since this term involves a second order derivatives and it might be uh very inconvenient
+[20:27] or computationally expensive to obtain this particular second order derivative
+[20:33] bearing in mind that this is only part of one iteration in the whole iterative optimization
+[20:40] technique that we are talking about so what this means is that if we were to compute the second
+[20:45] order differentiation we have to do it many many times over the x number of iterations that we have
+[20:52] in the technique before it converges so and this can incur a large amount of computational time
+[21:01] so in order to mitigate this computational complexity we will simply ignore this higher
+[21:07] order term and since we ignore this we can write gpp the second order derivatives which is the
+[21:15] hessian matrix that we have saw earlier on as epsilon p transpose multiplied by epsilon p
+[21:23] and this is simply equivalent to j transpose j since epsilon p as we have seen earlier on
+[21:30] equals to the Jacobian of the non-linear function f over here so and what this means is that we now
+[21:39] can approximate the hessian matrix which was computationally expensive to compute with the
+[21:45] product of the Jacobian matrix over here and this would be much easier to compute since we only need
+[21:53] to compute the Jacobian once after substituting the second order derivative of g which is the
+[22:00] hessian matrix of g as equals to j transpose of j here we will obtain this particular equation
+[22:09] j transpose j delta equals to minus j transpose epsilon j transpose epsilon is equals to the first
+[22:17] order derivative of the non-linear function g p and this equation over here would also be known as
+[22:26] the normal equation so we can also derive the same weighted iteration of the normal equation
+[22:34] by adding the covariance matrix over here so this is the final normal equation that we get
+[22:42] if we consider the error covariance on both sides you should work this out by yourself by
+[22:49] adding error covariance here so in this particular error function over here so what this means is
+[22:55] that we will end up with a equation of epsilon p transpose sigma epsilon p divided by 2 and if
+[23:06] we start off from here by doing the first order derivative and the second order derivative and
+[23:11] ignoring the higher order terms here we will end up with this particular normal equation over here
+[23:18] where sigma over here it's our error covariance of the measurement x and it is a symmetrical
+[23:26] semi-definite metric so what this means is that j transpose j would be symmetrical and
+[23:34] positive definite since it's a it's a metric multiplied by itself and if sigma x over here
+[23:42] if sigma the error covariance x over here is symmetrical and positive definite it also means
+[23:48] that the product of this would also be a symmetrical positive definite metric and this
+[23:56] would guarantee us to be able to flip this guy over here because we can view this as a x equals
+[24:05] to b so in order to solve for x we need to be able to solve for the inverse of a and since this guy
+[24:14] over here which is equivalent to the a metric is symmetric and positive definite this means that
+[24:21] we can always compute the inverse of this guy to get x which is delta over here so once we get
+[24:28] delta we will bring it back to update the p vector that we are interested in so pi plus 1 would be
+[24:35] equals to pi plus delta i in every iteration and we'll continue to do this until convergence
+[24:45] another way to compute the optimization would be to use what we call the gradient descent method
+[24:53] so in gradient descent it's a very straightforward method instead of computing the hessian matrix as
+[25:00] well as the first order derivative the jacobian matrix will simply compute the gradient of the
+[25:07] error function denoted by gp over here and that will be given by epsilon p transpose epsilon which
+[25:14] we have seen earlier on in this slide over here and we'll use this particular gradient to do what
+[25:22] we call the gradient descent towards the local minima so we can think of it this way that we have
+[25:27] a error function g of p over here and let's look at a one-dimensional space problem where
+[25:38] the variable to be optimized over is simply a scalar value of p now as we have seen earlier on
+[25:45] that in the case of the newton optimization technique we will have to start from p0 initial
+[25:54] point an operating point and approximate this with a quadratic curve and then the optimization
+[26:00] will move towards the minima of this quadratic curve and that will give us the next point p1
+[26:07] and we'll start the iteration here and taking p1 as the operating point and do a successive
+[26:13] approximation at p1 and then we'll do the same thing to descend to the minima and we'll get p2
+[26:20] which is this point and we'll do this until we reach the minima point so gradient descent would
+[26:26] be to do this thing without a quadratic approximation but instead we'll do it directly
+[26:33] by computing the gradient so let's look at this one-dimensional space and this is gp over here
+[26:40] if this is our cost function what it's going to do is that at every point starting from p0
+[26:46] over here we are going to compute the gradient at this curve over here and then we are going to move
+[26:53] in the direction of the gradient which is given by this guy over here we are going to scale this
+[26:58] gradient using lambda a hyperparameter that we define and we're going to take a step in the
+[27:04] negative gradient direction this means that we are going towards the minima point and then we'll take
+[27:10] that point as the next p1 and successively we'll compute the gradient and take the negative
+[27:19] over this particular control hyperparameter to control the step and then we'll successively
+[27:26] move towards the new point and successively compute this particular gradient that will
+[27:33] eventually bring us to a local minima
+[27:39] now in comparison with the gauss-newton as well as the newton technique this gradient descent is
+[27:45] definitely much easier to compute because we just simply compute the first order derivative and
+[27:51] move in to the negative direction of the first order derivative which is the gradient of the
+[27:58] error function and gradient descent itself is actually not a very good minimization technique
+[28:04] the reason is because we are computing the direction of the movement with respect to
+[28:11] the gradient because the cost function that we have might be locally not smooth so what this
+[28:18] means is that by computing the gradient we might be moving in many zigzag direction before we reach
+[28:26] the optimal point and this means that it's going to lead to a slow convergence but in comparison
+[28:35] to the gauss-newton or the newton technique gradient descent still can work reasonably
+[28:43] well when it is far away from the local minima and we will see how luverberg-makur algorithm
+[28:51] combines the two techniques the gauss-newton technique as well as the gradient descent
+[28:56] technique such that it gets the best out of the both or two worlds so more specifically the
+[29:02] luverberg-makur algorithm is a slight variation of the gauss-newton iteration technique we'll start
+[29:08] by looking at the normal equation over here which is the equation that we have derived when we look
+[29:14] at the gauss-newton iteration method and in luverberg-makur we simply augment the
+[29:22] j transpose j over here the hessian matrix with lambda multiplied by i so what this means is that
+[29:28] suppose that i is a m by n matrix we will get a diagonal of lambda in here in this particular
+[29:37] matrix over here and we iteratively refine or we iteratively update the lambda parameter here
+[29:45] over the successive iterations in the luverberg-makur algorithm a typical value of lambda
+[29:52] would be initialized to 10 to the power minus 3 times of the average values of the diagonal elements
+[29:59] in j transpose j so what this means is that after we compute j transpose j we get
+[30:06] suppose m by n matrix we'll take the sum of all the diagonal values and divide it by the total
+[30:12] number of entries which is going to be n over here and to get this particular value and we'll take
+[30:20] 10 to the power of minus 3 multiplied by the average values of this diagonal of this hessian
+[30:29] matrix over here to be the initial value of lambda and after we have computed this delta over here
+[30:37] from the normal equation j transpose j delta equals to minus j transpose epsilon over here
+[30:44] so we'll use this delta that is computed from the normal equation to update the value of p where p
+[30:51] here is equals to the previous value of p plus the delta value and finally once we computed the
+[30:59] updated p we'll use this updated p to compute the new error over here because epsilon is a function
+[31:08] of p which is given by the measurement minus away the non-linear function taking in the newly updated
+[31:15] value of p and we can compare whether the error value over here is reduced or increased
+[31:22] compared to the previous step so in the case where there's a reduction of the error epsilon over here
+[31:28] we will divide lambda by typically a factor of 10 before the next iteration and we will also
+[31:35] accept this new value of p that is estimated from the computed lambda on the other hand if this
+[31:45] lambda over here leads to an increase of the error then the increment would be rejected this means
+[31:52] that the newly computed p value will be discarded and we will take the p value at this particular
+[32:00] iteration to be the same as the p value in the previous iteration and lambda over here
+[32:06] would be multiplied by the same factor and the augmented normal equations are soft again
+[32:15] so we'll see why do we do this adaptive changes to the parameter of lambda when lambda is very small
+[32:24] the method is simply equivalent or essentially equivalent to Gauss-Newton iteration we can see
+[32:30] this from the normal equation in the lower macro algorithm when lambda here is very small so this
+[32:36] term over here becomes negligible and we will simply get the normal equations that we have seen
+[32:42] earlier on in the Gauss-Newton algorithm and this means that what this means is that since we saw
+[32:51] that when lambda is small this means that we there is a reduction of the error because we
+[33:00] see that when there is a reduction of the error we are going to divide lambda by a factor which
+[33:03] means that we are going to make this lambda smaller and as a result we are going to turn
+[33:08] lower macro algorithm to be the same as the Gauss-Newton algorithm when there is a reduction
+[33:16] of error and what this means is that because we know that if there's a reduction of error
+[33:22] in the cost function we are probably already getting closer to the local minima and as
+[33:30] mentioned earlier on when we are close to the local minima Gauss-Newton will work very well
+[33:37] because the local minima we are here on the assumption that the local minima it's getting
+[33:43] more and more quadratic and so hence Gauss-Newton algorithm will work best in this situation and
+[33:51] you will also converge faster at this particular situation over here hence when lambda when there's
+[33:58] a decrement in the error we will make lambda small and we'll turn lower macro algorithm into
+[34:07] a Gauss-Newton algorithm that ensures fast convergence so on the other hand when lambda
+[34:16] is large what this means is that we have defined earlier on that there's an increase in error
+[34:22] when we saw that there's an increase in error we want to make lambda large because we are going
+[34:27] to multiply a factor of 10 typically so we are going to make it large when lambda here
+[34:34] is large in this particular normal equation over here in the luverbert macro algorithm
+[34:39] when lambda is large this term over here is going to outweigh j transpose j and we can see that when
+[34:46] this term over here outweighs j transpose j then the normal equation simply becomes lambda
+[34:52] multiplied by delta equals to j transpose of epsilon and this is what we have seen earlier on
+[34:59] as the gradient step for the gradient descent technique and so what this means is that when
+[35:06] there is an increase in error we want to make the normal equation close to the gradient descent
+[35:14] algorithm which is a sensible thing to do because as mentioned earlier on when the estimate is very
+[35:21] far away from the local minima the Newton technique is not going to work well because
+[35:28] when it's very far away the chances that it's slightly not going to be quadratic at all
+[35:35] so Gauss-Newton is not going to work well in this case over here but when it is far away from the
+[35:43] local minima gradient descent method will still work except for it might be moving in a zigzag
+[35:51] direction but in this particular case it's better for the algorithm to move in a zigzag direction
+[35:57] than not to converge at all so in this particular case we will simply increase lambda and turn it
+[36:05] into a gradient descent technique so in other words the lower Markov algorithm it switches
+[36:15] between the Gauss-Newton iteration and the gradient descent approach depending on the error
+[36:24] that is being computed at this particular iteration so indeed we saw that when lambda
+[36:31] becomes increasingly large the length of the increment step decreases and eventually
+[36:36] will lead to the decrease of the cost function

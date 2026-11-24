@@ -1,0 +1,403 @@
+[00:00] Hello everyone, welcome to the lecture on 3D computer vision,
+[00:03] and today we are going to look at the fundamental and essential matrices.
+[00:08] And hopefully by the end of today's lecture, you will be able to describe the epipolar
+[00:13] geometry between two views and estimate the fundamental or the essential matrix with 8-point
+[00:20] correspondences, and then we'll look at how to decompose the fundamental matrix into the camera
+[00:26] matrices of two views and find the rotation and translation between two views from the essential
+[00:32] matrix. Finally, we'll look at how to recover the 3D structures with linear triangulation
+[00:38] and do stratified reconstruction from uncalibrated reconstruction.
+[00:44] Of course, I didn't invent any of today's material. I took most of the content of
+[00:48] today's material from the textbook written by Richard Hartley and Andrew Zisserman,
+[00:53] Multiview Geometry in Computer Vision, in particular Chapter 9, 10 and 11, and I also
+[01:00] took some of the materials from the textbook written by Ma Yi and Invitation to 3D Vision,
+[01:06] in particular Chapter 6. I hope every one of you will take a look at these chapters
+[01:11] after today's lecture. So in two-view geometry, we are given two images which we denote as i
+[01:17] and i', respectively, and suppose that we know the image coordinate in the first image,
+[01:24] which we denote as x, of a common 3D point that is seen by both i and i', concurrently.
+[01:32] We know from the last two lectures that this particular image coordinate point in the first
+[01:39] view is going to back project to a light ray, and the 3D point can lie anywhere on this particular
+[01:48] light ray. Now let's project this 3D ray onto the second image view, and we can see geometrically
+[01:57] that this particular light ray is going to project onto a line on the second image, which we are
+[02:03] going to define as the epipolar line and denote it as L'. So since the 3D point can lie anywhere
+[02:12] on this light ray, what this means is that the corresponding point of the first image coordinate
+[02:19] can lie anywhere on the epipolar line. We will further define the epipolar plane, and this plane
+[02:27] is simply the plane that is defined by the light ray, the back projected light ray that we have
+[02:33] seen earlier on here, as well as another line which joins the two camera centers that we denote as C
+[02:41] and C', here. So we call this line the baseline, and this is simply the line that joins the two
+[02:49] camera centers, and we can see geometrically or from this particular diagram here very obviously
+[02:55] that the two light rays, the two lines here, the first line which is the back projected light ray,
+[03:03] as well as the baseline, it spans this particular plane, which we call the epipolar plane. We further
+[03:10] define the epipolar. The epipolar is simply the intersection of the baseline with the camera image
+[03:21] itself. In two-view geometry, we have two epipoles, one in the first camera view and the other in the
+[03:28] second camera view, which is denote as E and E', respectively. And equivalently, the epipole is also
+[03:36] the projection of one camera center onto the other view. So for example, in this case, let's denote
+[03:44] the two camera centers as C and C', respectively. We see that the epipole, which is denote as E
+[03:51] in the first view, is simply the projection of C', which is the camera center of the second view,
+[03:58] onto the first image, and the relation holds vice versa. So for E', over here, we can see that it's
+[04:05] simply the projection of the first camera center onto the second image. And interestingly, the
+[04:12] epipoles are also the vanishing point of the baseline direction with respect to the respective
+[04:19] camera center. So for example, in this particular case, in the first view, we can see that E over
+[04:25] here, the first epipole over here, is simply the direction of the vanishing point of the baseline.
+[04:32] And similarly for E', over here, we can see that it is a vanishing point of the baseline direction
+[04:38] with respect to the second camera center. We have seen earlier on what's the definition of
+[04:45] epipolar plane. It's simply the plane that is being defined by the back projected
+[04:52] light ray as well as the baseline. So this is the plane here. In the example that we have seen
+[04:58] earlier on, if we observe a single image correspondence here, this is supposed to correspond
+[05:05] to a back projected light ray that is being projected into the second camera view as the epipolar
+[05:13] line. And we can see that this relation holds true for any point that we can observe on the image.
+[05:21] And every one of this pair of point correspondence, it's going to define an epipolar plane and hence
+[05:29] we'll get one parameter family of the epipolar planes. And interestingly, this particular one
+[05:35] family of epipolar planes, it's defined according to the epi-poles or the baseline over here.
+[05:43] The reason is because since there's a unique definition of the camera center C and C'.
+[05:50] So here in two-view geometry, we assume that C and C' stay fixed, hence only one single baseline
+[05:57] that cuts across the two respective image planes at epipolar E and E' respectively.
+[06:03] So in this case, E and E are also fixed and hence given all the possible point correspondences,
+[06:10] we would have a whole family of epipolar planes that must pass through the same baseline.
+[06:18] And hence as a result, this family of epipolar planes must be parameterized by one parameter
+[06:25] that revolves around the baseline. We have also looked at the definition of epipolar lines earlier
+[06:33] on and we saw that the epipolar line is simply the projection of the light ray that is the back
+[06:40] projection from the image correspondence of the first view onto the second view. And similarly,
+[06:49] for the definition that we have defined earlier on, it's meant for one particular pair of point
+[06:55] correspondences but there can also be many pairs of point correspondences and each one of these
+[07:00] would define a certain light ray that is being projected onto the second view. And hence we can
+[07:07] see that there's also a whole family of epipolar lines on the two views. And what's interesting
+[07:12] here is that this whole family of epipolar lines is related to the family of epipolar planes that
+[07:20] we have seen earlier on. It's simply a pair of these corresponding epipolar lines which we denote
+[07:27] as L and L' respectively. It's simply the intersection of an epipolar plane with the two
+[07:34] respective camera images. And we also note this family of epipolar lines is parameterized by one
+[07:41] parameter. The reason is because, as we have said earlier on, that C and C' which are the
+[07:46] camera centres of the two respective views stay fixed. As a result, the epipoles E and E' of the
+[07:54] two camera views must stay fixed. And since the whole set of epipolar lines must contain the
+[08:01] epipole, this means that the family of epipolar lines is actually defined by one parameter that
+[08:08] revolves around the respective epipole. Now after we have defined the terminologies of the epipolar
+[08:17] geometry and we have seen that given a point from one view it actually transfers the epipolar line
+[08:24] on the second view. And now we are going to find projective mapping that maps the point from one
+[08:31] view to an epipolar line in another view and define what's called the fundamental matrix as
+[08:39] the linear mapping or the projective mapping that maps the point from one view to an epipolar line
+[08:46] in the second view. And we'll denote this fundamental matrix as F. We'll first show the
+[08:52] existence of the fundamental matrix and we'll also formalize the exact transfer of the point
+[08:59] to a line between two views. So here the map of a point from one view to a line in the second view,
+[09:06] which we call the epipolar line, can be decomposed into two steps. So in the first step,
+[09:13] we have two views over here. Given a point in the first view which we denote as X, we'll define
+[09:20] a projective transformation that maps this point onto a point in the second view. In fact we have
+[09:26] seen this mapping or this transfer earlier on that there's simply a homography that defines this
+[09:33] mapping from a point to a point. And then in the second step, after we have defined the transfer
+[09:40] of the point in the first view to the point in the second view which we denote as X' over here,
+[09:46] since we know the epipolar line must contain the epipole which we denote as E' over here,
+[09:51] and the epipole E' is simply the projection of the first camera center C onto the second view.
+[09:58] So since we know that after we transfer X to X' via a certain homography, we know that the epipolar
+[10:06] line must contain E', the epipole in the second view as well as X' in the second view. We can
+[10:12] define the epipolar line L'. As mentioned earlier on, the first step is that we want to define
+[10:20] the transfer of the point from the first view into the second view, and we know in the past
+[10:26] lecture that this can be done using 2D homography. Now suppose that we know that the 3D point which
+[10:31] we denote as capital X over here lies on a 3D plane which we denote as pi over here,
+[10:36] and this knowledge tells us that the image point that we have seen in the first image which we denote
+[10:42] as small x over here can be transferred to the second image as X' via the homography,
+[10:50] and we can rewrite this particular relation as X' equals to h pi multiplied by x. We have seen
+[10:59] this particular definition in the earlier lectures. Once this is known, we will know that
+[11:06] image correspondence X' in the second image is related to the first image correspondence as hx,
+[11:13] and the next thing that we need to do would be find the definition of the epipole in the second
+[11:20] view which we denote as E' over here, and as mentioned earlier on, the epipolar line
+[11:26] must contain the epipole as well as the transferred point from the first view to the second view,
+[11:34] and we can easily define this as L' equals to the cross product of the epipole and the point
+[11:42] that is being transferred from the first image to the second image via the homography, and as a
+[11:48] result we can write L' equals to a cross product of the epipole and the transferred point, and now
+[11:57] let's substitute the transferred point which is expressed by the homography that we have defined
+[12:03] earlier on into this particular equation over here, and we can easily see that after substituting
+[12:10] this we'll get L' simply equals to the cross product of the epipole with the homography
+[12:18] multiplied by the image coordinate of the first point. Now we can collectively call
+[12:24] these two terms over here, the cross product of E' and the homography as a single metric
+[12:32] F over here, so note that this particular cross product over here is actually written as a skew
+[12:40] symmetric matrix, so if we were to take two vectors A cross with B, we can rewrite this A,
+[12:49] so this A here is a 3 by 1 vector and B here is also a 3 by 1 vector, we can rewrite the first
+[12:56] 3 by 1 vector which is A here as a skew symmetric 3 by 3 matrix that is given by this form over here,
+[13:03] so I'll leave it to you to verify that this is indeed the multiplication of the skew symmetric
+[13:09] matrix of A and the vector of V is equivalent to the cross product of A multiplied by B.
+[13:16] So we have seen that this is actually a 3 by 3 matrix and the homography which is the
+[13:22] projective transfer which is responsible for the projective transfer of the point from the first
+[13:27] view to the second view, it's also a 3 by 3 matrix and as a result we get the linear mapping of x
+[13:36] to the x which is the image point in the first image and to the epipolar line in the second view
+[13:44] via a linear mapping of a 3 by 3 matrix which we call F. This particular 3 by 3 matrix that
+[13:53] we denote as F, we were going to call it the fundamental matrix and hence we get the linear
+[14:00] mapping relation of a point in the first view gets transferred to a line in the second view
+[14:09] via the fundamental matrix which is a 3 by 3 matrix. We can see this particular relation
+[14:16] which we have seen earlier on L' equals to F of x as analogous to the homography that we have seen
+[14:24] in the first few lectures. So in a case of a homography we get a pair of 2D images and there's
+[14:30] a corresponding point pairs which we denote as x and x'. So in that case that we have seen earlier
+[14:37] on, this would be a transfer of a point to a point and this transfer we saw that it's
+[14:44] equivalent to x' equals to a homography multiplied by x. So now we have a point
+[14:53] and we are going to transfer it to a line which we denote as x and L' over here and we saw that
+[15:01] this transfer here it's going to be related by F which is multiplied by x and this is going to
+[15:09] give L' and the difference here is that in the case of the homography the transfer must be
+[15:16] strictly following a plane in the scene but in this particular case we are looking at here
+[15:22] the transfer by a fundamental matrix of a point to a line in the from the first view to the second
+[15:28] view although it's via two steps which we define the first step to be our homography it's important
+[15:33] to note that this homography can be on any plane it's actually a virtual plane that we define in
+[15:39] the scene to help us to derive the this particular relation of the fundamental matrix that transfer
+[15:47] a point to a line it is not a must that the 3D point lies on a physical in the 3D scene
+[15:54] but in the case of a homography this strictly must be followed that means in order for x to
+[15:59] be transferred to x' in two two views actual 3D point must lie on a plane but in this particular
+[16:06] case it's just a virtual plane that we define over the 3D point to help us derive the fundamental
+[16:13] matrix and furthermore we can see that since skew symmetric matrix of the second epi pole
+[16:21] has rank two this is obvious from here because we can see that the first two rows it's defined
+[16:29] out of a3 and a2 and as well as a3 and a1 so we can actually take a linear combination of the
+[16:36] first two row to get the third row hence the rank of this skew symmetric metric must be equals to
+[16:42] two it cannot be full rank hence the skew symmetric matrix that is defined by the epi pole it must have
+[16:51] rank of two and we also saw that in the previous lectures that in order for the linear mapping to
+[16:58] be valid the the homography here h pi it must have a full rank which is rank of three hence the
+[17:07] multiplication of a rank two matrix with a rank three matrix so this is rank two and this is rank
+[17:17] three the multiplication of these two must give rise to a rank two
+[17:22] metric and that means that the fundamental metric is of a rank two geometrically the fundamental
+[17:30] matrix actually represents a mapping of a two-dimensional projective plane in the first
+[17:35] image to a pencil of epipolar lines in the second image view and what this simply means is that since
+[17:42] we are transferring a point in this first view which we denote as i onto a second view which
+[17:49] becomes a line what this means is that we are actually mapping a projective space of p2
+[17:55] two-dimensional projective space because it's a point that lies on a plane and now we are
+[18:02] projecting this x to be anywhere which we denote as x prime over here on this particular line since
+[18:09] x prime is constrained to the line what this means is that now we have a one-dimensional
+[18:15] projective space over here so the fundamental matrix is actually responsible to map a 2d
+[18:23] projective space into a 1d projective space and we have also seen earlier on that the
+[18:31] plate that is used to define the transfer h pi it's actually a virtual plane and it's not required
+[18:39] for the fundamental matrix to exist so the fundamental matrix can also be derived in a
+[18:47] algebraic derivation now let's look at this closely here so suppose that we have two camera
+[18:55] projection matrices that describes the camera pose of the first view which is cos c and the
+[19:04] second view which you call c prime so this is an image of i and i prime suppose that the camera
+[19:09] matrices of the two images is given by p and p prime we know that the the image correspondence
+[19:17] in the first view is denoted by x we can derive the back projected rays that is spent by the
+[19:25] camera center as well as x over here but in this particular equation that we have seen earlier on
+[19:31] so p plus here is the pseudo inverse multiplied by x so this defines any point on the light ray
+[19:38] and any one point on the on this particular back projected light ray as well as this particular
+[19:44] projector light ray it must pass through the camera center which we denote as c so this light
+[19:50] ray can be defined as a span of these two points which means that it's a collection of all the
+[19:57] points that is lying on this particular light ray over here and we parameterize this light ray with
+[20:04] a killer value of lambda over here now let's consider two points on this particular light
+[20:10] ray so this light ray is seen from the first camera view which contains the camera center c
+[20:18] as well as the image point it backs projects to this particular line which we call x of lambda
+[20:26] that is given by p plus which is a pseudo inverse multiplied by x plus lambda c over here so let's
+[20:33] consider two points on this particular line the first point that we are going to consider
+[20:38] would be at lambda equals to zero and this would be given by the pseudo inverse multiplied by x
+[20:44] and this simply means that it's any point on this particular line and the second point that we are
+[20:50] going to consider would be at the limiting factor of lambda tending towards infinity and what this
+[20:57] means is that we'll get the second point as the camera center which we denote as c here so let's
+[21:05] now consider these two points and we'll project this but these two points onto the second camera
+[21:14] view and we can see that since the camera projection matrix of the second camera is
+[21:19] given by p prime we can see that the first camera center over here is being projected onto
+[21:26] one point on the image which we are going to call it p prime of c so this point here we
+[21:33] call it p plus of x is going to be projected onto the second camera and this results in the
+[21:40] projection of p prime p plus of x so we'll get two points over here which are respectively p prime of
+[21:48] x and p prime p plus of x that we have defined earlier on these are the two points that we have
+[21:55] seen here and we know that from the earlier definition of epipolar line is that the epipolar
+[22:01] line must contain the reprojected point as well as the epipolar this particular line here it's going
+[22:08] to form the epipolar line and the reason why we call the this particular point over here which
+[22:15] is given by p prime of c the epipolar it's simply because the definition of epipolar is the
+[22:22] projection of the camera center from one view to another view so this is exactly given by p prime
+[22:31] multiplied by c over here hence the epipolar line on the second image can be computed as l prime
+[22:37] equals to the epipolar in the second image which is given by p prime multiplied by the camera
+[22:45] center of the first image and cross product with the projected point of p plus x onto the second
+[22:54] image which is given by the this equation over here p prime multiplied by p plus multiplied by
+[23:01] x so we have mentioned earlier on that p prime c is the epipole in the second image
+[23:08] because it's a projection of the first camera center onto the second image so this is originally
+[23:16] p prime of c multiplied by the cross product of p prime p plus and x over here so we can rewrite
+[23:25] this guy here into the epipole cross product with this p prime plus and x and we have seen earlier
+[23:36] on that the cross product here can be rewritten into a skew symmetric metric that is in this
+[23:44] particular form hence we'll get this particular equation over here where we can collectively
+[23:50] group this portion here together and call it a f-matrix which is simply our fundamental matrix
+[23:58] and hence we'll get the relation of l prime equals to the fundamental matrix multiplied by the image
+[24:06] coordinates in the first image where the fundamental matrix here it's given by the
+[24:12] cross product of the epipole multiplied by p prime and p plus we can check the correctness of this
+[24:19] fundamental matrix it's supposed to be a three by three matrix over here and we can see that the
+[24:25] cross product the skew symmetric metric that is defined by the epipole it's also a three by three
+[24:31] matrix and we can see that p prime over here it's supposed to be a three by four matrix and p plus
+[24:39] since it's the pseudo inverse this is supposed to be a four by three matrix and if we multiply these
+[24:45] three matrices together we'll end up with a three by three matrix and this form of the fundamental
+[24:53] matrix that we derive algebraically we can see that it's similar to the fundamental matrix that
+[25:00] we have derived earlier on using the geometric derivation so where the homography simply is given
+[25:09] by p prime multiplied by p inverse and here we can also see that from this definition here from
+[25:18] this particular outcome of the derivation algebraically we can see that the homography
+[25:25] that we defined earlier on in order to help us to transfer a point to from one image x here
+[25:32] to transfer it to the second image x prime over here is simply a virtual homography this means
+[25:38] that the particular 3d point which called capital x it need not necessarily lies on a real
+[25:46] plane for this homography to exist because this homography is simply a function of the camera
+[25:53] matrices of the two views p and p prime over here a remark over the algebraic derivation of the
+[26:00] fundamental matrix is that this derivation that we have seen earlier on it breaks down when the
+[26:05] two camera centers are the same what this means is that it degenerates and we cannot make use of
+[26:10] this algebraic derivation to derive the the fundamental matrix when the two camera centers
+[26:17] are the same so the proof is here if we have seen earlier on that the epipole on the second view
+[26:24] so here's two views i and i prime the epipole which we define as e prime in the second view
+[26:31] is simply equals to the camera center of the first view being projected into the second
+[26:37] view which is p prime and c so in this particular case where c simply equals to c prime this means
+[26:44] that the two camera centers are the same we can see that the projection of c into the second view
+[26:51] which is p p prime multiplied by c is going to be a null matrix over here which is zero over here
+[26:58] and this follows that if we were to plug it into the equation that we have derived earlier on for
+[27:04] a fundamental matrix since the skew symmetric matrix here is defined based on e prime which
+[27:10] is equals to p prime multiplied by c over here and in this case where c equals to c prime this
+[27:17] guy over here simply equals to zero and the whole equation here will simply vanish and becomes zero
+[27:24] this proves that the algebraic derivation breaks down when the two camera centers are the same
+[27:29] we'll look at one example over the algebraic derivation of the fundamental matrix
+[27:36] suppose that we have two camera matrices of a calibrated stereo rig a calibrated
+[27:42] stereo rig simply means that we place two cameras on a fixed rig that means that the two cameras
+[27:51] is rigidly attached to a rigid body over here and calibrated simply means that we know the
+[27:59] intrinsic value of the first camera k and the intrinsic value of the second camera which we
+[28:05] denote as k prime over here and so we by this form of definition we can assign the camera matrix of
+[28:15] the first view to be a canonical camera matrix which is given by k multiplied by i and zero so
+[28:22] this is actually a three by four identity matrix this simply means that the camera coordinate
+[28:28] aligns with the world coordinate over here and the second view here is simply rotated and translated
+[28:36] by r and t over here and hence the second camera matrix can be expressed as the intrinsic k prime
+[28:45] multiplied by the rotation and translation of the second view defined with respect to the first
+[28:50] camera world frame then we can easily find the pseudo inverse of the first camera matrix over
+[28:58] here which is defined by this guy over here so pseudo inverse as we have seen earlier on here
+[29:04] is simply given by the three by four matrix of p multiplied by p plus equals to identity
+[29:12] we can solve this p multiplied by p plus equals to identity and since we know this guy here we
+[29:18] can plug it into this and we can solve for p pseudo inverse over here and as a result
+[29:25] we'll see that this is equivalent to k inverse and zero transpose over here so this is actually a four
+[29:32] by three matrix and c which is the camera center since we define the first camera projection matrix
+[29:42] to be in a canonical form what it simply means is that the camera center of the first camera is
+[29:50] going to be zero since the world frame is aligned with the camera coordinate frame and by plugging
+[29:57] p and p prime into the equation of the fundamental matrix that we have seen earlier on here we can
+[30:03] simplify this equation and finally we'll see that the fundamental matrix is actually an expression
+[30:10] that is given by the camera intrinsics which is k k prime over here as well as the camera extrinsics
+[30:17] which is r and t over here between the the two views so we can further make use of the
+[30:24] two camera matrices that we have seen earlier on here p and p prime to define the epi pose in the
+[30:33] two views respectively so now we have two images i and i prime over here we know that the camera
+[30:42] matrix of the first view is given by p equals to k multiplied by uh i and zero as well as uh
+[30:53] p prime is equals to k prime multiplied by r and t which can be rewritten into k prime multiplied by
+[31:06] again minus r c which is the camera center over here what this simply means is that
+[31:13] from this relation we can tell that minus r c tilde is equals to t and this implies
+[31:21] that the camera center can also be rewritten into minus r transpose of t over here so we know that
+[31:30] the epi pole of the first camera view is denoted by e and this epi pole over here which we denote
+[31:36] by e is simply equals to the projection of the second camera center which is c prime over here
+[31:43] in into the the first view so this would be simply equals to p multiplied by c tilde that we have
+[31:53] seen earlier on and one and this is equals to p multiplied by minus r of transpose of t and
+[32:01] one over here which is exactly what we see here if we were to plug the first camera
+[32:06] matrix in terms of the intrinsic and extrinsic value into this equation over here we can simply
+[32:12] express the epi pole of the first camera view as k multiplied by r transpose of t we can do similar
+[32:20] things for the epi pole that we denote as e prime in the second image since e prime
+[32:28] is simply equals to p prime multiplied by the camera center c of the first image since the
+[32:34] world frame and the camera coordinate frame are aligned in the first camera we can simply write
+[32:40] this as p prime equals to zero and one over here and plugging in this particular expression of p
+[32:47] prime into e prime we can see that we'll get this particular relation over here which is k prime
+[32:54] multiplied by t and what this means is that if we were to look at this expression which consists of
+[33:00] this guy over here kr transpose of t which is equivalent to the first epi pole we can
+[33:07] rewrite this part here as the first epi pole multiplied by whatever expressions that we have
+[33:13] earlier on as well as we can see that k prime of t which is the second epi pole here it appears
+[33:20] also in this particular equation here so we can also rewrite this term here into e prime
+[33:27] the cross product of the epi pole with k prime r multiplied by k in and this is the relation here
+[33:37] now so far we have looked at transfer between a point from one view into another view we saw that
+[33:44] this transfer is actually a point which we denote by small x over here in the first camera image
+[33:51] and we transfer it to a line in the second image and vice versa so this line is actually the epi
+[33:58] pole line which is l and we saw that this transfer is via the fundamental matrix so the fundamental
+[34:05] matrix essentially maps x into a line l prime over here and now suppose that we know that these
+[34:14] two points x and x prime are corresponding points in two views if we know x in one view we know that
+[34:22] x prime must lie on any point on the epipolar line in the second view but now suppose that we start
+[34:29] from the point correspondences that means that given two images which we observe x in one of the
+[34:36] image and its corresponding point x prime in the second image we know these two are correspondences
+[34:41] x and x prime are correspondences so we ask the question of whether there's any relation
+[34:49] simply these two correspondences and it turns out that the answer is yes we can actually derive a
+[34:56] correspondence condition which is simply given by this famous equation in 3d computer vision over
+[35:02] here so x prime transpose f multiplied by x must always be equals to zero as long as x and x prime
+[35:11] are correspondence point in the two images so the proof is very simple because we know that x prime
+[35:17] must lie on the epipolar line in the second view l prime which is given by f over here which is here
+[35:24] so we can see that x in the first image is transferred to the second image as an epipolar
+[35:30] line know that this epipolar line must contain the point correspondence of x which we denote as
+[35:36] x prime so what this simply means is that there must be an incidence relation between x prime and
+[35:42] l prime and what this simply means is that the dot product of x prime and l prime which is the
+[35:48] epipolar line must always be equals to zero and since we know that l prime it's given by the
+[35:56] fundamental matrix multiplied by the first image coordinate point which is f multiplied by x
+[36:03] substituting this relation into l prime over here we get the famous equation of x prime transpose f
+[36:12] multiplied by x equals to zero there's a very important significance of this particular equation
+[36:18] x prime transpose f multiplied by x equals to zero this simply means that we can actually compute
+[36:26] f the fundamental matrix over here the fundamental
+[36:35] matrix over here simply from the observation of point correspondences
+[36:43] between two views this is analogous to what we have seen in in the homography case we saw in
+[36:50] the homography case that given four point correspondences if we know that these four
+[36:55] point are correspondences we can simply compute the homography the three by three homography that
+[37:02] relates these two views that transfer this onto a set of corresponding point in the second view
+[37:10] the fundamental matrix unlike the homography it's going to transfer a point from the first
+[37:17] view onto a epipolar that contains the corresponding point in the second view
+[37:22] and this is a significant importance of this particular equation over here which means that
+[37:28] we can compute the fundamental matrix directly from the point correspondences without any
+[37:33] knowledge of the 3d scene nor the 3d geometry of the camera poses
+[37:41] we'll discuss later on how many point correspondences are needed to compute
+[37:45] the fundamental matrix from this particular correspondence equation over here
+[37:52] now let's look at some properties of the fundamental matrix we saw that the fundamental
+[37:59] matrix it can be expressed in terms of the two camera matrices p and p prime in this particular
+[38:05] order and what's interesting is that if we sort the order of p and p prime this simply means that
+[38:13] just now we define the first image to be i and the second image as i prime over here which
+[38:20] means that the camera matrix of the first image must be p and the second image must be p prime
+[38:27] over here our derivation is based on this ordering so we'll get we saw earlier on that
+[38:33] we get the expression for the fundamental matrix which is f is simply equals to p multiplied by c
+[38:41] and this cross product multiplied by p prime p pseudo inverse over here that this is the relation
+[38:49] so this particular fundamental matrix over here is defined based on the ordering that p
+[38:54] is the first camera view and p prime is the second camera view so suppose that we are we are swapping
+[39:01] the order right now that means that the first image over here we call it i prime and p prime
+[39:07] the second image over here we call it p and i then f transpose would be the corresponding
+[39:15] fundamental matrix over here we can see this very clearly from the correspondence equation
+[39:21] so we saw the x prime transpose f x equals to zero over here so this relation will also hold
+[39:29] if we take x x prime transpose f x and transpose the whole thing so this would become x transpose
+[39:38] f transpose and x prime equals to zero where we can see that this is simply a swap of the order
+[39:47] previously the first point here belongs to the second image which is x prime and the second
+[39:53] point here is the image correspondence in the first image which is denote as x so once we do
+[39:59] this transpose we can see that the first point here which corresponds the second image becomes x
+[40:06] and the image correspondence that corresponds to the first image becomes x prime and hence
+[40:13] the corresponding fundamental matrix becomes f transpose as we have claimed earlier on
+[40:18] here's some property of the epipolar line for a point in the first image the corresponding
+[40:23] epipolar line is l prime equals to f x so if we were to look at the other way around
+[40:30] l equals to f transpose of x prime simply represents the epipolar line of the corresponding
+[40:38] image this what this simply means is that we have two views if we were to look at the first
+[40:44] view i and i prime over here the first view with a point x over here is going to get transferred
+[40:50] to the second view as l prime and this is going to be equals to f of x but if we have a point here
+[40:59] that we denote as x prime this point over here is going to get transferred over to the second
+[41:06] view here as l prime and l prime is going to be equal to f transpose of x prime over here
+[41:15] so again we can simply see the relation over here in this particular equation over here so in the
+[41:22] first in the first equation over here x prime f x defines the incidence relation between the
+[41:31] point on the second image and the epipolar line so this is the epipolar line l prime over here
+[41:38] on the second view so this is an incidence relation and this must be equals to zero
+[41:43] and the second equation over here which is the simply the transpose of the first equation it
+[41:49] also defines the same incidence relation but in the first view so we can see that now x transpose
+[41:57] is the point in the first view and f transpose x prime defines the epipolar line in the first view
+[42:09] and that is since the point on the first image must lie on the epipolar line in the first image
+[42:16] as well the incidence relation over here the dot product of this two of the point and the
+[42:21] epipolar line would simply be equals to zero and hence fulfilling this equation that we have seen
+[42:27] earlier on and now let's also look at some properties of the epipolar so for any point
+[42:35] or x other than the epipolar in in the first image the epipolar line must contain the
+[42:42] epipolar we have seen this earlier on that this particular epipolar line that is being transferred
+[42:48] from a point x in the first view via f over here so this guy here is l prime equals to f of x
+[42:55] it must contain the epipolar over here which is e prime this simply means that because there's
+[43:02] an incidence relation between the epipolar and the epipolar line l prime over here so this simply
+[43:08] means that the top product of the epipolar with the epipolar line must always be equals to zero
+[43:14] we can also rewrite this particular equation so this this is the incidence relation which is
+[43:19] e prime transpose of l prime this simply means that the dot product of the epipole
+[43:26] in the second view and the epipolar line in the second view must always be equals to zero
+[43:31] can be rewritten into e prime transpose multiplied by f and x since we know f multiplied by x equals
+[43:39] to the epipolar line in the second view and this must also be equals to zero and we know that
+[43:45] x here is not going to be zero for it to be a valid image point so since this equation can be
+[43:53] rewritten into e prime transpose of f multiplied by x and we know that x here is never going to be
+[44:00] zero what this means is that the multiplication of e prime transpose and f must be equals to zero
+[44:07] in order for this relation here to hold hence we can rewrite this equation into a null space
+[44:15] equation of e transpose f equals to zero what this means is that e prime is simply the left null
+[44:22] space of f and similarly we can also derive this equation over here which means that the epipole
+[44:30] in the first image is simply the right null space of the fundamental matrix f we can also see that
+[44:39] the fundamental matrix has seven degrees of freedom fundamental matrix f over here is a
+[44:44] three by three matrix with with nine elements in there and we have to minus away two degrees of
+[44:50] freedom one because the there are only eight independent ratios the scale here is not important
+[44:58] and the second thing here is that because we have seen earlier on that the fundamental
+[45:04] matrix is of rank two this means that the determinant of the fundamental matrix must
+[45:10] be equals to zero and this reduce one more degree of freedom hence as a result we have nine minus two
+[45:17] equals to seven degrees of freedom for the fundamental matrix and another property of
+[45:23] the fundamental matrix is that it's not a proper correlation so what this means is that it's not
+[45:29] invertible we saw that the relation of a fundamental matrix is actually linear mapping function
+[45:37] that maps a point x onto the epipolar line in in the second view so l prime is equals to f
+[45:45] multiplied by x over here and the determinant of f equals to zero and it's not full rank although
+[45:52] it's a three by three square matrix over here the the relation is only one direction what it
+[45:59] means is that the inverse of f simply doesn't exist and here's a table to summarize the
+[46:06] properties of the fundamental matrix that we have seen earlier on so we have seven degrees of freedom
+[46:13] and the correspondence equation is given by f prime transpose f of x and then the
+[46:20] epipolar line in the two views is given by f or x and f transpose x multiplied by x prime
+[46:26] and we're also seeing that the epipoles are given by the left and right in our space and we also
+[46:32] seen the algebraic derivations that the fundamental matrix can be expressed as the epipole and the
+[46:40] camera projection matrices that we have seen earlier on and here there's a significance of this
+[46:47] what it simply means is that if the two camera matrices p and p prime are uniquely defined that
+[46:55] means that we know this uniquely what this means is that the fundamental matrix would also be unique
+[47:03] so this means that given a pair of p and p prime matrices of the camera it will only end up to have
+[47:11] one particular unique fundamental matrix that defines the mapping of a point
+[47:18] to a epipolar line between the two views

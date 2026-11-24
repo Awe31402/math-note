@@ -1,0 +1,1400 @@
+WEBVTT
+
+00:00.000 --> 00:04.560
+Hello everyone, welcome to the lecture on 3D computer vision, and today we are going to talk
+
+00:04.560 --> 00:10.160
+about single view metrology. Hopefully, by the end of today's lecture, you will be able to describe
+
+00:10.160 --> 00:16.240
+the action of camera projection on planes, lines, conics as well as quadric, and you will be able
+
+00:16.240 --> 00:22.720
+to explain the respective effects of fixed camera center, increased focal length and pure rotation
+
+00:22.720 --> 00:28.160
+on the image. And we'll look at how to calibrate the intrinsics of a camera with the image of
+
+00:28.160 --> 00:34.720
+absolute conics. Finally, we'll look at the definition of vanishing points and vanishing lines
+
+00:34.720 --> 00:40.640
+and use them to find the geometric properties of the scene and camera. And of course, I didn't
+
+00:40.640 --> 00:45.920
+invent any of today's material. I took most of the content of today's lecture from the textbook
+
+00:45.920 --> 00:51.280
+written by Richard Hartley and Andrew Zisserman, Multi-View Geometry in Computer Vision, in
+
+00:51.280 --> 00:56.400
+particular Chapter 8. I strongly encourage every one of you to take a look at this chapter after
+
+00:56.400 --> 01:04.720
+today's lecture. So just a quick recap of what we have done last week. We basically described
+
+01:04.720 --> 01:11.680
+the characteristic of a projective camera based on a simple pinhole camera model and with the
+
+01:11.680 --> 01:18.800
+further projection matrix. So this is essentially a 3x4 matrix. We have looked at its action on
+
+01:18.800 --> 01:25.040
+a point. In particular, we have looked at how it transforms a point in forward projection. That
+
+01:25.040 --> 01:31.040
+means that given in a 3D point in the real scene, we have looked at how this camera projection
+
+01:31.040 --> 01:37.040
+matrix, which we denote as P, maps this into the image. So this is what we call the forward
+
+01:37.040 --> 01:43.760
+projection. Given a point on the 2D image, we have looked at how to make use of the projection
+
+01:43.760 --> 01:51.840
+matrix to back project this particular point onto a light ray. And today, we'll continue to look at
+
+01:51.840 --> 01:58.480
+the action of the camera projection matrix on other entities such as plane, lines, conics,
+
+01:58.480 --> 02:04.800
+and quadric. In particular, we'll look at the forward and backward projection properties of
+
+02:05.680 --> 02:13.200
+these entities from a camera projection matrix. Let's first look at the action of the projective
+
+02:13.200 --> 02:20.720
+camera on 3D planes. So suppose that we have a 3D plane in the world which we call pi. Now let's
+
+02:20.720 --> 02:27.280
+first assign the world coordinate frame that defines this particular 3D plane. In fact,
+
+02:27.280 --> 02:33.440
+we have looked at this in last lecture during camera calibration. A convenient way to assign
+
+02:33.440 --> 02:39.760
+the world coordinate onto a 3D plane would be to place the XY plane of the world frame. So this is
+
+02:39.760 --> 02:48.640
+the world frame over here. We are going to align the XY plane onto the 3D plane pi itself, such
+
+02:48.640 --> 02:54.400
+that the 3D coordinates of any point, let's call X pi over here, that lies on the plane can be
+
+02:54.400 --> 03:03.520
+rewritten as XY01. Zero here is because of the XY plane lying on the plane, so there's no value for
+
+03:03.520 --> 03:10.080
+the Z axis. And if we were to expand this particular expression, the metric multiplication here,
+
+03:10.080 --> 03:16.640
+we can see that basically the zero in these 3D coordinates of this particular point on the plane,
+
+03:16.640 --> 03:23.840
+X on P3, the third column of the camera projection, hence eliminating it. So as a result,
+
+03:23.840 --> 03:29.920
+we can rewrite this particular expression over here with just P1, P2, and P4. This is the first,
+
+03:29.920 --> 03:38.080
+second, and fourth column of the camera projection matrix multiplied by XY and 1. We can ignore the
+
+03:38.080 --> 03:43.760
+Z axis because it's always zero. Since we eliminated P3 of the 3D point on the plane,
+
+03:43.760 --> 03:49.200
+which we call X pi over here, we can see that the end result would be simply a homography
+
+03:49.200 --> 03:54.160
+between the 2D point and the 3D point on the plane.
+
+03:56.320 --> 04:02.240
+So the reason is because now we have the same dimension. Small x over here is actually XY and
+
+04:02.240 --> 04:07.120
+1, the homogeneous coordinates. And since we removed the Z axis here, we will also have a
+
+04:07.120 --> 04:14.880
+3 by 1 metric over here. And these two entities, the 2D and 3D entities, are simply related by a
+
+04:14.880 --> 04:20.640
+3 by 3 homography metric, which is given by the first column, second column, and the last column
+
+04:20.640 --> 04:28.000
+of the camera projection matrix. It also becomes obvious that since we have two planes, the image
+
+04:28.000 --> 04:36.960
+plane as well as the world plane, it's X pi over here, we have looked at in Lecture 3 that the
+
+04:36.960 --> 04:43.920
+homography that relates these two planes can be easily found from any 4-point correspondences
+
+04:43.920 --> 04:52.080
+on the image and the world plane. Now let's look at the action of the camera projection on 3D lines.
+
+04:52.080 --> 04:58.560
+So suppose that we are given a 3D line which we call capital L. We can see that geometrically,
+
+04:58.560 --> 05:04.640
+when the line is being projected onto a camera center, which this plane over here has the image
+
+05:04.640 --> 05:13.440
+plane, the projection of the 3D line forms a plane, which is this guy over here. It forms a plane
+
+05:13.440 --> 05:19.920
+because this is projected onto the camera center. And let's denote this particular projection,
+
+05:19.920 --> 05:26.160
+the plane that is formed by the projection of this 3D line L over here as pi. And the intersection
+
+05:26.160 --> 05:34.320
+of this plane pi with the image plane would form the forward projection of the 3D line onto the
+
+05:34.320 --> 05:42.560
+2D image, which we denote as small l over here. Now let's formulate this in a more mathematical
+
+05:42.560 --> 05:50.480
+way. Suppose that we are given two 3D points in the space that lies on the 3D line L. So we have
+
+05:50.480 --> 05:58.240
+a and b over here that lies on the 3D line L. And we can then define the whole family of points
+
+05:58.240 --> 06:06.800
+that lies on this 3D line L as a span by the 2D points a and b. So we can simply write x mu,
+
+06:06.800 --> 06:13.920
+which is one family of solution points over here, x mu, that simply equals to a,
+
+06:13.920 --> 06:20.720
+which is the first point, plus mu b. And that means that x could be any point that is lying
+
+06:20.720 --> 06:26.800
+on this particular 3D line over here. We can simply make use of this equation over here to
+
+06:26.800 --> 06:33.280
+represent the 3D line L. And let's look how the camera projection matrix P would act on this
+
+06:33.280 --> 06:41.520
+particular 3D line over here. Because we know that given a point in 3D which we call x, the camera
+
+06:41.520 --> 06:47.600
+projection simply is a multiplication by the 3D point x that will give rise to the particular
+
+06:48.320 --> 06:54.560
+image point over here. So this is capital X and this is small x. Well the P would forward project
+
+06:54.560 --> 07:00.960
+this particular 3D point onto the image. And since we have defined the whole family of points that
+
+07:00.960 --> 07:06.000
+sits on the 3D line over here, we can also directly make use of this relation over here
+
+07:06.000 --> 07:13.280
+on the whole family of points. So I would have an end result of the whole family parameterized by
+
+07:13.280 --> 07:18.720
+the same parameter mu over here, but now this would be the whole family of points that is sitting
+
+07:18.720 --> 07:27.440
+on the projection of this 3D line on the image. And this would be simply equal to P multiplied by
+
+07:27.440 --> 07:33.920
+the big X which is also parameterized by mu over here. So what this simply means is that I'm
+
+07:33.920 --> 07:41.600
+taking every point that is sitting on the 3D line and project it onto the 2D image via the camera
+
+07:41.600 --> 07:49.520
+projection matrix P. And we can evaluate this in two. We'll simply take this equation over here
+
+07:49.520 --> 07:56.640
+where every point on the line is spanned by A plus mu B. So we can substitute this A plus mu
+
+07:57.280 --> 08:04.240
+B into the equation. As a result we can see that this expands to two terms mu P and B. So this
+
+08:04.240 --> 08:13.760
+becomes the projection of the point A onto the 2D image which you can rewrite this as small a over
+
+08:13.760 --> 08:19.920
+here. In terms of the notations to be consistent we're projecting a capital X which represents the
+
+08:19.920 --> 08:26.960
+3D point onto the 2D image point which we denote by small x over here. We are now similarly
+
+08:26.960 --> 08:33.280
+projecting a capital A denoting the 3D points on the line and we are projecting it onto small
+
+08:33.280 --> 08:41.120
+a over here which is 2D image point. So we can rewrite this P A as small a plus so mu remains
+
+08:41.120 --> 08:47.680
+because it's a parameter that parameterize the span over the line. So mu here remains and we can
+
+08:47.680 --> 08:53.200
+see that there's this term over here P multiplied by B which will follow the same convention. This
+
+08:53.200 --> 08:59.280
+simply means it's a projection of the 3D point which is denoted by capital B onto the 2D image
+
+08:59.280 --> 09:05.360
+which you denote by small b and this is this particular equation. After the projection it will
+
+09:05.360 --> 09:12.480
+be simply the family of 2D points that sits on this 2D line which corresponds to the projection
+
+09:12.480 --> 09:20.880
+of L under the camera projection matrix P. Now given a 2D line let's look at the backward
+
+09:20.880 --> 09:25.920
+projection of this 2D line. We are given this line here which we denote as small L over here
+
+09:25.920 --> 09:32.080
+and we'll look at the back projection of this particular line by the camera matrix P because
+
+09:32.080 --> 09:38.640
+we know that camera projection matrix here is actually a 3 by 4 matrix. So what it means here
+
+09:38.640 --> 09:46.480
+is that this particular matrix here it has a maximum rank of 3. If this is an infinite camera,
+
+09:46.480 --> 09:51.840
+a finite camera which we have looked at last week, this wouldn't be rank 3. It would be actually only
+
+09:51.840 --> 09:56.560
+rank 2 but in this case you are only talking of the projective camera where the rank of P is at
+
+09:56.560 --> 10:03.360
+most 3 because it's a non-square matrix. What it simply means here is that the inverse of P
+
+10:04.000 --> 10:11.680
+doesn't exist hence we cannot directly recover the 3D line from the inverse of this small L over
+
+10:11.680 --> 10:18.240
+here. Let's also look at the geometric intuition behind this rank deficiency. We can see that when
+
+10:18.240 --> 10:24.560
+we project this particular 2D line on the image back into the 3D space we'll get a plane that
+
+10:24.560 --> 10:31.280
+looks something like this that we denote by pi and what happens here is that in addition to
+
+10:31.280 --> 10:37.440
+original line that created this particular projection small L over here we can also have
+
+10:37.440 --> 10:43.120
+a whole family of lines as long as it sits on this particular plane pi we can see that this line here
+
+10:43.120 --> 10:50.640
+will do a forward projection onto the same 2D image over here. Similarly if we have a line here
+
+10:50.640 --> 10:56.400
+you will also forward project to the same line. This means that what we get here by doing a back
+
+10:56.400 --> 11:03.520
+projection is a whole set of solutions that is denoted by the plane which is the projection
+
+11:03.520 --> 11:10.560
+of this particular 3D line onto the 2D image. We'll see later that this particular projection
+
+11:10.560 --> 11:16.800
+a plane it's actually given by this particular equation which is equal to pi equals to P transpose
+
+11:16.800 --> 11:25.280
+of L. Now let's look at the proof of why pi is equal to P transpose of L. So pi here is this
+
+11:25.280 --> 11:32.960
+particular plane of the projection of this line which we denote by L onto the 2D space by the
+
+11:32.960 --> 11:40.800
+camera projection matrix P. We know that a point which we denote by small x over here it sits on
+
+11:40.800 --> 11:48.480
+the line which we denote by L on the image if and only if the dot product of x and L equals to 0. So
+
+11:48.480 --> 11:54.640
+we have seen this relation in lecture 1. We also know that the corresponding point that sits on
+
+11:54.640 --> 12:01.040
+the 3D line capital L at the point this 3D point which we denote by capital X over here
+
+12:01.040 --> 12:07.600
+it's going to map onto the image that corresponds to this small x over here via
+
+12:07.600 --> 12:15.280
+the equation that we have looked at many times since last lecture P multiplied by capital
+
+12:15.280 --> 12:22.960
+X. So if we were to substitute this relation back onto this here we can see that it simply
+
+12:22.960 --> 12:31.440
+means that we have this equation P of X transpose multiplied by L equals to 0 and the transpose here
+
+12:31.440 --> 12:38.560
+would be simply evaluated as X transpose P transpose and L equals to 0 which basically
+
+12:38.560 --> 12:46.240
+can be used to redefine the back projection where P transpose L here can be taken as
+
+12:46.240 --> 12:53.200
+a plane. So we know that a point has to sit on the plane if and only if the dot product of this
+
+12:53.200 --> 13:00.000
+two equals to 0. Hence this particular plane here which we denote by pi must be equals to P
+
+13:00.000 --> 13:06.960
+transpose multiplied by L which is the dot product of our camera projection matrix and the
+
+13:06.960 --> 13:12.640
+2D line. Now let's look at the action of the projection matrix on conics. We'll first look at
+
+13:12.640 --> 13:19.360
+the back projection of conics under the camera matrix P and we can see that given the conics
+
+13:19.360 --> 13:24.960
+on the image might look something like this. So intuitively or geometrically we can see that if
+
+13:24.960 --> 13:31.280
+we were to re-project any point that lies on this particular conic which we denote as C over here
+
+13:31.280 --> 13:39.680
+on the image and this is the camera center which is also C but this is a vector and this conic here
+
+13:39.680 --> 13:45.840
+is actually a matrix which is used boldface C to represent the camera location and we can see that
+
+13:45.840 --> 13:53.040
+any point that lie on this particular conic is back projected to be a ray in 3D space. So if we
+
+13:53.040 --> 13:58.880
+were to take all the points that lies on the conics and start to re-project them into the 3D
+
+13:58.880 --> 14:07.200
+space we'll essentially get a cone shape. We have seen in lecture 2 that a cone is essentially a
+
+14:07.200 --> 14:15.200
+degenerate quadric so this guy here is actually a 4 by 4 matrix that does not have a full rank.
+
+14:15.200 --> 14:22.720
+This means that this is actually a degenerate quadric and C over here it's our 3 by 3 conics
+
+14:22.720 --> 14:28.960
+that lies on the image plane and we'll see that this particular cone over here the back projection
+
+14:28.960 --> 14:37.600
+of the conics into a cone in 3D space is given by P transpose C multiplied by P where P here
+
+14:37.600 --> 14:43.440
+it's our camera projection matrix that we have looked at. We'll also see that the camera center
+
+14:43.440 --> 14:50.560
+which we denote by boldface C over here it's essentially the null space of this particular
+
+14:50.560 --> 14:55.040
+cone since it's the vertex of the cone. This means that every light ray that runs through this
+
+14:55.040 --> 15:02.080
+particular cone over here it must converge at the center of projection which is the camera center
+
+15:02.080 --> 15:07.680
+and what this essentially means is that we would have this particular equation Q of CO the cone
+
+15:07.680 --> 15:13.520
+multiplied by C it would be equals to zero since C must lie in the null space of the 3D cone.
+
+15:13.520 --> 15:20.800
+And the proof is this suppose that we have point X which we call small x over here so suppose that
+
+15:20.800 --> 15:27.440
+we have a conic which we call C and we have a point that is we call small x over here and we know that
+
+15:27.440 --> 15:33.760
+this particular point small x lies on the conic C if and only if this equation holds true that is
+
+15:33.760 --> 15:39.840
+the quadratic equation of a conic that we have defined in lecture one that means that X transpose
+
+15:40.400 --> 15:47.920
+C X must be equals to zero if this is fulfilled that means the point of small x actually lies on
+
+15:47.920 --> 15:53.200
+this particular 2D conic which we denote by C over here. We also know that from the camera
+
+15:53.200 --> 16:00.480
+projection big X the corresponding 3D point it maps to the 2D image small x over here
+
+16:00.480 --> 16:07.040
+via this projection function that we have seen many times p multiplied by x so essentially this
+
+16:07.040 --> 16:14.560
+guy here is equals to small x and which means that I'm projecting the big X the 3D point here
+
+16:14.560 --> 16:21.200
+onto the 2D image via the camera projection matrix now we we have two equations over here
+
+16:21.200 --> 16:29.280
+we can substitute this small x the reprojected point via the camera matrix into this particular
+
+16:29.280 --> 16:36.320
+equation which says that the reprojected point of the 3D point capital X which we denote by
+
+16:36.320 --> 16:42.880
+small x must lie on the conic in on the image so if we were to substitute this small x into
+
+16:42.880 --> 16:51.280
+this guy over here we can see that we'll get p x transpose c multiplied by p of x equals to 0
+
+16:51.280 --> 16:59.680
+which can be further evaluated as x transpose p transpose c multiplied by p x equals to 0 which
+
+16:59.680 --> 17:05.840
+is essentially this particular equation over here and what's interesting here is that since we have
+
+17:05.920 --> 17:12.640
+now transformed this particular conic equation in terms of the geometric entities on the 2D image
+
+17:12.640 --> 17:19.920
+space in the 3D world space and we can see that this essentially would be equivalent to a quadric
+
+17:19.920 --> 17:27.680
+equation that says that capital X over here must be lying on a quadric entity which is given by
+
+17:27.680 --> 17:36.560
+p transpose c multiplied by p and hence we can take this particular entity over here p transpose
+
+17:36.560 --> 17:42.720
+multiplied by p as a quadric and geometrically we have seen that this particular quadric here
+
+17:42.720 --> 17:50.880
+it's equivalent to a cone that is formed from the back projection of the 2D conics into the 3D space
+
+17:50.880 --> 17:58.400
+and hence this completed our proof that a 2D conics is actually back projected into the 3D
+
+17:58.400 --> 18:05.760
+space as a degenerate 3D cone by this particular equation here p transpose multiplied by c
+
+18:05.760 --> 18:13.440
+multiplied by p let's say this is the image over here so there's a conics over here the camera
+
+18:13.440 --> 18:20.480
+center it backs projects to this cone which is given by q c 0 equals to p transpose of c p
+
+18:20.480 --> 18:27.120
+transpose we can see that geometrically because the camera center is the vertex of this particular
+
+18:27.120 --> 18:36.000
+cone over here hence it actually lies in the null space of the quadric and hence this equation q c o
+
+18:36.000 --> 18:44.800
+multiplied by c which is the camera must be equals to 0 since c is on the vertex of the cone
+
+18:44.800 --> 18:49.440
+which means that it lies in the null space of degenerate quadric over here and we can
+
+18:49.440 --> 18:55.840
+rewrite this equation into what we have seen earlier on which is p transpose of c multiplied
+
+18:55.840 --> 19:03.520
+by p and now multiplied by c equals to 0 and we can see from this particular equation here
+
+19:04.160 --> 19:10.160
+this in deeps equals to the null space because we have looked at p multiplied by c this is the
+
+19:10.160 --> 19:17.840
+projection of the camera center is equals to 0 from our definition of a camera center in last
+
+19:17.840 --> 19:26.080
+week's lecture so let's look at an example how to express this formulation of the back projection of
+
+19:26.080 --> 19:33.200
+a conic into a degenerate quadric which is a cone so suppose that we have a camera projection matrix
+
+19:33.200 --> 19:39.680
+that is equals to k multiplied by identity over here this guy here is a three by four matrix and
+
+19:39.680 --> 19:47.280
+this is our camera intrinsic this is actually our extrinsic and this intrinsic is actually a three
+
+19:47.280 --> 19:54.000
+by three matrix so this is in a canonical frame that means that since we have an identity as the
+
+19:54.000 --> 19:58.720
+extrinsic over here what this simply means is that the world frame is aligned with the camera
+
+19:58.720 --> 20:06.400
+coordinate frame and then given this particular projection matrix a conic on a 2d image which we
+
+20:06.400 --> 20:14.320
+denote by c over here it actually backs projects to a cone which is given by q of co equals to p
+
+20:14.320 --> 20:21.040
+transpose c multiplied by p so we can see that if we were to take the transpose of this guy over here
+
+20:21.040 --> 20:28.480
+is equals to k transpose and zero transpose multiplied by c and multiplied by p over here
+
+20:28.480 --> 20:34.320
+so we'll get this equation you can see very clearly that this particular four by four
+
+20:35.120 --> 20:41.760
+matrix is less than full rank and the reason is pretty obvious from here because
+
+20:41.760 --> 20:48.480
+we have the last row as well as the last column that contains only zeros and hence this shows that
+
+20:48.480 --> 20:56.160
+qco is a degenerate quadric which is essentially a cone this example shows us that the cone here
+
+20:56.160 --> 21:02.640
+is a degenerate quadric now let's also look at what's the effect of the camera projection matrix
+
+21:02.640 --> 21:09.360
+on other smooth surfaces so suppose that we are given any arbitrary smooth surface which we denote
+
+21:09.360 --> 21:16.800
+as s over here an example is this particular shape over here it's a arbitrary shape that consists of
+
+21:16.800 --> 21:22.560
+smooth surfaces we can see that the projection of this particular smooth surface which we call
+
+21:23.200 --> 21:30.400
+s over here it's going to be projected onto a image with central projection such that the
+
+21:30.400 --> 21:38.000
+outline or the contour of this particular image over here it's going to be forward projected onto
+
+21:38.000 --> 21:44.080
+the 2d image plane and we can also see geometrically that every point that intersects
+
+21:44.080 --> 21:51.840
+the this particular light ray over here is actually defined by the light ray that is tangent
+
+21:51.840 --> 21:57.840
+to the smooth surface and passes through the camera center so just now we have looked at in
+
+21:57.840 --> 22:03.840
+this case here tangent to the smooth surface this is actually our forward projection because we are
+
+22:03.840 --> 22:16.000
+projecting a 3d entity onto a 2d so this is from p3 space we project to p2 space and similarly for
+
+22:16.000 --> 22:22.640
+backward projection we can see that if we were to join a line from the camera center to the tangent
+
+22:22.640 --> 22:29.520
+of this surface over here this would define our back projection of this contour that is given on
+
+22:29.520 --> 22:36.480
+the 2d image over here and we call this the backward projection in general so this is from a
+
+22:36.480 --> 22:45.440
+p2 space we are going to map it into a p3 space let's call this particular surface on the that
+
+22:45.440 --> 22:52.800
+defines the tangent that defines the light rays that is tangent to the surface and passes through
+
+22:52.800 --> 22:59.440
+the camera center as the contour generator this outline here is going to be the
+
+22:59.440 --> 23:05.840
+contour generator this literally means this particular outline here generates what we call
+
+23:05.840 --> 23:13.760
+the contour of the shape on the 2d image over here and we'll call this the projected contour
+
+23:13.760 --> 23:19.280
+of this shape onto the 2d image over here the apparent contour which we will denote by
+
+23:20.080 --> 23:28.400
+gamma so this is a projective camera we should know by now that why this is called a projective
+
+23:28.400 --> 23:35.440
+camera the reason is because all the light rays passes through the camera center over here and
+
+23:35.440 --> 23:41.440
+similarly for an affine camera we can also define the same thing but in this case here we can see
+
+23:41.440 --> 23:48.800
+that the backward projection over here be a light ray that is tangent to the surface as well as the
+
+23:48.880 --> 23:56.080
+camera plane the reason is because we do not have the center of projection anymore all the light
+
+23:56.080 --> 24:05.200
+rays are going to be parallel to each other here but this still doesn't stop us from defining the
+
+24:05.200 --> 24:13.200
+contour generator as well as the apparent contour so the apparent contour is also called the outline
+
+24:13.200 --> 24:20.720
+or a profile of the shape that's being projected onto the 2d image and we have seen that the
+
+24:20.720 --> 24:26.800
+contour generator it actually only depends on the relative position of the camera center and
+
+24:26.800 --> 24:34.880
+surface and it doesn't depend on the image plane it's pretty obvious here so when we define the
+
+24:34.880 --> 24:40.000
+contour generator we're looking at this outline over here this is what we call the contour
+
+24:40.000 --> 24:47.920
+generator on the 3d shape and this particular contour generator here we have defined earlier
+
+24:47.920 --> 24:55.280
+on that this has to be the tangent of this light ray that is tangent on the surface and it must
+
+24:55.280 --> 25:02.160
+also pass us through the camera center over here so as a result we can just simply define this set
+
+25:02.160 --> 25:08.000
+of light rays that starts from the camera center and passes through every tangent of the 3d shape
+
+25:08.000 --> 25:13.680
+and this set of light rays defined is what we call the contour generator it's pretty obvious
+
+25:13.680 --> 25:19.120
+from here that it has nothing got to do with the image plane so the image plane plays no role in
+
+25:19.120 --> 25:25.760
+defining the contour generator and but on the other hand the apparent contour on the image
+
+25:25.760 --> 25:32.720
+is actually defined by the intersection of image plane with the rays to the contour generator and
+
+25:32.720 --> 25:38.400
+it actually does depend on the position of the image plane because we can see over here is that
+
+25:38.400 --> 25:45.040
+this is the apparent contour that we denote by gamma over here so since we know that this is the
+
+25:45.040 --> 25:50.320
+contour generator and this generator is defined by a set of light rays that passes through the
+
+25:50.320 --> 25:56.240
+camera center as well as the 3d shape surface depending on where we place this camera image
+
+25:56.240 --> 26:02.480
+plane we can see that the section of the light ray on and the camera image plane would be
+
+26:02.480 --> 26:09.920
+different every time depending on the location of a particular image plane hence we will say that
+
+26:09.920 --> 26:17.360
+the apparent contour which is the projection of the contour generator in of the 3d shape onto the
+
+26:17.360 --> 26:25.200
+2d image it does depend on the position of the image plane so now let us define the forward
+
+26:25.200 --> 26:33.280
+projection of a quadric under the camera matrix projection p which onto the image and this would
+
+26:33.280 --> 26:40.800
+become a conic we'll use a dual conic or a line conic to define the forward projection of the
+
+26:40.800 --> 26:49.680
+quadric and this is given by c star equals to p q star p transpose the reason why we use the
+
+26:49.680 --> 26:56.720
+dual conic or the line conic is because we know that each one of this line that is tangent to the
+
+26:56.720 --> 27:02.880
+conic it back projects to a plane and this particular plane over here would also be the
+
+27:02.880 --> 27:12.000
+tangent that defines the quadric in the p3 space and here's the proof of this expression
+
+27:12.000 --> 27:19.280
+we know that in lecture one the line that is tangent to the conic outline satisfy
+
+27:19.280 --> 27:26.400
+this equation l transpose c star l equals to zero and we also seen earlier that lines from the image
+
+27:26.400 --> 27:34.800
+back projects to a plane given by pi equals to p transpose l that are tangent to the quadric and
+
+27:34.880 --> 27:41.760
+thus it satisfy this quadric equation pi transpose q star pi equals to zero
+
+27:41.760 --> 27:50.400
+then by simply substituting the equation of the plane pi over here given by p transpose l
+
+27:50.400 --> 27:58.960
+into these two entities over here we will get this expression l transpose p q star p transpose l
+
+27:58.960 --> 28:08.800
+where we can simply group this p q star p transpose into c star over here which satisfy
+
+28:08.800 --> 28:16.080
+the first equation over here and as a result we can see that c star is actually equals to p of q
+
+28:16.800 --> 28:24.880
+star and p transpose and this becomes the projection of the quadric onto an image which
+
+28:24.880 --> 28:34.000
+gives a conic now having looked at the action of the camera projection on several geometric
+
+28:34.000 --> 28:43.120
+entities such as the point plane line conics and quadrics let's move on to look at the effect of
+
+28:43.120 --> 28:48.560
+changing the parameters within the camera intrinsic as well as the extrinsic value
+
+28:49.360 --> 28:55.600
+on the projection of the 3d entities onto the 2d image we know that there are any object in the
+
+28:55.600 --> 29:01.280
+3d for example this 3d shape of a house the outline of a house over here we know that
+
+29:02.480 --> 29:09.600
+any object in 3d space and the cam camera center defines a set of light rays because light drivers
+
+29:09.600 --> 29:15.360
+is in in straight line so what it means is that suppose that we have a 3d shape here any point on
+
+29:15.360 --> 29:22.880
+the 3d shape which we define as x lights from the sun for example a source it's going to be
+
+29:22.880 --> 29:28.720
+reflected in straight line and they are all going to converge at a single center of conversion which
+
+29:28.720 --> 29:35.840
+is the camera center and an image is obtained by the intersection of every one of this light ray
+
+29:36.480 --> 29:43.200
+with a image plane so see here the camera center and the the orientation of the image plane so
+
+29:43.200 --> 29:50.480
+essentially this defines the rotation and the translation of the camera this is the extrinsic
+
+29:51.280 --> 29:56.720
+of the camera and we can see quite obviously here that if we were to change the camera center from
+
+29:56.720 --> 30:02.080
+this point to suppose this point fixing the orientation of our image plane the light rays
+
+30:02.080 --> 30:08.080
+are going to move in a different direction and hence the projection onto the image is going to
+
+30:08.080 --> 30:14.800
+change despite the fact that our camera orientation as well as the 3d object remains fixed we can also
+
+30:14.800 --> 30:18.800
+see that if the camera center remains fixed if we were to change the orientation of the image over
+
+30:18.800 --> 30:25.840
+here we can see that the projection is also going to be different from the the previous one because
+
+30:25.840 --> 30:31.440
+the intersection of the light ray with the image plane it's going to change as well as we can see
+
+30:31.440 --> 30:37.120
+that this length over here define how far the image plane is from the camera center is what we
+
+30:37.120 --> 30:42.960
+call the focal length so if we were to change this focal length we can also pretty much see that from
+
+30:42.960 --> 30:50.240
+here if you have a focal length f1 and the projection and in comparison to this image plane
+
+30:50.240 --> 30:57.920
+over here if we have a for denote this focal length as f2 the projection onto the image is going to
+
+30:57.920 --> 31:04.320
+stay pretty much different so what we are going to look at now is that how to formulate this in
+
+31:04.320 --> 31:11.040
+a more mathematical way we are going to look at how the projection onto the image by a 3d entity
+
+31:11.040 --> 31:17.200
+it's going to change if we were to change the intrinsic or if we were to vary the intrinsic
+
+31:17.200 --> 31:24.320
+as well as the extrinsic value of the camera we have seen earlier on from the illustration that
+
+31:24.320 --> 31:30.160
+the image obtained from the same camera it may be mapped onto another by a projective plane
+
+31:30.160 --> 31:36.800
+transformation which is called the homography the reason is because they are all passing through the
+
+31:36.800 --> 31:42.480
+same light ray for example this point over here it's passing through the same light ray and this
+
+31:42.480 --> 31:48.160
+converges at the camera center and we have seen earlier on if the projection is onto a plane that
+
+31:48.160 --> 31:55.040
+means that with the same camera center that means that there is a relation between these two points
+
+31:55.120 --> 32:00.880
+and this is actually related by our homography so we will have hx equals to x prime
+
+32:02.080 --> 32:08.240
+in other words we can say that this is projective equivalent so there will be a same set of
+
+32:08.240 --> 32:16.640
+projective properties and hence a camera can also be thought of a projective imaging device and we
+
+32:16.640 --> 32:21.920
+can we will see that this can be used to measure the projective properties of the cone of ray with
+
+32:21.920 --> 32:28.880
+the vertex of the camera center let's try to formulate this relation mathematically suppose
+
+32:28.880 --> 32:38.400
+that we we are given two images i and i prime with the same camera center so this means that
+
+32:38.400 --> 32:45.200
+the camera center statistics which is illustrated by this diagram over here will just look at the
+
+32:45.200 --> 32:52.640
+change of maybe focal length or orientation of the camera and so what this means is that the
+
+32:52.640 --> 32:59.840
+light ray for the same point is going to converge to the same camera center because the camera
+
+32:59.840 --> 33:07.600
+center stays fixed and here let's denote the first image that we have seen here as let's say this
+
+33:07.600 --> 33:15.040
+image here as i prime and this image here as i with the same camera center we also further denote
+
+33:15.520 --> 33:23.120
+two camera matrix as ps and p prime over here where the camera center remains the same this is
+
+33:23.120 --> 33:31.840
+the only thing that stays fixed we can bring this guy here k and r over here to this side of the
+
+33:31.840 --> 33:40.960
+equation making this side of the equation i and minus c tilde the subject so since k and r they
+
+33:41.040 --> 33:47.200
+three by three matrices so r is an octagonal matrix which the inverse equals to transpose
+
+33:47.200 --> 33:52.880
+the multiplication of these two three by three matrices are also going to be a full rank three
+
+33:52.880 --> 33:59.920
+by three matrix so we can take the inverse and bring it over to p hence we get the i and minus
+
+33:59.920 --> 34:10.560
+c tilde the subject so we can substitute this substitute this guy over here as k r inverse
+
+34:10.560 --> 34:18.080
+multiplied by p hence we will get this equation that relates the camera projection matrix of p
+
+34:18.080 --> 34:25.120
+prime and p with basically the intrinsic value and the orientation of the camera since the
+
+34:26.000 --> 34:33.360
+camera center remains the same and now let's further look at the the effect of this expression
+
+34:33.360 --> 34:40.640
+over here on a 3d point that is denoted by x suppose that i'm going to do a projection of
+
+34:40.640 --> 34:49.200
+this particular 3d point onto the image of i prime the end effect would be p prime multiplied by
+
+34:49.200 --> 34:57.920
+x over here and now let's substitute this guy into p prime and we will see that we will get this
+
+34:57.920 --> 35:04.240
+equation over here which consists of the intrinsics and the rotation of both cameras
+
+35:04.240 --> 35:11.760
+as well as the projection matrix of the first camera p and since we know that p
+
+35:11.760 --> 35:19.040
+multiplied by x is going to be a 3d point here it's going to be a forward projection onto the
+
+35:19.040 --> 35:24.400
+image by the camera matrix p here and we denote this by small x so this would be the essentially
+
+35:24.400 --> 35:31.200
+the relation hence we will get this relation where x prime is equals to k prime r prime
+
+35:31.200 --> 35:39.840
+multiplied by k r inverse multiplied by x we can see also that since this here becomes a three by
+
+35:39.840 --> 35:46.000
+one homogeneous matrix x prime and on the right hand side we also get the three by one homogeneous
+
+35:46.000 --> 35:53.360
+vector of x so this simply means that we are now in the same projective space which is the p2 space
+
+35:53.360 --> 36:00.240
+and x and x prime would be simply related by a homography that means that k prime r prime
+
+36:00.240 --> 36:07.040
+multiplied by k r inverse they are simply a homography by the way there's a missing prime
+
+36:07.040 --> 36:15.280
+over here so we should rewrite it as x prime equals to h multiplied by x where h is simply
+
+36:15.280 --> 36:22.160
+given by oh there's also a missing prime over here so where h is simply given by k prime r prime
+
+36:22.160 --> 36:30.240
+multiplied by k r inverse previously we have looked at the effect of a fixed camera center
+
+36:30.240 --> 36:36.640
+so essentially that ended up to be a homography that relates two points at the change of the
+
+36:37.280 --> 36:45.440
+intrinsic as well as the rotation of the camera let's suppose that everything else in the camera
+
+36:45.440 --> 36:50.240
+matrix stays fixed the only thing that we are going to change here would be the focal length
+
+36:50.240 --> 36:58.240
+in our camera matrix so suppose that we have a camera matrix that's given by f it could be f x
+
+36:58.240 --> 37:04.320
+or f y but let's make the illustration simpler suppose that we have the there's no skew that
+
+37:04.320 --> 37:10.960
+means that we have a uniform focal length over the x and y axis so suppose that we are only going
+
+37:10.960 --> 37:18.800
+to change this particular parameter in our camera matrix which is given by this guy over here we are
+
+37:18.880 --> 37:23.760
+going to only change the focal length inside here and everything else remains the same we'll see
+
+37:23.760 --> 37:30.320
+that this corresponds to the displacement of an image along the principal axis where the effect
+
+37:30.320 --> 37:38.160
+on the image is simply image verification so this this can be intuitively observed if we look at it
+
+37:38.160 --> 37:46.080
+geometrically suppose this is our camera center c over here and this is our image plane so we
+
+37:46.080 --> 37:52.000
+have seen earlier on that the intersection of the image plane with the principal axis
+
+37:52.000 --> 37:59.280
+is the the length between this camera center and to the intersection of the principal axis and the
+
+37:59.280 --> 38:05.520
+image plane which is called the principal point it's defined by the focal length so if we were
+
+38:05.520 --> 38:12.880
+to move this plane in and out we can see that basically a point here it's going to get magnified
+
+38:12.880 --> 38:20.720
+so if this is the location over here if i were to move it out over here then the basically the
+
+38:21.280 --> 38:27.760
+relative distance let's say if i have two points over here i have two points x1 and x2 over here
+
+38:27.760 --> 38:33.280
+so we can see that the relative distance between these two points and the relative distance
+
+38:33.280 --> 38:38.960
+between these two points after an increase of focal length it's going to be increased as well
+
+38:38.960 --> 38:46.880
+hence this is equivalent to a magnification of the forward projected object on the 2d
+
+38:46.880 --> 38:53.600
+image let's now look at how to formulate this mathematically suppose that we have the two image
+
+38:53.600 --> 39:01.600
+points of the same 3d point x which is denote by x and x prime over here before and after zooming
+
+39:01.600 --> 39:10.640
+so x before zooming would be equals to x equals to k identity zero multiplied by x so this we are
+
+39:10.640 --> 39:16.720
+we are looking at the canonical representation of a camera projection matrix where the
+
+39:17.600 --> 39:24.080
+world frame is aligned with the camera frame this is our intrinsic this is our extrinsic and this
+
+39:24.080 --> 39:30.400
+whole thing here is actually p multiplied by x and this is the projection into the image
+
+39:30.400 --> 39:36.000
+and after magnification let's denote it by x prime equals to k prime so in this case here
+
+39:36.560 --> 39:40.960
+it's only the focal length that is changed so we are changing the focal length from f to
+
+39:41.600 --> 39:48.480
+f prime for example we'll denote this as the change in our intrinsic value at a canonical
+
+39:48.480 --> 39:56.480
+frame where the principal point is is constant at a maybe px py or maybe at zero it doesn't matter
+
+39:56.480 --> 40:01.520
+over here so this is here the intrinsic and extrinsic here denote p prime multiplied by
+
+40:01.520 --> 40:06.880
+the same point because this is the projection of that same point onto the two images before and
+
+40:06.880 --> 40:13.760
+after magnification what we want to do here is that we want to bring this guy into this equation
+
+40:13.760 --> 40:20.560
+so uh we'll apply this particular trick over here since we know k inverse multiplied by k over here
+
+40:20.560 --> 40:25.520
+equals to identity it has no effect so we'll add a k inverse over here and we'll bring this guy here
+
+40:26.480 --> 40:33.840
+this p matrix here directly here because these two are going to cancel off and effectively we
+
+40:33.840 --> 40:39.760
+are going to result to the same equation as x prime that we have seen earlier on
+
+40:39.760 --> 40:48.400
+so now let's evaluate this guy over here so since we have this k prime multiplied by k inverse we
+
+40:48.400 --> 40:52.960
+will let it remain over here but we'll look at this effect over here so this particular effect
+
+40:52.960 --> 41:00.400
+over here is simply p the original projection matrix before magnification multiplied by x and
+
+41:00.400 --> 41:08.240
+this is equivalent to the projection of the 3d point into the 2d image and hence we get this
+
+41:08.240 --> 41:14.960
+particular relation over here as a result of this operation over here by simply magnifying the focal
+
+41:14.960 --> 41:20.960
+length over here we can see that this resulted in another homography where x prime is actually
+
+41:20.960 --> 41:28.240
+equals to k prime k inverse x where this on the left and right hand side these are all
+
+41:28.240 --> 41:35.360
+three by one homogeneous coordinate this means that we are doing a p2 space mapping into a p2
+
+41:35.360 --> 41:43.040
+space as well hence k prime k inverse here must be equals to a homography which gives this same form
+
+41:43.040 --> 41:51.040
+of relation that we have seen earlier on so this x prime equals to h multiplied by x where h over
+
+41:51.040 --> 42:00.320
+here is simply k prime multiplied by k inverse just now we saw the general form of representing
+
+42:00.320 --> 42:07.680
+the change in the focal length as k and into the intrinsic value now let's be more explicit
+
+42:07.680 --> 42:12.640
+about this if the focal length is the only thing that differs within k so we are not talking about
+
+42:12.640 --> 42:18.560
+the principal point we say that the principal point here remains the same so we can further
+
+42:18.560 --> 42:24.400
+evaluate this term which is our homography that we have looked at earlier on as this particular form
+
+42:24.400 --> 42:30.640
+here suppose we denote the magnification factor as this small k over here it's going to be equals
+
+42:30.640 --> 42:37.840
+to f prime which is our new focal length after magnification divided by the original focal length
+
+42:37.840 --> 42:48.400
+by evaluating this if we have f prime 1 and then x 0 so y 0 over here which is the principal point
+
+42:48.400 --> 42:56.880
+and then we have k the original k which is f over here and x 0 y 0 the principal point remains the
+
+42:56.880 --> 43:02.320
+same if we were to work this out this is the form that we will get where small k equals to
+
+43:02.320 --> 43:09.760
+f prime over f and that's the magnification factor if we were to express this particular
+
+43:09.760 --> 43:16.880
+equation over here in terms of making k prime the subject so this simply means that we are going to
+
+43:16.880 --> 43:24.240
+bring k inverse over to this side which becomes the multiplication with k the metric multiplication
+
+43:24.240 --> 43:34.400
+here can be further evaluated into k multiplied by the original focal length of the camera so if
+
+43:34.400 --> 43:44.640
+we were to represent this as k where a here is simply the diagonal of the original focal length
+
+43:44.640 --> 43:52.240
+we can see that this after multiplication into here because this is going to
+
+43:52.240 --> 43:59.840
+become simply k multiplied by a where this guy here has no effect on this because we can see
+
+44:00.640 --> 44:08.000
+from the multiplication is that ki multiplied by x tilde that's going to give us k multiplied by
+
+44:08.000 --> 44:18.800
+this x tilde over here and then plus 1 minus k x tilde where this can be further evaluated as
+
+44:19.440 --> 44:26.400
+plus x tilde minus k x tilde where this guy here cancels off and this is simply
+
+44:26.400 --> 44:34.240
+x 0 we can simply rewrite this as x 0 and hence as a result of this form of expression over here
+
+44:34.240 --> 44:42.240
+we can see that the change from k to k prime will be simply a magnification factor on k itself
+
+44:43.200 --> 44:51.200
+now let's move on to look at the effects on the images by pure camera rotation what this means is
+
+44:51.200 --> 44:57.200
+that we are going to assume that all other intrinsic and extrinsic parameters in the camera
+
+44:57.200 --> 45:06.400
+matrix remains the same except for the only change would be our camera rotation let's denote the 2d
+
+45:06.560 --> 45:13.280
+projection of the same 3d point x x and x prime on two images so in this illustration the only
+
+45:14.080 --> 45:21.440
+change here is the rotation between any two camera frames image 1 and image 2 and we are going to
+
+45:21.440 --> 45:29.600
+look at the same 3d point that project onto x and x prime on the first and second image we'll denote
+
+45:29.600 --> 45:39.040
+this projection as before as x equals to k multiplied by identity 0 so this is the canonical
+
+45:39.760 --> 45:46.560
+representation of our camera projection of the 3d point x and then this same 3d point is going
+
+45:46.560 --> 45:54.320
+to fall projected onto the second image which we denote as x prime over here equals to k multiplied
+
+45:54.320 --> 46:01.280
+by r so the only difference here is that there is a rotation because we are rotating this camera
+
+46:01.280 --> 46:07.280
+by an amount of r over here and multiplied by the same 3d point over here now we are going to
+
+46:08.080 --> 46:13.120
+put this guy over here this guy over here into this the second equation over here and we are
+
+46:13.120 --> 46:22.400
+going to apply the same tricks as before so notice that k inverse k here is going to be identity
+
+46:22.400 --> 46:28.800
+so this by simply inserting this guy k inverse over here it allows us to bring this canonical
+
+46:28.800 --> 46:35.280
+representation of the camera projection p over here into the second equation and we'll get k
+
+46:35.280 --> 46:43.440
+inverse k multiplied by the identity 3 by 4 matrix over here this term over here and see that this
+
+46:43.440 --> 46:51.200
+essentially is equal to the first camera projection multiplied by x which is simply equals to the
+
+46:51.200 --> 46:57.440
+projection of this 3d point onto the first image which we denote as small x over here
+
+46:57.440 --> 47:05.120
+hence we what we have obtained here would be similar as the first two cases where we have
+
+47:05.120 --> 47:15.600
+seen that we have obtained this relation small x prime equals to k r k inverse small x and this
+
+47:15.600 --> 47:22.720
+is essentially equals to a p2 space projected onto a p2 space where this term over here is
+
+47:22.720 --> 47:28.480
+simply a 3 by 3 homography so we'll get the same form of expression x prime equals to h
+
+47:28.480 --> 47:36.880
+x where h here now equals to k multiplied by r k inverse we can see that it's a function of the
+
+47:37.520 --> 47:45.920
+rotation matrix and here's some properties of this rotation the homography is also commonly
+
+47:46.560 --> 47:53.440
+caught in the literature as conjugate rotation so what's interesting about this is that because
+
+47:53.440 --> 47:59.600
+this is the upper triangular metric and the k and if we take k multiplied by r which is octagonal
+
+47:59.600 --> 48:05.360
+metric multiplied by k inverse the end result of the homography the eigenvalues of this
+
+48:05.360 --> 48:11.920
+homography would have the same eigenvalue as the rotation matrix up to a certain scale mu
+
+48:11.920 --> 48:20.480
+so there will be three eigenvalues of this homography and the rotation matrix since this
+
+48:20.480 --> 48:27.520
+is a three by three matrix we'll see that the eigenvalue of h would be the same as the eigenvalues
+
+48:27.520 --> 48:34.880
+of r so what's interesting here is that if we have two images that undergoes pure rotation only
+
+48:35.680 --> 48:40.960
+we can actually observe four corresponding points from these two images from this four
+
+48:40.960 --> 48:46.640
+corresponding point we can compute the homography and from the homography we can actually apply an
+
+48:46.640 --> 48:52.560
+eigenvalue operation on this homography to get the three eigenvalues over here since the eigenvalues
+
+48:52.560 --> 48:58.160
+of the homography is equivalent to the eigenvalue of the rotation and what's even more interesting
+
+48:58.160 --> 49:04.080
+here is that we'll see that the eigenvalue here it shares the same common scale so we can normalize
+
+49:04.080 --> 49:09.360
+this we can eliminate the scale over here and what's essentially going to left over would be
+
+49:09.360 --> 49:14.800
+the first entry here is one the second is e to the power of i is defined as an Euler angle
+
+49:14.800 --> 49:22.320
+a complex number e to the power of minus i theta and we can see that theta here is actually our
+
+49:22.320 --> 49:29.920
+rotation angles in the rotation matrix so what's interesting here is that if we have this pure
+
+49:29.920 --> 49:36.320
+rotation in one-dimensional rotation we can pretty much find the homography first and then
+
+49:36.320 --> 49:41.280
+take the eigenvalues of the homography which allows us to solve for the change in angle
+
+49:41.280 --> 49:48.640
+that corresponds to the rotation matrix what this means is that under pure rotation by using four
+
+49:48.640 --> 49:54.720
+point correspondences between two images under pure rotation we can actually compute h which
+
+49:54.720 --> 50:02.720
+will give us the rotation now the last case that we are going to briefly talk about we'll
+
+50:02.720 --> 50:08.000
+not look at this in detail in this lecture we'll look at a lot of detail in the next lecture when
+
+50:08.000 --> 50:13.840
+we look at the fundamental matrix and the essential matrix and as well as the epipolar
+
+50:13.840 --> 50:21.120
+geometry so in this case here we'll look at the the scenario when the camera center is
+
+50:21.120 --> 50:26.640
+changed so previously we look at the intrinsic value if there's a change in the intrinsic value
+
+50:26.640 --> 50:34.160
+and if there's a change in rotation as well as the fixed camera center and where all the rest
+
+50:34.160 --> 50:40.960
+k and r changes in the last case here would be if there is a change in our camera center so what's
+
+50:40.960 --> 50:47.360
+interesting about this case here is that comparing it with the previous three cases if we were to
+
+50:47.360 --> 50:55.440
+change k or change r independently or both at the same time we cannot tell anything about the 3d
+
+50:55.440 --> 51:01.120
+structure the reason is because what we are seeing in the all these three cases here is that the
+
+51:01.120 --> 51:08.080
+relation is going to be on a p2 space this means that it's going to be related by a homography and
+
+51:08.080 --> 51:14.720
+everything that relates the two images before and after the change in these values the k
+
+51:14.720 --> 51:20.880
+intrinsic value as well as the rotation it's going to be only given by the image point so
+
+51:20.880 --> 51:25.760
+hence there's no information about the 3d structure that can be obtained from this
+
+51:26.560 --> 51:32.480
+zooming and pure rotation cases with a fixed camera center but things would be different if
+
+51:32.480 --> 51:39.280
+we were to move the camera center this means that let's say if i have two images here the first image
+
+51:39.280 --> 51:45.760
+is at camera center c and the second image undergoes a rotation and translation for example
+
+51:45.760 --> 51:51.920
+let's make the scenario simple where there's a fixed k and this is going to rotate and translate
+
+51:51.920 --> 52:00.880
+to c prime and r prime even if r stays the same this is going to also undergo a motion parallax
+
+52:00.880 --> 52:08.000
+but so let's make the scenario even more simpler to to understand now let's say r also remains the
+
+52:08.000 --> 52:14.080
+same the only thing that changed over here is our camera center c to c prime we can see that now
+
+52:15.200 --> 52:23.600
+the relation of these two points x and x prime over here it's going to be related by the
+
+52:23.600 --> 52:30.240
+intersection of these two rays the light ray is going to pass through c and x on the first image
+
+52:30.240 --> 52:37.200
+and since x and x are projection of the same 3d point which we denote a capital x over here
+
+52:37.200 --> 52:42.800
+so with a change of the camera center we can see that this particular 3d point is going to project
+
+52:42.800 --> 52:48.240
+onto the second camera center on the image plane over here that causes small x prime to be observed
+
+52:48.240 --> 52:55.360
+over here so now the relation between these two x and x prime is no longer simply a homography
+
+52:56.320 --> 53:04.160
+because this in addition to being dependent on the camera center the change the the two camera
+
+53:04.160 --> 53:12.240
+centers over here it's also going to be dependent on the scene 3d point in the scene so we can see
+
+53:12.240 --> 53:18.560
+this from another 3d point here suppose that if i move this 3d point the depth of this 3d point
+
+53:18.560 --> 53:24.560
+further down on the same light ray although x2 here is going to be projected onto the same
+
+53:25.200 --> 53:31.680
+image point in the first camera we can see pretty much that because of this change in the in the
+
+53:31.680 --> 53:38.560
+3d structure where all the camera intrinsics and extrinsics remains the same this 3d point the
+
+53:38.560 --> 53:46.640
+new 3d point is going to be projected onto a new 2d point on the new camera center hence in
+
+53:46.640 --> 53:53.120
+conclusion we can conclude that by changing the camera center the observations on the two image
+
+53:53.120 --> 53:58.000
+before and after transformation by the camera center it's going to tell us something about the
+
+53:58.000 --> 54:05.520
+3d point as well as the camera motion so we'll look at this in more detail actually in the rest
+
+54:05.520 --> 54:10.400
+of the remaining lectures in this semester basically given a set of correspondences on
+
+54:10.400 --> 54:17.440
+the two images how to solve for the change in the rotation and translation as well as how to recover
+
+54:17.440 --> 54:22.720
+the 3d structure and this is what we call the structure from motion
+

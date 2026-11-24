@@ -1,0 +1,1541 @@
+WEBVTT
+
+00:00.000 --> 00:05.200
+Hello everyone, welcome to the lecture on 3D computer vision and today we are going to talk
+
+00:05.200 --> 00:11.040
+about camera models and calibration. Hopefully by the end of today's lecture you will be able to
+
+00:11.040 --> 00:17.280
+describe the camera projection with the pinhole camera model and you'll be able to identify the
+
+00:17.280 --> 00:23.280
+camera center, principal planes, principal point and principal axis from the projection matrix.
+
+00:23.280 --> 00:28.320
+We'll then look at how to use the projection matrix to get the forward and backward projection
+
+00:28.320 --> 00:35.360
+of a point and we'll explain the properties of an affine camera. Finally we'll do calibration
+
+00:35.360 --> 00:42.400
+to find the intrinsic and extrinsic values of a projective camera. Of course I didn't invent any
+
+00:42.400 --> 00:47.840
+of today's material. I took most of the contents of today's lecture from the textbook written by
+
+00:47.840 --> 00:53.840
+Richard Hartley and Andrew Zisserman, Multiple View Geometry in Computer Vision, in particular
+
+00:53.840 --> 01:00.720
+Chapter 6. I also took some of the materials from Chapter 3 from the textbook written by Ma Yi,
+
+01:00.720 --> 01:07.280
+An Invitation to 3D Vision, and I took the calibration method from a paper written by
+
+01:07.280 --> 01:12.560
+Zhang Zhenyou, A Flexible New Technique for Camera Calibration, which was published at
+
+01:12.560 --> 01:18.240
+T-PAMI in the year 2000. I strongly encourage every one of you to take a look at these materials
+
+01:18.240 --> 01:26.320
+after today's lecture. In the introductory part, we look at the basic definition of a camera.
+
+01:26.320 --> 01:32.800
+It's essentially a very simple device that maps any geometric entities in the 3D world onto a 2D
+
+01:33.360 --> 01:40.160
+image plane and we look at the 2D projective space denoted by P2. This is essentially a
+
+01:40.160 --> 01:45.520
+projective plane where we define geometric entities such as a point, a line, as well as
+
+01:45.520 --> 01:51.760
+the conic. And we also define the hierarchy of transformation that maps the geometric entities
+
+01:51.760 --> 01:59.600
+from a P2 space to the same space. And furthermore, we also look at the geometric entities in the 3D
+
+01:59.600 --> 02:05.040
+projective space denoted by P3. And we also look at the transformation, the hierarchy of
+
+02:05.040 --> 02:11.280
+transformation that maps these entities from the P3 space to the same space. And these geometric
+
+02:11.280 --> 02:16.880
+entities include a point, the line, plane, as well as the quadric. In today's lecture, we'll look at
+
+02:16.880 --> 02:23.760
+the projection matrix that maps the 3D geometric entity in the 3D projective space onto the
+
+02:23.760 --> 02:29.840
+projective 2D space. We'll look at the specific type of camera model which we call the camera
+
+02:29.840 --> 02:36.640
+model with a central projection in this particular lecture. And what it means is that all light rays
+
+02:36.640 --> 02:43.360
+that is being projected onto an image plane, they will converge at a single center of projection.
+
+02:43.360 --> 02:49.120
+And generally, camera models with a central projection force into two major classes. The first
+
+02:49.120 --> 02:55.280
+type is a camera with a finite center. What this means is that this particular point here, if I
+
+02:55.280 --> 03:02.640
+denote it by C, I express this particular coordinate in the R3 space. That means that it's in a 3D space.
+
+03:02.640 --> 03:09.920
+This particular coordinate with respect to a world frame, it will have a finite value. The second class
+
+03:09.920 --> 03:16.080
+of the camera models with a central projection would be those with a center at infinity. And if I
+
+03:16.080 --> 03:22.800
+denote this particular camera center, it will lie on the plane at infinity. We'll find out more detail
+
+03:22.800 --> 03:28.000
+about these two classes of camera models, those with finite center and those with center at
+
+03:28.000 --> 03:32.800
+infinity. In particular, we'll look at two camera models. The first type which we call
+
+03:32.800 --> 03:38.640
+the projective camera. This is a representative camera model with a finite center. And the second type
+
+03:38.640 --> 03:44.800
+that we will see would be the affine camera where the center of the projection lies at the plane
+
+03:44.800 --> 03:53.040
+at infinity. So a projective camera can be defined using the very basic pinhole camera model, which is
+
+03:53.040 --> 03:58.560
+what we are going to look at now. Let us first define a Euclidean coordinate which we can see
+
+03:58.560 --> 04:04.400
+this illustration where the y-axis is here and there's a x-axis and there's a z-axis that's
+
+04:04.400 --> 04:11.520
+pointing out. So where the center of projection is being defined at the origin of this particular
+
+04:11.520 --> 04:18.240
+Euclidean coordinate system which we denote by C over here. Now let's consider the image plane
+
+04:18.240 --> 04:23.680
+which is a plane that is parallel to the xy plane of the Euclidean system that we have defined.
+
+04:23.680 --> 04:29.520
+There is a certain distance in the z direction that is spaced out between the xy plane of the
+
+04:29.520 --> 04:34.720
+Euclidean coordinate system that we have defined earlier on and this particular image plane. And
+
+04:34.720 --> 04:39.680
+we define this particular distance as f which you will see that this is actually the focal length
+
+04:39.680 --> 04:46.480
+later on. And we call this particular plane either the image plane or the focal plane. And now having
+
+04:46.480 --> 04:51.280
+defined this if we were to look at the side view from this particular point of view we can
+
+04:51.280 --> 04:57.680
+represent this projection system onto where a point x in the 3D world actually joins up the
+
+04:57.680 --> 05:02.560
+camera center via a light ray where the intersection of this particular point which
+
+05:02.560 --> 05:08.480
+will cause more x over here it's actually the image projection of this particular 3D point
+
+05:08.480 --> 05:14.800
+onto the image plane following a camera model with a central projection. So now by the virtue of
+
+05:14.800 --> 05:20.320
+similar triangle we can see that there's two triangles over here one which is the smaller
+
+05:20.320 --> 05:25.200
+one which is here and the other one which is the bigger triangle which is given by this guy over
+
+05:25.200 --> 05:30.320
+here. We can see that the base distance of the smaller triangle is essentially given by f which
+
+05:30.320 --> 05:38.160
+we have defined earlier on and the base distance of the largest triangle let's denote it by z and
+
+05:38.240 --> 05:45.440
+the height of the larger triangle is also given by y which is essentially the inhomogeneous coordinate
+
+05:45.440 --> 05:50.000
+of the 3D point that is being projected onto the image that we have seen earlier on.
+
+05:50.000 --> 05:55.840
+By the virtue of the similar triangle the height of the smaller triangle is naturally given by the
+
+05:55.840 --> 06:02.960
+product of f over z which is the ratio of the base length multiplied by the height of the bigger
+
+06:02.960 --> 06:10.400
+triangle. Now we can formally express the 3D to 2D projection as the coordinate form where given
+
+06:10.400 --> 06:18.160
+a 3D coordinate denoted by x y z it's actually mapped onto the 2D space of f y where the y
+
+06:18.160 --> 06:25.120
+coordinate is being mapped onto f y over z. We can follow the same concept of a similar triangle
+
+06:25.120 --> 06:30.400
+to derive the x coordinate of the projection of this 3D point on the image coordinate we will
+
+06:30.400 --> 06:36.560
+find that this is given by f x over z. Since we are projecting it onto a 2D space we can ignore
+
+06:36.560 --> 06:43.760
+the third coordinate which is essentially the distance of this plane from the xy plane of the
+
+06:43.760 --> 06:51.440
+Euclidean coordinate f. Now this can be seen that it's a definition of a 3D projection onto a 2D
+
+06:51.440 --> 06:58.800
+space. We will further define some terminologies in the basic pinhole camera model so we have looked
+
+06:58.800 --> 07:04.960
+at the camera center otherwise can be known as the optical center this is essentially the point
+
+07:04.960 --> 07:11.360
+where all the light rays that is being projected onto the camera will meet and there's another
+
+07:11.360 --> 07:17.520
+definition which we call the principal axis and essentially this is the z axis of the Euclidean
+
+07:17.520 --> 07:24.880
+coordinate that we have defined so this particular principal axis is perpendicular to the image plane
+
+07:25.440 --> 07:31.440
+and we will also define what is known as the principal point so principal point is
+
+07:31.440 --> 07:39.520
+essentially the point of intersection between the principal axis and the image plane and finally
+
+07:39.520 --> 07:44.160
+we'll define what is known as the principal plane so the principal plane is essentially
+
+07:44.160 --> 07:52.800
+the plane that lies on the xy plane so this this guy here is the principal plane and this is the
+
+07:52.800 --> 08:00.480
+plane that lies on the xy plane of the Euclidean coordinate now we can see that the mapping from
+
+08:00.480 --> 08:06.720
+the 3D coordinate onto the 2D image plane it can be expressed as a linear mapping if we were to
+
+08:06.720 --> 08:13.360
+write it in terms of homogeneous coordinates previously we wrote that this is the 3D point
+
+08:13.360 --> 08:18.960
+this is the coordinate of the 3D point which essentially lies at x y z and if we were to
+
+08:18.960 --> 08:26.320
+write it into homogeneous coordinate we will add a 1 at the end and then we saw that by the
+
+08:26.320 --> 08:35.120
+virtue of a similar triangle the x coordinate on the image plane is denoted by fx over z and the
+
+08:35.120 --> 08:41.440
+y coordinate of the image plane is denoted by fy over z if we were to express this inhomogeneous
+
+08:41.440 --> 08:47.680
+coordinates into a homogeneous frame we can bring the denominator the common denominator which is z
+
+08:48.320 --> 08:54.400
+and put it into the third coordinate in the homogeneous coordinate frame and now essentially
+
+08:54.400 --> 09:01.440
+this becomes fx fy and z in the homogeneous representation we can see that we can factorize
+
+09:01.440 --> 09:08.320
+these terms over here the homogeneous coordinate fx fy and z into a three by four matrix multiplied
+
+09:08.320 --> 09:16.000
+by the four by one vector which represents the 3D point so this three by four matrix can be further
+
+09:16.000 --> 09:21.040
+simplified because it's actually a diagonal matrix which consists of f the focal length as
+
+09:21.040 --> 09:27.440
+well as one we can further factorize this into a three by three matrix which consists of a diagonal
+
+09:27.440 --> 09:35.360
+entries of f so this matrix here is essentially equals to f zero zero zero f zero and zero zero
+
+09:35.360 --> 09:43.120
+one and then multiply by an identity matrix one one one followed by all zeros here so this guy
+
+09:43.120 --> 09:47.680
+here is three by four and this guy here is a three by three matrix so essentially if you
+
+09:47.680 --> 09:55.360
+multiply these two matrices together this is the matrix that you will end up with and now with this
+
+09:55.360 --> 10:02.080
+three by four matrix if we multiply it to the 3D point what we will recover here is essentially
+
+10:02.080 --> 10:13.280
+the 2D projection fx fy and z over here let's further denote p equals to this matrix that we
+
+10:13.280 --> 10:20.160
+have factorized earlier on and it simply represents the diagonal matrix multiplied by the identity
+
+10:20.160 --> 10:27.280
+identity three by four matrix that we have seen earlier on and we will denote small x as the
+
+10:28.240 --> 10:35.440
+2D projection on the image and the big x as the 3D point that we have seen in short we can
+
+10:36.080 --> 10:44.640
+simplify this equation into this form where x where x is equals to p multiplied by x the small
+
+10:44.640 --> 10:51.600
+x here is actually a three by one homogeneous coordinate p here is a three by four matrix and
+
+10:51.600 --> 11:00.000
+x here is a four by one homogeneous coordinate and we'll give this p matrix which is a three by
+
+11:00.000 --> 11:06.400
+four homogeneous calling a metric a name and it will be called the camera projection matrix
+
+11:07.920 --> 11:14.720
+we have seen earlier on that the origin of the 2D coordinate frame is being defined
+
+11:14.720 --> 11:21.440
+at the principal point of the image which is often the center image but in practice the origin
+
+11:22.400 --> 11:28.240
+in the real image plane might be defined anywhere need not necessarily coincide with the principal
+
+11:28.240 --> 11:34.080
+point of the coordinate system and we can in fact define it anywhere say for example let's define
+
+11:34.080 --> 11:40.240
+the reference frame of the the image reference frame as a small x and y that is being assigned
+
+11:40.240 --> 11:48.320
+to one corner of the image which essentially means that the principal point is now px and py
+
+11:48.320 --> 11:53.200
+with respect to the image reference frame and what we need to do here is that we need to
+
+11:53.200 --> 12:00.400
+compensate for this px and py with respect to the reference frame of the image so as a result we can
+
+12:00.400 --> 12:05.600
+see that the projection from the 3D point so this is the 3D point the projection that we have seen
+
+12:05.600 --> 12:13.360
+earlier on from the 3D point to the 2D point it's no longer just this two terms fx over z and fy
+
+12:13.360 --> 12:20.080
+over z alone now we have to compensate for the translation of the coordinate frame by an amount
+
+12:20.080 --> 12:26.960
+of px and py in the respective direction we can express this particular expression here which is
+
+12:26.960 --> 12:35.040
+in the inhomogeneous coordinate frame to a homogeneous coordinate and we can see that
+
+12:35.040 --> 12:40.640
+this becomes a linear mapping what I meant by linear mapping here is that it simply becomes a
+
+12:40.640 --> 12:47.840
+metric multiplied by a three by four matrix multiplied by a four by one homogeneous coordinate
+
+12:47.840 --> 12:54.400
+the two additional terms that we have seen that defines the principal point it appears as px and
+
+12:54.400 --> 12:59.120
+py over here so if we were to evaluate the multiplication of this three by four matrix with
+
+12:59.120 --> 13:08.000
+the four by one vector over here we will get the 2D coordinate frame which is fx plus z px and fy
+
+13:08.000 --> 13:17.680
+plus z py and z here so now let's further write this three by four matrix into a factorization
+
+13:17.680 --> 13:23.920
+of what we call the k matrix but multiplied by a three by four identity matrix where this
+
+13:23.920 --> 13:29.520
+particular k matrix here can be expressed as this three by three matrix over here the diagonal
+
+13:29.520 --> 13:35.840
+consists of the focal length f and one and then the principal point will appear on the third
+
+13:36.320 --> 13:43.200
+column of the k matrix so essentially if we were to multiply k this matrix over here
+
+13:43.200 --> 13:50.080
+by one and zero and this guy here is a three by four matrix what we will get back would be
+
+13:50.640 --> 13:56.800
+the original metric over here so this is simply just a reorganization or a refactorization of
+
+13:56.800 --> 14:03.520
+the matrices and now we will also give this k matrix a name we'll call it the camera calibration
+
+14:03.520 --> 14:09.200
+metric this particular k matrix is also otherwise commonly known as the camera intrinsic
+
+14:09.840 --> 14:15.920
+metric if you have noticed earlier on that this particular 3D point is actually expressed in
+
+14:15.920 --> 14:21.600
+the camera coordinate frame which is this particular guy over here that we have defined
+
+14:21.600 --> 14:30.240
+the location of the camera center the principal axis the principal point as well as the principal
+
+14:30.240 --> 14:37.680
+plane but in practice any 3D point that is given to us might not always be expressed with respect
+
+14:37.680 --> 14:44.720
+to this camera frame it could be expressed with respect to any arbitrary frame which we call the
+
+14:44.720 --> 14:53.280
+world frame where the camera frame would be at a certain rigid transformation away from the world
+
+14:53.280 --> 15:01.760
+frame that is denoted by r and t so see here is actually expressed with respect to this origin by
+
+15:01.760 --> 15:08.000
+a rigid transformation of r and t that means that we should also consider the projection of the 3D
+
+15:08.000 --> 15:14.320
+point with respect to the world frame let's call this guy here x y and z and 1 the homogeneous
+
+15:14.320 --> 15:20.080
+coordinate of this which is expressed with respect to the world frame so we'll call this capital
+
+15:20.720 --> 15:26.400
+x with respect to the world frame the camera projection expression that we have derived
+
+15:26.400 --> 15:35.360
+earlier on which is small x equals to k i 0 multiplied by big x so in this case here x is
+
+15:35.360 --> 15:41.760
+defined with respect to the camera frame but let's say now x is defined with respect to the world
+
+15:41.760 --> 15:46.960
+frame we would have to compensate for this rotation and translation in this projection
+
+15:46.960 --> 15:54.720
+equation the aim here is actually to denote this particular point with respect to the camera frame
+
+15:54.720 --> 16:01.280
+instead so this can be easily done let's denote the inhomogeneous coordinate of the camera center
+
+16:01.280 --> 16:10.640
+as c tilde essentially it simply means the x y and z coordinate of c with respect to this particular
+
+16:11.360 --> 16:16.880
+frame that means that the camera coordinate is expressed in the world frame and we will denote
+
+16:16.880 --> 16:23.280
+this by c tilde so given any point if we know this relation and we also know that there is
+
+16:23.280 --> 16:29.520
+a rotation that means that the this particular frame the orientation of this particular frame
+
+16:29.520 --> 16:35.040
+the the camera frame with respect to the world frame it need not be a line as shown this in this
+
+16:35.600 --> 16:42.240
+figure here it could be actually in any particular orientation for example this could be our camera
+
+16:43.280 --> 16:49.280
+frame that is not aligned not perfectly aligned with the world frame so there exists a certain
+
+16:49.280 --> 16:56.720
+rotation that relates the orientation of the camera frame in the world frame now given a point x
+
+16:57.280 --> 17:02.400
+here defined with respect to the world frame what we want to do here is that we want to transform
+
+17:02.400 --> 17:08.800
+this particular point into the camera frame so that it will be consistent with this particular
+
+17:09.520 --> 17:15.040
+projection equation that we have defined earlier on with respect to the camera frame and the
+
+17:15.040 --> 17:21.840
+relation it will be simply given by a isometric transformation this is a isometric or metric
+
+17:21.840 --> 17:29.200
+transformation that we have seen in lecture one where the rotation is simply r because the
+
+17:29.200 --> 17:35.920
+orientation of camera and the world frame is related by r the translation amount here t
+
+17:36.560 --> 17:44.800
+is simply given by minus r of c applying this four by four matrix over here onto the 3d point
+
+17:44.800 --> 17:50.080
+that is expressed in the world frame what we will essentially get here is that we'll transform this
+
+17:50.080 --> 17:58.240
+express with respect to the world frame into the camera frame which we now denote as x can now put
+
+17:58.240 --> 18:03.440
+this particular x cam equation back into this projection equation what we'll get here is that
+
+18:03.440 --> 18:17.200
+we'll get ki 0 multiplied by r minus rc and 0 1 and multiplied by capital x where this guy here
+
+18:17.760 --> 18:24.400
+is simply our x cam which is consistent with what we have seen in the definition of the
+
+18:24.400 --> 18:30.560
+projection matrix earlier on because this this is a zero here which essentially means that
+
+18:30.560 --> 18:35.440
+after multiplication the last row of this isometric transformation would be eliminated
+
+18:35.440 --> 18:46.320
+and we can simply denote this as r minus rc x which is our three by four matrix over here
+
+18:46.320 --> 18:52.080
+and this guy here is our three by three camera intrinsics and this is the 3d point that is
+
+18:52.080 --> 18:59.680
+expressed with respect to the world frame so as we have also seen earlier on rotation matrix is
+
+18:59.680 --> 19:06.640
+essentially over parameterization of the Euler angle which has three degrees of freedom
+
+19:06.640 --> 19:15.920
+rho pitch and yaw so if we were to look at this in the xyz axis so the yaw angle rotation matrix is
+
+19:15.920 --> 19:22.800
+essentially obtained from first rotating around the z axis which we call the yaw and we denote
+
+19:22.800 --> 19:29.920
+this by gamma over here and then the second step that we do would be to rotate after the rotation
+
+19:29.920 --> 19:36.480
+of yaw angle we rotate with respect to the pitch angle along the y axis which is given by this
+
+19:37.120 --> 19:45.600
+rotation matrix over here finally we apply the rho angle on the x axis along the x axis this is the
+
+19:45.600 --> 19:52.960
+final rotation matrix for that represents the rho angle and now if we were to concatenate all the
+
+19:52.960 --> 20:00.560
+yaw pitch and rho together to get the final rotation matrix we'll be able to represent any
+
+20:00.560 --> 20:09.120
+arbitrary rotation in the 3d space so essentially this is the rotation matrix this guy here this
+
+20:09.120 --> 20:15.120
+this rotation matrix is the rotation matrix we are interested in this isometric transformation
+
+20:15.120 --> 20:21.040
+which means that it's a general arbitrary rotation matrix that represents the orientation
+
+20:21.040 --> 20:29.040
+transformation from the wheel frame to the camera frame in any general case this rotation matrices
+
+20:29.040 --> 20:36.160
+it's it could be a two by two rotation matrix which is in the 2d space if we were talking about
+
+20:36.160 --> 20:43.760
+the r2 space then the this rotation matrix would be a two by two square matrix or it could be also
+
+20:43.760 --> 20:51.360
+a three by three three by three square matrix when we are talking about rotations in the r3
+
+20:51.360 --> 20:57.680
+space so in this particular case r2 space then there will be only one degree of freedom because
+
+20:57.680 --> 21:05.680
+essentially in the xy plane there's only one rotation that is possible that is the yaw angle
+
+21:05.680 --> 21:12.480
+we can only have an in-plane rotation that is along the yaw angle so this two by two matrix
+
+21:12.480 --> 21:20.320
+on the 2d space it will have only one degree of freedom but in the general 3d space r3 space
+
+21:20.320 --> 21:24.960
+we will have a three degrees of freedom which is what we have seen earlier on here
+
+21:24.960 --> 21:33.200
+that is expressed is parameterized by the raw pitch yaw angle which we collectively call the
+
+21:33.200 --> 21:41.440
+Euler angle so a rotation matrix it's regardless of whether it's a two by two or three by three
+
+21:41.440 --> 21:46.240
+rotation matrix you always have the following properties the first property is that the
+
+21:46.240 --> 21:52.640
+determinant of r is going to be either plus one or minus one depending on how we define the
+
+21:52.640 --> 22:01.440
+coordinate frame so in the right hand coordinate frame where we do this x y and z is pointing
+
+22:02.000 --> 22:09.760
+in this direction where when we move from x to y our thumb is actually pointing towards the z
+
+22:09.760 --> 22:16.000
+direction so if we use the right hand our four fingers to do this sweeping action our thumb is
+
+22:16.000 --> 22:22.000
+pointing towards the z axis of the right hand and in this case we call it the right hand coordinate
+
+22:22.000 --> 22:30.320
+frame and this is usually the coordinate frame that we use to express any euclidean reference
+
+22:30.320 --> 22:36.400
+frames and there's also another coordinate frame where if we were to you do the same sweeping
+
+22:36.400 --> 22:43.920
+action with our left hand then we will see that in this case here we'll end up having x here
+
+22:43.920 --> 22:49.920
+and then y here and sweeping this direction where z now is going to be pointing in the same direction
+
+22:49.920 --> 22:55.920
+but we will see that x and y swap direction so if we were to be consistent if we were to draw
+
+22:55.920 --> 23:00.960
+x in the same direction as the right hand coordinate frame and y in the same direction
+
+23:00.960 --> 23:05.840
+as the right hand coordinate frame as well then we'll see that z points to the opposite
+
+23:05.840 --> 23:10.160
+direction and we'll call this the left hand coordinate frame so the difference between
+
+23:10.160 --> 23:15.520
+these two reference frame system is that the determinant of the rotation matrices that is
+
+23:15.520 --> 23:21.280
+expressed in the right hand coordinate system will always have a positive one determinant
+
+23:21.280 --> 23:29.040
+and the determinant of the rotation matrix that is defined with the right hand coordinate frame
+
+23:29.040 --> 23:36.560
+is always going to have a minus one since the rotation matrix is an octonormal matrix
+
+23:36.560 --> 23:41.760
+what this means is that the transpose of the rotation matrix is going to be equal to the
+
+23:41.760 --> 23:49.760
+inverse of the rotation matrix and uh hence and also since it's an octonormal matrix what
+
+23:49.760 --> 23:55.680
+this means is that the axis of the rotation matrix has to be octagonal to each other this
+
+23:55.680 --> 24:02.320
+means that the third column of the rotation matrix is equal to the cross product of the other
+
+24:02.320 --> 24:09.200
+two columns in fact any column of the rotation matrix is equal to the cross product of the other
+
+24:09.200 --> 24:15.360
+two columns that is in the rotation matrix we can see that actually the rotation matrix over here
+
+24:15.360 --> 24:25.280
+each column it defines the xy axis so the column one actually defines the x axis column two defines
+
+24:25.280 --> 24:33.040
+the y-axis and the cross product of these two is going to give us the z-axis in the reference frame
+
+24:33.040 --> 24:39.520
+and this will work for any combination so if we will take z and x cross together we will get the
+
+24:39.520 --> 24:46.320
+y-axis and so on so forth so the rotation matrix it actually defines the basis of the coordinate
+
+24:46.320 --> 24:52.800
+space and what this also means is that since the cross product of the any two of the columns
+
+24:52.800 --> 25:00.320
+is going to give the third column simply because every one of this frame is actually octagonal to
+
+25:00.320 --> 25:05.520
+to each other and this also means that the top product of any two columns in the rotation
+
+25:05.520 --> 25:13.520
+matrix will always be zero since they are perpendicular to each other and the fact that
+
+25:13.520 --> 25:19.200
+it's an octonormal matrix simply means that the norm of each column has to be equals to
+
+25:19.200 --> 25:25.520
+one but all these properties here simply points out that the rotation matrix it defines the basis
+
+25:25.520 --> 25:33.920
+of the coordinate system after we define x the 3d points with respect to the coordinate frame
+
+25:33.920 --> 25:40.960
+so if we recall that we have a 3d point x and this 3d point is actually defined with respect
+
+25:40.960 --> 25:48.320
+to the world frame where this is the origin and then there is a camera frame over here
+
+25:48.320 --> 25:54.320
+that we will define as fc where the center of projection is actually given by c over here and
+
+25:54.320 --> 26:00.000
+this particular frame relates to the world frame by r and t if we were to express this particular
+
+26:00.000 --> 26:07.600
+coordinate express with respect to the world frame in the camera frame we will get x cam over here
+
+26:07.600 --> 26:16.240
+that is related to the coordinate in the world frame by r and minus rc tilde so this is the
+
+26:16.240 --> 26:21.840
+relation that we have seen earlier on so we put it back to the general mapping of the pinhole camera
+
+26:21.840 --> 26:29.280
+this is the relation that we have seen earlier on where we can now factorize out the rotation
+
+26:29.280 --> 26:35.680
+matrix which appears twice in the three by four matrix over here this particular three by four
+
+26:35.680 --> 26:43.600
+matrix is actually equals to r and minus r tilde that we have seen earlier on so this r here since
+
+26:43.600 --> 26:48.400
+they are the same it can be factorized out in the rotation matrix that is in this particular
+
+26:48.400 --> 26:54.880
+form over here so now we'll end up with the general mapping of a pinhole camera this means
+
+26:54.880 --> 27:01.680
+that we will have a 3d point that is arbitrarily defined with respect to a world frame any world
+
+27:01.680 --> 27:07.600
+any reference world frame where the relation between the camera coordinate frame with respect
+
+27:07.600 --> 27:16.080
+to the world frame is by a rigid transformation of r and t we can also write the projection matrix
+
+27:16.080 --> 27:22.480
+to take into account the rotation and translation of the world frame and the camera frame into this
+
+27:22.480 --> 27:28.560
+particular form over here the p matrix now we can see that the p matrix still contains k which
+
+27:28.560 --> 27:35.360
+is the intrinsic value so this guy here k is the called the intrinsic value and it also consists
+
+27:35.360 --> 27:43.920
+of the rotation and the translation which is given by minus r and c or the inhomogeneous
+
+27:43.920 --> 27:50.080
+coordinate of the camera center with respect to the world frame that we have seen earlier on
+
+27:50.080 --> 27:58.000
+so this uh this three by four matrix so the end the intrinsic here is a three by three matrix
+
+27:58.000 --> 28:05.760
+and this three by four matrix here is also what we call the extrinsic value which consists of r
+
+28:05.760 --> 28:15.280
+and t altogether the camera projection matrix has nine degrees of freedom where three of the
+
+28:15.280 --> 28:22.480
+degrees of freedom goes to k because k we have seen earlier on that k equals to f and then px
+
+28:22.480 --> 28:31.760
+py and one over here so they are all together 3d o f in the camera intrinsics and then three other
+
+28:32.400 --> 28:37.840
+degrees of freedom goes to the rotation matrix this is because we have seen earlier on that the
+
+28:37.840 --> 28:43.920
+parameterization rotation matrix is actually a over parameterization of the roll pitch and yaw
+
+28:43.920 --> 28:50.800
+angle so that's all together only three degrees of freedom that can define any arbitrary orientation
+
+28:50.800 --> 28:57.920
+in the 3d space finally there's another additional three degrees of freedom in the
+
+28:57.920 --> 29:04.880
+inhomogeneous coordinates of the camera center and all together this adds up to be nine degrees
+
+29:04.880 --> 29:10.160
+of freedom i have said earlier on that the parameters contains in the camera
+
+29:11.120 --> 29:22.000
+metric k over here which is essentially f 0 px 0 f py and 0 0 1 over here the parameters that's
+
+29:22.000 --> 29:28.800
+contained inside here is also called the internal camera parameters because this really depends on
+
+29:29.520 --> 29:37.040
+the inter internally on the camera we can also see this from when we are defining the basic
+
+29:37.040 --> 29:42.640
+pinhole camera we first started off with the camera frame and then we express everything
+
+29:43.520 --> 29:48.800
+in in terms of the camera frame we will already have obtained the k matrix in this particular
+
+29:48.800 --> 29:57.440
+form so this is the 2d coordinate and then we have a k multiplied by 0 1 and x that is defined
+
+29:58.080 --> 30:03.760
+with x cam over here that's defined with respect to the camera frame since k here is defined with
+
+30:03.840 --> 30:10.000
+respect to the local camera coordinate frame we will also call k the internal parameters
+
+30:10.000 --> 30:16.880
+because it doesn't depend on the world frame or otherwise the intrinsic values of the camera
+
+30:17.680 --> 30:22.320
+there's another set of parameter which we call the extrinsic as i have mentioned earlier on
+
+30:22.320 --> 30:28.560
+so this set of parameters is just the r and c so this is the camera center and
+
+30:29.360 --> 30:36.160
+which relates the camera frame and the world frame so this guy here r and c since it requires the
+
+30:36.160 --> 30:45.680
+world frame for definition we will say that this is not internal to the camera this is actually
+
+30:45.680 --> 30:53.760
+relying on external parameters and or otherwise we'll call it the extrinsics of the camera
+
+30:54.080 --> 31:01.440
+instead of writing the this three by four matrix over here as what we have seen earlier on as this
+
+31:01.440 --> 31:11.200
+term over here or rather r identity and the coordinate the camera coordinate center
+
+31:11.200 --> 31:17.520
+over here a more convenient way would be simply to collectively call this term here as t
+
+31:17.520 --> 31:24.240
+the translation that relates the camera center with respect to the to the world frame
+
+31:24.240 --> 31:29.520
+so the three by four matrix can be simply written as an isometric transformation where
+
+31:29.520 --> 31:35.120
+which consists of the rotation matrix and the translation vector so this rotation matrix over
+
+31:35.120 --> 31:40.560
+here is a three by three rotation matrix and the translation vector is a three by one
+
+31:41.280 --> 31:49.040
+translation vector now so so far we have seen that the projection relation between a 3d world point
+
+31:49.040 --> 31:57.760
+onto a 2d image is based on the assumption that the image formation is based on a square pixel
+
+31:57.760 --> 32:05.200
+assumption so what it means here is that on the image that we get all the pixels are regular
+
+32:05.200 --> 32:12.880
+squarish point sometimes due to manufacturing error in the lens or the photo sensors that we
+
+32:12.880 --> 32:20.880
+have in cameras this pixels they might not appear to be perfect square there might be some skew that
+
+32:20.880 --> 32:27.280
+occurs in the x direction so in our camera model we have to compensate for this non-square matrix
+
+32:27.280 --> 32:35.520
+or the skewness in the real cameras so it hence it's actually more accurate to have two things
+
+32:35.520 --> 32:40.800
+two additional things in our camera projection metric the first one would be different focal
+
+32:40.800 --> 32:48.480
+length because we can see that there's a shift in the projection onto the metric in the x direction
+
+32:49.040 --> 32:56.800
+and hence there is a need to have different focal length in order to define the similar
+
+32:56.800 --> 33:04.240
+triangle relation that we have seen earlier on in the beginning of the lecture and another thing
+
+33:04.240 --> 33:11.040
+that is because we saw that the the skew could happen in the x direction and we would have to
+
+33:11.040 --> 33:19.200
+add another scaling factor in the x direction so as a result the camera intrinsic matrix would
+
+33:19.200 --> 33:27.360
+become f x f y where this replaces we will have two different focal lengths in each respective
+
+33:27.360 --> 33:35.680
+direction that replaces the that replace the same focal length in the in both direction and as well
+
+33:35.680 --> 33:42.160
+as we will have a scaling factor as in in the x direction over here so the principal point remains
+
+33:42.160 --> 33:54.400
+the same now this becomes our new camera intrinsic matrix and as a summary in general we we would
+
+33:54.400 --> 34:01.680
+have all together now 11 degrees of freedom where we have seen earlier the the camera projection
+
+34:01.680 --> 34:09.440
+extrinsic over here where r it's three degrees of freedom given by the Euler angles over here
+
+34:09.440 --> 34:16.960
+and t over here is three degrees of freedom because we all together have t x t y and t z
+
+34:16.960 --> 34:24.400
+in the 3d space now k the intrinsic since we have two separate focal length in each one of
+
+34:24.400 --> 34:30.160
+the respective direction which we denote by f x and f y we'll have two degrees of freedom here
+
+34:30.720 --> 34:36.800
+we have a skew factor which we denote by s so all together there's additional three degrees of
+
+34:36.800 --> 34:42.720
+freedom plus two more for the principal point so all together we have five degrees of freedom
+
+34:42.720 --> 34:51.120
+for the intrinsic value and in total five plus three plus three we will have all together 11
+
+34:51.120 --> 34:54.320
+degrees of freedom for our camera projection
+
+34:57.040 --> 35:04.880
+matrix p that is given by k multiplied by r and t so essentially a finite projective camera
+
+35:04.880 --> 35:10.560
+means that this is a camera with a central projection where all the light rays that are
+
+35:10.560 --> 35:16.000
+projecting onto the image have to converge at the one single point of convergence and this
+
+35:16.000 --> 35:24.320
+particular point of convergence which we denote by c it has to have a finite value with respect to a
+
+35:24.320 --> 35:30.160
+world frame illustrated here and we've seen earlier on that the projection matrix is given
+
+35:30.160 --> 35:36.400
+by this particular equation over here which consists of the intrinsic as well as the extrinsic
+
+35:36.400 --> 35:44.960
+of the camera and we can now rewrite this projection matrix into another form which is
+
+35:44.960 --> 35:53.280
+given by this particular equation over here where we can denote m as a three by three matrix and
+
+35:54.000 --> 35:58.880
+the remaining of the matrix would be a three by four matrix that consists of our identity
+
+35:58.880 --> 36:06.480
+matrix which is three by three and the inverse of the m matrix of the three by three matrix that we
+
+36:06.480 --> 36:11.920
+have defined earlier on multiplied by the last column of the original projection
+
+36:12.480 --> 36:22.960
+matrix so what it means is that we are going to rewrite p as p1 p2 p3 and p4 where each of the p
+
+36:22.960 --> 36:29.840
+is a column in the original projection matrix and we can see from this relation over here
+
+36:29.840 --> 36:37.200
+that if we were to multiply m inside we will get this m and for the first three by three matrix
+
+36:37.280 --> 36:43.200
+and the last column is p4 which essentially means that m here which we have defined earlier on in
+
+36:43.200 --> 36:50.160
+this form of factorization is equivalent to the first three columns of the original camera
+
+36:50.160 --> 36:57.920
+projection matrix in other words this is simply a refactorization of the original camera projection
+
+36:57.920 --> 37:03.920
+matrix that we have seen we'll see later that for finite projection camera this m matrix over here
+
+37:03.920 --> 37:10.320
+which essentially represents the first three by three entries of the camera projection matrix it
+
+37:10.320 --> 37:18.800
+has to be non-singular in order for a finite camera center to exist so of course the first
+
+37:18.800 --> 37:25.120
+thing that we can define from a finite projection camera is the camera center and we can see that
+
+37:25.760 --> 37:33.200
+this camera center has to lie in the null space of the camera projection matrix that is given by
+
+37:33.200 --> 37:40.320
+p c equals to zero and what this simply means is that the projection of the camera center
+
+37:40.320 --> 37:47.840
+is going to be projected into an undefined point where this undefined point is going to be at 000
+
+37:49.840 --> 37:57.200
+and we'll see a sketch of proof on why is it that the camera has to be on the null space of the
+
+37:57.200 --> 38:04.160
+camera projection matrix let's first consider a line that consists the camera center c as well
+
+38:04.160 --> 38:09.120
+as any other point in the 3d space and what does what this means is that i'm actually looking at
+
+38:09.120 --> 38:15.520
+a light ray that is a projection onto the camera center so there could be many other light rays
+
+38:15.520 --> 38:22.160
+that converges to this that meets at this single center of projection and now i'm considering one
+
+38:22.160 --> 38:29.280
+light ray which contains the point a in the 3d space and this actually joins up with the
+
+38:30.400 --> 38:36.960
+camera center c to form a line that we which we denote as x over here and this is given by the
+
+38:36.960 --> 38:45.200
+span of the two points a and c which i have seen in the past lecture under the projective mapping
+
+38:45.200 --> 38:52.400
+where a 3d point is being projected onto a 2d image point this is the developed from the basic
+
+38:52.400 --> 38:58.480
+pinhole camera model that we have seen earlier on we can make use of this projection to project this
+
+38:58.480 --> 39:04.960
+line any point on this line which we denote by x it's being projected onto the image
+
+39:04.960 --> 39:10.720
+via the camera projection matrix that we have defined earlier on and now let's substitute this
+
+39:10.720 --> 39:17.920
+x lambda by this the span of a and c into this equation we will see that the projected points
+
+39:17.920 --> 39:23.520
+can be decomposed into two terms over here where the first term is simply the projection of a
+
+39:24.320 --> 39:32.480
+this 3d point onto the image and the second term here it's the projection of the camera center to
+
+39:32.480 --> 39:38.480
+the image point and we know that a could be any point on this line and we know that any point on
+
+39:38.480 --> 39:47.200
+the light ray it has to be projected onto the image plane as p of a as p of a which is defined
+
+39:47.200 --> 39:54.160
+by this mapping over here so what this simply means is that the second term here that is given
+
+39:54.160 --> 40:00.640
+by the projection of the camera center it has to be in the null space it has to be equals to zero
+
+40:00.640 --> 40:08.080
+in order for this relation x equals to p a to hold true hence we conclude that the camera
+
+40:08.080 --> 40:16.320
+center must be in the null space of the camera projection matrix so let's write the camera
+
+40:16.320 --> 40:24.800
+projection matrix into four columns that we have seen earlier on p1 p2 p3 as well as p4 that we
+
+40:24.800 --> 40:31.520
+have seen we can see that the first three columns of this projection matrix actually defines the
+
+40:31.520 --> 40:40.080
+vanishing point of the world coordinate x y and z axis respectively what this means is that the
+
+40:41.120 --> 40:48.320
+the point that is being given by the z axis for example the infinite point this is going to
+
+40:48.400 --> 40:55.040
+intersect the plane at infinity the plane at infinity at an infinite point over here
+
+40:55.040 --> 41:03.520
+which is actually given by zero zero one zero transpose because this last term here has to be
+
+41:03.520 --> 41:08.960
+equals to zero for it to be an infinite point and the first three terms simply says that this
+
+41:08.960 --> 41:16.160
+is in the direction of the z axis so it has to be zero zero one so this particular point here
+
+41:16.160 --> 41:25.280
+when it projects back to the camera it actually lies on this point which is p3 which we can see
+
+41:25.280 --> 41:32.960
+by looking at the projection so if i were to take this p1 p2 p3 which is essentially the camera
+
+41:32.960 --> 41:39.520
+matrix p multiplied by this point zero zero one zero we can see that the first column here
+
+41:39.520 --> 41:45.200
+multiplied by zero it will turn out to be zero similarly p2 multiplied by zero it will turn out
+
+41:45.200 --> 41:51.360
+to be zero and only p3 will remain so what this means is that the projection the ideal point that
+
+41:51.360 --> 42:01.200
+is from the z axis it would have to project to a vanishing point of p3 on the image so this is
+
+42:01.200 --> 42:09.360
+similarly for the x axis here for example so in the x axis we can see that this guy over here it
+
+42:09.760 --> 42:19.440
+intersects the plane at infinity the plane infinity at a point of one zero zero zero transpose
+
+42:19.440 --> 42:24.480
+this has to be zero for it to be an ideal point and the first three entries is simply the direction
+
+42:24.480 --> 42:33.360
+of x so we can see that if we were to multiply this guy over here with p1 p2 p3 and p4 which
+
+42:33.360 --> 42:42.160
+is the camera projection matrix multiplied by one zero zero zero and only the first column remains
+
+42:42.160 --> 42:49.760
+which is p1 so hence p1 here would be the vanishing point of the ideal point that is in
+
+42:49.760 --> 42:57.520
+the direction of the x axis and what's interesting here is that the last column of the camera
+
+42:57.520 --> 43:04.880
+projection matrix is actually the projection of the origin of the world coordinate frame and we
+
+43:04.880 --> 43:11.120
+can easily verify this by looking at this since the the origin of the world coordinate frame
+
+43:11.120 --> 43:17.360
+it has to be at zero zero zero one this particular point over here so if we were to multiply this
+
+43:17.360 --> 43:24.880
+pre-multiply this by the camera projection matrix zero zero zero one we can see that only the last
+
+43:24.880 --> 43:32.240
+term over here p4 remains hence p4 has to be the projection of the origin of a world frame
+
+43:32.240 --> 43:38.800
+that is being projected onto the camera image now let's look at the row vectors of the camera
+
+43:38.800 --> 43:44.400
+projection matrix and we'll see that the row vectors actually corresponds to a particular
+
+43:44.400 --> 43:52.320
+world plane in the 3d coordinate frame so let's denote p1 transpose p2 transpose and p3 transpose
+
+43:52.320 --> 43:59.920
+as the respective row so pi transpose here is actually a four by one vector that consists of
+
+43:59.920 --> 44:06.720
+the four entries of each respective row in the camera projection matrix the first plane that we
+
+44:06.720 --> 44:12.720
+are going to look at is the principal plane and we'll see that the principal plane is actually
+
+44:12.720 --> 44:19.360
+given by the third row of the camera projection matrix we have seen earlier on that the definition
+
+44:19.360 --> 44:27.040
+of principal plane is a plane that lies on the xy plane of the camera coordinate frame as well as
+
+44:27.040 --> 44:33.600
+it must contain the camera center and since it contains the camera center what this means is that
+
+44:33.600 --> 44:41.280
+any point that lies on the principal plane it must be projected onto a line at infinity that is given
+
+44:41.280 --> 44:47.600
+by this equation over here x y and zero the third coordinate here has to be zero because this has to
+
+44:47.600 --> 44:53.760
+be an ideal point in order for it to lie at the line at infinity so looking at this particular
+
+44:53.760 --> 45:03.200
+equation over here px equals to x y and zero if we were to rewrite p the projection matrix in terms
+
+45:03.200 --> 45:09.280
+of each row of the metric you can see that is p1 transpose p2 transpose and p3 transpose
+
+45:09.280 --> 45:16.240
+multiplied by x and this must be equal to x y and zero since it must be projected into the line at
+
+45:16.240 --> 45:22.800
+infinity what we can see here is that since the third element of the projection must be at zero
+
+45:23.440 --> 45:29.840
+it simply means that the last entry over here which is the last row of the projection matrix
+
+45:29.840 --> 45:36.480
+multiplied by x it must be equals to zero which gives rise to this equation over here p3 transpose
+
+45:36.480 --> 45:44.880
+x must be equals to zero and since we have defined earlier on that x to be a set of point or to be
+
+45:44.880 --> 45:51.840
+any point that is lying on the principal plane what this means is that this relation here
+
+45:52.560 --> 45:59.200
+defines the incidence relation and this says that x which lies on the principal plane must also lie
+
+45:59.200 --> 46:06.080
+on this plane that is being defined by p3 transpose and hence this p3 transpose must be
+
+46:06.080 --> 46:13.360
+the same as the principal plane so the other set of planes the other two planes that can be defined
+
+46:13.920 --> 46:20.720
+by the remaining rows of p1 and p2 are the axis planes and we'll see that these planes
+
+46:21.280 --> 46:27.760
+for example p1 is defined to be the plane that contains the camera center which is denoted by
+
+46:27.760 --> 46:36.320
+c over here as well as the line in the image coordinate frame where x equals to zero and this
+
+46:36.320 --> 46:45.200
+essentially means that this is the y-axis which is given by this guy so this means that p1 has
+
+46:45.200 --> 46:52.560
+to be this particular plane that contains this line where x equals to zero as well as the camera
+
+46:52.560 --> 47:00.480
+center that is denoted by this point over here similarly p2 is defined by the camera center as
+
+47:00.480 --> 47:08.480
+well as the line where y equals to zero and this is essentially equals to the x-axis of the image
+
+47:09.840 --> 47:16.640
+coordinate frame we can see that this is the line and the camera center is here so p2 is
+
+47:16.640 --> 47:24.400
+essentially defined by this plane that contains the x-axis as well as the camera center and we
+
+47:24.400 --> 47:31.920
+can see that this relation is true let's first consider a set of points any points that lies on
+
+47:32.480 --> 47:40.800
+p2 so this point let's denote it by x according to our definition this point is defined to lie
+
+47:40.800 --> 47:47.600
+on the plane p2 that means that the incidence relation p2 transpose multiplied by the dot
+
+47:47.600 --> 47:55.600
+product of p2 transpose and x it must be equals to zero for x to be lying on p2 and hence we can
+
+47:55.600 --> 48:02.400
+see that if we were to project these points x that lies on p2 any points that lies on p2
+
+48:02.400 --> 48:13.760
+it must all be projected onto this line which is the x-axis at y equals to zero as seen earlier on
+
+48:13.760 --> 48:20.080
+and this is true because we can see that the dot product of p2 transpose which is the second row
+
+48:20.080 --> 48:28.560
+of p we can see that let's say if we write this relation into this p1 transpose p2 transpose and
+
+48:28.560 --> 48:36.640
+p3 transpose multiplied by x over here so the second row multiplied by this guy over here it
+
+48:36.640 --> 48:42.480
+must always be equals to zero which is given by the incidence relation since we define this set
+
+48:42.480 --> 48:48.240
+of points to be lying on the plane and the first element of this can be any point which is x
+
+48:48.240 --> 48:53.840
+and the last one p3 transpose the last row of the projection metric multiplied by x can be also
+
+48:53.840 --> 49:01.200
+anything which is denoted by w so what this simply means is that any point that lies on p2 will be
+
+49:01.200 --> 49:09.520
+projected to the x-axis since any point here the y element of this projection is going to be zero
+
+49:10.400 --> 49:15.920
+so now we have proven that p2 must contain this line where y equals to zero which is essentially
+
+49:15.920 --> 49:22.160
+the x-axis the next step to the proof is that we must also prove that the this plane p2 contains
+
+49:22.160 --> 49:28.320
+the camera center this is easy because from the null space equation that we have seen earlier on
+
+49:28.320 --> 49:36.320
+that p the projection of a camera center it must be equals to zero equals to undefined point of
+
+49:36.880 --> 49:43.840
+one zero zero zero transpose over here and so it also follows that p2 transpose
+
+49:43.840 --> 49:50.400
+since p multiplied by c this means that p1 transpose p2 transpose and p3
+
+49:51.200 --> 49:58.560
+transpose multiplied by c it must be equals to zero zero zero and what this means is that the
+
+49:58.560 --> 50:08.080
+second row multiplied by c p2 transpose multiplied by c must also be zero hence this shows the
+
+50:08.080 --> 50:16.320
+incidence relation of c with the plane p given by the second row of the projection matrix over here
+
+50:16.320 --> 50:24.400
+hence this means that the camera center it must also lie on the plane p2 as well as
+
+50:24.400 --> 50:32.080
+that the line here which is the x-axis it must also lie on the plane p2 this proves our
+
+50:32.080 --> 50:38.080
+definition over here that p2 which is the second row of the camera projection matrix
+
+50:38.080 --> 50:44.320
+it is the axis plane that contain the line of x-axis as well as the camera center
+
+50:46.240 --> 50:53.360
+now the last thing that we can get from a camera projection matrix is the principal point so since
+
+50:53.440 --> 50:59.920
+we have defined and this principal point is what we have defined earlier on
+
+50:59.920 --> 51:05.840
+is defined to be the point that intersects the principal
+
+51:09.200 --> 51:16.000
+axis the point of intersection of the principal axis and the image plane
+
+51:16.160 --> 51:25.280
+so this is the principal point over here and we have seen earlier on that p3 the third row of
+
+51:25.280 --> 51:33.360
+the camera projection matrix p1 transpose p2 transpose and p3 transpose so the third row over
+
+51:33.360 --> 51:40.160
+here gives us the principal plane and what this means is that the first three elements
+
+51:40.240 --> 51:45.680
+the first three elements of this principal plane essentially gives us the direction
+
+51:46.560 --> 51:52.160
+of the normal vector of this principal plane so this is our principal plane over here
+
+51:52.880 --> 51:58.640
+which is given by p3 transpose and that means the direction of the principal axis which is
+
+51:58.640 --> 52:08.400
+perpendicular to the principal plane is essentially given by the first three elements of the third row
+
+52:08.400 --> 52:17.280
+of the camera matrix and we can also treat this direction over here as an ideal point that is
+
+52:17.280 --> 52:23.920
+given by the direction of the principal axis of our camera coordinate frame this ideal point over
+
+52:23.920 --> 52:29.440
+here in the direction of the principal axis given by p hat 3 over here this point here actually
+
+52:29.440 --> 52:36.640
+projects onto the image at the principal point this can be mathematically given by this projection
+
+52:36.640 --> 52:42.560
+over here where this is the p3 hat here represents the ideal point and it's projected by the
+
+52:43.200 --> 52:50.560
+projection matrix onto x0 which represents the principal point and we can rewrite this relation
+
+52:50.560 --> 52:59.760
+as capital m multiplied by m3 where capital m here represents the first three by three entries
+
+52:59.760 --> 53:05.760
+of the camera projection matrix and m3 here represents the third row of this m matrix of
+
+53:05.760 --> 53:14.240
+this three by three m matrix which is rewritten as m1 transpose m2 transpose and m3 transpose
+
+53:14.240 --> 53:21.200
+over here so earlier on in the camera projection matrix that we have defined from the basic pinhole
+
+53:21.200 --> 53:27.360
+camera model we have seen that any points mathematically any points in the 3d space
+
+53:27.360 --> 53:33.440
+can be mapped by fire this projection matrix onto the image but in reality only half of
+
+53:33.440 --> 53:38.480
+these points in the 3d space in particular those that are lying in front of the camera
+
+53:38.480 --> 53:48.160
+can be observed on the image we can define this half of the points in in space using the principal
+
+53:48.800 --> 53:55.840
+axis vector and the principal axis vector is actually given by v equals to the determinant of m
+
+53:56.560 --> 54:06.000
+which is the first three by three entries of the p matrix over here p4 which is the first three by
+
+54:06.000 --> 54:16.240
+three entry of the camera projection matrix and multiplied by the last row of the m matrix
+
+54:16.240 --> 54:26.160
+which is given by this which is rewritten by as this guy we have seen that m3 here
+
+54:26.160 --> 54:32.880
+defines the direction of the principal axis because we have seen that p is given by
+
+54:33.520 --> 54:41.040
+rewrite into p1 transpose p2 transpose and p3 transpose and this guy here the last row is it
+
+54:41.040 --> 54:48.640
+represents the principal plane and we have said earlier on that the first three entries of
+
+54:48.640 --> 54:57.120
+principal plane denotes the direction vector the first three elements of this which we earlier on
+
+54:57.120 --> 55:05.040
+define as p hat 3 transpose and now we can see that these first three elements of this if we
+
+55:05.040 --> 55:13.040
+were to rewrite the projection matrix into m and p4 the first three elements of the last row is
+
+55:13.040 --> 55:20.320
+actually given by the last row of the m matrix which we denote by m3 transpose over here which
+
+55:20.320 --> 55:27.840
+means that m3 transpose is actually the principal axis that we have seen earlier on however we must
+
+55:27.840 --> 55:33.200
+also note that this particular vector m3 transpose over here is only defined up to
+
+55:33.840 --> 55:40.800
+a certain sign with respect to a world frame we do not know whether this is pointing this direction
+
+55:41.360 --> 55:48.960
+or pointing the other direction so but this ambiguity can be resolved using sign of the
+
+55:48.960 --> 55:54.240
+principal axis that is obtained from the determinant of m the determinant of m is
+
+55:54.240 --> 56:03.760
+essentially equivalent to the sine area distance so if we were to write m as m1 transpose m2
+
+56:03.760 --> 56:15.040
+transpose and m3 transpose we can treat the first row as i j and k and the second and third row
+
+56:16.400 --> 56:23.440
+as this so what it means when we write the determinant when we are computing the determinant
+
+56:23.440 --> 56:29.040
+of this guy over here is equivalent to the cross product of and the two rows
+
+56:30.080 --> 56:37.200
+geometrically what it means here is that i have two vectors on the principal plane i'm going to
+
+56:37.200 --> 56:43.120
+cross the two i'm going to do a cross product of these two and this is going to give me another
+
+56:43.120 --> 56:49.280
+vector that tells me the sine distance of this it's either going to be pointing this direction
+
+56:49.280 --> 56:55.360
+depending on the sign of these two vectors if this vector is pointing the other way this means
+
+56:55.360 --> 57:01.680
+that i would end up to have another vector our determinant of this is going to be negative in
+
+57:01.680 --> 57:07.040
+the other direction over here so by doing this i'll be able to figure out that this principal
+
+57:07.040 --> 57:14.320
+axis is actually pointing to and figure out the set of points that is lying in front of the camera
+
+57:14.320 --> 57:23.920
+so a summary of the properties that we can obtain from the camera projection matrix is given by this
+
+57:23.920 --> 57:30.000
+table over here we have seen that the camera center is essentially given by the right now
+
+57:30.000 --> 57:35.760
+spot of this equation over here since we know that the projection of the camera center has to
+
+57:35.760 --> 57:41.840
+be projected onto a point of zero zero zero an undefined point of zero zero zero we will see
+
+57:41.840 --> 57:48.400
+that this null space is essentially given by the inverse of the m matrix where m is the first three
+
+57:48.400 --> 57:55.520
+by three matrix of the projection since this is a finite camera we'll see that this is an invertible
+
+57:55.520 --> 58:02.880
+three by three metric that can be used to find out the null space we can actually verify this
+
+58:03.520 --> 58:10.800
+if we take m multiplied by the and p multiplied by this guy over here
+
+58:12.880 --> 58:24.240
+p for one this essential this essentially gives us p4 minus p4 plus p4 which has to be a zero
+
+58:24.240 --> 58:32.560
+vector and this is equivalent to the this equation over here which is which satisfy this equation
+
+58:32.560 --> 58:39.440
+over here and then at towards the end of the lecture we'll also look at the camera at infinity
+
+58:39.440 --> 58:45.040
+where the first three by three element of the camera projection matrix is no longer invertible
+
+58:45.040 --> 58:51.680
+and the camera center lies at infinity where it has to be given by this equation over here we'll
+
+58:51.680 --> 58:58.160
+look at this in more detail in a in a moment so we also look at the columns of the camera
+
+58:58.160 --> 59:03.680
+metric the first three columns define the three vanishing points that corresponds to the
+
+59:04.560 --> 59:12.160
+directions to the directions of the axis of the world frame and the fourth column
+
+59:13.120 --> 59:20.960
+corresponds to the projection of the of the world of the origin of the world frame onto the image
+
+59:20.960 --> 59:25.280
+and then we've also seen the third row of the camera matrix represents the principal plane
+
+59:25.280 --> 59:30.880
+and there are also two additional axis planes that contains the camera center as well as the
+
+59:30.880 --> 59:38.080
+x-axis or the y-axis of the image coordinate frame that is defined by the first row and the second
+
+59:38.080 --> 59:45.840
+row of the camera projection matrix and we also look at the principal point so essentially this
+
+59:45.840 --> 59:52.320
+is the projection of the ideal point that is given by the normal vector from the principal plane
+
+59:52.320 --> 59:58.160
+which is the first three entries of the third row of the principal plane then finally we look at
+
+59:58.160 --> 01:00:04.080
+the principal ray and this ray this principal axis it actually defines the direction of the
+
+01:00:04.080 --> 01:00:10.640
+camera principal axis by defining this direction we'll also be able to figure out a half set of
+
+01:00:10.640 --> 01:00:17.840
+points that is lying in front of the camera that can be projected onto an image for observation
+

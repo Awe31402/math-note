@@ -1,0 +1,1430 @@
+WEBVTT
+
+00:00.000 --> 00:04.800
+Hello everyone, welcome to the lecture on 3D computer vision, and today we are going
+
+00:04.800 --> 00:10.480
+to talk about the generalized cameras. Hopefully, by the end of today's lecture, you will be
+
+00:10.480 --> 00:15.800
+able to use the Blucher line representation that we have learned earlier on in our lectures
+
+00:15.800 --> 00:23.160
+to derive the generalized epipolar geometry that relates two views of a generalized camera.
+
+00:23.160 --> 00:28.480
+Next we will look at how to apply the linear 17-point algorithm to compute the relative
+
+00:28.480 --> 00:36.280
+pose between the two views of a generalized camera, and then we will look at how to explain
+
+00:36.280 --> 00:43.680
+the degeneracy cases of a generalized epipolar geometry. In particular, we will look at three
+
+00:43.680 --> 00:50.520
+cases, the locally centered projection, axial cameras, and the locally centered and axial
+
+00:50.520 --> 00:57.640
+camera configuration. Finally, we will learn how to compute the absolute pose of a generalized
+
+00:57.640 --> 01:05.720
+camera using 2D, 3D point, or line correspondences. Today I'm not going to say that I didn't invent
+
+01:05.720 --> 01:12.080
+any of today's material because indeed I did invent two of the materials that we are going
+
+01:12.080 --> 01:20.600
+to talk about today. So I took mainly four references for today's lecture. The first
+
+01:20.600 --> 01:27.480
+is the paper written by Robert Plasse using many cameras as one. In particular, I took
+
+01:27.480 --> 01:37.000
+from this paper the derivation of the generalized epipolar geometry. I took the three degeneracy
+
+01:37.000 --> 01:42.280
+cases that we are going to look at from the paper written by Hongdong Li, a linear approach
+
+01:42.280 --> 01:48.680
+to motion estimation using generalized camera models, and I took the generalized pose estimation
+
+01:48.680 --> 01:54.040
+from point correspondence from this paper that I have written in 2015, Minima solutions
+
+01:54.040 --> 02:01.400
+for the multi-camera pose estimation problem. Finally, I took the non-prospective pose estimation
+
+02:01.400 --> 02:08.320
+from line correspondences from this paper that I have written in 2016 in ECCV, and I
+
+02:08.320 --> 02:13.600
+strongly encourage all of you to look at these papers after today's lecture. So far in all
+
+02:13.600 --> 02:20.520
+our lectures, we have been looking at the pinhole camera model where all the light rays
+
+02:20.520 --> 02:25.720
+that comes into the standard pinhole camera converge at a particular point, which is the
+
+02:25.720 --> 02:32.400
+camera center. So this is the image, and all the light rays are going to come in and project
+
+02:32.400 --> 02:38.200
+onto the image, but they will all converge at a single center of projection, known as
+
+02:38.200 --> 02:44.120
+the camera center. One illustration here would be in a two-view geometry of a pinhole camera.
+
+02:44.120 --> 02:49.680
+We can see that lights that are reflected from these 3D points into the pinhole camera
+
+02:49.680 --> 02:56.080
+converges at a single center of convergence, and this is true for the two views that is
+
+02:56.080 --> 03:02.640
+shown here. In contrast, light rays do not meet at a single center of convergence in
+
+03:02.640 --> 03:08.200
+the generalized camera. So we can think of a generalized camera where the lens is a general
+
+03:08.200 --> 03:14.240
+shape. It can be something like in the shape of a funhouse mirror. So this is an arbitrary
+
+03:14.720 --> 03:20.440
+shape. What it means is that the light rays that are being projected into the cameras,
+
+03:20.440 --> 03:28.560
+they do not meet at a single center of projection. So here, this is an illustration of a two-view
+
+03:28.560 --> 03:34.680
+generalized camera where we can see that the light rays that are reflected from the 3D points
+
+03:34.680 --> 03:40.520
+in the environment do not converge at a single center of projection here. So all these light
+
+03:40.520 --> 03:48.640
+rays, they are in arbitrary locations. Of course, in reality, the funhouse mirror lens,
+
+03:48.640 --> 03:55.680
+this funhouse mirror lens that projects light ray into arbitrary configuration,
+
+03:55.680 --> 04:04.320
+it does not exist in reality. But a generalized camera can be realized with a multi-camera system
+
+04:04.320 --> 04:11.240
+with minimal or without any overlapping field of view. Here's two examples of the multi-camera
+
+04:11.240 --> 04:17.320
+system that I worked with in the past. So the first example here, it's a drone system where
+
+04:17.320 --> 04:22.760
+we mounted four cameras that look in four different directions. We can see that from
+
+04:22.760 --> 04:28.720
+this camera setup, there are minimal field of view between the front forward-looking camera and the
+
+04:28.720 --> 04:35.360
+backward-looking camera. And here's another example where we mounted four cameras on the
+
+04:35.360 --> 04:42.680
+self-driving car, one looking forward and one looking backward, and two at the side mirrors.
+
+04:42.680 --> 04:49.120
+So we can see here that there's minimal overlapping field of view between these four cameras,
+
+04:49.120 --> 04:55.480
+and this is generally known as the generalized camera. The reason is because let's look at this
+
+04:55.480 --> 05:00.680
+illustration over here. Suppose that I have a camera here and another camera here. We can see
+
+05:00.680 --> 05:06.440
+that all these light rays from the first camera that we saw here, it's going to project at a
+
+05:06.440 --> 05:12.800
+single center of projection. And this is true for another camera that is mounted rigidly on this
+
+05:12.800 --> 05:19.000
+vehicle. So here, let's look at the second camera. It's also going to project light rays that are
+
+05:19.000 --> 05:25.840
+going to converge at a single center of projection. However, the two points of convergence,
+
+05:25.840 --> 05:31.760
+they do not meet or they are not the same point here. So we can see that given an arbitrarily
+
+05:31.760 --> 05:38.680
+configured number of cameras that are rigidly fixed onto the vehicle here, we can see a numerous
+
+05:38.680 --> 05:45.800
+point of projections over here, and they generally do not meet at a single point. So here, this would
+
+05:45.880 --> 05:54.560
+be an example of how the generalized cameras can be realized in a physical system. And the reason
+
+05:54.560 --> 06:00.560
+of why we chose a multi-camera system is because cameras are generally low cost and easy to maintain
+
+06:00.560 --> 06:07.080
+compared to other kind of sensors configuration or sensor setup such as the LIDAR sensor. LIDAR
+
+06:07.080 --> 06:15.120
+sensor is a laser sensor, and this is generally much more expensive compared to a camera. And
+
+06:15.160 --> 06:21.400
+because there are many rotating parts on the LIDAR sensor, and we know that generally more
+
+06:21.400 --> 06:29.120
+sophisticated mechanical systems means that it's more difficult to maintain it, and it's also more
+
+06:29.120 --> 06:36.440
+susceptible to mechanical failure. But in contrast, for cameras, there's no moving parts at all. So
+
+06:36.440 --> 06:42.960
+it's generally easier to maintain and less susceptible to any failures. And of course,
+
+06:43.360 --> 06:49.080
+it's also low cost for LIDAR sensor that we see on some of the self-driving cars out there. The
+
+06:49.080 --> 06:58.520
+unit price is about in the order of 60,000 USD, where for an industrial camera, the very high-end
+
+06:58.520 --> 07:04.920
+ones, it probably will only cost you up to a thousand dollars to buy. So this means that we
+
+07:04.920 --> 07:12.800
+can easily gather many of these cameras and put it together in one particular system that we wish
+
+07:12.840 --> 07:20.360
+to operate on. And another advantage of a multiple camera system is that we can easily choose the
+
+07:20.360 --> 07:27.640
+configuration such that it maximizes the view of view. So for example, in this car here, where we
+
+07:27.640 --> 07:34.520
+chose four of these cameras, the multi-camera system, such that we can achieve an only directional
+
+07:34.520 --> 07:42.480
+view here. This means that the coverage would be 360°. We get a surround view by just mounting
+
+07:42.560 --> 07:49.120
+four cameras in four different directions. And we'll also see in today's lecture that in the
+
+07:49.120 --> 07:56.040
+mathematics derivation of the generalized epipolar geometry, that absolute scale can be obtained
+
+07:56.040 --> 08:01.520
+directly from the epipolar geometry. So epipolar geometry, as what we have learned earlier on in
+
+08:01.520 --> 08:10.400
+the lectures, when we look at fundamental matrices in a single camera, we have two views. We saw
+
+08:10.400 --> 08:17.200
+that this is related by essential matrix or fundamental matrix. So in the case of a calibrated
+
+08:17.200 --> 08:22.800
+camera, it will be essential matrix. And we saw that this can be decomposed into the rotation and
+
+08:22.800 --> 08:30.680
+translation vector. But in a single central camera configuration, we saw that we can only obtain up
+
+08:30.680 --> 08:36.640
+to five degrees of freedom, the decomposition of an essential matrix into the relative pose of a
+
+08:36.640 --> 08:42.440
+relative rotation and a relative translation, where the translation is only known up to scale.
+
+08:42.440 --> 08:49.240
+So this guy over here is known up to scale. And in today's lecture, we'll see that given two
+
+08:49.240 --> 08:56.680
+generalized images, we can relate them using the epipolar geometry, where here we can see that we
+
+08:56.680 --> 09:02.920
+will derive something that is known as the generalized essential matrix, GEM. And then we'll
+
+09:02.920 --> 09:08.400
+see that we can decompose this as well into the rotation and translation vector. But in this
+
+09:08.400 --> 09:14.200
+particular case here, the translation vector will contain absolute scale. This means we know the
+
+09:14.200 --> 09:20.240
+absolute matrix scale of this guy over here. And this means that there are altogether six degrees
+
+09:20.240 --> 09:27.600
+of freedom which we can obtain from the generalized essential matrix. However, there are challenges to
+
+09:27.840 --> 09:33.920
+generalize epipolar geometry. That is, when we have a multiple camera system to realize the
+
+09:33.920 --> 09:40.320
+generalized camera, there would be no or minimal overlapping field of view, as what we have
+
+09:40.320 --> 09:47.320
+mentioned earlier on. And this simply means that the stereo setup or the mathematics, the physics
+
+09:47.320 --> 09:54.640
+behind stereo cannot be used directly here. And the next challenge we will see is that we can
+
+09:54.680 --> 10:00.640
+mitigate this particular problem of no or minimal overlapping field of view by processing each
+
+10:00.640 --> 10:07.200
+camera independently. This means that I will just treat the multiple camera system. For example,
+
+10:07.200 --> 10:16.280
+if I have a car here and I mount four cameras here. So one argument could be that after I have
+
+10:16.280 --> 10:23.200
+moved this multiple camera system from one location to another, I could simply treat this
+
+10:23.200 --> 10:29.520
+camera, the same camera as one camera epipolar geometry, which we have learned in the earlier
+
+10:29.520 --> 10:35.560
+lecture. That means that I can compute the essential matrix of each one of these cameras
+
+10:35.560 --> 10:42.520
+independently from each other. And then we can think of a way to aggregate these essential
+
+10:42.520 --> 10:49.120
+matrices that we have computed from the multiple camera system together to get the relative
+
+10:49.160 --> 10:56.840
+translation and rotation. However, the problem with this is that it's computationally inefficient,
+
+10:56.840 --> 11:03.560
+and we will not be able to identify or we will not be able to get the absolute scale if we do
+
+11:03.560 --> 11:08.600
+it this way. The reason is because we are treating every single camera independently. We are not
+
+11:08.600 --> 11:14.600
+making use of the relative locations or the relative extrinsic calibration between these
+
+11:14.720 --> 11:20.640
+cameras. As we will see later in the lecture that this actually helps us to get the absolute scale.
+
+11:20.640 --> 11:25.760
+So the solution here that we are going to introduce in this particular lecture on how to
+
+11:25.760 --> 11:32.880
+use a multiple camera system efficiently would be to use what we call the generalized camera
+
+11:32.880 --> 11:38.560
+formulation. In particular, we'll look at the generalized epipolar geometry. So in contrast
+
+11:38.560 --> 11:46.080
+with the single pinhole camera model where there is a single center of projection. In that case,
+
+11:46.080 --> 11:52.560
+all the light rays here are going to be projected onto a single center of projection. So in that
+
+11:52.560 --> 11:58.480
+particular case here, we can see that we can easily or conveniently assign a reference frame
+
+11:59.040 --> 12:05.120
+to this particular single center of projection where every pixel in the image can also be
+
+12:05.120 --> 12:11.520
+conveniently represented using the homogeneous coordinates. So they are coherent in the sense
+
+12:11.520 --> 12:17.600
+that there is a single center of projection, a single reference frame that binds all of them
+
+12:17.600 --> 12:22.480
+together. Hence, we can see that for example in this case here if this is this coordinate here
+
+12:22.480 --> 12:33.120
+is x and y, we can easily call this x y and 1 in this particular illustration over here. And all
+
+12:33.120 --> 12:39.360
+the pixels here they are all going to be related via this particular single center of projection,
+
+12:39.360 --> 12:45.200
+this reference frame that is attached to the single center of projection. In contrast,
+
+12:46.080 --> 12:52.320
+in the case of a generalized camera, since all the light rays they are all going to be projected
+
+12:52.960 --> 13:00.960
+in arbitrary locations. So here we cannot conveniently choose a single reference frame.
+
+13:01.760 --> 13:09.600
+And we'll see that it becomes inconvenient to stick on to the standard homogeneous
+
+13:09.600 --> 13:16.160
+representation that we have seen earlier on for points. Hence, we are going to introduce the use
+
+13:16.160 --> 13:22.960
+of Plucker vectors. This means that all these pixels on the generalized images, for example
+
+13:22.960 --> 13:27.600
+this particular point here, suppose that it's called x y, we're not going to represent this
+
+13:27.600 --> 13:32.880
+particular homogeneous coordinates that we have seen in the standard pinhole camera because there's
+
+13:32.880 --> 13:38.000
+no single point of convergence over here. So what we are going to do here is that we are going to
+
+13:38.000 --> 13:46.400
+arbitrarily assign a reference frame here with respect to the generalized camera setup. And we
+
+13:46.400 --> 13:53.040
+are going to represent every single point on the generalized image as a light ray. That is with
+
+13:53.040 --> 14:00.080
+respect to this particular reference frame that we have defined or we have attached to the
+
+14:00.080 --> 14:06.880
+generalized camera. And we can see that this is going to be convenient. The reason is because we
+
+14:06.880 --> 14:13.520
+have seen earlier on in the first two lectures that for a Plucker vector we can represent it
+
+14:13.520 --> 14:21.280
+using a six dimensional 6D vector, where the first three vectors represent the directional vector
+
+14:21.280 --> 14:28.480
+which we denote as q over here, and the next three vectors would be representing the moment
+
+14:28.480 --> 14:34.080
+vector that we denote as q prime. So what this means is that any light ray that we have seen,
+
+14:34.080 --> 14:41.200
+so suppose that this is the light ray that projects onto our generalized image, we can
+
+14:41.200 --> 14:48.800
+assign a general reference frame over here. And then the first three vectors of the Plucker
+
+14:48.800 --> 14:55.280
+coordinate that represents this particular pixel on the generalized image would be the
+
+14:55.280 --> 15:00.720
+directional vector of this light ray which we denote as q here. So this would be a unique
+
+15:00.720 --> 15:08.560
+vector in the direction of this light ray that we denote as q over here. And then the moment vector
+
+15:08.560 --> 15:16.480
+here will be simply the cross product of any point on this particular line. So here we can arbitrarily
+
+15:16.480 --> 15:23.440
+choose a point which we call p over here, and the cross product of this p which is a vector
+
+15:23.440 --> 15:28.640
+that is from the reference frame over here. So note that the directional vector of q over here
+
+15:28.640 --> 15:33.680
+would also be expressed with respect to this reference frame that we have chosen for the
+
+15:33.680 --> 15:41.840
+generalized camera system. And p here would be a point or a vector that is defined from the
+
+15:41.840 --> 15:48.960
+reference frame. And q prime, the moment vector, would be the cross product of this p, this point
+
+15:48.960 --> 15:56.640
+over here, and the unidirectional vector of the first three entries in the Plucker vector as given
+
+15:56.640 --> 16:03.040
+by this equation over here. Hence as a result we'll get this particular line which we can denote as
+
+16:03.040 --> 16:10.400
+l over here to be equals to q transpose q prime transpose and transpose. So this means that this
+
+16:10.400 --> 16:18.000
+is a 6D vector where the first three entries of this 6D vector is our unit direction of the light
+
+16:18.000 --> 16:25.280
+ray and the last three entries in the unit vector would be the moment vector that is computed from
+
+16:25.280 --> 16:33.440
+the cross product of the unit direction and any point on the line. Hence as a result we know that
+
+16:34.080 --> 16:41.520
+since q prime is obtained from the cross product of q with any point that lies on the line,
+
+16:41.520 --> 16:48.240
+what this means is that q and q prime would be octagonal to each other. Hence the dot product
+
+16:48.240 --> 16:53.520
+of these two entities in the Plucker vector should always be equals to zero because they
+
+16:53.520 --> 16:59.680
+are octagonal to each other. And the remaining five parameters are also homogeneous. This means
+
+16:59.680 --> 17:06.000
+that their over skills does not affect the line that they describe and it is convenient to force
+
+17:06.000 --> 17:12.480
+the directional vector to be unit vector because as what we have mentioned here is that the scale
+
+17:12.480 --> 17:19.280
+of the direction does not matter at all. So hence we will just conveniently choose the
+
+17:19.920 --> 17:26.400
+first three entries or the directional vector in the Plucker line which is q transpose and q
+
+17:26.400 --> 17:33.680
+prime transpose over here. So we'll conveniently choose the direction vector to be a unit vector
+
+17:33.680 --> 17:39.360
+and this also defines the scale or rather we fix the scale at unit scale for the homogeneous
+
+17:39.360 --> 17:46.720
+coordinates. And once we have defined the Plucker line to be this guy over here, what it means is
+
+17:46.720 --> 17:51.760
+that the set of points or the points that lies on the Plucker line, suppose that this is generalized
+
+17:51.760 --> 17:57.360
+image where there's a light array over here and we define this light array to be l equals to
+
+17:57.360 --> 18:05.680
+q transpose q prime transpose transpose with respect to a arbitrary reference frame that is fixed
+
+18:05.680 --> 18:15.200
+according to the general camera system. Any points on this particular line would be given by this
+
+18:15.200 --> 18:24.160
+equation over here where it's a q cross q prime plus alpha q. What the first term over here means
+
+18:24.160 --> 18:30.880
+is that we're expressing this to be the base point or the closest point to the reference
+
+18:30.880 --> 18:37.520
+frame from the this particular light array l over here. So this means that this is the closest point
+
+18:37.520 --> 18:45.280
+to the reference frame given by q cross q prime over here and hence any point on this particular
+
+18:45.280 --> 18:53.040
+line would be in the direction of the line which is given by q and taken at a certain regular
+
+18:53.040 --> 19:00.000
+interval that is scaled by this scalar value of alpha over here. For example this particular point
+
+19:00.000 --> 19:05.760
+here it will be in the direction from q cross q prime that's the closest point to the reference
+
+19:05.760 --> 19:14.640
+frame of the line and it will be taken at a certain unit of this q which is the direction
+
+19:14.640 --> 19:22.880
+or in the Plucker light array and here we'll refer to alpha as the sign distance from that point
+
+19:22.880 --> 19:28.640
+because this alpha over here when it's positive it will tell us that it's moving in this direction
+
+19:28.640 --> 19:35.280
+according to the unit direction of the Plucker line and if it is negative it means we are looking
+
+19:35.360 --> 19:41.680
+behind the opposite direction of the Plucker line. Since we are looking at a multiple camera system
+
+19:41.680 --> 19:49.680
+setup our generalized camera will be made up of multiple cameras that are fixed rigidly together
+
+19:49.680 --> 19:54.720
+for example in the car system that we have seen earlier on we have four cameras that are looking
+
+19:54.720 --> 20:00.880
+in four different octagonal directions. In the case where the reference frame for this general
+
+20:00.880 --> 20:08.080
+camera system can be chosen arbitrarily anywhere on this fixed rigid body that contains the
+
+20:08.080 --> 20:15.120
+multiple cameras setup and in the case where we choose a reference frame to be on the center of
+
+20:15.120 --> 20:21.200
+projection for one particular camera suppose that this camera we call ci over here so what this
+
+20:21.200 --> 20:27.280
+means is that all the light rays are going to converge at a single center of projection which
+
+20:27.280 --> 20:33.200
+coincides with the reference frame for this particular camera in the multiple camera system
+
+20:33.200 --> 20:42.480
+setup and here a pixel sample along this light ray would be x and y so what this means is that
+
+20:42.480 --> 20:49.920
+we have also seen in our earlier lectures that given a pixel on an image over here as x and y
+
+20:49.920 --> 20:54.480
+we can easily compute the directional vector that corresponds to this particular
+
+20:55.040 --> 21:02.160
+in the image and that can be given by the normalized camera coordinate where kci over here
+
+21:02.160 --> 21:08.800
+represents the intrinsic camera calibration matrix of this particular pinhole camera that makes up
+
+21:08.800 --> 21:15.440
+the multi-camera system so here by doing this we will be able to find the unit direction
+
+21:15.440 --> 21:22.880
+along the vector that represents this light ray over here so this means that this guy over here
+
+21:22.880 --> 21:29.520
+will give us the first three entries of our looker coordinate which is known as q and since
+
+21:29.520 --> 21:35.040
+in this particular case we fix the reference frame of the multiple camera systems setup
+
+21:35.040 --> 21:41.040
+coincide with this camera ci over here so this means that a point that lies on this particular
+
+21:41.040 --> 21:48.160
+array can be conveniently chosen as the origin of this reference frame since all the light rays
+
+21:48.160 --> 21:54.080
+are going to pass through this particular point over here and this is also the point which
+
+21:54.080 --> 22:00.240
+contains the reference frame and this means that this point can be conveniently chosen as a 0 0
+
+22:00.240 --> 22:10.480
+0 here so what this means is that q prime can be computed from q cross p where q here
+
+22:11.040 --> 22:17.760
+is from the normalized camera coordinates that we find here in this particular case and p here
+
+22:17.760 --> 22:25.280
+would be any point on this light ray and we can conveniently choose p to be equals to the origin
+
+22:25.280 --> 22:31.280
+since we have fixed the reference frame to be on the convergence point of the camera so here
+
+22:31.840 --> 22:39.520
+what this means is that q prime over here can be conveniently chosen as the vector of 0 0 0
+
+22:40.640 --> 22:46.720
+and in the case where the camera center is not at an origin so what it means is that because we have
+
+22:46.720 --> 22:50.720
+multiple camera system here for example in the car system that i have shown earlier on
+
+22:51.280 --> 22:58.080
+we have four cameras we can as mentioned in the previous slide we can choose the reference frame
+
+22:58.080 --> 23:05.360
+to be coincident with one of the camera center but what this means is that this reference frame
+
+23:05.360 --> 23:12.480
+cannot be coincident with all the other remaining cameras so as a result the last moment vector the
+
+23:12.480 --> 23:19.200
+last three entries of the pluker coordinates cannot be zero and for all the remaining cameras
+
+23:19.200 --> 23:26.480
+in the multiple camera system setup so here we have to look at how to compute the pluker
+
+23:26.480 --> 23:33.360
+light rate of all the light rays that passes through these cameras in general so here we
+
+23:33.360 --> 23:40.400
+will define ci over here which is the camera center to be not at the origin so since we already
+
+23:40.400 --> 23:46.000
+chosen the reference frame to be at origin or otherwise we can also choose the reference frame
+
+23:46.000 --> 23:52.800
+to be in general anywhere on this particular rigid body where all the four different cameras
+
+23:52.800 --> 23:59.520
+or multi-camera systems are rigidly fixed onto the body we will further assume that the respective
+
+23:59.520 --> 24:04.960
+cameras are calibrated that means that we have the calibration matrix the intrinsic calibration
+
+24:04.960 --> 24:11.440
+matrix which we call kci that represents the ith camera on our multiple camera system
+
+24:11.440 --> 24:17.600
+and we'll also assume that we have the extrinsic calibrations of this multiple camera system set
+
+24:17.600 --> 24:22.720
+out so what it means is that suppose we fix the reference frame to be here for example the
+
+24:22.720 --> 24:28.960
+extrinsic calibration simply means that for camera ci we will know the relative transformation which
+
+24:28.960 --> 24:38.320
+we denote as rci and tci that brings the camera to the frame of the reference that we have defined
+
+24:38.320 --> 24:48.560
+here and this can be easily found from calibration methods that we have described earlier on and so
+
+24:48.560 --> 24:54.000
+in this particular case here where the reference frame are not at the origin of any of this camera
+
+24:54.000 --> 25:01.360
+system we can see that the directional vector would be the given by this particular equation
+
+25:01.360 --> 25:09.520
+over here so in this case here we have x and y to be a pixel on the image for that particular
+
+25:10.160 --> 25:16.080
+camera that we are that we are looking at and since the reference frame is somewhere else
+
+25:16.080 --> 25:23.280
+suppose that this is the reference frame over here which we call fw over here and we'll see that
+
+25:23.280 --> 25:29.280
+q that is computed from the normalized camera image coordinates over here would be either
+
+25:29.280 --> 25:36.000
+direction or with respect to the local frame of that particular camera that contains this
+
+25:36.000 --> 25:42.720
+particular image pixel or this particular light ray but we have to do an additional step that is
+
+25:42.720 --> 25:49.440
+to transform this vector which we can we can call q tilde over here because this is with respect to
+
+25:49.440 --> 25:56.400
+that particular camera we need to transform this directional vector into the frame of the
+
+25:56.400 --> 26:03.520
+reference frame of the generalized camera so this can be done easily by transforming it according to
+
+26:03.520 --> 26:09.680
+a rotation this is because this guy here q tilde is just a directional vector in the direction of
+
+26:09.680 --> 26:14.400
+the light ray so in order to transform this directional vector into the frame of the
+
+26:14.960 --> 26:20.560
+generalized camera we can pre-multiply this with the rotation of the camera
+
+26:20.560 --> 26:27.040
+intrinsics for that particular camera so this would give us q the directional vector
+
+26:27.040 --> 26:34.160
+of the pluker line that represents this light ray with respect to the reference frame of the general
+
+26:34.160 --> 26:40.080
+camera and the next thing that we need to compute would be the next three elements of the pluker
+
+26:40.080 --> 26:46.880
+line which is q prime over here so in this case we have to find a point since we already have the
+
+26:46.880 --> 26:52.480
+directional vector with respect to the reference frame q over here the next thing that we need to
+
+26:52.480 --> 26:58.800
+find would be any point on this particular light ray with respect to the general camera reference
+
+26:58.800 --> 27:06.320
+frame fw over here and a convenient point to choose would be the translation vector
+
+27:06.320 --> 27:11.840
+of this point from the extrinsics calibration of this particular camera with respect to the
+
+27:11.840 --> 27:18.400
+world frame so the translation vector here simply refers to the point where the center of projection
+
+27:18.400 --> 27:24.880
+of this particular camera lies with respect to the reference frame that we have defined
+
+27:24.880 --> 27:31.440
+and this is given by t c i that we have defined here hence the cross product of these two vectors
+
+27:31.440 --> 27:38.160
+over here will give us q prime as a result we would have obtained the pluker line coordinate
+
+27:38.160 --> 27:44.720
+which called l over here given by q transpose q prime transpose transpose over here where
+
+27:44.720 --> 27:53.920
+q transpose and q prime transpose is given by the camera intrinsics calibrations the pixel value with
+
+27:53.920 --> 28:00.960
+respect to that particular camera and the cross product of the direction vector with the translation
+
+28:01.760 --> 28:08.080
+intrinsics value of that particular camera so here's an example of the multi-camera system
+
+28:08.080 --> 28:15.040
+on the car that i have shown earlier on in the in the lecture suppose i have an arbitrary camera
+
+28:15.040 --> 28:22.400
+which i call c i over here so we can see that we normally in this car system in the self-driving
+
+28:22.400 --> 28:28.000
+car system we will assign a reference frame because this car system will contain many other
+
+28:28.000 --> 28:33.520
+sensors as well so one of the sensors that you will contain could be the inertia measurement
+
+28:33.520 --> 28:46.640
+unit so inertia measurement unit or in short the imu unit which we normally use to measure
+
+28:46.640 --> 28:54.960
+the acceleration or the change of the angles of this particular car over here so this inertia
+
+28:54.960 --> 29:00.720
+measurement unit because it has the highest sampling rate so it's normally around 200 hertz
+
+29:00.720 --> 29:07.280
+of sampling rate so this this means that it's a very good sensor to be taken as the reference
+
+29:07.280 --> 29:13.120
+frame or the suite of sensors in the robotic systems that looks like this over here so
+
+29:13.120 --> 29:18.880
+normally we'll place this inertia measurement unit somewhere in the middle of the car a good
+
+29:18.880 --> 29:26.320
+reference frame for the general camera would be the on the inertia measurement unit or the imu
+
+29:26.320 --> 29:32.160
+over here which we denote as v over here hence all the cameras of this multiple camera system
+
+29:32.160 --> 29:38.480
+set up would have to be with respect to this particular reference frame over here and we can
+
+29:38.480 --> 29:45.840
+see as we have defined in the previous slide that any pluco line on any camera can be given by this
+
+29:45.840 --> 29:53.680
+equation over here l equals to this equation over here where q would be simply the inverse
+
+29:53.680 --> 30:00.320
+normalized camera coordinate of that particular camera pre-multiplied by the rotation extrinsic
+
+30:00.320 --> 30:06.720
+value with respect to the reference frame and then the moment vector over here q prime would
+
+30:06.720 --> 30:13.120
+be simply the cross product of the unit vector and a point on the light ray so this point over here
+
+30:13.760 --> 30:23.200
+can be simply chosen as the translation of the camera with respect to the reference frame now
+
+30:23.200 --> 30:28.320
+after looking at the definition of the pluco line coordinates to represent the light rays in a
+
+30:28.320 --> 30:34.800
+generalized camera we will next look at the two view geometry of a general camera suppose that
+
+30:34.800 --> 30:41.200
+we are given two generalized images as illustrated in this figure here this is view one and this is
+
+30:41.200 --> 30:49.920
+view two where we have a correspondence pixel which we denote as x1 y1 and x2 y2 here so what
+
+30:49.920 --> 30:57.680
+it means is that i have a 3d point which i denote as x and this 3d point is simultaneously projected
+
+30:57.680 --> 31:05.360
+onto the general camera 1 and general camera 2 over here where this particular pixel over here
+
+31:05.360 --> 31:17.040
+it's a x1 and y1 and the corresponding pixel on the second view would be denoted as x2 and y2 and
+
+31:17.040 --> 31:23.360
+we know that from the pluco line coordinate that we have seen in the previous slides that the first
+
+31:23.360 --> 31:29.360
+light ray in the first view can be represented as a pluco line which is given by these coordinates
+
+31:29.360 --> 31:37.280
+over here q1 transpose and q1 prime transpose where q1 is simply the unidirectional vector
+
+31:37.280 --> 31:45.360
+of this light ray over here with respect to the local frame of this generalized camera of the
+
+31:45.360 --> 31:52.560
+first view of the generalized camera and similarly we can compute the cross product of the the moment
+
+31:52.560 --> 32:00.080
+vector q1 prime over here for the light ray in the first view by simply taking the cross product
+
+32:00.080 --> 32:07.760
+of q with this translation vector the extrinsic value or any point on this particular light ray
+
+32:07.760 --> 32:14.400
+over here with q and this would give us the pluco representation of this particular light ray we can
+
+32:14.400 --> 32:19.920
+do the same thing for the light ray in the second view where here that the reference frame if they
+
+32:19.920 --> 32:24.800
+are the same camera this means that if i have a same general camera that i move from one
+
+32:25.440 --> 32:32.320
+view to another then the extrinsic value of these cameras would remain the same over the two view
+
+32:32.320 --> 32:37.840
+however this is not necessarily needed you just need to know where this reference frame
+
+32:37.840 --> 32:43.200
+needs to be for the two view so in this case here i have the reference frame i can also compute the
+
+32:43.200 --> 32:50.400
+unit vector in the second view which i call q2 over here and i'm going to also take an arbitrary
+
+32:50.400 --> 32:56.480
+point from this light ray over here and do the cross product of the unit directional vector with
+
+32:56.480 --> 33:03.040
+at this particular point usually chosen as the extrinsic value of this camera that gives rise
+
+33:03.040 --> 33:09.040
+to this particular light ray over here so here i would also have a pluco line that represents the
+
+33:09.040 --> 33:14.800
+second light ray in the second view over here and we know that these two light rays they must
+
+33:14.800 --> 33:21.520
+intersect since they are corresponding points in in 3d space this means that they must intersect
+
+33:21.520 --> 33:29.200
+at the 3d point which we call x and similar to the model the epipolar geometry of the pinhole camera
+
+33:29.920 --> 33:36.960
+in this particular case there is also a relative rotation and translation over here that relates
+
+33:36.960 --> 33:43.760
+the two reference frame note that this relative transformation it's the rotation and translation
+
+33:43.760 --> 33:48.960
+that relates the reference frame of the general camera between two views so there is a
+
+33:48.960 --> 33:55.520
+differentiation between this rotation and translation from the extrinsic value that we have
+
+33:55.520 --> 34:03.920
+defined here so in this case here this is a multiple camera setup where each to make
+
+34:03.920 --> 34:10.880
+out this general camera there are many cameras on this particular generalized camera so in that case
+
+34:10.880 --> 34:18.720
+r c i and t c i refers to the extrinsic value each one of this camera with respect to the
+
+34:18.720 --> 34:24.080
+reference frame so this is the extrinsic value the rotation translation but this rotation and
+
+34:24.080 --> 34:29.840
+translation that we are looking at now it's the rotation translation that relates two views the
+
+34:29.840 --> 34:37.520
+reference frame of these two views so after this rigid transformation we can express the proctor
+
+34:38.160 --> 34:46.000
+vectors of the first line in the second coordinate system so what this means is that i have two views
+
+34:46.000 --> 34:52.240
+over here and then i have this two light rays which intersects at a common point over here
+
+34:52.240 --> 34:59.440
+so the first line over returns l1 and this second line over here is written as l2 but we know that
+
+34:59.440 --> 35:06.480
+according to the definition of the proctor vector that we have defined earlier on that l1 is
+
+35:06.480 --> 35:12.480
+expressed with respect to the reference frame of the first view and l2 is expressed with respect
+
+35:12.480 --> 35:21.520
+to the second reference frame over here so in order to express both the light rays in a coherent manner
+
+35:21.520 --> 35:29.680
+we need to choose one particular reference frame to express this relation so here in order
+
+35:29.680 --> 35:37.120
+to achieve this we will transform the light ray in the first frame into the second frame so the
+
+35:37.120 --> 35:44.560
+transformation here can be given by this equation over here where r and t over here is the relation
+
+35:44.560 --> 35:50.160
+between the two frames is the relative transformation between the two frames so this means that
+
+35:50.160 --> 35:56.720
+i'm bringing the any points or any coordinates that is represented in the first frame of the
+
+35:56.720 --> 36:04.960
+first view into the second view so we can see that this is generally a six by six matrix over
+
+36:04.960 --> 36:12.400
+here the transformation matrix that transform a proctor line this is my proctor line l1 in the
+
+36:12.400 --> 36:19.440
+first view i'm going to transform l1 into the frame of the reference frame of the second view
+
+36:19.440 --> 36:25.760
+so here what it means here is that after the transformation i'm going to call this l1 tilde
+
+36:25.760 --> 36:31.760
+this particular proctor line it will remain the same in the 3d world but here instead of
+
+36:31.760 --> 36:38.000
+representing l1 tilde with respect to the frame of the first generalized camera i'm going to
+
+36:38.000 --> 36:45.280
+represent it in the frame of the second camera over here and the relation here gives the gives
+
+36:45.280 --> 36:51.520
+me the transformation so this six by six matrix over here can be seen as the transformation
+
+36:51.520 --> 36:57.360
+matrix that we have saw many times in the lecture but in those cases it's just a simply
+
+36:57.360 --> 37:02.960
+four by four matrix but in this case because it's a proctor line so it's going to be a six by six
+
+37:02.960 --> 37:10.320
+matrix so suppose that after the transformation we have a and b line proctor line a and b that are
+
+37:10.880 --> 37:17.280
+already expressed in the same reference frame via the rotation and translation the transformation
+
+37:17.280 --> 37:24.240
+that we have seen here in this particular step we can say that this two since the two light rays
+
+37:24.240 --> 37:30.080
+are correspond from a pair of correspondence point which means that this two light rays over here
+
+37:30.080 --> 37:37.280
+they must intersect at the certain point you know which we call x here in the 3d space we know that
+
+37:37.280 --> 37:43.840
+two light rays intersect at the 3d space if and only if this particular relation over here
+
+37:44.960 --> 37:51.760
+hosts through and this can be rewritten into this particular equation over here which provides us a
+
+37:51.760 --> 37:59.600
+constraint on the intersection of the two proctor line so here we can take qb over here to be the
+
+37:59.600 --> 38:09.440
+second light ray so this would be equivalent to q2 and this can be q prime a as we have
+
+38:09.440 --> 38:15.520
+mentioned earlier on that this two a and b these two lines they are all going to be expressed with
+
+38:15.520 --> 38:22.480
+respect to the same frame which is in the second camera coordinate frame and this means that qa
+
+38:22.480 --> 38:28.960
+prime would be simply the last three entries of the first line after transformation we're going
+
+38:28.960 --> 38:36.640
+to rewrite this guy over here into qa prime and similarly for qb prime would be simply
+
+38:36.640 --> 38:42.720
+q2 prime or that means that it's the last three elements of the proctor vector of a light ray in
+
+38:42.720 --> 38:49.040
+the second view over here and qa as we have mentioned earlier on that a would be the line
+
+38:49.040 --> 38:56.320
+of the first light ray expressed with respect to the reference frame of the second view and hence
+
+38:56.880 --> 39:03.200
+qa would be given by this q1 so we are going to substitute this guy here into this equation
+
+39:03.200 --> 39:10.960
+and as a result we'll get this particular equation or in matrix form we can simply say that this would
+
+39:10.960 --> 39:17.840
+be l2 transpose the proctor line in the second view multiplied by this six by six matrix and
+
+39:17.840 --> 39:26.400
+multiplied by l1 which is the proctor line in the first view so this is l1 and this is l2 over here
+
+39:26.400 --> 39:33.760
+and we can see that the relation between l1 and l2 which are corresponding light rays will be
+
+39:33.760 --> 39:41.040
+related by a six by six matrix in this particular form over here so this is a six by six matrix over
+
+39:41.040 --> 39:48.000
+here where interestingly e here it arises from this particular component of the constraint the
+
+39:48.000 --> 39:54.960
+intersection equation that we have seen earlier on and this here it's e it's equivalent to the
+
+39:54.960 --> 40:01.680
+regular essential matrix of a single two view pinhole camera that we have learned in our
+
+40:01.680 --> 40:07.520
+previous lecture and r here is simply the rotation matrix that relates the two views so there's an
+
+40:07.520 --> 40:13.920
+r and t that relates the two views that we have defined earlier on and here we'll call this
+
+40:13.920 --> 40:23.280
+relation analogous to the epipolar geometry which is given in the form of x prime transpose ex
+
+40:23.280 --> 40:29.600
+equals to zero so this is the epipolar geometry that we have seen in our previous lectures that
+
+40:29.600 --> 40:36.480
+relates to pinhole camera views this is the epipolar geometry and now we can see that this
+
+40:36.480 --> 40:44.320
+particular form of the generalized epipolar geometry is equivalent it's in a similar format
+
+40:44.320 --> 40:48.400
+as the pinhole camera over here hence we are going to call this the generalized
+
+40:49.360 --> 40:59.040
+epipolar geometry where now instead of a three by one image correspondence x and x prime we are
+
+40:59.040 --> 41:05.760
+going to have a six by one local line correspondences and this where this guy over here is
+
+41:05.760 --> 41:12.400
+six by one and this guy over here is also six by one and interestingly we will no longer have a
+
+41:12.400 --> 41:18.720
+three by three essential matrix that's what we have seen earlier on in the epipolar geometry
+
+41:19.520 --> 41:25.600
+for a single pinhole camera so in this case this is three by three matrix now we are going to have
+
+41:25.680 --> 41:32.960
+a six by six generalized essential matrix that relates the a correspondent
+
+41:32.960 --> 41:43.360
+pair of plucker line in the two view generalized camera so here again this q1 or l1 over here that
+
+41:43.360 --> 41:48.080
+represents this plucker line and l2 that represents this the second the plucker line in the second
+
+41:48.080 --> 41:54.880
+view there are point correspondences in the first view represented as a plucker light rays
+
+41:56.560 --> 42:04.320
+and since they are all together nine unique entries in the essential matrix over here so
+
+42:04.320 --> 42:10.160
+this is a three by three matrix which implies that there are nine unique entries there are nine
+
+42:10.160 --> 42:18.960
+entries here and there are also all together three by three which is equals to nine unique entries
+
+42:18.960 --> 42:26.000
+in our rotation matrices over here so all together we will have 18 unique entries
+
+42:26.000 --> 42:32.960
+in the generalized essential matrix that is given in this particular form over here so all together
+
+42:33.600 --> 42:40.480
+nine from the essential matrix and nine from the rotation matrix so in total we will have 18 unit
+
+42:40.480 --> 42:47.680
+entries in this particular generalized epipolar geometry and the fortunate thing about this is
+
+42:47.680 --> 42:56.880
+that we have l2 transpose and then the generalized essential matrix multiplied by l equals to zero
+
+42:56.880 --> 43:02.400
+so if we were to rewrite this equation into a linear form that means that we are going to
+
+43:02.400 --> 43:09.280
+express this into a one by one equation so instead of in as the matrix form we are going to expand
+
+43:09.280 --> 43:16.480
+this expression over here and this would be linear with respect to the 18 unique entries
+
+43:16.480 --> 43:22.320
+which can be rewritten into this particular form of the equation over here so this is the
+
+43:23.200 --> 43:30.640
+simply a dot product of a and g over here where g would be 18 by one
+
+43:31.360 --> 43:38.000
+vector that contains the 18 unique entries in the essential matrix as well as the rotation
+
+43:38.000 --> 43:44.480
+matrices here and the entries of these two matrices the 18 elements in there they are unknown
+
+43:46.480 --> 43:53.920
+so and the coefficient here which is a that it's made out of the known correspondence
+
+43:53.920 --> 44:01.200
+over here which is the respective entries in l2 and l1 our local light rays in the two
+
+44:01.200 --> 44:08.640
+views so this means that we will get this homogeneous linear form of equation and that
+
+44:08.640 --> 44:16.160
+is made out of a known coefficient a and this is going to be 1 by 18 and then it's also made
+
+44:16.160 --> 44:22.160
+out of the unknown parts which is 18 vector made out of the entries in the essential matrix
+
+44:22.160 --> 44:29.440
+and the rotation matrix that relates the two views and what this means is that we will need at least
+
+44:29.440 --> 44:35.920
+17 point correspondences to solve for the unknown of g so each one of the corresponds gives us a
+
+44:35.920 --> 44:43.040
+transpose g equals to 0 so this means that the first correspondence i have a 1 transpose g equals
+
+44:43.040 --> 44:50.000
+to 0 and a 2 transpose g equals to 0 and so on so forth until i have a n transpose g equals to 0
+
+44:50.000 --> 44:59.920
+so i can factorize this a out into a general m by 18 matrix over here which i call capital a and g
+
+44:59.920 --> 45:06.720
+would remain the same as an 18 by 1 unknown vector so this would become our familiar
+
+45:07.360 --> 45:10.800
+homogeneous linear equation so this is the homogeneous
+
+45:12.960 --> 45:20.400
+linear equation that we are all familiar with that we have seen many times over the past
+
+45:20.400 --> 45:25.760
+lectures we also know that this is a homogeneous linear equation that can be solved using the
+
+45:25.760 --> 45:30.480
+svd uh vector method this simply means that i'm going to take the svd
+
+45:31.520 --> 45:41.440
+of a that gives me u sigma v transpose and the solution of g would correspond to the last
+
+45:42.720 --> 45:49.200
+singular vector in v that matches up with the least singular value and that would be taken as
+
+45:49.200 --> 45:57.520
+the solution of g so since the we all also know that this is a homogeneous so a g equals to 0
+
+45:58.560 --> 46:05.360
+this is a homogeneous linear equation this means that the last vector of v would gives us the basis
+
+46:05.360 --> 46:11.360
+of this homogeneous linear equation and the solution of g would be expressed as a one
+
+46:11.360 --> 46:19.760
+parameter family of the solution which we call lambda v over here and in the fundamental matrix
+
+46:19.760 --> 46:25.200
+or the homography case we know that there's one degree of freedom that cannot be determined in
+
+46:25.200 --> 46:31.600
+our unknown of the fundamental matrix essential matrix or this uh homography matrix that we have
+
+46:31.600 --> 46:38.960
+seen earlier on so we'll just leave that solution as a family of solution because the scale is
+
+46:38.960 --> 46:46.640
+unknown but in this particular case over here we can actually determine this lambda over here
+
+46:46.640 --> 46:54.080
+to be a unique value because we know that the rotation vector that means that the last nine
+
+46:54.080 --> 47:02.880
+entries of our g value has to be a octonormal matrix over here whose determinant should be
+
+47:02.880 --> 47:08.880
+equals to one so we need to enforce this particular constraint hence as a result we can make use of
+
+47:08.880 --> 47:15.920
+this particular constraint to solve for the unknown lambda in this family of solution
+
+47:15.920 --> 47:22.400
+so what it means here is that since this g has 18 elements i'll be able to write this into g
+
+47:22.400 --> 47:35.520
+1 all the way until g 9 and then g 10 all the way until g 18 where this last nine entries over here
+
+47:35.520 --> 47:45.440
+represents the rotation matrix which is simply given by lambda v 10 lambda v 11 all the way
+
+47:45.440 --> 47:53.200
+until lambda v 18 over here so there are two parts of this equation and where the last nine entries
+
+47:53.200 --> 48:00.000
+corresponds to the rotation vector that means that we can simply rearrange this last nine
+
+48:00.000 --> 48:08.960
+vector into the rotation matrix which would be lambda v 10 lambda v 11 and so on so forth into
+
+48:08.960 --> 48:15.520
+this three by three matrix over here and then since this particular rotation matrix that we
+
+48:15.520 --> 48:21.280
+have obtained from the family of solution this means that lambda here is unknown but we can
+
+48:21.280 --> 48:31.040
+easily equate this to be the determinant of r in with respect to the unknown lambda to be equals
+
+48:31.040 --> 48:36.480
+to one hence we get one equation and one unknown which we can solve for lambda so once we have
+
+48:36.480 --> 48:45.680
+solved lambda this means that we have obtained a unique solution for e and r in our two view
+
+48:45.680 --> 48:52.880
+generalized epipolar geometry and finally once we have gotten this the e and r we can solve for
+
+48:53.600 --> 49:00.560
+t the translation vector using this decomposition that we have defined in our earlier lectures for
+
+49:00.560 --> 49:07.360
+the essential matrix and since here we know a unique solution for g what this means is that
+
+49:07.360 --> 49:14.000
+we would have obtained an absolute scale there's no ambiguity in the scale of the translation
+
+49:14.000 --> 49:24.560
+vector and intuitively we can see that because this is true because the correspondences l1 and
+
+49:25.360 --> 49:34.080
+l2 of the puckel light ray it's obtained from known extrinsic value this means that we just
+
+49:34.080 --> 49:41.040
+earlier on we have seen that the this particular light ray over here it's computed based on the
+
+49:41.040 --> 49:50.800
+known extrinsic value rci and tci where tci is known with a absolute matrix scale so since
+
+49:50.800 --> 49:57.440
+these correspondences is embedded within the epipolar geometry here the coefficient here
+
+49:57.440 --> 50:05.760
+this means that a here would already embed information of the absolute scale and we are
+
+50:05.760 --> 50:12.080
+making use of this to solve for the unknown translation vector here where we also know that
+
+50:12.080 --> 50:17.600
+there's additional constraint of the rotation matrix which is that the determinant of it must
+
+50:17.600 --> 50:26.240
+be equals to one hence as a result this information is directly transferred to the relative
+
+50:26.240 --> 50:34.240
+transformation between the two views and hence the absolute scale of the translation can also be
+
+50:34.240 --> 50:40.080
+found in this particular case this means that there won't be any scale ambiguity in the relative
+
+50:40.080 --> 50:49.840
+transformation of the translation for a generalized epipolar geometry so once we have obtained the
+
+50:49.840 --> 50:55.120
+relative transformation between the two views given by the rotation matrix and a translation
+
+50:55.120 --> 51:02.560
+vector we'll go on to do a triangulation here so in this particular case since it's a generalized
+
+51:02.560 --> 51:09.440
+camera setup this means that the linear triangulation algorithm that we have seen in our
+
+51:09.440 --> 51:15.120
+previous lectures cannot be used in this case over here but we can make use of the
+
+51:15.120 --> 51:22.240
+plucker line equation that we defined earlier to get this relation over here if we look at the
+
+51:22.240 --> 51:28.960
+equations over here we can see that this part over here it simply means that it represents any point
+
+51:28.960 --> 51:34.000
+on the plucker line in the second view over here this is what we have defined in the very
+
+51:34.000 --> 51:41.520
+beginning of this lecture of any point lying on a plucker line can be expressed as the point that
+
+51:41.520 --> 51:49.920
+is closest to the reference frame so in this case it's given by q2 cross q2 prime and plus a scale
+
+51:49.920 --> 51:57.040
+for a certain unit away from the this particular reference point in the direction of the plucker
+
+51:57.040 --> 52:03.760
+line given by q2 so alpha 2 here would be the direction so this point would be given by alpha
+
+52:03.760 --> 52:11.360
+2 multiplied by q2 and similarly since there's an intersection of this point from the first view
+
+52:11.360 --> 52:18.080
+which we denote as l1 we are going to do the same thing here so the closest point on this particular
+
+52:18.080 --> 52:25.760
+line over here it's given by q1 cross q1 prime but in this particular case we are going to express
+
+52:25.760 --> 52:32.240
+everything coherently with respect to a reference frame which we chose to be the second frame in the
+
+52:32.240 --> 52:36.960
+second view over here so this particular vector here with respect to the first reference frame
+
+52:36.960 --> 52:44.960
+we need to multiply by the rotation we need to rotate it into the second reference frame and
+
+52:44.960 --> 52:51.760
+this is given by the rotation vector the rotation matrix that we have computed in our generalized
+
+52:51.760 --> 52:58.960
+epipolar geometry and similarly for the unit direction vector over here we also need to
+
+52:58.960 --> 53:06.720
+transform this into the second view since this is a three by one vector we need to multiply it by
+
+53:06.720 --> 53:13.120
+the rotation and translation that transform it into the second view over here so since these
+
+53:13.120 --> 53:20.720
+two lines are going to intersect at the certain point over here so this means that these two lines
+
+53:20.720 --> 53:28.000
+are going to define the same point in the reference frame of the second view so here we
+
+53:28.000 --> 53:35.040
+will need to equate the two points where the first point is parameterized by alpha 1 and the second
+
+53:35.040 --> 53:41.760
+point is parameterized by alpha 2 so we are going to solve for the two unknowns such that the two
+
+53:41.760 --> 53:47.600
+points that is represented here refers to a single point in the 3d view and that's the point where
+
+53:47.600 --> 53:53.280
+the two light rays intersect each other and interestingly we can see that this particular
+
+53:53.280 --> 53:58.320
+equation over here the only two unknowns are alpha 1 and alpha 2 so we can rearrange this into
+
+53:58.320 --> 54:05.760
+an over determinant linear equation given by this form over here where the unknown here would be a
+
+54:05.760 --> 54:12.800
+two by one vector of alpha 1 alpha 2 and this is a inhomogeneous linear equation that we can
+
+54:12.800 --> 54:20.800
+solve easily solve for alpha 1 and alpha 2 without any ambiguity so once alpha 1 and alpha 2 is
+
+54:20.800 --> 54:30.880
+obtained we can simply plug this into the equation the line the equation of the the lines over here
+
+54:30.880 --> 54:39.440
+and to get the point in the in in with respect to any reference frame over here and after
+
+54:39.440 --> 54:44.960
+reconstructing the alpha 1 over here we can simply plug it into this equation if you choose
+
+54:44.960 --> 54:51.440
+the first frame as the reference for structure for motion using a generalized camera so this
+
+54:51.440 --> 55:02.400
+can be also chosen to be p in the second frame to be q2 cross q2 prime plus alpha 2 q2 if we
+
+55:02.400 --> 55:13.360
+decide that the reference frame of the second view to be the reference frame for our 3d reconstruction
+

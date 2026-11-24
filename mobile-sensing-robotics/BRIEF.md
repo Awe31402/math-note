@@ -25,7 +25,7 @@
 - 英文授課，筆記用**繁體中文**，術語第一次出現附英文。
 - 逐字稿：**一律用 Whisper**（`medium.en`，GPU）從音檔轉（同 `../robot-autonomy/` 的做法）。音檔和 `.vtt` 放 `_work/audio/`，帶時間點的純文字放 `_work/txt/<課>-<序號>.txt`。Whisper 聽錯的字用 `⚠️ 逐字稿缺字` 標。
 - **MSR1 課本**：Thrun, Burgard, Fox《Probabilistic Robotics》**1999–2000 早期草稿版**，`ProbabilisticRobotics.pdf`。**PDF 頁碼 = 書頁 + 12**。草稿版章節和 2005 正式版不同，筆記一律寫草稿版的章節號。
-- **MSR2 課本**：Hartley & Zisserman《Multiple View Geometry in Computer Vision》第 2 版，`Richard_Hartley_Andrew_Zisserman-Multiple_View_Geometry_in_Computer_Vision-EN.pdf`（簡稱 **MVG**）。**PDF 頁碼 = 書頁 + 18**。MVG 只管相機與多視角幾何；SLAM、ICP、特徵點書上沒有 → 那幾集只靠逐字稿（SLAM 那幾集可參考《Probabilistic Robotics》草稿版）。
+- **MSR2 課本**：Hartley & Zisserman《Multiple View Geometry in Computer Vision》第 2 版，`../multiple-view-geometry/Richard_Hartley_Andrew_Zisserman-Multiple_View_Geometry_in_Computer_Vision-EN.pdf`（簡稱 **MVG**）。**PDF 頁碼 = 書頁 + 18**。MVG 只管相機與多視角幾何；SLAM、ICP、特徵點書上沒有 → 那幾集只靠逐字稿（SLAM 那幾集可參考《Probabilistic Robotics》草稿版）。
 - **MSR2 第二參考**：高翔、張濤《視覺 SLAM 十四講：從理論到實踐》第 2 版，`视觉SLAM十四讲从理论到实践 第2版 (高翔,张涛) (z-library.sk, 1lib.sk, z-lib.sk).pdf`（簡稱 **十四講**，簡體中文，完整 14 講＋附錄）。**PDF 頁碼 = 書頁 + 23**。這是**掃描檔、沒有文字層**，只能用 Read 看圖，不能 grep。標 `【十四講補充】`。
 - **2-14 專用論文**：Grisetti, Kümmerle, Stachniss, Frese, Hertzberg〈Hierarchical Optimization on Manifolds for Online 2D and 3D Mapping〉（HOG-Man；簡稱 **HOG-Man 論文**），`grisetti2010-hogman.pdf`，6 頁。下載自 Stachniss 在 Freiburg 的個人網頁。標 `【論文補充】`。篇名和五位作者已經對過。PDF 上沒寫會議和年份，「ICRA 2010」是憑記憶寫的。
 - 表中「PR」= 《Probabilistic Robotics》草稿版，「MVG」= Hartley & Zisserman，「十四講」= 高翔。

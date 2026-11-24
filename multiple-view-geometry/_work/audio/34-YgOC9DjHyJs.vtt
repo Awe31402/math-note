@@ -1,0 +1,782 @@
+WEBVTT
+
+00:00.000 --> 00:05.920
+So we have looked at earlier on that the local optimization of considering a single pixel will
+
+00:05.920 --> 00:13.920
+lead to a blocky effect and optimization over a scanline will lead to a streaky effect. And we
+
+00:13.920 --> 00:20.320
+look at the other extreme case where we say that we are going to consider all the pixels in the
+
+00:20.320 --> 00:25.920
+image as the neighboring pixel and that would lead to the global optimization which will probably
+
+00:25.920 --> 00:32.640
+give the best result. But it is NP-complete in nature so this means that it's hard to optimize.
+
+00:32.640 --> 00:39.440
+And so we are now going to look at another method which we call the semi-global matching. So this is
+
+00:39.440 --> 00:44.800
+in contrast to the global matching and the block matching that we have looked at earlier on.
+
+00:45.520 --> 00:50.960
+It's going to be somewhere in between which is tractable and will still give us a reasonable
+
+00:50.960 --> 00:57.280
+result. So the idea behind this semi-global matching is to perform line optimization along
+
+00:57.280 --> 01:04.080
+multiple directions. This means that for a pixel in a reference image, I'm going to look at the
+
+01:04.080 --> 01:12.480
+search not just along the scanline but I'm going to look at the smoothness constraint over the
+
+01:12.480 --> 01:18.080
+neighboring pixel in several different directions. So now I'm not only going to look at in contrast
+
+01:18.080 --> 01:24.880
+to the scanline optimization which only looks at the neighboring pixel along the same scanline,
+
+01:24.880 --> 01:30.320
+I'm going to look at the neighbor pixels in different directions. And we can see that this
+
+01:30.320 --> 01:38.560
+can be done by aggregating the cost of this in every single direction which we call S over here.
+
+01:38.560 --> 01:45.920
+And this accumulation of the cost S can be done in two passes and the forward pass which consists
+
+01:45.920 --> 01:53.120
+of four directions for typical eight direction implementation and the backward pass that
+
+01:53.120 --> 01:59.680
+consists of four additional directions from the other end of the image. So we can see that
+
+01:59.680 --> 02:07.280
+the accumulator costs S over here. It's summed over all the possible directions. So what this
+
+02:07.280 --> 02:14.960
+means is that I have S over here which is given by this equation over here. This is for one
+
+02:14.960 --> 02:23.600
+particular pixel which is P over here. This means that it's a function of P as well as all the
+
+02:23.600 --> 02:30.400
+possible disparity value that this particular guy can take over here. And this is a sum over the
+
+02:30.400 --> 02:37.440
+four directions which is denoted by the four arrows over here. The accumulated cost over the
+
+02:37.440 --> 02:45.040
+four directions which is given by L, R and P D over here. So this means that for the first
+
+02:46.320 --> 02:55.920
+entry over here it would be simply equals to L P of D in this particular entry over here. And as
+
+02:55.920 --> 03:06.080
+we proceed down the pixel we will accumulatively accumulate S by taking the sum over the different
+
+03:06.080 --> 03:11.760
+direction and we'll do this from both forward and backward pass. So after we have done two passes
+
+03:11.760 --> 03:19.280
+that means that each one of these pixels will have two sets of S value. We'll sum them up and that
+
+03:19.280 --> 03:28.160
+would be the S value, the accumulated cost for all over all the possible eight directions that
+
+03:28.160 --> 03:35.760
+we have from the forward and backward pass. And L over here would be defined as this guy
+
+03:36.240 --> 03:40.880
+this term over here which is essentially equivalent to the dynamic programming of
+
+03:40.880 --> 03:46.160
+the scanline optimization that we have seen earlier on. So what this means is that for
+
+03:46.160 --> 03:53.760
+a certain pixel in a reference image I'm going to still look at the same scanline to compute
+
+03:55.360 --> 04:02.080
+this unary cost over here. But the smoothness constraint going to consider over the
+
+04:02.080 --> 04:06.800
+neighboring pixel would be denoted by P minus R here. So this simply means that I'm going to
+
+04:06.800 --> 04:15.440
+look at the neighboring pixel where R is in the direction of my search. So because we are saying
+
+04:15.440 --> 04:21.680
+that an example here is that the eight directions so if it is in the horizontal direction then this
+
+04:21.680 --> 04:26.560
+would be the neighboring pixel that I'm going to consider it's the same as the scanline. So every
+
+04:26.560 --> 04:32.560
+time I do the recursion over here I'm going to consider these few pixels that are in the
+
+04:32.560 --> 04:39.120
+this direction but in the case where I'm considering the diagonal direction for example
+
+04:39.120 --> 04:45.920
+then every recursion or every pixel P that I'm considering over here I'm still going to consider
+
+04:45.920 --> 04:54.480
+the values over here to compute D the unary cost over here this is simply the dissimilarity cost
+
+04:54.480 --> 05:00.080
+that we have seen earlier on but the neighboring pixel where I'm going to compute the smoothness
+
+05:00.080 --> 05:06.640
+cost would be to take these two guys into account or more elements here in this direction are over
+
+05:06.640 --> 05:12.240
+here I will do this for eight different directions eight different scan lines and then once I have
+
+05:12.240 --> 05:18.160
+all the eight different values for that particular pixel in the forward accumulation I will then
+
+05:18.800 --> 05:26.480
+cumulatively sum up the values of L to form S in the forward path as well as in the backward path
+
+05:26.480 --> 05:33.280
+and then finally I'll add out the two values to get the final S value the accumulated cost
+
+05:34.480 --> 05:43.680
+and once I'm done with this this means that for the an image with all the pixels for example a
+
+05:43.680 --> 05:52.880
+pixel P over here that I call P over here I will have a vector of entries 1D table of all the
+
+05:52.880 --> 05:58.800
+disparity cost for that particular accumulated cost for this particular pixel over here so what
+
+05:58.800 --> 06:04.080
+I'm going to do here for that particular pixel I'm going to take the minimum cost to be the
+
+06:05.120 --> 06:11.520
+corresponding disparity value and I'm going to do it for every particular pixel in order to get the
+
+06:11.520 --> 06:19.680
+final disparity map for this particular image pair and of course sub-pixel accuracy can also
+
+06:19.680 --> 06:26.080
+be done by fitting a curve along the neighboring cost so what this means is that an example here
+
+06:26.080 --> 06:35.760
+is what we call the bilinear interpolation because I have a discretization of the pixel
+
+06:36.560 --> 06:44.080
+value over also the neighboring pixels of these guys over here so I'm considering this guy over
+
+06:44.080 --> 06:52.160
+here I'll simply take the average and interpolate the particular value here to become a continuous
+
+06:52.160 --> 06:58.400
+value instead of just a discrete value that I have computed from the disparity earlier on and
+
+06:58.400 --> 07:04.880
+this is known as the bilinear interpolation and here's an example of the results from semi-global
+
+07:04.880 --> 07:12.160
+matching we can see that in comparison to 3x3 block matching which consider only the pixels
+
+07:12.720 --> 07:17.840
+every pixel independently so we can see that there's a blocky effect over here but in this
+
+07:17.840 --> 07:23.120
+case where there are 16 paths that means that I'm looking at 16 different direction per pixel
+
+07:23.120 --> 07:32.560
+and this we can see that it's much smoother without losing the five grain detail of the
+
+07:32.560 --> 07:38.560
+original image in the disparity map comparing to the ground truth over here now next we'll look at
+
+07:38.560 --> 07:45.600
+an example on how to do a single view stereo as we have mentioned earlier on that stereo camera
+
+07:46.240 --> 07:52.480
+refers to two images we have seen in our earlier lecture on epipolar geometry that is only possible
+
+07:52.480 --> 07:58.080
+to obtain depth values from one pair of images with overlapping field of view but in this
+
+07:58.080 --> 08:02.960
+particular case we are going to look at some state-of-the-art techniques where we learn from
+
+08:02.960 --> 08:10.400
+data on how to get the depth values from just one single image and of course we'll use we'll
+
+08:10.400 --> 08:18.960
+consider deep learning so here the objective would be that I'm given a single image i over here
+
+08:19.760 --> 08:26.720
+what I want to do is that the goal would be to learn a function of f so the input would be one
+
+08:26.720 --> 08:34.800
+single image i such that the outputs of this function would be the disparity value of i which
+
+08:34.800 --> 08:40.160
+I denote as d hat over here this means that for every pixel I'm going to predict with a function
+
+08:40.160 --> 08:46.800
+where the outputs of that particular pixel to be the disparity value corresponding to that
+
+08:46.800 --> 08:53.680
+particular pixel and of course I'm going to model this without going too much into the detail I'm
+
+08:53.680 --> 09:01.520
+going to model the this function over here with the popular convolution neural networks in short
+
+09:01.520 --> 09:08.240
+CNN to model this particular function and we'll do this by training the neural network using what
+
+09:08.240 --> 09:16.240
+we call the left-right consistency more specifically during training time but given the stereo pair
+
+09:16.240 --> 09:22.640
+the left right and right color images which we denote as iL and iR from a calibrated stereo
+
+09:22.640 --> 09:29.520
+pair this means that I have this stereo pair iL and iR over here and I have many of these pairs
+
+09:29.520 --> 09:36.720
+during training time so the objective of this particular work from the these papers the CVPR
+
+09:36.720 --> 09:45.280
+2017 paper is that you will design a neural nets which is denoted by this guy over here so there's
+
+09:45.280 --> 09:53.040
+a neural net which takes in both the left and the right image independently to predict the left and
+
+09:53.040 --> 09:58.480
+right disparity map independently so what this means is that this function is the same function
+
+09:58.480 --> 10:04.400
+it will take the left image and produce the left disparity and the right image and produce the
+
+10:04.400 --> 10:12.800
+right disparity so since we know that there is just a pixel shift because in this particular case
+
+10:12.800 --> 10:20.160
+where we have a calibrated stereo which means that for every pixel over here once we have the
+
+10:20.160 --> 10:27.520
+disparity value of DL that is predicted from the deep neural network we know that by using this
+
+10:27.520 --> 10:33.840
+DL over here this is simply equals to x minus x prime over here so what this means is that DL
+
+10:33.840 --> 10:39.680
+is simply equals to x minus x prime and since we know this particular value over here the x value
+
+10:39.680 --> 10:47.120
+over here we can easily compute x prime from here this means that given an image with the disparity
+
+10:47.120 --> 10:54.480
+map we can actually map this or transform this particular image into the left image and the left
+
+10:54.480 --> 11:00.960
+disparity into the right image here by simply shifting the pixel according to the disparity
+
+11:00.960 --> 11:09.360
+that is estimated from the deep networks and what this means is that I can make use of the
+
+11:09.360 --> 11:14.800
+deep network to predict the disparity map of the left image from the left image itself
+
+11:14.800 --> 11:23.120
+and then by making use of the left image and the predicted disparity map I can do a pixel shifting
+
+11:23.120 --> 11:31.280
+and to get a reconstruction of the left image in the right view so I can do this similarly
+
+11:31.280 --> 11:37.520
+for my right image and the disparity and then I can reconstruct the left image over here and then
+
+11:38.000 --> 11:44.240
+once I reconstructed the two views from the predicted disparity and the respective
+
+11:45.360 --> 11:53.280
+original image I can make use of these images to compare I can say that the reconstructed
+
+11:53.920 --> 12:02.400
+right view from the left image should be the same as the original right view and vice versa this
+
+12:02.400 --> 12:11.120
+means that the reconstructed right image should be the same as the original right image and this
+
+12:11.120 --> 12:19.600
+means that I would have to enforce this training loss during my training of the deep networks and
+
+12:19.600 --> 12:26.800
+this would be the reconstruction loss as well as we will look at several similarity smoothness
+
+12:27.680 --> 12:37.360
+disparity losses in the loss function so as I mentioned earlier on one of the most important
+
+12:37.360 --> 12:42.480
+loss would be the appearance matching loss this simply means that the left image and the
+
+12:42.480 --> 12:48.880
+reconstructed left image from the disparity and the right image would be forced to be
+
+12:48.880 --> 12:54.800
+as similar to each other as possible so we can do this via two parts of the loss function
+
+12:55.440 --> 13:02.400
+it would be the L1 loss function which is robust to outliers and as well as the SSIM so this is
+
+13:02.400 --> 13:09.440
+similar to the correlation matching cost that we have mentioned earlier on I wouldn't go too
+
+13:09.440 --> 13:14.960
+much into the detail of this if you are interested you should look up from the internet and the
+
+13:14.960 --> 13:22.480
+second cost that we want would be the disparity smoothness loss so this means that the neighboring
+
+13:22.480 --> 13:29.360
+pixel the disparity value should be either as similar as possible and what this means is that
+
+13:29.920 --> 13:36.880
+we will take the we will minimize the gradient change so if a del x over here simply means that
+
+13:36.880 --> 13:43.600
+the gradient change of the intensity values along the x-axis between two neighboring pixels over
+
+13:43.600 --> 13:49.280
+here so if they are very similar this value is very small this means that the depth value would
+
+13:49.280 --> 13:55.760
+be very smooth across the different pixels we do this for the x-axis as well as the y-axis
+
+13:56.480 --> 14:01.600
+and so here is the disparity gradient because we are predicting two things over here we are
+
+14:01.600 --> 14:06.800
+reconstructing the image as well as we are predicting the disparity directly from the
+
+14:06.800 --> 14:13.840
+deep networks we will minimize the smoothness loss over the gradient of the disparity as well
+
+14:13.840 --> 14:21.920
+as the gradient of the original image itself and there's also a left right disparity consistency
+
+14:21.920 --> 14:27.520
+loss so in comparison to the left right reconstructed image since during training time
+
+14:27.520 --> 14:34.640
+I have a calibrated stereo pair I can compute the disparity map from the
+
+14:35.520 --> 14:42.000
+techniques that we have described earlier on and use this reconstructed loss disparity
+
+14:42.000 --> 14:47.760
+to compare it against the reconstructed disparity and this means that the two
+
+14:48.560 --> 14:55.360
+disparity maps should be equivalent to each other here are some results of the this particular
+
+14:55.360 --> 15:03.440
+method we can see that it's very much quite accurate compared to the ground truth so here
+
+15:03.440 --> 15:11.280
+recall that or remember that this is direct that map output from just one single image so we'll
+
+15:11.280 --> 15:18.880
+input this particular image into the deep network to give this particular guy over here and this
+
+15:18.880 --> 15:27.120
+very impressive considering that stereo in terms of geometry we know that it can only be done
+
+15:27.760 --> 15:35.280
+from two views where we have two overlapping field of view of images but in this particular case we
+
+15:35.280 --> 15:40.960
+are only looking at one single image which will give us directly the depth map that looks something
+
+15:40.960 --> 15:50.800
+like this here so finally we'll look at the multi-view stereo recall that the multi-view
+
+15:50.800 --> 15:56.480
+stereo is the last step of large scale 3d reconstruction that we have looked at in last
+
+15:56.480 --> 16:04.960
+week's lecture when we talk about 3d reconstruction and the problem is that given the multiple view
+
+16:05.520 --> 16:13.200
+images and the camera poses that is recovered from 3d structure from motion the goal is that
+
+16:13.200 --> 16:20.800
+we want to find the depth maps of every single image so in comparison to the large scale sparse
+
+16:20.800 --> 16:27.120
+3d reconstruction the goal was to recover the rotation and translation that means that the
+
+16:27.120 --> 16:34.560
+poses of each camera and then we want to simply triangulate the sparse set of point correspondences
+
+16:34.640 --> 16:41.040
+on the image but in this particular case we want to find out the depth for every particular pixels
+
+16:41.040 --> 16:47.760
+in every single image after the sparse 3d reconstruction the structure for motion step
+
+16:47.760 --> 16:54.640
+that we have mentioned earlier on and we'll use the plane sweeping algorithm to achieve this so
+
+16:54.640 --> 17:00.000
+here's an illustration which we have seen earlier on in the last week's lecture so we have looked
+
+17:00.000 --> 17:06.560
+at the data association and structure for motion which will allow us to recover the sparse 3d
+
+17:06.560 --> 17:13.280
+model in last week's lecture so the last step here would be to get the dense depth map and then from
+
+17:13.280 --> 17:19.440
+the dense depth map we can recover the dense 3d model as shown in this particular figure
+
+17:21.360 --> 17:28.800
+so the plane sweeping algorithm is as follows the input to the algorithm is m number of 3d planes
+
+17:28.800 --> 17:37.760
+which we will use for the depth test so this the m 3d planes is a set of planes that we will sweep
+
+17:37.760 --> 17:43.760
+across hence the name of a plane sweeping algorithm and we will have all together m plus
+
+17:43.760 --> 17:50.400
+one images at the different camera positions these camera positions are recovered from our structure
+
+17:50.400 --> 17:56.640
+for motion pipeline and then now we'll assume that all the images have been corrected for
+
+17:56.640 --> 18:02.480
+radial distortion this means that there's no more radial distortion in the image which can be done
+
+18:03.200 --> 18:09.520
+from our calibration and then this means that the respective camera matrices would be given by
+
+18:10.160 --> 18:17.280
+this equation over here where k here denotes the index of each camera and the kth camera
+
+18:17.280 --> 18:24.400
+would have a projection matrix of pk equals to k multiplied by r and minus r transpose ck where k
+
+18:24.400 --> 18:33.040
+equals to one to n so this is our images and here r and c here represents the rotation matrix and
+
+18:33.040 --> 18:39.200
+the camera center of respective cameras and peak is a camera projection matrix with respect to a
+
+18:39.200 --> 18:48.880
+reference projection matrix which we call the p reference and this p reference over here is taken
+
+18:48.880 --> 18:56.240
+to be at the origin of the coordinate system and this is given by the canonical camera projection
+
+18:56.240 --> 19:04.720
+matrix which is k multiplied by identity and zero which we have seen many times in the past lecture
+
+19:04.720 --> 19:12.000
+and the family of depth planes over here would be defined with respect to this reference frame so
+
+19:12.000 --> 19:19.920
+we will have m number of this depth planes which is denoted by pi m over here so this would be
+
+19:19.920 --> 19:27.360
+simply the normal vector and minus the depth with respect to this normal vector so we'll have a
+
+19:27.360 --> 19:36.000
+family of these planes that sweep across a certain normal vector over here and each with respect to
+
+19:36.000 --> 19:42.000
+this particular reference frame over here the distance away would be defined as dm which is
+
+19:42.000 --> 19:49.920
+given by this guy over here and where m here is the unit length of the normal vector of the plane
+
+19:49.920 --> 19:57.600
+and d is the distance to the origin so for frontal parallel plane sweeping algorithm what this means
+
+19:57.600 --> 20:06.240
+is that the this guy the normal vector would be simply 0 0 1 this means that i'm looking in the
+
+20:06.240 --> 20:14.160
+direction of the z axis and the normal vector of the plane is defined with respect to the z axis
+
+20:14.160 --> 20:23.360
+hence it has a value of 0 0 1 over here and the depth values would have to define a set of
+
+20:23.360 --> 20:29.840
+discrete planes within a range of d near and d far this means that i'm going to define a set
+
+20:29.840 --> 20:38.640
+of planes such that the first plane over here would have a depth value of d near with respect
+
+20:38.640 --> 20:48.720
+to the origin and the last plane over here would have a depth of d far from the origin so in order
+
+20:48.720 --> 20:56.240
+to test for the depth hypothesis in the reference view the a pixel from the reference image would
+
+20:56.240 --> 21:02.400
+be projected into the other image into all the other n number of images and to check for the
+
+21:03.200 --> 21:09.040
+matching consistency we'll see that this can be done using a planar mapping that is defined by
+
+21:09.040 --> 21:17.200
+this guy over here so since we know that what this means is that for a reference frame so this is my
+
+21:17.200 --> 21:23.360
+image of my eye reference over here i'm looking at one particular patch of the image over here
+
+21:23.360 --> 21:33.200
+so i'm going to sweep across the set of uh planes that is frontal parallel to this so this is pi 1
+
+21:33.200 --> 21:42.320
+pi 2 all the way to pi and defined in the range of d near and d far so what happens here is that
+
+21:42.320 --> 21:50.000
+i'm going to say that suppose that pi 1 is the depth from my reference frame over here since
+
+21:50.000 --> 21:57.200
+this is a plane i can do a homography i can transfer this patch to this plane and then i
+
+21:57.200 --> 22:03.920
+can define a homography so since all the other images are also planes so what this means is that
+
+22:04.880 --> 22:13.040
+i can define the transfer from the reference image to dr images based on the relative
+
+22:13.040 --> 22:19.840
+transformation between the i reference and the view that i'm looking at so suppose that this
+
+22:19.840 --> 22:27.600
+is ik that i'm looking at so since i know the camera projection the r k as well as ck that
+
+22:27.680 --> 22:35.040
+means that i know the camera center of the k image and as well as the depth of the plane
+
+22:35.040 --> 22:42.160
+with respect to the reference image given by this normal vector over here and the and the depth
+
+22:42.160 --> 22:49.840
+which is dm over here that we have defined earlier on when we define pi m so what i can do here is
+
+22:49.840 --> 22:56.000
+that i can define a homography given by this guy so recall that this formulation is actually from
+
+22:56.000 --> 23:03.200
+the chapter when we look at a homography we can define a homography that transfer a patch from
+
+23:03.200 --> 23:09.280
+the reference frame to the target frame that we are interested in in the cave image over here
+
+23:09.280 --> 23:15.920
+and this would be via a depth of defined by this particular plane in the image seen over here
+
+23:15.920 --> 23:24.160
+so we can do this for every single view depending on the rotation and the center of the
+
+23:24.160 --> 23:30.560
+that particular image over here so this means that for one single image patch on the reference image
+
+23:30.560 --> 23:39.280
+i can map this i can transfer this onto all the other views via the depth of this particular
+
+23:39.280 --> 23:47.920
+plane over here and i can do it for all the planes all the depth that is represented by the
+
+23:48.480 --> 23:55.440
+different planes across this set over here i can map it into all the different views
+
+23:55.440 --> 24:02.800
+so this of this can be computed by this equation over here so after i have the
+
+24:02.800 --> 24:10.000
+defined the homography with respect to a certain camera view and a certain image plane i can
+
+24:10.000 --> 24:18.240
+get the homography and simply map the reference patch which is given by x y 1 over here this is
+
+24:18.240 --> 24:23.360
+the location of this guy over here into the image coordinate of the target view which is denoted by
+
+24:23.360 --> 24:32.640
+ik over here so x tilde y tilde and w tilde here simply refers to the final image coordinate after
+
+24:32.640 --> 24:39.600
+the transfer as a result what i can do here is that i can compute the photo consistency between
+
+24:39.600 --> 24:48.000
+these two patches over here for that particular depth and here what we can do is that we can
+
+24:48.000 --> 24:53.360
+compute the photo consistency by considering the absolute difference or other matching courses that
+
+24:53.360 --> 25:02.480
+we have seen earlier in the lecture over all the views so for a reference view i'm going to compute
+
+25:02.480 --> 25:10.000
+this for a certain plane so this means that for this reference patch over here
+
+25:10.880 --> 25:18.240
+which is given by a window size of i and j or in w so i'm going to consider one particular
+
+25:18.240 --> 25:29.040
+plane which is pi k over here and then i'm going to map this transfer this across all the different
+
+25:29.040 --> 25:37.600
+views all the different views over here and then for each view i'm going to use the homography over
+
+25:37.600 --> 25:42.320
+here to compute the location on this particular view for this particular plane and compare these
+
+25:42.320 --> 25:49.040
+two using the absolute difference intensity given by this equation over here then what i'm going to
+
+25:49.040 --> 25:57.040
+do is that i'm going to sum this cost over all the views all the patches that i computed the
+
+25:57.600 --> 26:04.880
+cost for this particular plane pi of k over the this particular pixel on my
+
+26:05.520 --> 26:14.160
+reference image which has a coordinate of x and y so this beta over here is simply to compensate for
+
+26:14.160 --> 26:21.840
+the ratio the gain ratio between the image and the reference to make sure that illumination
+
+26:21.840 --> 26:28.560
+difference doesn't affect the result too much so what we can see here is that we can compute this
+
+26:29.360 --> 26:36.400
+value over pi a set of different planes so for every plane i'm going to find the corresponding
+
+26:36.400 --> 26:45.280
+patch for this particular patch with respect to all the other views so and sum the similarity
+
+26:45.360 --> 26:53.600
+score up pose that this plane over here d1 corresponds to 0.15 for example so after
+
+26:53.600 --> 26:59.120
+summing out all the similarity value this is the photo consistency the total whole consistency
+
+26:59.120 --> 27:06.560
+value that we'll get we'll do this over a range of all the different planes over here and then
+
+27:06.560 --> 27:14.160
+for each plane we'll get a photo consistency value from this equation over here so finally
+
+27:15.360 --> 27:21.040
+we'll select the plane with the that corresponds to the minimum cost this means that in this
+
+27:21.040 --> 27:27.840
+example here this guy here has the minimum cost so what this means is that uh i have a
+
+27:27.840 --> 27:34.240
+i would be able to transfer this according to the plane that such that after the transfer
+
+27:34.240 --> 27:42.720
+it gives me the best match over all the images and that would be the correct that value for this
+
+27:42.720 --> 27:50.480
+particular pixel and i'm going to do this over all the pixels in my reference image and hence
+
+27:50.480 --> 27:56.880
+as a result i'll get the disparity map i can repeat the same process for every other single
+
+27:56.880 --> 28:02.560
+image and select it as the reference image and then do this by taking all the other images into
+
+28:02.560 --> 28:08.800
+my consideration and as a result i'll be able to get the dense depth map for every single view
+
+28:09.760 --> 28:16.720
+so uh finally what we can do here for every single pixel with the disparity value i can
+
+28:16.720 --> 28:22.240
+compute the depth by considering this equation over here so this is uh in the consideration
+
+28:22.240 --> 28:28.800
+that is a frontal parallel that means that the image and the plane is frontal parallel
+
+28:28.800 --> 28:34.240
+so i can directly use this equation over here to compute it and once we get the depth we can
+
+28:34.240 --> 28:40.000
+recover the 3d point and putting everything together we'll be able to get the dense 3d point
+
+28:40.000 --> 28:48.000
+cloud for every pixel in every image here's an example of the quality of the depth map
+
+28:48.000 --> 28:54.720
+we can see that the number of images that's considered in this plane sweeping algorithm
+
+28:54.720 --> 29:01.120
+as it increases the depth map the quality of the depth map also improves so you can see that for
+
+29:01.120 --> 29:07.120
+two views we'll still get the blocky effect and then for 20 views we'll uh it will gradually get
+
+29:07.120 --> 29:14.800
+a very smooth disparity map which is uh quite comparable to the ground truth over here
+
+29:17.600 --> 29:23.200
+so uh we'll come to the end of the lecture in summary we'll look at how to do stereo
+
+29:23.200 --> 29:30.160
+rectification and correspondence search along the scan lines to get the disparity value for
+
+29:30.160 --> 29:37.280
+each pixel and then we look at how to compute the values from this disparity map using the
+
+29:37.280 --> 29:44.640
+concept of the similar triangle and so we saw that by doing this which is essentially
+
+29:45.280 --> 29:51.840
+known as the block matching algorithm we'll get blocky results of the disparity map
+
+29:51.840 --> 29:57.520
+so we can improve this by doing scan line optimization but we have also seen that in
+
+29:57.520 --> 30:02.640
+scan line optimization we are considering the smoothness cost or the smoothness prior over
+
+30:02.640 --> 30:09.680
+a scan line and this would result in a streaky artifact so a better way would be to do or rather
+
+30:09.680 --> 30:14.160
+the best way is actually to do a global optimization because we need to consider every
+
+30:14.160 --> 30:19.360
+other pixel in the image as the neighboring pixel so that would lead to an mp complete solution
+
+30:19.360 --> 30:26.640
+which is intractable to compute and so we go for the compromise between scan line and global
+
+30:26.640 --> 30:33.680
+matching and that is known as the semi-global matching where we look at the dynamic programming
+
+30:33.680 --> 30:38.800
+being applied to several different directions in particular eight different directions or
+
+30:38.800 --> 30:44.640
+60 different directions and then this can still be solved using the dynamic programming
+
+30:44.640 --> 30:53.680
+algorithm finally we look at how to do the multi-view then stereo reconstruction by
+
+30:54.480 --> 30:59.600
+looking at what we call the plane sweeping algorithm and that's the end of today's lecture
+
+30:59.600 --> 31:00.320
+thank you
+

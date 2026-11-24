@@ -1,0 +1,331 @@
+[00:00] Hello everyone, welcome to the lecture on 3D computer vision.
+[00:03] And today we are going to talk about three view geometry from points and or lines.
+[00:09] And hopefully by the end of today's lecture, you'll be able to derive the trifocal tensor
+[00:15] constraint from points, line, image correspondences of three views.
+[00:21] And you will be able to describe the homography relations between two views.
+[00:26] In particular, we'll look at how to derive this homography relations from the trifocal tensor.
+[00:33] Next, we'll look at how to extract the three view epipoles and epipolar lines from the trifocal
+[00:39] tensor. And we'll also look at how to decompose the trifocal tensor into the camera matrices,
+[00:46] as well as the fundamental matrices that relates the three views. Finally, we'll compute
+[00:53] the trifocal tensor from image point-like correspondences of three views.
+[01:01] And of course, as usual, I didn't invent any of today's material. I took most of the content from
+[01:07] chapter 15 and 16 of Richard Tuckley and Andrew Zizerman's textbook, Multiview Geometry in Computer
+[01:14] Vision, which I strongly encourage every one of you to read these two chapters after today's
+[01:20] lecture. And if you are interested, please also read chapter 8 of Mahi's textbook, An Invitation
+[01:28] to 3D Vision. So in the previous lecture, we have learned the fundamental matrix and its role in
+[01:39] relating or describing the geometric relations between two views. So today we'll look at the
+[01:45] trifocal tensor, which is analogous to the fundamental matrix, but it's meant to relate
+[01:52] the geometry of three different views. In particular, it encapsulates all the geometrical
+[01:59] or projective relation between these three views that are independent of the scene structure. What
+[02:05] this means is that given these three views, given the three views, as long as we know
+[02:12] the image correspondences, it could be a point, a point-point, or it could be a mixture of point
+[02:20] and lines. For example, we will be able to relate and compute the trifocal tensor that relates these
+[02:29] three views, and then we'll be able to decompose this trifocal tensor into the geometric
+[02:36] formation of camera projection matrices, fundamental matrices, etc.
+[02:44] Now, many ways to derive this trifocal tensor relation in particular, there are several
+[02:51] different combinations of point-line image correspondences. So we will look at one particular
+[02:57] combination here, which is the line-line and line correspondences in the three views to derive the
+[03:04] trifocal tensor. But do take note that this doesn't mean that this is the only way to derive the
+[03:11] trifocal tensor. You could also start from other combinations, but you will all end up to be the
+[03:16] same relation of the trifocal tensor. And so now suppose that we are given three views where we
+[03:24] observe three line correspondences here, which we denote as L, L' and L'', in the respective view
+[03:34] from the previous lecture, we all know that each one of these lines in its respective view is going
+[03:39] to be back projected to a plane that is represented by this plane over here. And since there are
+[03:47] three different views which see the line respectively, what it means is that these
+[03:55] three different planes that are back projected from the respective view, they are all going to
+[04:01] intersect at the unique 3D line in the 3D space, which is shown by this line over here.
+[04:08] And we'll make use of this particular relation to derive what we call the trifocal tensor.
+[04:15] So what's interesting here is that if we look at two views, we will generally notice that there
+[04:21] is no constraint that is being provided by a pair of line correspondences in the respective
+[04:27] view. And we can see this pretty clearly because any single line that is observed on the image
+[04:33] is going to back project as a plane in the 3D world. So if we were to take the pair of images
+[04:39] and denote the image correspondences as L and L', we can see that basically each one of these
+[04:46] back projects to a plane. And we know that in 3D space, any two planes is always going to
+[04:52] intersect at a line, hence there is no relation that can be derived or there's no unique relation
+[04:58] that can be derived that relates any two views. But things change when we have a third view,
+[05:05] because we know that given a third view where we know that the correspondences to L and L',
+[05:11] let's denote it as L' over here, it's also going to back project to a plane. And we know that in
+[05:18] general, three planes they don't intersect at a line. And when they do, which is the case here,
+[05:25] because we know that L, L' and L' are line correspondences, which means that these three
+[05:30] lines they back project to intersect at a unique line of L in the 3D space. And in this particular
+[05:38] case, since there is only a unique intersection in the 3D space, this means that there is a certain
+[05:46] constraint that constrains geometrically these three particular views. We will see that this
+[05:53] particular constraint is what we call the trifocal tensor. For each image in the three views,
+[06:00] we are going to denote the camera matrices in the canonical denotation, as we have seen earlier on
+[06:07] in the previous lectures. We will denote the camera matrix of the first view as P identity
+[06:13] and 0. This is the canonical representation. What it means is that we are assigning the camera
+[06:18] frame to be aligned with the world frame for the first image over here. And then we are going to
+[06:24] denote the camera matrix of the second view as P', which is obviously a 3x4 matrix that we write
+[06:32] in this particular way. We write A matrix over here, capital A matrix, which is a 3x3 matrix
+[06:40] over here. And then we are going to write the last column, which is a 3x1 vector over here,
+[06:47] as lowercase a subscript 4 over here. This denotes that this is the fourth column of the
+[06:54] of the camera matrix P'. And similarly, we are going to denote the third view, the camera
+[07:01] matrix of the third view, as P'. And we are going to use a 3x4 matrix to
+[07:07] denote this P'. And the first 3x3 matrix over here, we are going to use the capital B to
+[07:14] denote this particular matrix. And the last column, which is a 3x1 vector, we are going to use
+[07:21] a lowercase b with a subscript 4 that denotes that this is the fourth column in the third camera
+[07:29] matrix. And we know that after this denotation P P' and P'', we can also show lowercase
+[07:38] a subscript 4, that means the fourth column of P', the second view, and the fourth column of P'
+[07:46] from the third view, they represent the epi-poles of the second and third view respectively
+[07:54] that arise from the first camera. So let's denote this as P P' and P'',
+[08:00] so there's a camera center over here which we denote as C. What this means is that a4 over here
+[08:07] represents the projection of C, the first camera center, onto the second image. And this projection
+[08:16] over here is what we call the epi-pole, that we are going to denote this as E'. We will show that
+[08:22] it's actually given by the fourth column of the second camera projection matrix. And similarly,
+[08:30] b4 over here represents the projection of the first camera center onto the third image over
+[08:37] here. And this particular guy over here, we are going to denote it as E'. And this is going to be
+[08:43] our epi-pole that is on the third image that arise the camera center of the first camera image over
+[08:50] here. And so E'' is actually equals to b4 and E' is actually equals to a. This relation can be
+[08:59] easily shown by the following step over here. We know that the first camera center here,
+[09:06] it's going to be given by 0 0 0 1, because as we have mentioned earlier on, we denote the
+[09:14] first camera projection matrix in its canonical reference frame, which is identity and zero.
+[09:20] This simply means that the camera center is given by 0 0 0 1. And if we were to take the projection
+[09:28] of this camera center into the second image, which is going to be P', that's given by a
+[09:35] 3x3 matrix and small a4, this is a 3x1 vector, multiplied by 0 0 0 1. We can see that this
+[09:46] simply becomes a4, which is equivalent to P' of c, and that's equivalent to the epi-pole in the
+[09:56] second image that arose from the first image. Similarly, we can also show that this happens for
+[10:03] the third view, where we take the camera projection matrix of b and small b4 over here,
+[10:12] and then multiply it by 0 0 0 1. We'll see that this gives rise to b4, which is the epi-pole in the third view.
+[10:23] Now, we all know that each image line backprojects to become a plane. We've already seen in the previous
+[10:29] lecture that this backprojected plane that arose from the image line is given by this particular
+[10:37] equation over here, where we denote the plane as pi, and that would be equal to the transpose of
+[10:43] the projection matrix multiplied by the image line in homogeneous coordinates. And in this particular
+[10:50] case over here, we know the first plane which is given by this guy over here, which is pi,
+[10:56] this is the backprojection of L over here, and this is going to be pi equals to P transpose of L,
+[11:05] which is the first line over here. And since we know that P over here is the first camera frame
+[11:11] which we denote using the canonical representation earlier on as identity and zero, we can see that
+[11:19] this gives rise to this particular equation over here. This should be identity, so it's a 3x3
+[11:27] identity and the last column is zero, multiplied by the vector of L, which is a 3x1 vector, so this
+[11:36] is a transpose. This means that from a 3x4 matrix after a transpose, this becomes a 4x3 matrix over
+[11:44] here. And after taking the transpose of this guy over here and multiplying by L, we can see that it
+[11:48] gives rise to the plane equation which is denoted by the first 3 and 3 would be the image coordinate
+[11:55] and the last entry would be zero. So similarly, we can do the same thing for the second and third
+[12:00] plane that is being back projected by the line correspondences in the second and the third view,
+[12:06] which is denoted by L prime and L prime prime over here. So here in this figure over here,
+[12:12] we can see that L prime is here in the second view, so the backprojection here would give
+[12:17] rise to pi prime and that would be equal to P prime transpose multiplied by L prime.
+[12:24] So similarly for the third view, this guy over here, the darker shaded plane over here,
+[12:31] that's pi prime prime and that would be given by P prime prime transpose multiplied by L prime prime
+[12:38] and substituting this representation of a and b's over here into the second and third plane
+[12:47] equations over here and we will end up to have this vector and this vector representing the
+[12:52] second and third back projected plane by the line correspondences in the second and third view.
+[12:59] What's interesting here is that we know that these three planes, they are not independent
+[13:04] because they are formulated or they are they arose because of the line correspondences because
+[13:10] L and L prime over here and L prime prime, they are correspondences in the three views.
+[13:18] What this means is that pi pi prime and pi prime prime, the three back projected planes,
+[13:25] they are not independent because they have to meet at a single line intersection which is the
+[13:31] 3D line that gives rise to the line correspondences in the three respective
+[13:37] images as L, L prime and L prime prime and we also learned in the earlier lectures that
+[13:44] this intersection constraint can be algebraically represented by a 4x3 matrix which we call
+[13:53] m over here. That would be the 4x3 matrix where each column here is the respective equation of
+[14:02] the planes. This is 4x1, this is 4x1 and the third guy over here would be also 4x1. We simply
+[14:11] concatenate them together into a 4x3 matrix which we call m over here and since we know that these
+[14:19] three back projected planes, they are not independent of each other, what this means is
+[14:25] that the 4x3 matrix has to be rank deficient. We'll show in the next slide that this not just
+[14:31] only that it's rank deficient but it has a very precise rank of two and now we proceed on to show
+[14:38] that the m matrix over here that's formed by the three back projected planes are rank deficient
+[14:46] and we know that these three back projected planes which we denote as pi prime and pi prime
+[14:53] prime over here, they have to intersect uniquely at a single line over here which in the 3D space
+[14:59] which we denote by capital L and the reason is because this capital L forward projects to
+[15:06] the respective image line correspondences of L, L prime and L prime prime. This is because L
+[15:13] L prime and L prime prime they are correspondences that is formed by the 3D line that
+[15:20] hence the matrix that is formed by pi prime and pi prime prime is going to be rank deficient and
+[15:25] the m matrix that's formed by the three back projected planes, it's going to give rise to
+[15:32] the intersection. So we all know that from the previous lectures that the intersection of the
+[15:37] three back projected planes intersects at a unique line and this particular 3D line
+[15:43] which we call L over here can be represented by all the points that sit on this particular line
+[15:49] that we are going to call as x and we know that x over here can be parameterized by any two points
+[15:56] on this particular line because we know two points are going to represent a single line that is
+[16:04] passing through these two points which we call x1 and x2 and this is going to be parameterized by
+[16:11] alpha and beta which are scalar values here and we know that this x over here which represents
+[16:18] the points all the points the possible points that sits on this particular
+[16:22] 3D line it's going to also sit on the respective plane so there is an incidence relation between
+[16:30] x this and any points that is on this line it could be anywhere on this line which we call x
+[16:36] over here it has to have an incidence relation with pi the first plane pi prime the second
+[16:43] plane as well as pi prime prime which is the third plane over here hence we can write the dot product
+[16:49] of the plane and the respective plane with this 3D point over here to be equals to zero and this
+[16:57] holds for all the respective three planes hence we get this equation of prime transpose x equals
+[17:04] to zero pi prime transpose x equals to zero and pi prime prime transpose x equals to zero
+[17:11] this relation here can be rewritten into m transpose where m is what we have seen earlier on
+[17:18] is pi pi prime as well as pi prime prime in the previous slide over here we can stack them
+[17:28] together and put a transpose over here and write x so this effectively works out to be the respective
+[17:36] plane equation dot product with any 3D point that is sitting on this particular line over here
+[17:42] and that would add up to be a vector of 0 0 0 which is because each one of this is going to
+[17:49] give us a a zero which is shown here a scalar zero but concatenating them together it has a
+[17:55] matrix over here we're going to get the three times of zeros from each one of this respective
+[18:01] relation over here and consequently we the because the fact that a point on the line
+[18:08] we saw earlier that it can be parameterized as by two separate points x1 and x2 which is two
+[18:16] parameters over here or two bases over here that represents this particular 3D point on sitting on
+[18:23] the 3D line hence this what this means is that the matrix m that we have defined earlier on would be
+[18:32] of rank two because it has a two-dimensional null space solution since the x over here can be
+[18:40] obtained as a null space vector of the matrix m over here and we know that essentially any of
+[18:47] this equation over here any of this point x1 or x2 is all going to fulfill all the three relation
+[18:54] over here hence we can rewrite the the solution or the equation null space equation into these
+[19:02] two equations over here and by substituting x1 into x and x2 into x respectively hence the
+[19:09] family of two individual sets of solutions here therefore we conclude that m over here has a rank
+[19:17] of two and this intersection constraint that we have seen earlier on the null space equation
+[19:26] here that we have seen earlier on induces a relation amongst the image line correspondences
+[19:33] which is l l prime and l prime prime so i have mentioned earlier on that this is the correspondence
+[19:40] the the reason the the reason why this gives rise to the correspondence is that because this
+[19:46] equation here the null space equation here it must be satisfied when all the three planes
+[19:52] intersects at a unique line and hence once this is satisfied we can also say that the vice versa
+[19:59] is true as well that the correspondence here the three correspondences here in the images it must
+[20:07] have a certain relation and that relation would be that they must intersect at a unique line they are
+[20:13] representing a single unique 3d line in the 3d space and since the rank of the of m over here
+[20:21] is 2 there must be what it means is that there must be a linear dependence in the column because
+[20:28] we saw earlier on that m it consists of pi pi prime and pi prime prime so this is actually a
+[20:37] four by three metric and what this means is that since rank since the rank of m is only equals to
+[20:47] two which means that this four by three matrix is a rank deficient metric this means that out of the
+[20:54] three columns two any two of them can be linearly combined to produce the third column hence there
+[21:02] is a linear dependence between its column which it denotes as m subscript i where i denotes the
+[21:09] column index and hence we can this particular relation over here where we simply choose m1 the
+[21:17] first column it becomes a linear combination of the other two columns in the matrix m over here
+[21:25] which we call m2 and m3 and this would be parameterized by two parameters which we call
+[21:32] alpha and beta they are both scalar values over here we have seen earlier on that the
+[21:39] the equations of the respective back projected planes can be obtained exactly from the the line
+[21:45] correspondences as well as the the notations the denotations of the respective camera projection
+[21:53] matrices the entries of the respective camera projection matrices in this form over here
+[21:58] so we can now rewrite m into this particular form over here which is which consists of all the
+[22:06] line correspondences the three line correspondences that we have seen earlier on here
+[22:10] and the respective camera projection matrices and trees which we call a and b over here now
+[22:20] if we were to plug this back into the equation we can derive some meaningful constraints over
+[22:28] here and we'll see that in the following slide so one before before we do that one
+[22:33] particular observation from the four by three matrix that we have seen earlier on here is that
+[22:39] there's a specific number over here which is zero it's always zero due to the canonical
+[22:45] representation of our first camera matrix which is identity and zero over here and as well as the
+[22:53] the relation that we have earlier on which we have m1 equals to alpha m2 plus beta m3 over
+[23:01] here let's rewrite this relation over here so m1 equals to alpha m2 plus beta m3 so we can make
+[23:12] use of the fact that this second row first column over here is always zero so because we know that
+[23:20] this is the first column over here is m1 and the second column here is m2 and the third column
+[23:26] here is m3 so what it means is that we since we know this particular relation and we know
+[23:32] that m1 here is going to be zero for this particular row and column over here we can
+[23:40] see that in order for it to be zero we can actually solve for alpha in in terms of the a b
+[23:47] and l's over here in the in this particular m matrix over here so we can see that one of the
+[23:52] obvious choice would be to let alpha be equals to some scalar k multiplied by b for transpose l
+[24:00] prime and beta equals to minus k multiplied by a for transpose l and that will fulfill this
+[24:08] particular equation the this particular relation over here we can we can let's let's take a closer
+[24:14] look at this so in this particular case because we know m1 here is going to be zero so if we let
+[24:22] alpha over here be b4 transpose l prime prime multiplied by m2 m2 is going to be this guy over
+[24:32] here which is a4 transpose l prime plus we can see that from the next slide that beta we are
+[24:41] going to fix it at minus a4 transpose l prime and m3 over here would be b4 transpose l prime
+[24:51] over here of course the whole thing has to be multiplied by a scalar k which is which is anyway
+[24:58] it's going to be cancelled out because on the left hand side it's going to be equals to zero
+[25:02] we can see that the two terms over here they becomes the same and but with the negative sign
+[25:08] in between hence the we can we will show that the right hand side over here it becomes zero
+[25:14] which is consistent with what we have over here and hence the the choice of alpha to be
+[25:22] b4 transpose l prime prime and beta to be minus a4 transpose l prime it's going to fulfill this
+[25:29] particular constraint over here based on the observation that the second row first column
+[25:36] of the m matrix is always going to be zero over here hence we can apply this alpha and beta that
+[25:43] we have found over here in the first step over here to the top three vector of each column
+[25:49] that means that we can apply it to this over here and we'll get l1 because we know l1 here
+[26:00] corresponds to m1 which is this guy over here then we can have m2 equals to a transpose l prime
+[26:08] which is this guy over here so this is basically m2 and this is m1 that we have seen earlier on
+[26:16] so this whole term over here it's going to be alpha that we have soft earlier on we can see
+[26:23] that this guy over here b transpose l prime prime it's going to be n3 so this guy over here is going
+[26:30] to be m3 and a4 transpose l prime we have computed earlier on to be representing beta over here so
+[26:42] this is going to be beta over here so notice that the scalar value k can be set to one so we can
+[26:50] simply set this to one over here and to get this relation and we can see that by putting this all
+[26:56] this together it will actually fulfill this equation over here which we have seen earlier
+[27:01] on that this equation is it arose from the fact that the rank of m is equals to two and first we
+[27:11] can further evaluate this into this relation over here this guy over here the l is an image
+[27:19] correspondence we can simply represent this as l1 l2 and l3 over here so each one of this the
+[27:28] indices we can simply denote it as li and what we are going to do next would be to derive the
+[27:35] expression or show expression of each entry in this particular line over here in terms of this
+[27:41] particular equation over here so we can simply see that what this becomes would be the two sides of
+[27:52] the l prime prime and l these two vectors over here from this equation over here it can be
+[27:59] factorized it can be factorized out and since we are only interested in any entries over here
+[28:05] since this guy over here is a three by one vector over here we can simply look into a over here and
+[28:14] take out a particular column of a for this dot product over here to become a scalar
+[28:21] value hence the whole thing over here can become a scalar value that represents the i-th coordinate
+[28:27] of the the line l and we can do the same for the second term over here then we can see that we can
+[28:33] rearrange the this because this is a dot product it doesn't matter on which direction over here we
+[28:39] can simply swap the transpose and swap the place because this is just simply a dot product over
+[28:47] here now we can see that l prime transpose always appears on the left side of the equation and l
+[28:54] prime prime ends out on the right side of the equation over here so we can simply factorize
+[28:59] this out to get the relation of l prime transpose and then a i b 4 transpose minus a 4 b i transpose
+[29:12] l prime prime so now finally once we get this particular relation we let's collectively call
+[29:21] this term over here t i and this is actually a three by three matrix here we can see from the
+[29:29] previous equation over here by pre-multiplying by l prime and post-multiplying by l prime prime
+[29:35] it actually gives rise to a particular entry in our image line in the first image l1 l2 and l3
+[29:44] so l i here represents the coordinates of this the first image line over here so now we can plug
+[29:52] this notation back into the equation over here which gives rise to the what we call the incidence
+[29:58] relation the incidence relation simply means that the three correspondences they are related by
+[30:05] this t i matrix over here because we know this was derived from the rank deficiency of the matrix m
+[30:13] that tells us that the back projected planes that arose from the three line correspondences
+[30:20] must intersect at a single line which we call l in the 3d space hence this equation over here
+[30:27] it's what we call the incidence relation and now we are going to call this set of the three matrices
+[30:37] which is denoted by t1 t2 and t3 recall that t1 t2 and t3 over here each one of this which we
+[30:45] generally call ti over here it's going to be used to compute the respective entry in the first image
+[30:55] line over here so we are going to collectively call this t1 t2 t3 where each of them is a three
+[31:01] by three matrix over here so if we were to stack them together then this becomes what we call the
+[31:09] trifocal tensor because this is a tensor when we stack them all up so you have a what to visualize
+[31:16] this what you see is that this is actually a three by three matrix which called t1 so
+[31:22] imagine that we have another of this matrix of this three by three matrix that is behind here
+[31:28] so this is t2 and then we have another of this matrix over here which we call t3 so the whole
+[31:36] thing forms a three by three by three cube where t1 is the first block over here and t2 is the
+[31:44] second block over here and then t3 is the third block over here so this three by three by three
+[31:51] it's in comparison so if i have just n by one dimension i call this a vector
+[31:59] and if i have two dimensions i call this a matrix so now what we have over here is a three dimension
+[32:08] so this becomes a tensor and hence we call this thing here the the set of three matrices
+[32:15] the trifocal tensor because trifocal because it's used to relate the incidence relation between
+[32:22] three image views because it's a tensor over here it's a three-dimensional matrix which we can if
+[32:28] you would like to call it that way so the formal term would be a tensor hence we call the whole
+[32:33] thing a trifocal tensor and now now we can rewrite the incidence relation into this equation over
+[32:41] here which is actually the same as what we have seen earlier on but in this case here it was just
+[32:48] meant to be each respective entry in the image line of the first view over here and we have to
+[32:54] denote t using the respective i over here but we can collectively write them into a square bracket
+[33:01] and t1 t2 t3 so this actually represents the tensor or the trifocal tensor over here it's a
+[33:09] three by three by three so by writing this notation pre multiplying by l prime transpose
+[33:15] and post multiplying by l prime prime prime transpose this actually represents an end result
+[33:20] of the factor of which is given by first multiplying by the first block in the
+[33:27] trifocal tensor and then the second block of the trifocal tensor as well as the third block of
+[33:31] trifocal tensor and this individual operations are simply or what we simply derive here using the
+[33:39] incidence relation of three views although we define the caudonica camera
+[33:47] notation using the first frame this what this means is that we use the first frame
+[33:52] as the reference to derive the trifocal tensor relation that we saw earlier on and this simply
+[34:00] gives rise to this particular relation that we have seen earlier on here but because we
+[34:07] base it on the first view hence in the equation earlier on we saw that is l transpose equals to
+[34:13] this l prime transpose ti multiplied by l prime prime so if we make you the second frame as the
+[34:21] reference frame this is what we will get we will see that the relations swap order as well as we
+[34:27] use the third frame as the reference frame you will see that it's going to swap order the l's
+[34:33] are going to swap order and notice that it will change the reference view to the second view or
+[34:38] the third view that although it is not just purely the lines over here that swaps order but we will
+[34:47] end up with totally different trifocal tensor over here and what's interesting here is that
+[34:55] actually because they are still the same three views that and the same three line correspondences
+[35:02] that gives rise to the same line in the 3d space via the intersection of the back projected planes
+[35:09] so what this means is although by choosing a different reference view the second third or
+[35:14] the first view we will end up with a different trifocal tensor there is actually a relation
+[35:21] between all these three different trifocal tensors regardless of which view that we chose as the
+[35:27] reference view and they are although they are distinctive there is a relation between the
+[35:33] three different trifocal tensor unfortunately the relation is not so trivial so we will not derive
+[35:41] the relation between these three trifocal tensor further and for the rest of the lecture we will
+[35:48] just focus on one of them that means that the choice over here will be simple we will just
+[35:54] choose the first frame as the reference frame and focus on this particular equation
+[35:58] of the trifocal tensor that we have derived earlier on now with the trifocal tensor although
+[36:07] it has 27 entries because it's three by three by three we saw that the trifocal tensor is given by
+[36:16] t1 t2 and t3 where each one of this is a three by three matrix so there are nine entries each
+[36:25] and hence all together there are 27 elements but the trifocal tensor only has 18 degrees of
+[36:34] freedom we can think of it this way each one of the view it has a camera matrix which we denote
+[36:40] by p p prime and p prime prime earlier on so we we also know that from the previous lectures
+[36:48] that each camera matrix has altogether 11 degrees of freedom this is because there are 12 entries
+[36:58] it's a three by four matrix and we minus off the scale so it's 12 minus one so it will be 11
+[37:05] degrees of freedom each because we are saying that three views here they are supposed to be
+[37:11] chosen independently what it means here is that it are going to be 33 degrees of freedom over here
+[37:18] if these reviews are chosen independently but what's interesting here is that because all
+[37:24] these reviews come together you can think of it this way where they are actually glued together
+[37:30] by the line correspondence that we have seen earlier on it could be a point correspondence
+[37:36] as well or point line correspondence that we will see later in the later slides but so because this
+[37:45] image correspondences they glue the three projection matrices together higher the line
+[37:51] correspondences which should back project to three different planes that intersect at the
+[37:56] single unique 3d line in the in the 3d space this and what it means is that this particular
+[38:04] 3d line has 15 degrees of freedom due to the projective plane because we know that the
+[38:12] this thing here the the 3d line l it can be transformed via the the transformation which
+[38:19] you call h and this is actually a four by four matrix that transform the four by one that can be
+[38:27] applied to transform the four by one 3d line over here and this has 16 elements in there
+[38:36] but since the scale is not defined what it means is that we can minus off one over here and that
+[38:44] gives rise to 15 degrees of freedom in the projective transformation so all together
+[38:51] although the three camera matrices gives rise to 33 degrees of freedom because it has 11 degrees
+[38:59] of freedom each we have to take away 15 degrees of freedom because these three cameras views the
+[39:06] three camera projection matrices they are related they are glued together by that single line that
+[39:11] defines the image correspondences in the three view so hence all together we have 18 degrees of
+[39:19] freedom 33 minus 15 for the projective world frame

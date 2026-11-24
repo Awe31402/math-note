@@ -1,0 +1,380 @@
+[00:00] So now finally, let's re-look at the projective camera projection matrix that we have seen
+[00:06] earlier on, that there are altogether 11 degrees of freedom in the camera projection matrix,
+[00:14] which is given by the K with 5 degrees of freedom from the intrinsics.
+[00:24] And then another 3 plus 3 equals to 6 degrees of freedom from the extrinsics of the camera.
+[00:33] So now the million dollar question is that, since we have altogether 11 unknowns that
+[00:39] constitute this camera projection matrix, how can we find all the 11 parameters, which
+[00:44] is the 11 degrees of freedom of the camera projection matrix?
+[00:48] The answer is true calibration, and we will look at how to do this.
+[00:53] Besides calling this procedure as the calibration of the camera, it's also very commonly known
+[00:58] as camera re-sectioning.
+[01:00] So re-sectioning simply means that we want to find the parameters that make up the camera
+[01:06] projection matrix, the intrinsics as well as the extrinsics parameters.
+[01:12] And one of the simplest approach and most commonly used approach is what we call the
+[01:19] calibration, with a 2D calibration pattern that might look something like this with circles.
+[01:26] But more commonly used would be the checkerboard pattern.
+[01:32] You have to physically print this out and paste it onto a flat board, which is a plane,
+[01:38] and we'll see why is this so.
+[01:40] I'll be mainly describing the technique written by Kang Sen Yeo in this particular paper,
+[01:45] a flexible new technique for camera calibration, that was published in Tipami in the year 2000.
+[01:52] So here's some open source calibration toolboxes where you can download and play with it yourself.
+[01:59] They are all mainly based on this paper that was published in Tipami in the year 2000.
+[02:04] So the first one is the Bouguet calibration toolbox, commonly known as the Bouguet calibration
+[02:09] toolbox, because it was written by Bouguet.
+[02:14] So this was based on MATLAB.
+[02:16] And then later, some people took this code and developed it into C++.
+[02:22] And I think there's also a Python version right now in OpenCV.
+[02:27] So you probably can find a later version.
+[02:30] What I put here is version 2.4, but I think now it's probably version 3 point something
+[02:36] already or maybe even version 4.
+[02:38] This particular Bouguet calibration toolbox is also migrated into the MATLAB image processing
+[02:43] toolbox.
+[02:44] So these are free versions, this is also free.
+[02:47] But this is a paid version because it's under MATLAB imaging processing toolbox.
+[02:54] Let's describe the actual procedure for calibration of a projective camera with the checkerboard.
+[03:02] So given a checkerboard that looks like this, we would have to first print out the checkerboard
+[03:06] pattern and then we have to paste it on the flat planar board that looks something like
+[03:12] this.
+[03:13] The first thing that we need to do is to assign a reference frame onto the checkerboard.
+[03:18] And we will conveniently select the assignment of this by saying that we will assign the
+[03:25] xy plane to be on the plane of this checkerboard over here, such that the z-axis would be zero,
+[03:36] the z-reading of all these points on the checkerboard would be always zero.
+[03:42] The next thing is that we'll have to put this into our camera projection matrix, which is
+[03:47] given by the equation x small x equals to p multiplied by x.
+[03:52] And since we know that the projection is always up to a certain scale, since we have looked
+[03:59] at earlier on as x as y and the unknown scale here can be actually factorized out such that
+[04:06] this becomes a normalized homogeneous coordinate over here.
+[04:11] And p over here would be rewritten into this form, r and t over here.
+[04:21] So essentially this is equal to p and we will multiply the corners that we observe on the
+[04:27] checkerboard.
+[04:29] What we have seen earlier on is that the checkerboard looks something like this.
+[04:33] So this part here is shaded.
+[04:34] So we'll be able to detect these corners.
+[04:37] So every corner will be represented by x, y, zero and one, since the world axis is conveniently
+[04:45] attached to the checkerboard where the x-y plane is lying on the checkerboard itself.
+[04:52] And this means that all the z-axis is equal to zero here.
+[04:56] So that's why there's a zero here.
+[04:59] So if we were to evaluate this, we'll see that this term here on the right hand side,
+[05:06] this multiplication of the matrices and vectors over here, it ends up to be this equation
+[05:12] over here where z can be ignored because the z is going to multiply by the third column
+[05:21] of this guy over here.
+[05:22] And hence we can ignore r3 in this equation over here as well as z equals to zero over
+[05:29] here.
+[05:30] Effectively, what we get here is that we have 2D projective mapping from the checkerboard,
+[05:37] which is this is P2, and we actually get to map it into a P2 space, which is on the image.
+[05:45] So this means we're doing a mapping from a plane to a plane, which simply means that
+[05:49] the transformation operation here given by k, r1, r2, and t is simply a homography which
+[05:56] can be represented by h1, h2, h3 over here, where h1, h2, h3 respectively are the vectors
+[06:04] in each column of the homography matrix.
+[06:09] And we can rewrite this into this form.
+[06:12] The scale homography with the unknown scale factor here is equals to k multiplied by r1,
+[06:20] r2, and t.
+[06:23] This homography is unknown.
+[06:25] x, y, 1 here, the image coordinate, this is known because given the image of the checkerboard,
+[06:32] we can actually know where are the x, y coordinate of the image, as well as the capital X, Y
+[06:39] coordinate over here, because we know that we attach the world frame onto the maybe let's
+[06:44] say the top left hand corner of the checkerboard, and we know that the checkerboard is of a
+[06:50] regular size.
+[06:51] That means that I know that each square is probably one centimetre by one centimetre.
+[06:58] So by looking at this, and I also know that how many squares are there in the checkerboard
+[07:03] and where are the black and white boxes, so what it means is that I will be able to find
+[07:08] the one-to-one correspondence of the 2D coordinate point, the corners, matching those corners
+[07:14] at the checkerboard in the overall scene.
+[07:18] So this part here is known.
+[07:20] Now the only unknown would be the homography as well as the scale factor.
+[07:26] So based on the known x, y in the image, as well as the known x, y in the world coordinate,
+[07:38] so now the objective is to find the homography as well as the unknown scale factor.
+[07:44] And we can do this by looking at the equation over here, that we know that this S multiplied
+[07:51] by the homography is going to be equal to k R1, R2 and T. And we can simply equate this
+[08:01] to get two independent constraints.
+[08:03] So here I simply multiply S by H1 and then I bring k over, so this would be equal to
+[08:11] R1 and this would be equal to R2, although we don't know what's R1 and R2 at this moment,
+[08:17] but one thing that we know from here is that R1, R2, since it belongs to the rotation matrix,
+[08:25] because this has to be R1, R2 and R3, and R1, R2 is the first two columns of the rotation
+[08:32] matrix, and we can make use of what we have seen earlier on, the octonormal constraints
+[08:37] of the entries of the columns in the rotation matrix to get a constraint.
+[08:42] So this means that since they are both octagonal, this is perpendicular to each other, that
+[08:47] means that the dot product of R1, R2 must be equal to zero, so we can apply this dot
+[08:52] product and equate it to zero.
+[08:54] What this means is that this term here, dot with this term here, they are going to be
+[09:00] equal to zero, and hence we get the constraint over here, equation one, and we also know
+[09:06] that since this is an octonormal constraint, the norm of these two vectors over here, R1
+[09:12] and R2, they should be equal, hence we can write this relation over here, that the dot
+[09:19] product of this R1 over here, which is equivalent to the norm of R1, is going to be equal to
+[09:27] the norm of R2.
+[09:29] We'll see that in the next lecture that this term here, this interesting term here, is
+[09:34] equal to the image of the absolute conic, which we will call omega, in the next lecture.
+[09:40] And now we got two equations over here, which consist of all the unknowns of the homography,
+[09:49] as well as the intrinsic values.
+[09:54] Let's denote this guy, K inverse transpose multiplied by K inverse as a 3-matrix, it's
+[10:00] actually a 3x3 matrix, and since we are multiplying it by the transpose, or taking the inverse,
+[10:07] this means that B here should be symmetrical as well as positive definite, it should be
+[10:12] a positive definite matrix, because this can be seen as the square of a matrix.
+[10:19] When we take a square, that means that the eigenvalues would have to be strictly positive.
+[10:25] And since B is symmetrical, we can rewrite this in terms of a 6x1 vector of unknowns.
+[10:34] Then we will get this represented by a small b over here.
+[10:38] So finally, we can rearrange the equations in 1 and 2.
+[10:43] If we compactly write this term K inverse transpose, K inverse, represented by the 6x1
+[10:52] vector B, we can rewrite this into a linear constraint of the form of A B equals to 0.
+[10:59] So similarly here, we can also rewrite, we can bring this guy over here, and then this
+[11:05] will be equal to this term minus this term equals to 0.
+[11:08] We can rewrite this K inverse transpose and K inverse into the 6x1 vector B, and then
+[11:14] rewrite this into a linear constraint here.
+[11:17] So if we were to stack these two equations together, we can rearrange this homography
+[11:21] term into this form where A is made up of the homography terms, and B is made up of
+[11:28] the unknowns from the intrinsic values over here, which is K.
+[11:35] A is going to be a 2x6 matrix because B is a 6x1 vector, and we have two equations that
+[11:45] we have seen earlier on.
+[11:46] So all together, A would have 2x6 entries, and now this A is going to be made up of all
+[11:54] the homography terms that we have seen earlier on in this equation over here.
+[11:58] It consists of H1 and H2, and B is going to be made up of all the unknown terms in the
+[12:06] camera matrix, which is K inverse transpose multiplied by K inverse.
+[12:12] So what it means is that since we have 6 unknowns in this equation, AB equals to 0,
+[12:19] where this has 6 unknowns, which one of the point correspondence here is going to give
+[12:24] us a 2x6 entry in A. So all together, since we need to solve for 6 unknowns, all together
+[12:32] we need a minimum of 3 different views.
+[12:35] That means each view is going to give me H1 and H2, a homography that relates a view from
+[12:39] the real checkerboard.
+[12:41] So this is the checkerboard, it's mapped into the image.
+[12:48] One view is going to give me H1 and H2, so let's denote this as 1.
+[12:53] And then all together, I need 3 different views.
+[12:56] I need to move either the checkerboard or the camera, I can fix the camera, and then
+[13:01] take the checkerboard just like what this guy is doing.
+[13:05] He's going to move this around into a second view, so this is the second view.
+[13:10] And then we will get another set of correspondences that relates this homography.
+[13:14] So we have to do this at least 3 different views.
+[13:17] So this is the third view, where I will get another homography to the image.
+[13:24] Now once we have this done, we all together have a 6x6 A matrix multiplied by a 6x1 unknown
+[13:35] B and this is equal to 0.
+[13:37] The first thing that we need to do is that we need to get A in order to solve for the
+[13:41] unknown B and what we can do here is that we know that the mapping between the checkerboard
+[13:47] and the image is given by a homography from lecture 3.
+[13:52] We know that if we have 4 correspondences between each view, we will be able to solve
+[13:57] for the homography using this equation over here.
+[14:02] So we know that we have xy1 that's equal to a homography multiplied by xy1.
+[14:10] We can ignore the scale because this is a homography up to scale.
+[14:14] And so one view here is going to give us this correspondence and we need at least 4 point
+[14:21] correspondences to solve for this homography over here.
+[14:24] For each view, we have 4 correspondences, we will be able to solve for the homography
+[14:29] and if we have at least 3 views over here, we will get 3 sets of constraints where we
+[14:36] can solve for 3 different homographies and we can plug it into this equation to get a
+[14:41] 6x6 known A matrix multiplied by a 6x1 unknown vector that consists of an intrinsic value
+[14:49] k.
+[14:50] And then since we have A, B equals to 0, where A has to be 6x6 and then B has to be 6x1.
+[14:59] So we can easily solve for the SVD of A and this is going to be U sigma V transpose.
+[15:08] And then the solution of B is going to take the V vector that corresponds to the least
+[15:19] singular value of this guy over here.
+[15:23] This is equivalent to the right now space of A.
+[15:26] As we have also seen in the last lecture that this is essentially a least square operation
+[15:32] when we solve for the Ax equals to 0, solve for the null space of B, what this means is
+[15:38] since the correspondences is corrupted with noise, A would never be exact, it's actually
+[15:43] very noisy.
+[15:44] So if we can get more views like this where we simply fix the camera and we move the calibration
+[15:51] board around, if we can get more views, it will provide a better constraint to this AB
+[15:56] equals to 0 and we will be able to solve for a more accurate B vector over here.
+[16:03] So once B is recovered, we can actually put it back into the capital B, which is actually
+[16:09] a 3x3 matrix.
+[16:12] So small b is actually a 6x1 vector which can be placed back into this symmetric matrix
+[16:19] B.
+[16:20] Finally, k can be obtained because B here is equals to k inverse transpose inverse,
+[16:29] which is equivalent to k transpose k inverse.
+[16:34] We can actually take the inverse of B and then take a Cholesky decomposition on B inverse
+[16:40] to find out the values of k.
+[16:42] So if you take a Cholesky decomposition on a matrix A, this is equivalent to L transpose
+[16:53] or the other way around, it doesn't matter.
+[16:55] So this is lower triangular or the other way around, it could be upper triangular matrix,
+[17:00] which is equivalent to the intrinsic of the camera.
+[17:04] Once k is known, then all we are left with would be just extrinsic parameter of all views.
+[17:12] So now it's no longer just one RNT.
+[17:15] So if we were to take three views, that means that A is at least 6x6, we will have three
+[17:22] views over here, each different view over here.
+[17:24] There will be a different RNT if we have a camera that stays fixed over here that is
+[17:30] looking at these views.
+[17:32] So view 1, you will have an RNT with respect to the camera, view 2 will have another RNT
+[17:38] with respect to the camera, and so on and so forth.
+[17:41] We will also need to solve for all the extrinsic parameters once this is done, as well as the
+[17:48] scale factor.
+[17:50] So now let's look at how to solve for all the remaining unknowns.
+[17:54] So we've seen that earlier on R1 is equivalent to S multiplied by k inverse multiplied by
+[18:00] H1.
+[18:01] So H1 is in that view.
+[18:04] So since k remains fixed for all views, and we know that this from the Kolesky decomposition
+[18:15] earlier on, so we can make use of these values, plug it inside here, and H here would be the
+[18:23] homography, the first column of the homography that is in that particular view that corresponds
+[18:31] to R1 and R2.
+[18:32] For example, if I were to solve R1 here, then H would be taken from this transformation
+[18:39] of the checkerboard onto the image itself.
+[18:43] Then I can solve for this, and R2 I can also solve for this, since this is known and this
+[18:49] is known, this is known and this is known.
+[18:51] R is R1, R2 and R3, and they are all octagonal matrices.
+[18:59] This is octagonal matrix.
+[19:01] This means that the cross product of R1 and R2 will give you R3.
+[19:04] But the only unknown here, the only remaining unknown here is S, which can be easily solved
+[19:13] by taking the scale of this guy over here, because we know that the norm of R1 has to
+[19:23] be equal to 1.
+[19:24] So we can easily solve for this by taking the norm of this guy here, it has to be equal
+[19:30] to 1.
+[19:31] And this is what we get, we can solve for S and put it back into this equation.
+[19:37] So everything here is known, we can easily solve for R1, R2 and R3 for each respective
+[19:42] view.
+[19:43] And finally, the translation vector, which is also an unknown, can also be solved using
+[19:50] this form here.
+[19:51] So now this is known, this is known and this is also known.
+[19:54] We can easily solve for the translation vector.
+[19:58] So what we have looked at so far would be how to solve for all the 11 degrees of freedom
+[20:06] that is in the camera projection matrix.
+[20:09] So there's still another set of unknowns in the camera calibration that we need to solve
+[20:16] for, and that would be what we call the lens distortion.
+[20:20] So usually when we take a picture using any camera, using your cell phone camera or using
+[20:27] the DSLR or even a pocket camera, we will be able to observe some form of distortion
+[20:35] in the image.
+[20:36] So a more commonly observed distortion would be a radial distortion.
+[20:42] For example, if you use a highly convex lens, a fisheye lens, for example, then even for
+[20:49] the normal camera lens, you will be able to observe some form of distortion.
+[20:54] So that it could be a negative radial distortion that looks something like this, all the pixels
+[20:59] will be squashed towards the center.
+[21:02] And or it could also be more commonly observed, it's a positive radial distortion that looks
+[21:08] something like this, where it's distorted with respect to the radial direction, where
+[21:13] the original image should look something like this, where every pixel is regular.
+[21:18] There's also another less commonly observed distortion, which we call the tangential distortion.
+[21:24] So this is more commonly occurring in cheaper cameras than it might be due to manufacturing
+[21:31] imprecision, where let's say this is my photo sensor, and this is my lens that I'm going
+[21:38] to place inside my camera.
+[21:40] So usually due to poor worksmanship, we can see that the camera sensor might not be aligned
+[21:46] in parallel with this lens, it could also be the lens that is misaligned.
+[21:51] So in this case, we will observe tangential distortion because the light rays that is
+[21:56] supposed to be focused onto this, it will be misaligned.
+[22:02] To complete the camera calibration, we also have to model the lens distortion mathematically
+[22:09] and find the parameters that gives us this particular model.
+[22:15] And here, we will first look at how to model the radial distortion.
+[22:20] So let X equals to XY be the image projection of a 3D point without distortion.
+[22:27] This means that I'm looking at this guy here without any distortion, so any point here,
+[22:32] let me represent it with XY, I suppose, which is equals to X over here, this is without
+[22:38] any distortion.
+[22:39] And what we need to do here is that we need to find a formulation, let's say, for example,
+[22:46] the camera has this positive radial distortion, so this is a function that takes in X here,
+[22:52] such that it maps out to Y, where this is the new position, which I call Y here, and
+[22:58] this is the radially distorted pixel location.
+[23:03] And now the question is that what is this particular function?
+[23:06] And we choose to use a parametric way of describing this function over here.
+[23:13] So essentially, this function here, which I called FX earlier on, which takes in the
+[23:20] pixel without distortion and maps it to a pixel with distortion.
+[23:24] So FX here is essentially given by this equation that is first proposed by Brown in this particular
+[23:30] paper, closed range camera calibration.
+[23:34] And we can see that the input to this would be XY, the pixel location without distortion.
+[23:39] And there's a parameterization here, where 1 plus K1R2 plus K2R4 plus K5R6, where R here
+[23:50] is simply the circle equation, R2 equals to X2 plus Y2.
+[23:56] So R is actually a function of X and Y, which is this guy over here.
+[24:04] And then here, K1, K2, K3 is basically the radial distortion where we use to parameterize
+[24:11] this mapping function.
+[24:13] These are unknowns that need to be found during the calibration process.
+[24:19] We can also model the tangential distortion using this particular model here that was
+[24:26] also proposed in the same paper by Brown in 1971.
+[24:31] But in comparison to the radial distortion, where we find a mapping function that maps
+[24:39] a pixel without distortion onto a pixel with distortion, here we say that we are going
+[24:49] to find the delta change in the pixel after the distortion.
+[24:55] That means that if I were to give you an image, and then this point here, which I call
+[25:01] X and Y, it has no distortion.
+[25:05] So in the previous case, after some form of distortion over here, I'm going to map this
+[25:13] and the mapping function that I looked at earlier on for the radial distortion is to
+[25:18] find the exact location of this with XR with radial distortion, YR with radial distortion.
+[25:25] But now this case here, I'm going to find the delta change, which adds on to the radial
+[25:33] distortion, which I call DX over here.
+[25:35] So this essentially is also a function of X, which is my perfect pixel on the image
+[25:43] without any distortion.
+[25:45] But after mapping to here, what I'm finding DX over here is essentially the new location
+[25:53] of the pixel after I take the radial distortion into account.
+[25:59] So the final location here would be simply XR plus DX over here.
+[26:06] And DX is given by this equation, where R is still the same, R squared equals to X squared
+[26:12] plus Y squared.
+[26:14] And now we have two more unknowns, which we call K3 and K4.
+[26:19] All together, I would have five unknown parameters, K1, K2, K5 for the radial distortion and K3,
+[26:26] K4 for the tangential distortion.
+[26:29] So this would be the final equation where I can map a perfect pixel onto the tangentially
+[26:41] and radially distorted image.
+[26:50] So it will be given by this guy, which is this equation.
+[26:55] Now the question is that how can we find K1, K2, K3, K4 and K5?
+[27:01] So we'll use a very simple method to do this.
+[27:05] We'll just put it through an iterative refinement, a maximum likelihood estimation.
+[27:10] So the steps to estimate this would be left to the last after we have estimated the Intrinsics
+[27:20] and Extrinsics calibration using the method proposed by Zhang Zhenyu that we have seen
+[27:26] earlier on.
+[27:27] And then once we get these unknowns, the K as well as the Ri and Ti, because of different
+[27:34] views of the calibration toolbox, we can simply put it into this equation here, this cost
+[27:40] function here, which we call the reprojection error.
+[27:45] So what this means is that this guy here, pi, is simply the projection function.
+[27:50] So for example, I have an image here, I have a point here where I know that this point
+[27:55] corresponds to the checkerboard, the corner of a checkerboard, and it's being reprojected
+[28:02] here.
+[28:03] So let's call this point xj, and let's call this reprojected point xij, where j corresponds
+[28:11] to the 3D point and i corresponds to the camera view over here.
+[28:16] So this means that I'm reprojecting this point, which is the jth point on the checkerboard,
+[28:22] onto the i camera view, and the correspondence will be given by xij over here.
+[28:28] So this reprojection has to undergo p of x, which we have seen earlier on.
+[28:35] So p here would consist of these three sets of parameters k, r, and t.
+[28:43] But then once we use this p to reproject xj back onto the image, this is on the assumption
+[28:50] that the mapping is perfect.
+[28:54] That means that there's no distortion.
+[28:56] So what we need to do to compensate for the distortion would be simply putting this p
+[29:02] xj into the distortion function that we have seen earlier on here, to get the new distorted
+[29:10] location.
+[29:11] And since there's a set of unknowns, which consists of the five parameters in k, here
+[29:18] we have an equation that is a function of the five unknowns over here, and p here we
+[29:23] assume it to be known already, because we would have already obtained it from the first
+[29:27] step of the calibration.
+[29:29] So now the question is that, once we reproject this, so here we can think of this as a, it's
+[29:36] actually a function of p xj as well as the unknown of k, which is this guy over here.
+[29:46] And then, so once we reproject it based on this equation that consists of all the unknowns
+[29:53] of k1 to k5, so we can compare this reprojected point onto the image, the xij that we have
+[30:02] observed on the image, essentially we want to minimize the square errors here.
+[30:07] And we'll see in the lecture that when we talk more about bundle adjustment, how to
+[30:12] make use of lower Markov to minimize this.
+[30:15] This is essentially a continuous unconstrained optimization, which can be done using lower
+[30:23] Markov.
+[30:24] We'll do also a refinement over r and t as well as k, and then we'll find this where
+[30:29] we initialize it to zero.
+[30:31] The reason why we can initialize this to zero is because these parameters are usually very
+[30:36] small, it's close to zero.
+[30:38] So zero initialization is actually a pretty good initialization in this sense.
+[30:44] Then once we put it through, we'll be able to get a new estimate of all the parameters,
+[30:51] all the intrinsic parameters, extrinsic parameters, as well as all the unknown parameters that
+[30:56] parameterizes the radial and tangential distortion here.
+[31:01] So this is also called minimizing the reprojection error because we are reprojecting the 3D points
+[31:10] onto the 2D image, so what this point here is being reprojected here, the correspondence
+[31:15] might be here, there's an error here that we want to minimize.
+[31:19] So this is, in other words, also a geometric error that we have seen earlier on in the
+[31:27] last lecture, that this kind of error, minimizing the geometric error, is far more accurate
+[31:34] than what we have seen earlier on using Tanzanio's method.
+[31:37] We were solving a b equals to zero over there, and this is actually the algebraic error.
+[31:45] We have seen earlier on in the lecture on homography that this error is less accurate
+[31:49] than this error, hence by applying this, minimizing the reprojection error at the last step, we
+[31:56] are guaranteed to have much more accurate results for the calibration.
+[32:01] So once we have gotten the calibration for the radial and tangential distortion, we can
+[32:08] actually do the mapping the other way around.
+[32:11] So previously I mentioned that there's a function here, it's essentially this direction, where
+[32:16] any point here x without any distortion, we are going to put it through f and then we
+[32:22] will get this point here, which corresponds to the y here which is the distorted.
+[32:27] So this is with distortion, and this is without any distortion.
+[32:33] So once this is done, once we know exactly this function, we can actually compute a lookout
+[32:39] table as mentioned before.
+[32:40] So every pixel here, compute a lookout table that look up on the corresponding pixel over
+[32:48] here, and then I can simply fill this part in.
+[32:53] So originally we will not be able to know this, this is what we observe, but we will
+[32:58] compute for every pixel here, every pixel value here, we will compute the corresponding
+[33:04] y and then use this as a lookout table to fill in the entries here.
+[33:10] So eventually we'll be able to recover the undistorted image, which we call lens distortion
+[33:20] correction.
+[33:22] So this ends my lecture, and in summary, today we have looked at how to describe the camera
+[33:29] projection with pinhole camera model, that's the most basic camera model that we can use
+[33:36] to describe projection matrix.
+[33:39] And then we also have looked at how to identify the camera center, principal planes, principal
+[33:44] points, and principal axes from the camera projection matrix.
+[33:50] We also looked at how to use the camera projection matrix to find the forward and backward projection.
+[33:57] Then next we looked at the properties of and some definitions of the commonly seen affine
+[34:04] camera.
+[34:05] And finally, we looked at a technique proposed by Zhang Zhenyou to do calibration to find
+[34:12] the intrinsic and extrinsic values of a projective camera.
+[34:15] Furthermore, we also looked at the radial and tangential distortion, and also how to
+[34:21] get this radial and tangential distortion parameters from calibration, and how to undo
+[34:27] the distortion effect.
+[34:30] Thank you.

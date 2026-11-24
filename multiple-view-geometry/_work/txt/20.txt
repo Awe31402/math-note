@@ -1,0 +1,367 @@
+[00:00] Hello everyone, welcome to the lecture on 3D computer vision and today we are going to talk
+[00:05] about absolute pose estimation from points or lines. Hopefully by the end of today's lecture,
+[00:12] you'll be able to define the perspective endpoint or otherwise known as the PMP camera pose
+[00:18] estimation problem. We'll look at how to estimate the camera pose of an uncalibrated camera with
+[00:24] endpoints or line 2D, 3D correspondences. Then we'll look at three different algorithms of
+[00:32] calibrated camera pose estimation, in particular the Grunet three-point algorithm, the Quan
+[00:40] four-point algorithm, and the efficient PMP endpoint algorithms to estimate the pose of
+[00:46] a calibrated camera. Finally, we'll look at how to describe the degeneracies of the camera pose
+[00:52] estimation problem. And of course I didn't invent any of today's material. I took a lot of the
+[00:58] slides and content of today's lecture from the textbook written by Richard Hartling and Andrew
+[01:03] Zisserman, in particular chapter 7. This is for the case of the uncalibrated camera and for the
+[01:09] three-point Grunet algorithm, I took it from the paper which is a review of the original version
+[01:16] of the paper which is written in German review and analysis of the solutions of the three-point
+[01:23] perspective pose problem published in IJCV in 1994. And I took the Quan algorithm, the four-point
+[01:32] algorithm, from the linear endpoint camera pose determination paper published at T-PAMI in the
+[01:40] year 1999. And I took the efficient PMP problem, the EPMP problem and solution from this paper
+[01:50] written by Vincent Lapetit published at IJCV 2009. And the degenerate analysis is taken from the
+[01:58] paper Space Resection Failure Cases published at Photogrammetric Records in 1966. Now suppose
+[02:07] that we are given a set of 3D points denoted by capital X1 all the way to capital XN defined in
+[02:14] the world frame. What this simply means is that all these 3D points which we write as XN using
+[02:20] a homogeneous coordinate XYZW, this set of coordinates, it's defined with respect to a
+[02:28] assigned frame which we call the world frame represented by FW over here. And for each one
+[02:34] of these points, we're also given its corresponding 2D image points denoted by small x1 to xn. Now
+[02:42] what this means is that suppose that we are looking at this 3D point X2, we are also given
+[02:48] the 2D image coordinate which is the projection of this particular 3D point onto the image over
+[02:55] here which we denote as small x2 over here. So small xn in general would be also represented
+[03:03] by a homogeneous coordinate XY as well as alpha that is defined in the camera frame
+[03:11] which we denote as FC. So we call this the 3D-2D correspondences. Given this set of 3D-2D
+[03:23] correspondences, the task of camera pose estimation problem is to find the camera pose which is the
+[03:31] rotation and represented by the rotation matrix as well as the translation vector of the camera
+[03:37] frame in the world frame. So this is the objective and this particular problem is also known as the
+[03:45] perspective endpoint problem or simply in short the PMP problem. And the reason why it's called
+[03:53] the perspective endpoint problem is because in this particular case we're looking at the camera
+[04:00] model where is a projective camera model where all the light ray simply converge to the camera
+[04:07] center a single point of convergence and in the later subsequent lectures we'll be looking at
+[04:13] what we call the non-perspective non-perspective endpoint camera pose estimation problem and in
+[04:24] that particular case we'll be looking at a general camera. A general camera could be any of with a
+[04:30] lens of any shape where all the light rays simply do not pass through a single center of projection.
+[04:40] Now let's start by looking at the first case where the camera is an uncalibrated camera
+[04:47] and what this simply means is that we have a unknown intrinsic value. The intrinsic
+[04:54] of the camera is unknown which we denote by k over here. As a result what this simply means is that
+[05:01] since the camera intrinsic is unknown and our task here is also to find out the unknown rotation
+[05:07] and translation of the camera frame with respect to the world frame since all these parameters
+[05:14] are unknown so we'll simply put them all together into the camera projection matrix which is a three
+[05:21] by four matrix where 12 entries in the three by four matrix are unknown so the objective now
+[05:27] becomes we are supposed to find the 12 unknown parameters in our camera projection matrix such
+[05:33] that the given 3D point which we denote as capital X is projected onto the given 2D point
+[05:41] which is denoted by small x over here with the camera projection matrix.
+[05:48] And we know from earlier lecture in homography that we can, given an equation that looks like
+[05:55] this gamma x i equals to p of x i, in order to eliminate the unknown scale here we can actually
+[06:05] take the cross product of both sides which is given by this guy over here and simply
+[06:11] equate it to zero and what it simply means here is that the unknown scale can be cancelled out
+[06:18] since this is a scalar value that can be factorized out from this metric multiplication
+[06:23] operation which is equals to zero and expanding this particular equation over here we will get
+[06:29] this equation in tricks form where the scalar value of x and y and w here are simply the entry
+[06:36] of the 2D point and we'll simply rewrite or reshape the three by four matrix here
+[06:44] the three by four matrix here into a 12 by one vector and this particular matrix over here is
+[06:51] simply 3 by 12 and similar to the homography case we'll see that what we have three equations here
+[06:59] from our camera projection equation as shown here only two of them are linearly independent
+[07:06] what this mean is that we can simply remove the third equation over here and end up with a 2 by
+[07:13] 12 matrix multiplying by a 12 by 1 vector that will always give us zero so this simply means
+[07:22] that we end up with a homogeneous linear equation of the form of A x equals to zero and given
+[07:31] 2D to 3D point correspondences we can simply plug it this known correspondences to find
+[07:38] each one of these constraints in this particular matrix over here and given n of this
+[07:44] 2D to 3D point correspondences we'll end up with 2n constraints that can be used to form a 2n by 12
+[07:54] matrix which we call A and this together with the 12 by 1 vector forms a homogeneous linear equation
+[08:04] of AP equals to zero where all the entries in the matrix A are known and the only unknown in
+[08:12] this particular case would be the 12 entries in our P vector over here given a homogeneous linear
+[08:20] equation that looks like this where A here is 2n by 12 and P here it's 12 by 1 this simply means
+[08:29] that we have 12 unknowns in this particular P vector over here so in order for a non-trivial
+[08:36] solution to exist for this homogeneous linear equation the rank of A better be equals to 11
+[08:43] such that we have a non-trivial solution for this particular homogeneous linear equation over here
+[08:49] so since earlier on we look at this equal this particular equation over here well each one of
+[08:55] the point correspondences gives us two constraints and since we have all together 11 unknowns in the
+[09:03] P vector over here well what it simply means is that we need a minimum of 5.5 correspondences
+[09:10] to get this 11 constraints where the 0.5 correspondence here simply means that
+[09:17] since each point one point gives us two constraints so the half point here simply means that we are
+[09:29] taking one of these constraints from the point correspondences that is given to us effectively
+[09:34] a minimum of six point correspondence are needed where the last point correspondence only one
+[09:41] equation is used to form the A matrix over here and the now the solution after getting the minimum
+[09:49] equation over here of A P equals to 0 we can simply solve for the unknown P using the right
+[09:57] null space of A so what this means is that we can take the SVD of A which will give us the left null
+[10:05] space the left null space multiplied by the singular value multiplied by the right null space
+[10:11] and V here can be rewritten as the collection of the right singular vector V1 all the way to V12
+[10:19] and the solution of P would simply corresponds to the last singular vector in V which corresponds
+[10:29] to the least singular value in sigma so in earlier lecture we have seen that for homogeneous linear
+[10:36] equations such as A P equals to 0 over here to have an exact solution the matrix A must be made
+[10:44] out of measurements that are noise free and we know that in practice this is not true because
+[10:51] a camera is a real device that is often corrupted with noise and this means that the data that we
+[10:58] collected which is the 2D to 3D correspondences to form the A matrix over here it's always
+[11:11] noisy and in order to deal with such noisy data we know that in we have learned in the
+[11:17] previous lecture that in general we need more than the minimal number of point correspondences
+[11:24] to compute the solution for this P vector over here so as a result here it's always better to
+[11:33] use more than six point correspondences and the solution of the camera projection matrix
+[11:41] can be obtained from either the algebraic or minimizing the geometric error as we have seen
+[11:49] earlier on when we look at the case of the homography so to minimize the algebraic error
+[11:56] because we know that since A here is corrupted with noise in general you will never fulfill this
+[12:03] homogeneous linear equation where the product of A multiplied by P will never be equals to 0
+[12:09] and so what we can do best would be to minimize the norm of A P such that it is as close to 0 as
+[12:19] possible and of course if we were to naively minimize this the product of A and P then we
+[12:29] are not guaranteed to have a meaningful solution of P because in this particular case if we do not
+[12:35] subject P here to a certain constraint what it means is that a trivial solution could be found
+[12:42] and that would be simply to equate P equals to 0 and this is the solution that we do not want
+[12:49] so in practice it's always good to subject this minimization the algebraic error minimization
+[12:55] to a certain normalization constraint and in this particular lecture we will use the
+[13:02] first option over here where we will just constrain the norm of the vector P to be equals
+[13:09] to 1 so this is similar to what we have seen earlier on in the lecture of homography and
+[13:16] fundamental matrix so in the lecture of homography we do this where we want to minimize
+[13:21] the norm of AH subjected to the norm of H to be equals to 1 and in the fundamental matrix
+[13:31] case this is what we do we have AF over here equals to 0 and to minimize the algebraic error
+[13:39] means that we will minimize the norm of AF and subjected to the norm of F to be equals to 1
+[13:48] otherwise all these cases here by just doing this minimization without any constraint
+[13:55] then it's likely that the solution would be equals to 0 and this is what we want to avoid
+[14:03] so a second option here in this particular case which is not applicable to what we have looked
+[14:10] at earlier on in the case of the homography as well as the fundamental matrix would be
+[14:15] to subject the normalization of the P matrix in particular the first three entries of the last row
+[14:24] which means that I have a P matrix over here if I were to write it in this way
+[14:32] so this is the capital M the three by three matrix and this is the three by one
+[14:39] vector over here so P to the P3 over here it means that I'm taking the last row of this guy over here
+[14:49] so M3 by 3 the last row of this guy over here and I want to subject the norm of this to 1
+[14:57] and the reason why this can be done is because as we have seen in the earlier lecture that the depth
+[15:06] given x and P
+[15:12] P is the camera projection matrix x is a point in 3D space this depth here is actually
+[15:18] given by the sine of over the determinant of M and multiplied by w w it's the so if we were
+[15:28] to project this guy over here P x into small x and small x here would be given by x y and w
+[15:37] so w is the the scale here that we are looking at in the image coordinate point divided by
+[15:46] T and the norm of M3 so M here refers to this three by first three by three entry of the P
+[15:56] matrix and M3 refers to the last row of the first three by three entries in the P matrix over here
+[16:03] and T here it's the last entry of the homogeneous coordinates
+[16:10] of the 3D point so we have seen that the depth is uh equals to the w the sum multiplied by w
+[16:19] divided by T and the magnitude of the last row of the first three by three entries of the P matrix
+[16:28] and hence in order to normalize this we can subject the last row of the first three by three
+[16:36] entries in the P matrix to have a norm of one and after we have solved for P using the SVD
+[16:45] we know that P here the solution of P is actually equals to the a certain scale lambda which we call
+[16:54] lambda multiplied by the by the solution v this corresponds to the least singular vector in the
+[17:03] right null space multiplied by a lambda represents a whole family of solution
+[17:09] for this P vector over here so we can actually take the entries of this solved by one vector
+[17:16] over here so we can take the three entries that corresponds to this P3 over here and take the
+[17:23] norm to be equals to one so this gives one equation in terms of one unknown lambda over
+[17:28] here where lambda can be solved but in this lecture we will stick to the first option here
+[17:35] although the second option here can also be applied so after initial a solution has been
+[17:42] obtained from the algebraic approach the next step would be to refine the solution using the
+[17:49] geometric error and the geometric error here is given by the reprojection error where suppose that
+[17:56] P here is the initial camera projection matrix that we found from minimizing the algebraic error
+[18:04] we can make use of this as an initialization to minimize the geometric error and using this
+[18:10] particular projection matrix that we have found earlier on from the algebraic error we can project
+[18:16] any 3d point x back onto the image and which we call x hat over here since the camera projection
+[18:23] matrix is an estimated one what this means is that the reprojected 3d point onto the image
+[18:30] which we call x hat it is unlikely to coincide with the measured point which we call x i here
+[18:38] and hence there is a certain error in between here so this error is given by the Euclidean
+[18:45] distance between the measured point and the reprojected point from our estimated camera
+[18:52] projection matrix over here and the objective now is that we want to find the correct projection
+[18:58] matrix P the 3x4 camera projection matrix such that the total reprojection error for every point
+[19:08] is minimized and this will guarantee us the best solution for the camera projection matrix and in
+[19:15] comparison to the algebraic error as we have mentioned earlier on in our lecture in homography
+[19:21] as well as the lecture in fundamental matrix is that the reprojection error the or the geometric
+[19:29] error use a much more accurate result because it's physically meaningful we are actually
+[19:36] physically minimizing this error over the prediction of the camera projection matrix whereas
+[19:44] in the algebraic case by simply minimizing this norm there's no physical meaning behind this
+[19:50] except for we are just trying to mathematically force this norm to be close to zero as much as
+[19:59] possible but we are not physically minimizing anything as the the reprojection that we are
+[20:06] seeing here and this particular minimization we have also mentioned earlier on in the
+[20:13] lecture of homography that this minimization can be done using continuous unconstrained optimization
+[20:21] algorithms such as luvermmert-makur another option would be to use the gauss-newton algorithm to do
+[20:29] this we'll see these two algorithms in more detail when we talk about budget adjustment in the
+[20:35] subsequent lecture so since our objective is to minimize the norm of a p over here subjected to
+[20:44] the constraint that the norm of p should be equals to one we know from the lecture in homography that
+[20:51] a here better be in a good condition such that when we take the svd of a it can use a good
+[20:59] solution for the p factor over here but unfortunately we know that a is made out of the
+[21:06] 2d to 3d correspondences that might be defined very poorly with respect to the respective frame
+[21:17] of reference so for example for the 3d points over here we might be given a set of 3d points that are
+[21:24] defined with respect to a world frame that is very far away from it and with some of the points
+[21:30] might be very close and we can see that from the lecture in homography we know that if this is the
+[21:37] case then we know that this would greatly affect the magnitude of the respective entries in the
+[21:43] metric a and as a result it will also affect the svd result that is used to compute the solution
+[21:51] for p and we also know that this holds true in the 3d domain as well as in the image frame so
+[21:59] we might get some points that are here and some points that are here and it's defined all defined
+[22:04] with respect to a camera frame so in this particular case we know that the a matrix it
+[22:11] will affect the magnitude of the a matrix to differ greatly from one another and this will
+[22:20] in turn affect the results svd that is used to compute the solution for the p
+[22:27] vector so we also seen that in the homography lecture that a simple solution can be done to
+[22:35] overcome this particular problem and that would be to do data normalization so in that particular
+[22:41] case in the homography lecture we are dealing with the 2d to 2d correspondences for case of
+[22:48] homography in that case the data normalization would have to be done on the 2d domain for both
+[22:56] of the images and in our case here we are given 2d to 3d correspondences so data normalization
+[23:03] naturally has to be done on both the 2d domain as well as the 3d domain so in in the case of the
+[23:12] data normalization for the 2d data point it will be exactly the same as what we have seen earlier
+[23:18] on in the 2d homography case so we have to define a transformation matrix such that all the 2d points
+[23:27] in the image such that the centroid of all this let's say i call this centroid as a c over here
+[23:35] to be translated to the origin of the reference frame and the points over here in order to prevent
+[23:43] this kind of situation where they are badly distributed in the image space we have to scale
+[23:51] the points such that the root mean square distance the total root mean square distance to the origin
+[23:58] equals to square root of 2 and we have seen in the lecture of homography that this can be
+[24:04] easily done by defining a scale factor which we call s over here to be equals to square root over
+[24:11] the mean distance of all the points from the centroid and similarly we have to do the same
+[24:20] data normalization in the 3d domain we'll still do the same the first step where we define a
+[24:28] transformation metric over here so in the previous case where we defined t norm over here since this
+[24:34] is in the image domain this would be a three by three matrix now since we are looking at the 3d
+[24:42] domain well this transformation matrix which call u norm over here would become a four by four
+[24:48] matrix where the the first step of this transformation would be the same as the in the
+[24:53] 2d domain where we want to translate the centroid of all the 3d points suppose that all these are
+[25:00] the given 3d points what we want to do here is that we want and suppose that this is the centroid
+[25:06] that we are looking at in the in the 3d space and this is the centroid which I denote as c we want
+[25:13] to define a translation such that the centroid over here is translated to the origin of the
+[25:20] frame of reference and next we want to scale the root mean square of the 3d points such that the
+[25:30] total root mean square distance from the origin or from the centroid is equals to square root of
+[25:36] three three over here and this would prevent the case where we have some data that is scattered
+[25:44] very far away from each other or very far away from the reference frame and in order to achieve
+[25:51] this we will simply define a scale scaling factor over here we should call s as before but in this
+[25:59] case since we want the total root mean square distance to be square root of three we can define
+[26:04] s to be equals to square root of three divided by the mean distance of all the points from the
+[26:10] centroid so in summary the post estimation steps to estimate the camera pose of an uncalibrated
+[26:17] camera with unknown intrinsic value can be summarized in this particular table over here
+[26:24] the objective here would be suppose that we are given n points where n equals to or more than
+[26:30] six points of 2d to 3d correspondences which we denote as big x and small x over here so we are
+[26:38] given n points of this the objective of this is that we want to estimate the camera projection
+[26:46] matrix which is a three by four matrix such that from here we can actually decompose it to become
+[26:53] the intrinsic value as well as the extrinsic value over here this particular camera projection matrix
+[27:01] should achieve the objective of minimizing the total projection error of every 3d point that
+[27:08] we are given that is being projected onto the 2d image with respect to the 2d point correspondences
+[27:17] that we are given as well and we have seen earlier on that this can be done first by a linear method
+[27:26] which minimizes the norm of the of a multiplied by p subjected to a constraint of the norm of
+[27:38] p to be equals to 1 and this would be equivalent to finding the null space equation solution of
+[27:45] a p equals to 0 subjected to p equals to 1 and but before we do this we also saw that
+[27:53] the a matrix here has to be well conditioned by using the data normalization technique and
+[28:00] in order to do the data normalization we have to do it in both 2d as well as 3d domain so we have
+[28:06] to compute a similarity matrix which we call t that we have seen earlier on how to compute this
+[28:12] to normalize the points and as well as the normalization matrix in 3d which called u over
+[28:19] here to normalize the 3d points so the normalization is simply done by computing
+[28:25] this t matrix and then pre-multiplying all the respective 2d points to get the x tilde over here
+[28:32] which is the normalized set of point and we'll do the same thing for the 3d point so after
+[28:38] normalization we minimize this by simply minimize a p equals to 0 and by simply taking the svd
+[28:47] solution from a and so once we have the initial estimate from this algebraic error we can proceed
+[28:54] on to refine the estimation of p using the geometric error which is also the reprojection
+[29:01] error so here what we want to do here is that we want to do the arc mean over the camera projection
+[29:09] matrix or the 12 parameters in the camera projection matrix such that the given 3d point
+[29:17] reprojects to be as close as the corresponding 2d point as possible and we can do this using the
+[29:25] either the luverberg macquardt algorithm since this is a unconstrained continuous optimization
+[29:32] problem we can do this over luverberg macquardt algorithm or we'll also see later
+[29:39] that gauss newton algorithm can also be used here then finally in the last step after we have
+[29:46] obtained the camera projection matrix from both the algebraic initialization as well as the
+[29:53] geometric error minimization we have to perform the last step which is the denormalization to
+[29:59] recover back the correct projection matrix with respect to all the original 2d to 3d correspondences
+[30:08] that we have obtained earlier on to do the denormalization we will simply just multiply the
+[30:14] inverse of the 2d transfer similarity transform by the predicted camera projection matrix from
+[30:22] the geometric error and finally multiply by the similarity transformation matrix for the 3d point
+[30:30] denoted by u over here and so after we have found the camera projection matrix p we know that this
+[30:41] is a three by four matrix which is made out of the intrinsic value as well as the rotation and
+[30:49] translation and in order for us to reach our objective of finding the camera pose with respect
+[30:58] to the world frame which is essentially the rotation and translation which is also the
+[31:04] known as the extrinsic value of the camera projection matrix we have to do a decomposition
+[31:10] of the three by four camera projection matrix into the intrinsic which is k as well as the rotation
+[31:18] and the translation vector over here so we have seen earlier on in lecture four that this guy
+[31:24] over here the first three by three entries in our camera projection matrix is actually equals to k
+[31:30] multiplied by r and what this means is that we can make use of m to to recover k and r using the rq
+[31:40] decomposition and once k and r has are both found from the rq decomposition we can make use of the
+[31:49] rotation matrix that that is found in the rq decomposition to find the camera center by simply
+[31:57] equating minus r and multiply by c c tilde here is the inhomogeneous coordinate of the camera center
+[32:06] and with the last column of p that was found earlier on so we can there are three unknown
+[32:13] over here and we have three equations we can easily solve for all the three unknowns from this
+[32:18] equation over here and finally what we also want to solve would be the exact solution for
+[32:26] the translation as well so notice that when we compute p from minimizing the norm of ap in the
+[32:35] algebraic error or even in the geometric error that the scale is missing because say that we
+[32:41] are subjecting this to the norm of p to be equals to one what this simply means is we ignore the
+[32:49] scale of the camera projection and this means that t here the translation vector here it's obtained
+[32:59] up to scale at this point that means that we do not know the scale of the translation vector here
+[33:08] and fortunately we are given the 3d points x so each 3d point we know its exact location
+[33:16] away from the world frame over here and what this means is that the 3d point gives us the absolute
+[33:24] scale information which can be used to recover the scale of the translation vector over here
+[33:33] and this can be easily done by looking at the ray equation that we have seen earlier on in the
+[33:38] lecture this actually means the set of points lies on the light array so x here is actually a light
+[33:46] array where the beginning over here is the camera center c and the pseudo inverse multiplied by x
+[33:55] is the image point over here and if we will take the pseudo inverse multiplied by the image
+[34:01] coordinate over here we will get any point on this light array over here so x which is the 3d point
+[34:10] actually lies somewhere on this light array over here so let's denote this by x and in order to
+[34:16] find because we are we know this information from we know x the exact x from the given 2d to 3d
+[34:23] correspondence and we know that this x here is parameterized by a single scalar value which we
+[34:30] call lambda here that's the depth value over here so since we know this because it's given in the 2d
+[34:36] 3d correspondences we can make use of this known value and this one equation over here that
+[34:43] represents the light ray to solve for the unknown depth value and once this is solved we can put
+[34:51] this back into the translation because now the translation is without scale so we can actually
+[34:57] take t divided by the norm of t here and multiply by the lambda that we have obtained from this
+[35:04] equation over here to get the new translation factor over here now in the case where we are
+[35:16] given line to 2d to 3d line correspondences which means that instead of just now what we
+[35:23] have looked at this that in on the image we are given a set of 2d points and we know the
+[35:29] three it's 3d correspondences or also a point in the 3d space we want to find
+[35:39] the rotation and translation from here which means that we want to find the camera pose
+[35:43] but now suppose that we are given a set of 2d lines or given all these lines in the 2d image
+[35:52] as well as the it's 3d correspondences here which is also lying the objective would remain the same
+[35:59] given this 2d to 3d line correspondences we want to find the camera pose the rotation
+[36:04] and translation such that the world frame is aligned with the camera frame so as a start
+[36:12] we'll first represent the 3d line suppose that this is our 3d line we'll represent
+[36:18] the 2m points or any two points on this 3d line using a 3d homogeneous coordinate which we call
+[36:27] x0 and x1 and we also know that from the previous lecture we know that a line back projects to a
+[36:34] plane so suppose that this is my line x0 x1 my 3d line and we have an image plane over here
+[36:44] at this image plane it corresponds to a projection of this 3d line on the image plane and we know
+[36:52] that this particular 2d line or this particular image projection it back projects to become a
+[36:59] plane so in in the 3d space so this is our the plane that is in the 3d space and we also know
+[37:07] that from lecture five that this back projected plane can be represented by the equation of p
+[37:12] transpose of l over here where l it's the image line or the image projection of this of this 3d
+[37:22] line so this is the 2d line correspondence that we have over here and we also we also know that
+[37:31] this p transpose l represents the back projection of the this 2d line to a plane in 3d space and we
+[37:38] since we also know that the 3d line is supposed to lie on this particular plane over here what
+[37:46] it means is that any one of the two 3d points used to represent the 3d line the dot product of
+[37:52] it with the plane equation must be equals to zero because there is a coincidence relation here
+[38:01] between the two points and the plane formed by the back projection of the 2d line so we can
+[38:08] write this relation mathematically in terms of the dot product of the plane so this first is the
+[38:14] plane equation we can take a dot product of a plane equation with any one of the 3d points
+[38:21] and that should be equals to zero and now since we get this equation over here
+[38:30] what we can see here is that each choice of j which means that each choice of the
+[38:37] 3d points that is the of the two 3d points that is used to represent the line would gives
+[38:44] would give us a single linear equation in the entry of p over here so what this means is that
+[38:54] we'll get this equation where l the 2d line and the 3d point over here that represents the 3d line
+[39:00] these are known values and the unknown is p over here we can evaluate this into a linear
+[39:06] equation which is when we expand this out and then rearrange p to be on the right side and the
+[39:14] l and x to be on the left side we can see that it's simply a system of linear equations with
+[39:22] respect to the unknown entries in the p matrix over here and we also can verify this after we
+[39:31] multiply it out we will we'll get this equation a of p equals to zero where a here is simply made
+[39:40] out of l the 2d lines as well as the 3d points of x j any one of the 3d points and this would be a
+[39:49] 3 by 12 matrix and this guy over here would be a can be reshaped into a 12 by 1 factor from the
+[39:59] 4 by 3 matrix of the camera projection matrix and similar to the last previous cases that we have
+[40:08] seen in in the point correspondences as well as the cases that we have seen in the homography
+[40:16] that out of these three equations only two are linearly independent so we can rewrite this into a
+[40:24] 2 by 12 matrix multiplied by p which is a 12 by 1 factor and equals to zero and we'll get the
+[40:34] homogeneous linear equation here so what this means is that given n number of correspondences
+[40:43] n number of 3d to 2d line correspondences we can form a 2n by 12 a matrix by stacking every
+[40:54] two constraints from a single 2d to 3d line correspondence together to form the a matrix
+[41:01] where p here remains at the 12 by 1 and this here represents the camera projection
+[41:11] matrix which is unknown here and this is what we want to find out so similar to what we have seen
+[41:18] earlier on in the case of a 2d to 3d point correspondences we also want to minimize the norm
+[41:26] of a multiplied by p subjected to the normalization constraint so in this case here of the 2d to 3d
+[41:35] line correspondences we can also make use of either one of the two constraints the first one
+[41:41] would be subjected to the norm of p to be equals to one which is the preferred choice here and the
+[41:47] second case that we have looked at would be to subject the third row the last row of the first
+[41:54] three by three entries of the camera projection matrix to be equals to one and so the in order to
+[42:06] minimize this we can apply the same technique that we have seen earlier on by taking the svd
+[42:12] of a so this would be the left singular null space multiplied by the singular value and the right
+[42:18] singular null space and the final solution here would be given by the last column of the right
+[42:27] singular null space that corresponds to the least singular value in the sigma metric over here so
+[42:36] once we have found the solution an initial solution from the algebraic error as before
+[42:42] we know that minimizing the algebraic error of the given by the norm of a p here it simply
+[42:51] doesn't mean anything physically except for we are just minimizing the mathematical
+[42:57] equation such that a multiplied by p gives us zero but in the physical sense in geometric sense
+[43:04] there's actually no meaning to this particular error so once we have found the initial solution
+[43:12] for the p vector over here which is a 12 by 1 vector over here we will reshape it back to
+[43:20] form a three by four camera projection matrix and we'll minimize the geometric error because
+[43:28] now it's not a point correspondence anymore and now it's a 2d to 3d line correspondence so one of
+[43:35] the way to define the geometric error is given by the paper which I have published a few years ago
+[43:43] at ECCV so specifically this geometric error can be as follows so given a 3d line that is defined
+[43:54] by the two end points xi0 and xi1 over here we can re-project this two end points back onto the image
+[44:03] where this re-projected end points is given by x hat i0 that is directly computed from p
+[44:11] multiplied by x i0 and we can do the same projection of this the second 3d point onto the
+[44:18] image and what we want to do here is that we know that the observed 2d line is given by this line
+[44:25] over here that we represent it as li over here so what we want to do here is that we want to minimize
+[44:32] the closest distance that the re-projected end point made with the 2d line is represented by d0
+[44:42] on one end and second perpendicular distance that which is made by the second point to the
+[44:49] to the line and this is also the closest distance from the second re-projected point to the line
+[44:56] denoted by d1 over here both of them should be as small as possible and once d0 and d1 are zero
+[45:05] what this means is that the line that is formed by the re-projected end points would be lying
+[45:12] exactly on the observed line and this is the ideal case that we want so in other words we want to
+[45:18] minimize the two errors over here but we can see that there is an inherent bias towards shorter
+[45:25] line so if this line is very short what this means is that the error that is formed by this
+[45:33] would be smaller compared to a very very long line so if i have a very long line i have a very
+[45:40] long line a very small angle over here it will actually make a very huge error at the two end
+[45:46] points so instead of just simply adding out the two errors of that that's made by the end point
+[45:54] we also normalize it by the length of the 3d line so as a result this is what we
+[46:04] how we define the reprojection error for line correspondence

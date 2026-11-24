@@ -1,0 +1,330 @@
+[00:00] So, if we were to naively make use of the Löfverberg-Macquardt algorithm, we will find
+[00:05] ourselves quickly running into a cubic complexity at every iteration, since we are going to
+[00:12] solve for the normal equation given by J transpose J delta equals to minus J transpose epsilon
+[00:20] over here. And this, we have seen that this is equivalent to an inhomogeneous linear equation
+[00:26] of A X equals to zero. And we all know that when we solve for this inhomogeneous linear
+[00:35] equation for X, which is equivalent to delta over here, we have to invert this guy over
+[00:40] here, the A matrix, in order to solve for A, which is equal to inverse of A multiplied
+[00:49] by B. And this incurs a cubic complexity where n over here can be very large. And this is
+[00:58] actually in the order of the total number of camera parameters over all camera, so it
+[01:03] would be 12 multiplied by the total number of camera in our 3D reconstruction, as well
+[01:10] as the total number of 3D points, that would be three coordinates of X, Y, Z multiplied
+[01:15] by the total number of 3D points in the scene. In a 3D reconstruction problem, this can easily
+[01:24] be up to an order of millions of 3D points. So fortunately, we will exploit the sparse
+[01:34] block structure in this A matrix, which is equivalent to the J transpose J matrix over
+[01:40] here, in order to mitigate the computational complexity. More specifically, we first divide
+[01:49] or partition the set of parameters P, which is an m-dimensional parameter, into two sets
+[01:57] of parameter vectors which we call A and B. So what this means is that I'm going to rewrite
+[02:03] P into P1, P2, all the way to Pm here, and I'm going to partition this set of parameters
+[02:14] into two sets, where I call the first set of parameters over here a vector of A, and
+[02:19] the second set would be a vector of B over here, and I'm going to rewrite this P as A
+[02:26] transpose, B transpose, and altogether transpose. So this, in the context of our bandai adjustment
+[02:33] problem, A could represent all our camera parameters, and B here could represent all
+[02:42] the parameters from the 3D points, so we can partition them into two sets of parameters
+[02:48] that we wish to optimise over. And now the Jacobian J, which is defined as del X over
+[02:56] del P, where X hat here represents the non-linear function that we want to optimise over, that
+[03:02] would be our reprojection function in the context of bandai adjustment, it would now
+[03:08] form a block structure of the form of A and B, where A and B here are respectively given
+[03:15] by the partial differentiation of X, the non-linear function, with respect to the first
+[03:22] partitioned parameter A and the second partitioned parameter B respectively. Now, after we computed
+[03:32] the Jacobian in the partitioned way, we can put it together into the normal equation to
+[03:38] compute J transpose J, which is this guy over here, and we will see that it has a very nice
+[03:44] structure over here. And delta would also have a partitioned structure where the first
+[03:52] set of this vector would be representing A, and the second set would be representing the
+[03:59] delta increment of B. And similarly, for the right side of this normal equation, which
+[04:05] is given by minus J transpose of epsilon, we can see that the structure would also be
+[04:11] the first part here is only dependent on the parameters of A, and the second part will
+[04:17] only be dependent on the parameter of B. And we can rewrite this block over here, the J
+[04:23] transpose J block over here into this form, where we saw that the off-diagonal here, it
+[04:29] consists of the same parameters, but just a transpose of it, so we will rewrite this
+[04:34] part as W, and the lower left part as W transpose over here, and then we will write this block
+[04:41] over here as U*, and this block over here in the diagonal block as V*, in this particular
+[04:48] form over here. Now, we further observe that if we were to multiply the normal equation
+[04:56] with, the left and right side of the normal equation with this particular matrix over
+[05:01] here, we will be able to get this equation over here, where we can see that in the first
+[05:08] row, the top right entry, the top right block over here, would become zero, because we have
+[05:16] this element over here, which will act as a subtraction over here to eliminate W in
+[05:24] this particular block over here. So once we have arrived at this particular equation where
+[05:30] the top right block over here is equal to zero, we can make use of this to solve for
+[05:37] delta A, because we can see that after multiplying this row over here into this column over here,
+[05:46] delta B is being eliminated, so we will get the equation of this block multiplied by delta
+[05:54] A equals to this particular block over here, and the only unknowns in this case would be
+[06:01] dependent on the parameters of A, so in this particular form over here. And this is also
+[06:08] known as the Shear's Complement, which we can use to solve for a partial block of the
+[06:17] parameters that we are interested in optimising over. And we can also see that this form of
+[06:24] equation, it becomes an inhomogeneous linear equation where it's equivalent to Ax equals
+[06:31] to B, this whole block here is B, and this block here is A, and delta A here becomes
+[06:38] X, where if we were to compare this with the original normal equation over here, now we
+[06:46] have a smaller block of X over here to solve for as compared to this, because this X over
+[06:54] here, it is the original parameter which consists of the parameters of A and B, that means that
+[07:01] it's actually a delta A and delta B all together, and what this means is that J transpose J
+[07:07] in the original form is much larger than the form that we are, the inhomogeneous linear
+[07:15] equation that we are trying to solve for here. And we will also see that another advantage
+[07:21] of this is that A, this particular block here, it's much sparser, and this can be solved
+[07:27] efficiently using several linear algebra factorisation techniques. So once we have found delta A,
+[07:36] we can subsequently solve for delta B using back substitution by the following equation
+[07:43] that is shown here. This equation is in fact obtained from the second row of this particular
+[07:49] equation over here, where we multiply this guy to delta A and this guy to delta B, and
+[07:56] that would be equal to epsilon B. Since we already know delta A, we will have one equation
+[08:02] that consists of the unknown of delta B, and this particular equation over here would again
+[08:10] be equivalent to A X equals to the inhomogeneous linear equation, which we can solve efficiently
+[08:18] for X. Now, once we have computed the delta A and delta B, the update vectors of delta
+[08:27] A and delta B, we can put it back into this equation over here to get the updated equation
+[08:34] of P. So this is simply equivalent to P i plus 1 is equal to P i plus delta, where delta
+[08:44] is the value that we have solved for in the normal equation. So since here we split this
+[08:51] delta into two parts of delta A and delta B, we can put it back into the equation by
+[08:56] adding it back into the respective part of A and B to get the new vector of P. And we
+[09:02] will never do this iteratively until convergence. So we will also follow the way that we increase
+[09:12] or decrease lambda in the naive Leuverbert-Marquardt algorithm that we have seen earlier on. And
+[09:19] here is a table that summarises the sparse Leuverbert-Marquardt algorithm that I have
+[09:27] talked about earlier on. Now we will look at the application of the sparse Leuverbert-Marquardt
+[09:34] algorithm on the multiple image bundle adjustment. In particular, we will take advantage of the
+[09:40] lack of interaction between the parameters of the different cameras to obtain the sparse
+[09:47] structure in our normal equation. So we will define the measurement data as capital X over
+[09:53] here, where each one of these X1 to Xi represents a set of observations on the images. So we
+[10:00] can think of it this way, that each one of these X is actually a 3D point in the scene,
+[10:06] which we call capital Xi over here. And it actually also contains a set of corresponding
+[10:13] 2D points on the image. For example, Xi1, that means that I'm observing this Xi, this
+[10:21] 3D point in image number 1. So I'm going to call this Xi1. This means that there is
+[10:28] a correspondence from the first image, and there is also a correspondence in the second
+[10:33] image, which I'm going to denote as Xi2 over here. So note that this 1, 2 and these indexes,
+[10:44] it need not be consecutive, it need not be continuous here, because what this means is
+[10:50] that we are allowing for missing data. That means that it's not possible to observe the
+[10:56] same point over all the image frames. So it could be image number 1, image number 2, and
+[11:02] then it jumps to image number 5, for example. So we are going to have i1, i2, and then Xi5
+[11:11] transpose over here, and all the way to Xim. This means that this particular 3D point,
+[11:18] Xi, is being seen in m number of images, and we are denoting xi,j as the image 2D point
+[11:29] that corresponds to the 3D reconstructed points. And as mentioned earlier on, we are going
+[11:35] to denote the camera parameters as a, which is denoted by a1, a2, all the way to am, where
+[11:44] they are all together m images in our bundle adjustment context. And each one of these
+[11:52] parameters ai represents the jth camera in the scene. And this could be a 12 by 1 vector,
+[12:02] which represents all the parameters in our projection matrix. So suppose that we are
+[12:08] given a re-projected point which we call xij hat here. We know that this xij is a result
+[12:17] of the re-projection of a 3D point xi in the 3D scene. And we know that this particular
+[12:25] 3D point would only be seen in the jth camera. That means that if I have a camera a, k for
+[12:32] example, we will only see this particular 3D point as xij if k is equal to j. What this
+[12:41] means is that the partial differentiation of xij hat over xaj will not be equal to 0.
+[12:54] And in general, if k is not equal to j, what this means is that this particular 3D point
+[13:02] will not be re-projected onto this particular image if this is ik over here. And in a similar
+[13:09] way, we can see that the partial differentiation of the re-projection will not be equal to
+[13:15] 0 if we partially differentiate with respect to the 3D point that is re-projected onto
+[13:22] that particular image. Suppose that I have an image which I see the re-projection of
+[13:30] x hat i and j, I know that the 3D point whose parameter is b of k over here, it would be
+[13:38] re-projected onto this particular image if k is equal to i over here. And what this means
+[13:47] is that if I take a partial differentiation of x hat ij with respect to the partial differentiation
+[13:54] of b of i, then this in general will not be equal to 0. But if I have a case where k is
+[14:01] not equal to i, this means that this particular point will not be re-projected onto this particular
+[14:07] image where I see a re-projection of x hat ij over here. And in this particular case,
+[14:14] x hat ij over here will be independent of bk, and this means that the partial differentiation
+[14:20] will be equal to 0. And the form of the Jacobian after we do this partial differentiation would
+[14:30] be shown in this particular figure over here. We can see that the projection matrices which
+[14:36] we denote as the vector of a and the 3D points which we denote as the vector of b over here,
+[14:46] it's only affecting the re-projected points when we can see that it's in that particular
+[14:56] respective camera or it's in that particular respective 3D point. For example, in this
+[15:04] case here, x1 and j, this 3D point is seen in the first camera. So let's say this is
+[15:10] my a1, which is denoted by the parameters of p1 over here. And I'm going to see in this
+[15:18] example over here 4 points inside here. So this 4 point is going to be x11, x12, x13
+[15:28] and x14. And we can see that these 4 points, it's only affected by the variable a1 or p1
+[15:36] that is denoted in this particular diagram over here. And since p1 is the parameter of
+[15:44] the first image, we can see that in the second image, if we were to see also 4 points in
+[15:51] this particular case over here, 4 points that is projected onto this particular image over
+[15:57] here, which is denoted as a2 over here or p2 in this case, we can see that the p1 over
+[16:03] here is not going to re-project that point in the second image. Hence, all the entries
+[16:08] over here, the partial differentiation of del x2j over del p1 is going to be 0 in this
+[16:17] block over here. But it's not going to be 0 in the first block over here because we
+[16:23] can see that the first camera matrix is affecting the points that is re-projected onto the first
+[16:29] image. And similarly, the first camera matrix is not going to affect all the re-projected
+[16:35] points in this particular example here. There are 4 re-projected points onto the third image
+[16:41] which is denoted as a3. So there are 4 of these points. We can see that the first camera
+[16:46] matrix is not going to affect this and hence the partial differentiation of this block
+[16:50] over here is going to be equal to 0 as well. And we can also see this in the 3D points
+[16:59] which is denoted as the vector b here. So in this particular case, in the first image
+[17:05] over here, we have 4 re-projections which we denote as x11, x12, x13 and x14 over here
+[17:12] as mentioned earlier on. And we can see that capital X1 which is the first 3D point, so
+[17:18] this means that I have a 3D point here which I call x1. It's only going to be affecting
+[17:23] one of the entries, one of the re-projected points which is x11 over here. What this means
+[17:31] is that x11 is the re-projection of x1, the first 3D point, into the camera image of the
+[17:39] first camera. So we can see that it's affecting this only, hence taking a partial differentiation
+[17:46] of the re-projection over here with respect to x1 is going to be a certain value over
+[17:54] here, a non-zero value over here. But at the same time, if we look at all the other entries
+[18:00] over here, the other 3 entries over here which represents the 3 re-projected points in the
+[18:06] first image, it's not going to be affected by x1 because these are caused by some other
+[18:12] 3D points in the scene, hence the partial differentiation of this is going to be equal
+[18:17] to zero over here. And we can see that in the first image over here, the second point
+[18:24] which is x2 over here, which is caused by a re-projection of x2, the second point over
+[18:29] here, it's going to be a non-zero value when we partially differentiate x12 with respect
+[18:36] to x2, and it's going to be zero everywhere else. And we can see this trend happening
+[18:42] in all the other entries in this block as well. So once we have computed this, we would
+[18:48] have obtained the Jacobian matrix in this particular form, and we can see that this
+[18:53] is indeed a very sparse matrix, where most of the entries here are equal to zero, and
+[18:59] it's only sparsely filled in the white parts, as illustrated in this particular figure.
+[19:07] So once we obtain the Jacobian matrix, we can continue to get the normal equation where
+[19:16] we can compute the Hessian of J transpose J, which is in this particular format over
+[19:23] here as what we have described earlier on. We can also see that this is a sparse matrix
+[19:30] in the diagonal block over here, where all these entries over here are going to be equal
+[19:36] to zero. And now, delta over here would be divided into two parts. The first part here
+[19:44] would be dependent on A, which is our camera matrix, and the second part over here would
+[19:50] be dependent on the 3D point entries, which corresponds to the partition of the blocks
+[19:56] over here in the Jacobian matrix. And similarly, epsilon A and epsilon B, denoted by this term
+[20:05] over here, would be divided into two parts. The first part is again dependent on the camera
+[20:12] matrices, and the second part would be dependent on the 3D point.
+[20:18] So we can see more clearly this illustration over here, that the first block over here,
+[20:25] taking the second camera where i equals to 2, taking this block over here, we can see
+[20:31] that partially differentiation of this point x2j for the four points that is being reprojected
+[20:41] onto the second image, where i equals to 2. So in this case here, I'm looking at P2.
+[20:48] So I'm looking at four points over here, where each point represents x21, x22, x23, and x24.
+[20:57] And in the case where I'm partially differentiating with respect to the first camera matrix, this
+[21:04] would be zero. And it would be the same for the case where if I'm partially differentiating
+[21:10] this with respect to the third camera matrix over here, it will also be equal to zero.
+[21:14] And the only case is that it won't be equal to zero is when I partially differentiate
+[21:19] this reprojection with respect to the camera matrix P2 or A2 that I denote over here. This
+[21:26] is because this is the camera projection matrix that affects this particular image, and in
+[21:32] turn it will affect the reprojection onto this particular image over here.
+[21:38] Here's an illustration on how the 3D points affect the Jacobian. We can see that this
+[21:44] is the reprojection onto the second image, the four points onto the second image. And
+[21:49] we can see that it's non-zero when we partially differentiate this, the respective reprojection
+[21:55] with respect to the 3D points that causes this particular reprojection over here.
+[22:02] What's interesting here is that if we look at the Jacobian matrix, where we obtain the
+[22:09] Hessian matrix as J transpose J over here, and it's interestingly that J transpose J
+[22:15] or the Hessian matrix, it actually represents the adjacency matrix of the graph that relates
+[22:23] the relation between all the parameters. So in this particular case over here, we can
+[22:28] see that there is a connection between A to 2 and 1. So here in this example, in this
+[22:36] example over here, these are the 3D points, and these are the cameras. So what this means
+[22:42] is that this particular 3D point A is seen by camera 1 and 2, and it's not seen by camera
+[22:52] 3 and 4. And the second point B over here is seen by camera 1, 2 and 4. So what it means
+[23:02] is that if I have an image here, which I call A and B, and I have a point where I call X1
+[23:14] and then another point which I call X2. So in this graph over here, it simply means that
+[23:18] X1 is seen by both images and X2 is also seen by both images, but X3 for example is not
+[23:27] seen by neither of these images, but X3 over here is actually seen by C and D, that is
+[23:34] the third and fourth camera. So X3 over here would be seen by these two cameras, and X1
+[23:40] over here is actually also seen by C concurrently with A. So this means that this is going to
+[23:46] reproject into C as well. And we can see that this graph over here that relates the camera
+[23:51] parameters as well as the 3D point, it's well represented as an adjacency matrix in the
+[23:58] Hessian matrix over here that we compute in the normal equation. And as mentioned earlier on,
+[24:06] once we have computed this, the Hessian matrix, and the Jacobian matrix that we have seen earlier
+[24:14] on, it's equivalent to this structure over here, which is represented by this diagram over here.
+[24:21] So we can see that the W and W transpose is just a transpose of each other, and the diagonal over
+[24:28] here, it's actually a sparse matrix. And we can rewrite this into this form over here that we have
+[24:35] seen earlier on when we look at the sparse Lebesgue-Macquaire algorithm. And we also mentioned
+[24:43] earlier on that we can compute the shear complement by multiplying this block of matrix over here on
+[24:50] both sides of the normal equation, where we can see that the first half, or the first block over
+[24:57] here, it represents the camera parameters, and the second block over here represents the 3D
+[25:02] structure. So by multiplying this, we obtain the shear complement equation of the first row,
+[25:08] because there's a zero here. So it effectively decouples out delta B from A. We will have an
+[25:14] equation that with only delta A that is remaining. And we also know that this can efficiently speed
+[25:22] up, or effectively speed up the computational power, because the number of cameras is far
+[25:30] lesser than the number of 3D points in the normal 3D reconstruction problem.
+[25:38] And here is what I have mentioned earlier on. We get the shear complement equation,
+[25:44] which is equivalent to Ax equals to B, an inhomogeneous linear equation that we can
+[25:50] solve for delta A in this particular case over here. And it is easy to invert this guy over
+[25:58] here, because when we compute this from this block over here, it will become a block diagonal
+[26:05] matrix, and it's both sparse and symmetric positive definite. This means that the inverse
+[26:13] of this guy exists, and once we have computed for delta A, we can back substitute it into this
+[26:20] equation over here, multiply by this, and when delta A now is a known vector, and which we can
+[26:27] solve for delta B. And to solve for the non-homogeneous linear equation, which is
+[26:38] equivalent to Ax equals to B, we can make use of many linear algebra techniques such as the LUD
+[26:45] composition, where we factorize this into this A matrix over here into a lower and upper triangular
+[26:52] matrix. So once we have a lower and upper triangular matrix, for example, we can easily
+[26:58] solve for x over here by doing this. So LU, which represents A, multiplied by x and B over here.
+[27:07] So we can collectively call this U as a y and solve this equation as Ly equals to B,
+[27:14] where this is a lower triangular matrix. So if this is a lower triangular matrix, that means
+[27:20] that the upper triangular part of this matrix is equal to zero, multiplied by a vector of y
+[27:26] and equals to B, what we can do here is that we can simply solve for this element multiplied by
+[27:32] the first entry of y, and then solve for this first entry, and gradually do a back substitution
+[27:40] to solve for all the other entries in y. So once we have obtained y over here, we can see that
+[27:47] y is actually equal to U and x. We'll solve for another homogeneous linear equation where
+[27:53] this becomes an upper triangular matrix. So what we will have here would be an upper triangular
+[28:01] matrix over here multiplied by x, where y is now a known value. We can do a back substitution,
+[28:10] solve for the first value over here that corresponds to the last element of x,
+[28:14] and do a back substitution to solve for all the elements over here. Similarly, we can also apply
+[28:20] the QR decomposition and the Cholesky decomposition, where QR decomposition here
+[28:27] simply means that the Q matrix is an octagonal matrix, and the inverse of an octagonal matrix
+[28:33] is simply the transpose. So we can solve for this as QR multiplied by x equals to B,
+[28:39] and then we can do a Rx equals to Q transpose or B, which can be easily computed by taking
+[28:47] the transpose. We do not need the inverse of this, which is easier to compute in this case.
+[28:53] So once we have computed this, then we'll end up with another system or linear equation,
+[28:58] which we call this collectively as y. We will end up having to solve Rx equals to y,
+[29:06] where R here is a lower or upper triangular matrix that we can take advantage of the same
+[29:12] method to solve for the unknowns of x over here. And similarly for Cholesky decomposition,
+[29:19] which is probably the most commonly used decomposition or factorization technique
+[29:25] to solve for the normal equation in the Loevenberg-Markov algorithm, where we simply
+[29:31] factorize A into a square root matrix L multiplied by L transpose, where L here
+[29:40] is a lower triangular matrix that we can then solve for the x in the similar way as
+[29:49] what we have seen in the LU factorization. For more information about this, because you should
+[29:55] have learned this in your undergraduate Linear Algebra course, I won't go through in very much
+[30:01] detail except for what I have just talked about just now. And for more detail of this, I advise
+[30:09] you to look into this textbook by Gilbert Strang, An Introduction to Linear Algebra. There's also
+[30:16] very nice video lectures online that is taught by Gilbert Strang himself, and I strongly encourage
+[30:24] every one of you to look into this if you forgot some of the basic background knowledge of linear
+[30:32] algebra. And there are also other techniques to solve for this non-homogeneous linear equation
+[30:38] in an iterative method such as conjugate gradient and Gauss-Snyder algorithm, and I also strongly
+[30:46] encourage you guys to look into this. Part of this can also be found in this particular textbook.
+[30:52] Now unfortunately, the normal equation cannot be solved in a naive way of just
+[30:59] taking the LU decomposition, Cholesky decomposition, or other form of decomposition,
+[31:07] because we'll more than often face what we call the problem of fill-in in this kind of factorization
+[31:16] techniques. So what it means here is that if I were to have a matrix A in the homogeneous
+[31:22] linear equation of A X equals to B, I would, one technique that I have mentioned earlier on here
+[31:31] would be to solve this using the Cholesky factorization technique by decomposing this
+[31:37] or factorizing A into L multiplied by L transpose. But more than often, if given a sparse matrix of A
+[31:47] by simply naively doing a Cholesky decomposition on the sparse matrix A, we will end up with a
+[31:55] lower triangular matrix that is much more denser than the original sparse matrix itself. And this
+[32:04] will not be good because we will end up taking more time in solving for the equation in the
+[32:11] back substitution steps. And one way to resolve this is to reorder the sparse matrix of A by a
+[32:18] permutation matrix. So permutation matrix simply means a matrix that is with entries of 1 or 0
+[32:27] in the matrix, and every column and every row of this particular matrix has to sum up to 1.
+[32:35] So this means that I have to have only 1 once in a particular row as well as a particular
+[32:44] column over here. And what this means is that I'm going to reorder the permutation matrix given
+[32:52] square matrix over here. All the entries in this particular matrix would be reordered,
+[32:59] that means that I will have to sort some of the entries by simply applying the permutation matrix
+[33:05] on the A matrix. I'll not go into the detail of this, I will just simply give you a flavour of
+[33:14] how to do the reordering or what does the reordering mean over here. So unfortunately,
+[33:20] this particular problem to reorder the sparse matrix is an NP-complete problem,
+[33:26] and this means that it could become intractable to compute for the best permutation, such that
+[33:35] we reorder the A matrix to minimise the amount of fill-in after, for example, Kolosky decomposition.
+[33:44] There are some approximation algorithms such as the minimum degree, the column approximate minimum
+[33:51] permutation, reverse, McCutcheon-Mckee algorithm and the nested dissection algorithm.
+[33:57] I will not go into the detail of this algorithm, if you are interested you should read the
+[34:02] related text. But we will see the effect of applying this fill-in, the permutation algorithm
+[34:13] or the reordering algorithm to prevent fill-in. Given a sparse matrix where we have 18,441
+[34:21] non-zero entries, for example, after applying the reordering, we will see that we reorder
+[34:28] these elements to become something like this, for example, by applying P transpose and P on A.
+[34:36] So we will still get the same number of non-zero because we are simply just reordering the entries
+[34:42] in the sparse matrix of A. Then after Kolosky decomposition, we applied Kolosky decomposition
+[34:50] on this matrix over here after reordering, we can see that the total number of non-zero,
+[34:56] it becomes 78,120, which is lesser than what we began with and it's also lesser than this example
+[35:05] over here, where we simply naively apply a Kolosky decomposition on the sparse matrix of A,
+[35:13] and will lead to a 8.28% increase of the non-zero elements as compared to this particular
+[35:24] guy over here. So similarly, if we were to apply a minimum degree reordering on the sparse matrix,
+[35:31] this is what we will get. We will still get the same number of non-zero elements because we are
+[35:36] simply reordering the entries in the sparse matrix of A. And after applying Kolosky decomposition,
+[35:43] we can see that we are, we end up to have 52,988 non-zero elements over here. This is still much
+[35:54] lower than what we have over here, which is about 606,000 non-zero entries. We can see that we have
+[36:03] the same effect by applying column count as well as nested dissection, where we will end up with a
+[36:10] much lower number of non-zero elements after applying the Kolosky decomposition. So here's
+[36:18] a comparison of the non-zeros after factorization. We can see that the original factorization, the
+[36:26] naive Kolosky decomposition on the original sparse matrix, will lead to many non-zeros over here.
+[36:34] And it seems like, apparently it seems like nested dissection has the best performance in this
+[36:41] particular example, where it gives the least number of non-zero after Kolosky factorization.
+[36:49] And what this means is that because Kolosky decomposition, it turns A into LL transpose,
+[36:55] which I have mentioned earlier on that we are going to solve this equation by grouping this
+[37:02] together as Y and then solve it as LY equals to B. So L over here is our lower triangular matrix
+[37:10] over here. So what this means is that if I have very few non-zero entries over here,
+[37:16] then the number of operations that I need to do by back substitution would be far lower than the
+[37:23] number of computations that I need in the naive Kolosky decomposition of the original sparse matrix.
+[37:31] And this would lead to a much more efficient computation of the normal equation, which has to
+[37:37] be done at every iteration in our Leuvenberg-Makur algorithm. And finally, here's some open source
+[37:46] software that is capable of implementing Leuvenberg-Makur algorithm for bundle adjustment.
+[37:53] So you don't have to code everything from scratch. These three libraries which helps you to
+[37:58] do this bundle adjustment, and particularly for the problem of structure for motion.
+[38:06] Google series is most commonly used in the computer vision community for structure for
+[38:13] motion, and g2o and gtsam is more commonly used by the robotics community for visual
+[38:21] slam, visual simultaneous localization and mapping. As a summary, we have looked at in
+[38:28] today's lecture how to describe the pipeline of large scale 3D reconstruction in particular.
+[38:35] We looked at data association and the structure for motion. We'll leave that
+[38:39] stereo to the next week's lecture. And then we have looked at how to do data association
+[38:47] using robust 2-view geometry as well as the back-of-words algorithm. And we looked at how
+[38:54] to do the initialization of 3D reconstruction with 2-view geometry, PMP as well as the linear
+[39:01] triangulation algorithm. In fact, these three algorithms are what we have learned in the past
+[39:07] lectures. And finally, we look at the definition of a bundle adjustment and how to do bundle
+[39:14] adjustment using the iterative methods such as Newton, Gauss-Newton and the Leuvenberg-Makur
+[39:24] algorithm. And that's all for today's lecture. Thank you.

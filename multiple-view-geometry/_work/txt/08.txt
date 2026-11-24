@@ -1,0 +1,455 @@
+[00:00] Hello everyone, welcome to the lecture on 3D computer vision, and today we are going
+[00:04] to talk about homography and robust estimation. Hopefully by the end of today's lecture, you
+[00:10] will be able to show the existence of homography in two particular cases, and you will be able
+[00:15] to explain the difference between algebraic, geometric and the Samson error, and then apply
+[00:21] them on homography estimation. Finally, we will look at the RANSAC algorithm for robust
+[00:27] estimation. Of course, I didn't invent any of today's material. I took most of the slides
+[00:32] and the content of today's lecture from the textbook written by Richard Hartley and Andrew
+[00:37] Zisserman, Multivariable Geometry in Computer Vision, in particular Chapter 3 and 4, and
+[00:44] I also took some of the materials from the textbook written by Ma Yi, an invitation to
+[00:49] 3D vision in particular Chapter 5.3. I strongly encourage everyone of you to take a look at
+[00:54] these two textbooks after today's lecture.
+[00:58] So I've seen in Lecture 1 that for central projection, there's a series of transformations
+[01:04] that maps a point from one plane to another plane. So essentially what it means is that
+[01:09] we have looked at the series of operations or the transformations that maps a point from
+[01:15] the P2 space to another point on the P2 space, and we have denoted that this transformation
+[01:22] as H over here, and it could be a projective transformation, a fine transformation, similar
+[01:28] transformation, or a rigid transformation in the Euclidean space. And this is represented
+[01:37] by a linear mapping of homogeneous coordinates, which is given by this particular equation
+[01:42] over here. H here is the linear mapping transformation, which maps a point for X which is in the P2
+[01:51] space to another point X' which is also in the P2 space here. And today we will look
+[01:59] at this particular transformation in the most general form, the projective transformation,
+[02:06] which we will also call as homography in today's lecture, and we will look at in particular
+[02:12] how to estimate this homography using 4-point RANSAC algorithm.
+[02:21] Before we look at how to estimate the homography using 4-point correspondences from a pair
+[02:26] of images, let's first look at the existence of projective homography. There are two cases
+[02:32] in particular that projective homography exists due to the fact that it must be a transformation
+[02:41] from a P2 space, a point in the P2 space, to another point in the P2 space. And in the
+[02:49] first case here, it must be in a planar scene. What this means is that suppose that I have
+[02:55] a set of points, 3D points, that lies in the 3D world. So this is my 3D world, and I have
+[03:03] a set of points denoted by these circles over here. Suppose that one of these points, I'm
+[03:08] going to call it capital X over here, and the existence of this projective homography
+[03:15] is true only when all the points that we see in the 3D world lies on a plane which
+[03:22] we call pi over here. And what it means is that when all these points lie on a plane,
+[03:28] pi over here, the projection into two different views of camera 1 and camera 2. So it will
+[03:35] form image 1 and image 2 over here, where X1 and X2 here are correspondences of the
+[03:43] reprojection of the 3D point X into image 1 and image 2 here. There will exist a homography
+[03:52] which we denote as H that directly links these two corresponding points over here. So what
+[03:57] this means is that when the 3D points over here lie on a plane, then all its reprojections
+[04:05] onto the image over here, there will be a one-to-one correspondence that directly is
+[04:12] related by H, which we can write as X2 here equals to H multiplied by X1. And this is
+[04:22] the first case where this homography or the projective homography exists in relating the
+[04:29] two sets of correspondence between two images. They must all lie on a plane in the real 3D world.
+[04:38] Now let's derive this particular relationship here, starting from that suppose that X1 and X2
+[04:47] are the 3D point X. So I have this 3D point which I denote as X over here. And what X1 and X2 means
+[04:57] here is that I'm representing X in the first camera frame. Suppose that I have a camera frame
+[05:04] over here that I attached to this camera and the image. And the X1 here would be the coordinates
+[05:11] that is with respect to the camera coordinate frame 1. And X2 here would be the same 3D point
+[05:18] X that is represented in the camera coordinate frame 2 here. And we know from the rigid
+[05:26] transformation that X2 is going to be related to X1 via a rotation and translation. So this would be
+[05:33] the rotation from frame 1 to frame 2 and the translation would also be from frame 1 to frame 2
+[05:41] over here. Now we further denote n as a 3 by 1 vector that represents the normal vector of the
+[05:49] plane pi here. And this is a unit normal vector. This means that the norm of n should be equals to
+[05:57] 1 here. And this represents the plane pi with respect to the camera frame C1 here. And d is the
+[06:06] perpendicular distance from the plane to C1. This means that from this plane over here, from the
+[06:13] camera frame over here, we will have a perpendicular distance that this particular plane pi here make
+[06:20] with the camera frame C1. And we will denote this distance here as d. And hence the equation of the
+[06:30] plane can be rewritten into this form here, into the Cartesian form which we have seen in our
+[06:35] lecture 2 when we talk about the 3D projective coordinate and the rigid transformation of a plane.
+[06:42] And here n transpose X1 here can be rewritten into this format here which is the normal vector
+[06:51] dot product with the X1. X1 is the point in homogeneous point in the image frame here,
+[06:59] so which can be converted into an inhomogeneous coordinate X, Y and Z here. And hence I will get
+[07:06] n1 X plus n2 Y plus n3 Z equals to d here. And now I can reformulate this, move d to the left
+[07:17] hand side of the equation which will give me this particular equation here that is equals to 1. And
+[07:23] what's interesting here is that I have two equations here, equation 1 and equation 2 here.
+[07:29] Since equation 2 is equals to 1, this means that I can multiply this term here anywhere here in
+[07:36] n it will still be the same relation, equation 1 will still hold because this equation 2 here
+[07:43] equals to 1. So I'm going to multiply this guy here with t in equation 1. So I will have n transpose
+[07:51] X1 divided by d over here. And now factorizing out X1 in this equation after multiplying equation 2
+[08:00] into the equation, I will get this particular relation here. Combining the two equations and
+[08:07] factorizing out X1, I'll get this relation here. And since we also know that lambda X1 equals to
+[08:15] capital X1 here, so what it means is that we know that these two points here X1 and X, the
+[08:25] 3D point capital X over here, it lies on a line. Both of them lie on a line. So what this means is
+[08:32] that the scalar product of this X1, the vector of X1 here, if I were to scale it with lambda,
+[08:45] I will be able to reach the 3D point here and represent the 3D point here. Hence the equality
+[08:51] in these two equations. So lambda here is actually a scalar scale. It's a scale that I
+[08:58] scale up X1 such that I can scale up this vector of X1 into X over here. So similarly for X2,
+[09:08] I would also be able to scale this X2 over here, this vector over here, with respect to the frame
+[09:16] at C2, such that it becomes the same as the 3D point here in the frame of C2. Hence that is
+[09:23] another scale of lambda 2 here. And substituting these two relations over here with the scale
+[09:32] into this equation that we have obtained from combining equation 1 and equation 2,
+[09:39] I would end up with this particular equation here. So I'm replacing capital X1 over here
+[09:49] with lambda 1 small x1. This is my image point. And I'm replacing this capital X2 here
+[09:56] with the lambda 2 and small x2 here. And now I can combine these two lambdas together. I can
+[10:04] simply rewrite lambda equals to lambda 2 divided by lambda 1 here. And finally I'll be able to get
+[10:13] this equation, which is up to a certain scale. Ignoring the scale, I would obtain the equation
+[10:20] of X2 equals to H multiplied by X1 over here, which is the transformation, the projective
+[10:28] transformation equation that we have seen earlier, that maps a point in the P2 space
+[10:34] to another point in the P2 space here. And we can see that in this relation here,
+[10:41] H has a certain expression here related by R, which is the rotation between C1 and C2,
+[10:51] the two camera frames, as well as the translation between the two camera frames.
+[10:56] And the normal vector of the 3D plane that we have defined earlier, as well as the
+[11:03] perpendicular distance between the 3D plane and the camera coordinate frame C1 here.
+[11:13] And the second case where homography exists that relates the two points or a set of points
+[11:21] between two images here, X1 and X2, when this edge exists is that there is a plane at infinity.
+[11:28] This means that the actual 3D point that causes these two, X1 and X2 in two camera frames here,
+[11:35] lies at infinity, pi at infinity here. And what this means in reality is that this point that
+[11:42] is projected onto the image lies at a very far away scene. Example, taking from the satellite,
+[11:50] you have a satellite image of the Earth where all the objects on the Earth actually had a very
+[11:57] far away scene and that would appear to be the ground of the Earth would appear to be at pi
+[12:05] infinity, the plane at infinity. And we can see that in this case here, taking the homography
+[12:11] that we have derived to be this relation, in this case here is a finite scene where the scene has to
+[12:18] be a plane lying on a plane. That means that all the 3D points they have to lie on the plane
+[12:23] for this homography to exist, such that it relates to points, a pair of correspondences between the
+[12:32] two images. And in this case here, we saw that the plane at infinity simply means that the distance
+[12:41] has to be close to infinity. This means that the distance between the camera frame 1, C1 here,
+[12:48] and the plane, it has to be close to infinity. This means that D has to approach infinity here
+[12:55] and hence this plane here would be close to the infinite plane here. And substituting this limit
+[13:02] into this equation, we can see that this guy here becomes infinity. So this term here would be
+[13:08] 10 to 0 and we will be left with rotation. What this means here is that a very far away scene
+[13:15] with the point that is projected onto the two images would be related by the homography, as
+[13:22] well as if my camera undergoes a pure rotation, that means that I'm purely rotating this camera,
+[13:29] the frame here along a certain axis here, then the points that is seen by the two frames would also be
+[13:38] related by the homography. And this is similar to, it has a similar effect to the point lying
+[13:48] at the plane at infinity, which we can see that from this limit theorem over here, that at the
+[13:54] end we will see that both have the same effect as pure rotation here. The next question to ask
+[14:02] is that given two images where we have a set of correspondences, where we know that the
+[14:07] homography exists, we want to compute the homography from these point correspondences.
+[14:13] For example, in this case here, we see that there are four point correspondences here,
+[14:20] that we know that x1 is corresponding to x1 over here, they belong to the same point,
+[14:25] but at a different viewpoint, so there is a certain rotation and translation that relates the
+[14:31] two camera centers for these two views over here, and now we identify the correspondences,
+[14:38] the point correspondences that are the same point in 3D that is projected onto the 2D view over
+[14:45] here. The question is that if we are able to identify these correspondences, how can we compute
+[14:52] the homography that relates x' and x in the two views? And the next question is that
+[14:59] how many or a minimum of how many point correspondences are needed in order to
+[15:05] solve for the homography that relates these two views here? So as I've mentioned, the question
+[15:15] is how many point correspondences are needed to compute H. So the answer is very straightforward.
+[15:21] It depends on the number of degrees of freedom in the homography metric H, and the number of
+[15:27] constraints each point correspondences give. And we know in Lecture 1 that a homography
+[15:33] consists of nine entries with one less for the scale. This means that a homography has eight
+[15:39] degrees of freedom altogether, and we will see that each point correspondences of xi and xi'
+[15:47] in the two images over here, each point corresponds xi as well as xi',
+[15:53] these are correspondences, they give us two constraints, and as a result, altogether we will
+[15:59] need four point correspondences because each point gives us two constraints, and we have altogether
+[16:06] eight unknowns in our homography matrix to solve. So four correspondences will give eight constraints,
+[16:14] and eight constraints, eight unknowns over here, we will be able to solve for the full
+[16:20] homography matrix up to scale. And it will be seen that if exactly four point correspondences
+[16:27] are given, then an exact solution for the metric of H is possible, and this is what we known as the
+[16:35] minimal solution, which is important for RANSAT loops. We'll see that the more number of points
+[16:42] that we use, increasing number of points that we use, or correspondences that is needed in order
+[16:47] to compute a certain entity, such as the homography matrix, then the number of RANSAT loops
+[16:53] that is needed for robust estimation will increase exponentially, and this is not good. And since the
+[17:00] points are measured in exactly, what this means is that the points here, an image is actually a
+[17:06] sensor imaging device which is subjected to noise. This means that every picture, the projection of
+[17:12] the real 3D point or 3D structure onto the image, onto the photo sensor, it's usually corrupted by
+[17:20] a noise, so it's not that precise. There might be some noise error here and there, and so these
+[17:26] point correspondences that we obtain, and it might not also be the exact correspondence, it might be
+[17:32] corrupted with some noise as well, so in terms of the location. And under this kind of situation,
+[17:38] we'll see that we'll use the least square estimates or the least square solution
+[17:44] to eliminate or to minimize the noise in our measurements.
+[17:54] Now let us begin by looking at a simple linear algorithm for determining the
+[17:58] projective homography denoted as H here. Given a set of four point correspondences
+[18:04] X i and X i prime where i equals to 1, 2, 3, and 4, and we'll start by looking at the familiar
+[18:13] equation of the transformation, the projective transformation, which relates the point
+[18:20] correspondences in two views here. So this is a projection from X i that transforms X i to another
+[18:29] view of X i prime, and this transformation here is related by H, where the mapping is from the P2
+[18:36] space to another P2 space here. And we'll start off by looking at this equation here, where the
+[18:45] unknowns are found in H over here, so there are altogether nine entries over here where only eight
+[18:51] of them matters because the scale cannot be found here. And here X i and X i prime are the four point
+[19:01] correspondences that we can obtain from the image correspondences using something like a
+[19:09] sift algorithm or the surf algorithm, which I will not cover in detail in this particular module.
+[19:16] And now the objective here is that starting off from this equation, H X i equals to X i prime, where
+[19:24] we have a set of unknowns in H and a set of known correspondences in X, so where X i here equals
+[19:32] to 1, 2, 3, and 4, and we'll have four sets of these equations over here. So our objective
+[19:40] here is to reformulate this into a linear, homogeneous linear equation, A X equals to 0,
+[19:47] where X here consists of all the unknown elements in H, and this would be a nine by one vector,
+[19:54] and A here would be all the coefficients from the known correspondences that we can observe from the
+[20:01] image. And we can do this by simply taking the cross product of H X i equals to X i prime here,
+[20:09] with X i prime itself. So we'll do this by taking X i prime cross with H X i equals to X i prime
+[20:20] cross with X i here, and we know that any vector when it's cross product with itself, this guy here
+[20:27] is going to be equals to 0. Hence we'll get this relation over here, where we can rewrite H here
+[20:36] into the respective rows, H1 and then H2 and H3 here. So we can take the product of each row
+[20:49] with X and to form this H multiplied by X i over here, and X i prime over here would be our
+[20:58] three by one homogeneous coordinates from the image, the second image where X i is observed,
+[21:05] X i prime here is observed. And the cross product here, substituting these two terms over here into
+[21:11] the cross product term over here, we can see that it explicitly gives this equation over here.
+[21:18] So factorizing out the unknowns of H, the terms of H from the cross product
+[21:26] metric, we can see that we can rewrite it into this particular form here, the linear form
+[21:32] over here, where we have a known coefficient metric over here multiplied by a vector,
+[21:38] this is a nine by one vector, that consists of all the unknowns in my homography metric H here. And
+[21:45] what's interesting here is that this particular metric, the coefficient metric, which is three
+[21:51] by nine, but only two of them are linearly independent, two rows are linearly independent.
+[21:59] This is because if we take X prime i multiplied by the first row and add it to the product of Y i
+[22:09] multiplied by the second row, we will be able to obtain the third row up to a certain scale. And
+[22:15] this means that only two of the rows are linearly independent, hence this will give us two constraints
+[22:21] over here. Each point correspondence is going to give us two constraints. This is going to
+[22:27] produce a two by nine metric here, where the unknowns here are nine by one, or the H in my
+[22:36] three by three homography matrix here, which I can rewrite into this form here, A i H equals to zero.
+[22:45] And since we all together have nine unknowns, where eight of them, eight degrees of freedom,
+[22:51] matters because the scale cannot be found, and each point correspondence gives me two constraints.
+[22:56] This means that all together I'll need four point correspondences, so four multiplied by two
+[23:01] constraints is going to have eight constraints, where to solve for the eight unknowns or the eight
+[23:08] degrees of freedom in my homography vector over here. This means that with the four point
+[23:15] correspondences, I will be able to solve for the nine by one unknown vectors in my H matrix over
+[23:23] here. And as I mentioned earlier, that each A i here is going to be a two by nine matrix, because
+[23:30] each point correspondence gives us two constraints, and H here is a nine vector that is
+[23:38] more explicitly here. It's made up of each entry in my homography matrix, where I write H1, H2, H3,
+[23:46] H4, H5, H6, H7, H8, H9, that forms my small h, the vector nine by one vector over here. So this would be
+[23:55] H1 all the way to H9 over here. And notes that in our expression w, the correspondence x i equals to
+[24:08] x i, y i, and w i over here transpose, these are homogeneous coordinates of the point x i in my
+[24:19] image. The w over here is normally chosen as one. This means that I'm going to normalize,
+[24:27] divide by w throughout here, such that I will be able to get x i divided by w, y i divided by w i,
+[24:37] and then I get a one over here transpose. And since H has eight degrees of freedom, as I mentioned
+[24:44] earlier, and each point correspondences give two constraints, this means that a minimum of four
+[24:50] point correspondences is needed to solve for the nine by one vector of H, where each point
+[24:58] correspondences is denoted as x i and x i prime over here. And since each point correspondences
+[25:05] is going to give me a i H equals to zero, where this is a two by nine matrix, and this guy over
+[25:12] here is a nine by one vector, four point correspondences means that I can stack them
+[25:17] up together. The a1, a2, a3, and a4 here, I can stack them together and they will still multiply
+[25:26] by H equals to and it will be equals to zero here. So this means that all together I will get a
+[25:34] two i by nine matrix over here, which I collectively call a over here. So note that it
+[25:42] need not necessarily be just four point correspondences, this a minimum requirement in order
+[25:49] for us to solve for the nine by one unknown in the null space equation here. We'll see that stacking
+[25:55] more than four point correspondences together, we'll be able to solve for the least square
+[26:01] solution that is robust to noise. And in the real life images, as I mentioned earlier, that
+[26:11] the measurements of point correspondences are usually corrupted with noise. This means that
+[26:16] given an image, the correspondence in the other image over here, because these are mapped onto
+[26:21] or captured by real photo sensors which is subjected to noise, and the algorithm that we
+[26:27] use to extract the point correspondences are also subjected to a certain model noise. This means
+[26:33] that the two point correspondences here, the pair of correspondences here, they might be corrupted
+[26:39] with some noise in terms of the homogeneous coordinates here. And what this means is that
+[26:46] if we were to put all these correspondences x i and x i prime here into our equation
+[26:53] of a h equals to zero, this means that if we have a minimum of four points, we are going to solve for
+[27:00] a minimum of four using four point correspondences, to solve for all together the nine by one unknown
+[27:08] here, it's going to give us a less accurate estimation. This is because the correspondences,
+[27:18] the point correspondences, are corrupted with noise. And an exact solution for this a h equals
+[27:25] to zero does not exist. This means that even if I get the best h over here, after I solve for h over
+[27:32] here using the four point correspondences, and I plug this h back into this equation with the four
+[27:38] point correspondences that forms a over here, it's not going to be equals to zero because
+[27:46] all my correspondences, the four point correspondences, are actually corrupted with some
+[27:52] sort of noise. And instead we seek to minimize a h over h subjected to the constraint of the
+[28:01] norm of h equals to zero. This means that since we know that the point correspondences are
+[28:07] corrupted with noise, it's impossible to reach this constraint over here or to reach this cost
+[28:13] over here, such that we can never find a h such that it actually fulfills the equation of a
+[28:21] multiplied by the h that we found equals to exactly zero. Instead we will seek to minimize
+[28:29] the norm of a multiplied by h. So we want to get this guy here as close to zero as possible,
+[28:38] but we know that this is impossible because it's corrupted with noise. Hence we minimize this,
+[28:43] this means that I'm going to do a min of h over the norm of h, subjected to
+[28:51] the constraint that the norm of h should be equals to one. This is because if we didn't
+[28:58] have this particular constraint over here, then the minima of h here that minimizes this norm
+[29:05] could be actually equal to the zero vector, and this is not a solution that we want because we
+[29:11] don't want a trivial solution for our homography matrix. And subjected to one, it's also because
+[29:19] that we do not know the scale of our homography matrix, hence we will just normalize the scale to
+[29:26] one here. And this is the least square solution of h, which can be obtained by the right null
+[29:33] space of A. Since this A h equals to zero is the famous homogeneous linear equation that we know
+[29:42] of in linear algebra, what this means is that we can simply take the right null space of A,
+[29:47] and that will give us the null space vector of h over here that fulfills this constraint,
+[29:55] or this optimization cost over here.
+[30:00] So the least square solution of A h equals to zero can be given by computing the right null space
+[30:08] of the matrix A over here. A here is a 2i by 9 matrix, where h here consists of all our 9 by 1
+[30:18] unknowns in this null space equation, and by computing the right null space of A, we can
+[30:25] compute the solution to this least square estimate. This means that we are computing
+[30:31] the solution to the minimization mean of over h of A h, such that subjected to the constraint that
+[30:41] the norm of h needs to be 1 over here. And we can make use of the singular value decomposition
+[30:48] to compute the solution of h that minimizes this constraint here. And this is given by the right
+[30:56] singular vector that corresponds to the smallest singular value or the eigenvalue in the singular
+[31:04] value decomposition of the 2i by 9 matrix of A. We can see that taking the SVD of A, the matrix of A
+[31:15] 2i by 9 of A, we will get the left singular vector. This is a square matrix or the left
+[31:24] octagonal matrix which we denote as U over here. This is of size 2i by 2i, and the singular values
+[31:33] matrix over here which is of size 2i by 9. Since A here is a non-square matrix in general,
+[31:40] this would be a 2i by 9, where we will see that the first 9 rows over here, the first 9 rows over
+[31:50] here, the diagonal of the first 9 rows are non-zero and 3, which corresponds to sigma 1 to sigma 9.
+[31:57] That corresponds to the 9 singular values of this matrix A here. And the subsequent
+[32:06] rows over here that make out the subsequent 2i minus 9 rows over here, they will be all padded
+[32:13] with 0, as well as the non-diagonal of the first 9 rows, they are all zeros over here. And we also
+[32:22] have a right singular vector denoted by V over here, which is 9 by 9. And we can see that
+[32:30] the multiplication of these three matrices, the left singular vectors or the left octagonal
+[32:37] matrix and the right octagonal matrix and the singular value matrix over here will all together,
+[32:44] it will result in 2i by 9 of our A matrix here. And after computing this in general for a given
+[32:57] n by m matrix, where m here is more than n, this means that A here is a tall and thin matrix,
+[33:08] we will get the, after taking the singular value decomposition of A here, we will get
+[33:16] m by m left singular vectors and the singular value matrix will be m by n over here, where the
+[33:28] first n rows over here, the diagonal, should be a non-zero value that corresponds to the eigenvalues
+[33:37] or the singular values of the matrix A. And the rest of all the remaining rows, the remaining n
+[33:46] minus n rows here, it's going to be padded with 0. And we will also have our right singular vector,
+[33:55] which is in general n by n in size. We can denote this as U sigma and V transpose here,
+[34:05] and this will give us the matrix of A. And in the case where A is not corrupted with noise,
+[34:14] since A here we mentioned that it's a form from the observation from the correspondences between
+[34:21] two images x i and x i prime here, and in the case where all these correspondences are perfect
+[34:30] correspondences, they are not corrupted with noise, then an exact solution of A H equals to 0
+[34:37] exists. And what this means is that the rank of A here is going to be exactly R over here,
+[34:49] where R is the number of point correspondences or the number of constraints in H here. So since
+[34:59] in our homography estimation case here, it's going to be 2 i by 9, where we are only interested
+[35:09] in 8 unknowns or in this particular 9 by 1 vector here, there are only 8 degrees of freedom. So what
+[35:18] this means is that the rank of A better be equal to 8 in order for us to find this particular
+[35:27] solution here. But in general, this does not exist because the point correspondences are corrupted
+[35:36] with noise, and in general the rank of A is not going to be equal to 8 over here. And we'll see
+[35:43] that in this case, if A is corrupted by the noisy measurements, so what this means is that the next
+[35:52] next n minus R singular values, they are not going to be equal to 0. So in the case where
+[36:00] in the previous slide here, in the case where the rank equals to 8 over here or exactly equals to R
+[36:06] over here, then the singular values of all the n minus R singular values over here, the least
+[36:15] singular values over here, they are all going to be equal to 0. But in the case where the rank
+[36:23] of A is not equal to R, then these least singular values over here, they are not going to be equal
+[36:29] to 0. And since U and V are octagonal square matrices, sigma is a diagonal matrix, we have
+[36:40] this A equals to U sigma V transpose, this is obtained by the SVD of A over here, and we can
+[36:49] simply flip this guy, we can simply bring this V over here onto the left hand side of the equation
+[36:56] by taking the transpose, because for an octagonal matrix, the inverse is equal to the transpose of
+[37:03] the same matrix itself. So we'll get this relation AV equals to U multiplied by sigma over here.
+[37:10] And since V here, it consists of V1, V2, all the way to Vn, and U here consists of U1, U2,
+[37:25] all the way to Um. And we can rewrite this relation into AVI. This means that I'm taking
+[37:34] one of the columns here and then multiplying it by A over here, as well as Ui sigma i. This means
+[37:43] that I'm going to take one of the columns here and directly multiplying it with the scalar value of
+[37:52] my sigmas over here. And this equation will hold through for i equals to one all the way to i
+[38:03] equals two. And what's interesting here is that since we have this relation of AVI equals to Ui
+[38:12] sigma i over here, and where this is a singular value, it's a scalar value multiplied by
+[38:20] our vector Ui over here. And we will see that AI or AVI over here, this guy over here on the
+[38:28] left side, is the minima when the singular value here is also at its minima, or the product of
+[38:35] these two terms here are at its minima. Hence it corresponds to the singular or the smallest
+[38:41] singular value at sigma n here. Because since when we compute the SVD in the previous slide here,
+[38:49] it's always computed or any compiler that you are using, Python or Matlab for example, when you
+[38:59] compute SVD, it's always going to arrange it in this way, the singular value from the largest all
+[39:05] the way to the smallest singular value. And hence the column of V that corresponds to the smallest
+[39:12] singular value is going to be at its minima over here, since it corresponds to the smallest singular
+[39:20] value here. And hence this will give us the solution to the optimization cost function,
+[39:27] or the least square cost function that we are after. So we are after this where AH should be
+[39:35] the minima and subjected to the constraint that the norm of H should be equals to one.
+[39:42] And what this means here is that H here would be at its minima when we choose V or Vi that
+[39:49] corresponds to the singular value that is at its smallest value. And we will also be guaranteed
+[39:56] that the norm of H would be equals to one, this constraint here would be satisfied, because V here
+[40:03] comes from the column of an octagonal matrix of V and where every column here, the norm of
+[40:11] every column and every row would have to be equals to one. Hence the solution of the problem
+[40:18] is, to this least squares problem over here, is simply given by setting H equals to VN
+[40:27] that corresponds to the smallest singular value. So as I have mentioned earlier on,
+[40:33] that the constraint of the norm of H to be equals to one is also automatically satisfied,
+[40:39] because V here is an octagonal matrix where every column and every row has to be unit norm.
+[40:49] Here's a summary of the direct linear transformation algorithm for us to find the
+[40:55] homography from four-point correspondences or more than or equals to four-point correspondences.
+[41:01] So the objective here is given by given N equals to or more than four-point correspondences 2D to
+[41:10] 2D point correspondences that is denoted by xi and xi prime. So what this means is that I have
+[41:16] two images here, i1 and i prime over here or i and i prime over here. I have the four or more
+[41:26] point correspondences here, so this is x1, x1 prime, x2 and x2 prime and so on so forth over here.
+[41:33] Given this observation from the image where I have this set of point correspondences,
+[41:39] the objective is to find the 2D homography H such that xi prime is related to xi
+[41:46] via this relation over here. And we have seen that the algorithm is very simple,
+[41:52] for each point correspondences we will compute ai, this is given by the equation of ai H equals to 0
+[42:01] which we derived using the cross product earlier. And we'll take the first two rows from this
+[42:08] because we have seen that only the first two rows or only two rows in the cross product matrix
+[42:16] are linearly independent. And then we'll assemble N of this 2 by 9 matrix of A into a 2N by 9 matrix
+[42:26] of A over here. So we'll stack, this means that we'll stack all the ai together, a1, a2 all the way
+[42:35] to aN over here and then we'll stack it together to form aH equals to 0. And finally we'll obtain
+[42:46] the SVD of a because the objective here is that we know a here or the point correspondences are
+[42:52] corrupted with noise and hence this equation here, the solution here is not going to be fully
+[42:59] satisfied. And this is why we are going to just simply minimize the norm of aH over
+[43:07] H subjected to the constraint that the norm of H should be equals to 1. And this, we have seen
+[43:13] that this can be easily done by taking the SVD of a such that we get the left octagonal matrix,
+[43:21] the singular matrix and the right octagonal matrix. And the solution here of H will correspond
+[43:30] to the smallest vector or the vector in the right singular matrix that corresponds to the smallest
+[43:42] singular value over here. In this case, I denote this as VN over here. And then we'll be able to
+[43:50] rearrange from H because H is a 9 by 1 vector that consists of all the elements in the homography
+[43:56] matrix. And finally we'll be able to rearrange this 9 by 1 vector over here to recover our 3 by
+[44:04] 3 homography matrix here. And there is a degeneracy case where the formulation that we have seen
+[44:13] earlier would fail. So in this case here, let's start off with the aH equals to 0.
+[44:19] And here we know that a solution or a right null space of a for the solution of H exists
+[44:28] for this null space equation here is that the rank of a must be equals to it for the solution of H
+[44:38] to exist. This is because H over here is a 9 by 1 vector with 8 degrees of freedom, hence the null
+[44:45] space. To fulfill this null space equation, the rank of a must be equals to 8. And in the
+[44:53] case where the rank of a drops below 8, if 3 of the 4 minimal, 4 points correspondences are
+[45:02] collinear. This means that I have the correspondences and 3 of them actually lies in a straight line
+[45:09] and 1 of them is outside the straight line. So what this means is that these 3 points, they become
+[45:15] linearly dependent on each other because they all lie in the straight line. Given any 2 points,
+[45:20] I'm able to compute the other, the third one. So this means that they are not linearly independent
+[45:25] and hence the rank, the overall rank of a will drop below 8. This means that the total number
+[45:33] of constraints which is given by the linearly independent rows in a here will no longer be
+[45:40] equals to 8 since 3 of the points are linearly dependent on each other. And hence the rank of a
+[45:47] will drop, will be lesser than 8 and this means that I will not be able to solve for the null
+[45:55] space of a to get h over here. And in this case, we call this a critical configuration or a
+[46:03] degeneracy case where the solution of the h here would simply not exist. And hence it's important
+[46:11] to check that the selected points, the correspondence points here, are not in the critical
+[46:16] configuration. The collinearity of the 3 points can be easily checked via this formulation over
+[46:24] here. Given any 2 points, we can find the line, so x1 and x2 over here, we can simply compute the
+[46:32] line as the cross product of these 2 points and a third point, any third point, if to check for
+[46:37] collinearity, suppose that this third point here is x3, we will simply put it into this equation
+[46:44] L transpose of x3. If it is equals to 0, this means that these 3 points are collinear and if
+[46:50] it is not equals to 0, then this means that the 3 points are not equals to 0. And we have seen
+[46:56] earlier the direct linear transformation algorithm which simply to formulate the formulation or the
+[47:04] estimation of the homography into a h equals to 0, the homogeneous linear equation here, such that
+[47:11] we can make use of the known correspondences to form a and solve for the unknown of h here, the
+[47:17] 9 by 1 vector of h here. But there is a problem in the observation which will result in a U
+[47:25] condition matrix of A that will lead us to the wrong solution. Here's an illustration of the
+[47:32] problem. Suppose that I have a point x, y and w, homogeneous coordinate of the point on the image
+[47:39] which is given by 100, 101 over here. And suppose that x', y' and w' is also in this order,
+[47:50] hundreds and hundreds and also 1 over here, the scale here is set to 1. And by putting it into
+[47:59] a h equals to 0, formulating A here, the matrix of A here, according to what we have derived in
+[48:06] the previous slide, this is what we are going to get. The 2 by 9 matrix of Ai over here is what we
+[48:16] are going to get. We can see that from here, some of the columns here, it's going to be in the order
+[48:21] of hundreds and some of the columns here are going to be in the order of ones. And some of the
+[48:27] columns here, because of the multiplication of the two terms, is going to be the order of
+[48:33] ten thousands over here, 10 to the power 4 over here. And the order of many difference is going
+[48:40] to cause a bad behavior in SVD. So in linear algebra, we call this kind of matrix U condition,
+[48:48] U condition matrix, and this will lead to a very bad behavior in the SVD solution. I won't go on
+[48:57] to prove this, leave this to you because it's out of scope of what we are going to teach in
+[49:03] this semester. But I'll illustrate this with an example here. Suppose that I have five points that
+[49:14] is selected from one image and here these five points are corrupted with noise, each one of
+[49:21] these points is corrupted with noise in 100 times, 100 different noise over 100 different trials.
+[49:29] And every time these five points are corrupted once with a 0.1 pixel Gaussian noise,
+[49:37] we'll use that configuration to compute the edge that transfer any one of these points
+[49:44] to the next image over here. And over these 100 trials, because this is corrupted with 100
+[49:50] different randomly generated Gaussian noise of 0.1 pixel standard deviation, what this means is
+[49:59] that it's going to the transfer of the point from my the homography that I have computed over 100
+[50:06] trials, it's going to end up in 100 different locations here. And we can see that if we use
+[50:13] an unnormalized data to compute, this means that all these points over here, they are unnormalized,
+[50:20] they are lying in the, this means that the A matrix that I have formed from this unnormalized data
+[50:27] over here, it's going to have a different order of magnitudes over the different columns that we have
+[50:34] seen the example in the previous slide. And to use that to compute the transfer or to compute
+[50:42] the homography for the transfer, we can see that the transformation here, the transfer of the points
+[50:47] over these 100 trials of each one point over 100 trials here, it's going to end up to have a very
+[50:54] large error distribution compared to a normalized data, because in this case here, this A matrix is
+[51:01] ill-conditioned, and compared to the better condition, a well-conditioned A matrix to compute
+[51:10] the homography, we can see that over 100 trials, the transfer of the points over 100 trials is going
+[51:17] to lead to a very small error over here. And therefore, we have to mitigate this particular
+[51:26] problem, we have to turn A from an ill-conditioned matrix into a well-conditioned matrix, and this
+[51:34] can be done by normalization. We will look at how to do the normalization to achieve this.
+[51:41] So data normalization is carried out by simply a transformation of the points as follows.
+[51:48] First, all the points are translated so that their centroid is at the origin, because we have seen
+[51:53] that the scale of the points, given an image, the magnitude of these points, it actually matters
+[52:03] because if it is 100, 100, and 1 versus another point which is at, for example, 1, 1, and 1, then
+[52:11] the scale of this or the distribution of these points are too large, too far away. Hence, as a
+[52:18] result, it will lead to the difference order of magnitude in our formulation of the A matrix.
+[52:26] So we are going to first centralize, or we are going to first centralize all these points
+[52:33] with respect to their centroid as the reference point, so that they are all centered to this centroid.
+[52:41] And then the next thing is that we are going to prevent some points from being too far away
+[52:47] from each other by scaling, by applying an overall scale such that the average distance
+[52:53] of all the points to the centroid here is equal to the square root of 2, and the transformation is
+[53:02] applied to each of the two images independently. This means that the average point is equal to 1, 1, 1
+[53:11] after the normalization. That's why we have the square root of 2 here. And this will, as a result,
+[53:18] mean that there won't be any magnitude difference in the linear equation of AH equals to 0.
+[53:25] Here's a summary of the normalized direct linear transform algorithm. It should be noted that
+[53:31] the data normalization is an essential step in the DLT algorithm, and it must
+[53:39] be done in order for us to get the correct result. So this means that this step here
+[53:45] is not optional, it's compulsory, otherwise we will not be able to get the correct result.
+[53:50] So the objective here is as usual, that given n equals to or more than four point correspondences,
+[53:57] 2D, 2D point correspondences, we want to determine the 2D homography such that
+[54:04] xi prime equals to h xi. We want to transfer a point from one image to another. So we'll start by
+[54:12] first normalizing the points by computing this. So what this means is that we are going to apply a
+[54:19] transformation on every of our points in image i here, and we're also going to apply
+[54:26] another transformation on every image point xi prime on the second image. Notice that T norm
+[54:34] and T prime norm, they are not the same, because we will compute the transformation of each image
+[54:42] individually, because the centroid and the scale are not going to be the same in the two image,
+[54:48] because the distribution of the points are not going to be the same, since it has already
+[54:53] undergone some homography transformation here. And here's the formulation for the matrix, this is
+[55:00] a three by one transformation matrix over here, whereas here is our scale, it's computed by square
+[55:08] root two divided by the mean distance of all points from the centroid. This means that if I
+[55:13] have an image, I have all the points over here, and I compute the centroid. The first thing to do is to
+[55:19] compute the centroid over here, which I denote as cx and cy over here, and then we will take
+[55:28] the average distance, we'll compute all the distances with respect to this new centroid,
+[55:34] and then take the average and denote it by bar of d, and compute the scale as square root
+[55:41] of two divided by d bar over here. So by applying this transformation, we will ensure that all the
+[55:48] points now are centralized with respect to the centroid, and as well as their mean average
+[55:55] distance is going to be 111 from the centroid. And after applying this, we'll get the new set of
+[56:05] correspondence points xi tilde and xi prime tilde, then we'll use this set of point correspondences
+[56:12] to compute the homography, and finally we'll have to denormalize the solution. This means that
+[56:19] we'll apply this transformation to the h tilde, which we have computed from the normalized points
+[56:27] to denormalize it to get the final solution of h here, and please remember that this step is not
+[56:36] optional, it's compulsory to do this, otherwise we'll end up with a U-condition matrix of A,
+[56:43] and that will lead us to a bad solution of the homography.

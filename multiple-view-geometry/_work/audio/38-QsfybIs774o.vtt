@@ -1,0 +1,3602 @@
+WEBVTT
+
+00:00.000 --> 00:03.760
+Shall we start? How's everybody doing?
+
+00:03.760 --> 00:06.800
+Okay and today we are going to, as promised,
+
+00:08.000 --> 00:15.840
+I'm going to talk about 3D point cloud processing and we are almost reaching the end of the
+
+00:15.840 --> 00:22.320
+semester. So next week will be the last lecture where I'm going to today I'm going to talk about
+
+00:22.320 --> 00:27.680
+3D point cloud processing and next week I'm going to talk about neural fields representation.
+
+00:28.640 --> 00:37.440
+And yeah there is also some learning outcomes here. I will start off by talking about what's
+
+00:37.440 --> 00:45.200
+the definition of implicit and explicit surfaces. So today we are only focusing on one type of
+
+00:46.000 --> 00:52.160
+representation that's 3D point cloud representation and the 3D point cloud representation is actually
+
+00:52.240 --> 01:00.880
+an explicit representation. Actually the regular 3D point cloud meshes, they all belong to explicit
+
+01:00.880 --> 01:07.680
+representation. And I'll also talk about implicit representation next week. So implicit
+
+01:07.680 --> 01:16.240
+representation, the sign distance field and the well-known radiance fields, neural radiance fields,
+
+01:16.240 --> 01:20.640
+that's nerve. That's just one type of representation, one type of
+
+01:20.640 --> 01:25.920
+implicit representation. I'll define them mathematically today and then next week we'll
+
+01:25.920 --> 01:32.320
+look at the different examples and how we are going to learn them using neural networks.
+
+01:32.320 --> 01:36.960
+I'll also talk about briefly talk about what are the pros and cons of point cloud representation.
+
+01:37.520 --> 01:43.200
+Then of course this is something that you guys are looking forward to. I will describe how deep
+
+01:43.200 --> 01:51.360
+learning can be used on 3D point cloud processing. And then once I talk about how I'll introduce
+
+01:51.360 --> 02:00.400
+PointNet, that's actually the landmark work in 3D point cloud processing by a guy from Stanford
+
+02:00.400 --> 02:08.400
+University in 2017. And then I will talk about some tasks on 3D point cloud processing,
+
+02:09.200 --> 02:14.720
+particularly place recognition, key point detection, descriptor, 3D object detector,
+
+02:15.280 --> 02:22.320
+and then 3D semantic segmentation, point cloud registration, and image-to-point cloud registration.
+
+02:22.320 --> 02:28.400
+Okay so these are several tasks but it's not limited to just this task. It's just that I'm
+
+02:28.400 --> 02:36.320
+already accessing 100 overflights so I have no more time and energy to go on. There are actually
+
+02:36.880 --> 02:44.880
+many more tasks in 3D point cloud processing which actually that we are also researching on.
+
+02:44.880 --> 02:50.960
+I have several publications on some other tasks such as point cloud completion or point cloud to
+
+02:50.960 --> 03:00.400
+dense surface completion. So these are the stuff that we are currently still actively working on.
+
+03:00.400 --> 03:06.560
+Okay and I'll talk about just this six or seven tasks over here. Alright so
+
+03:08.800 --> 03:15.760
+nonetheless, even though it's just not limited to this task, I'm already covering quite a
+
+03:15.760 --> 03:22.000
+number of papers here. So today's content is not from any textbook. They are all from the
+
+03:24.240 --> 03:29.920
+publications and from these conferences in computer vision and machine learning
+
+03:29.920 --> 03:36.560
+over the past five or six years. They are mostly from the last three or four years actually.
+
+03:37.280 --> 03:44.080
+So it all started from this landmark paper here which is actually a very very simple
+
+03:44.720 --> 03:51.840
+concept. We'll look at how this can be done. Then I strongly encourage all of you to
+
+03:52.720 --> 03:59.440
+look through all the papers after today's lecture. You will probably be able to appreciate more
+
+04:00.560 --> 04:06.960
+because one disclaimer is that I'm just going to touch on the surface of most of them because
+
+04:06.960 --> 04:13.760
+it's really too much. I won't go into too much of the detail and I won't prove anything because
+
+04:13.760 --> 04:20.080
+there are some theorems here right in some of these words here but I won't go too much into
+
+04:20.080 --> 04:25.760
+those details. I won't also because this is not a deep learning class so I'll just assume that
+
+04:25.840 --> 04:33.520
+you guys already know how to train a deep network. I'll just talk about the concept and how is it
+
+04:33.520 --> 04:45.200
+related to 3D. As I mentioned that there are two types of 3D surface representation, two major
+
+04:45.200 --> 04:51.040
+classes. The first one is what we call the explicit representation or otherwise known
+
+04:51.040 --> 04:59.760
+as the parametric representation. The second type would be the implicit representation
+
+04:59.760 --> 05:06.480
+or otherwise known as the volumetric or volume representation. Here's some examples of the
+
+05:06.480 --> 05:12.080
+explicit representation. In the discrete form it could be point cloud which is what we are going
+
+05:12.080 --> 05:19.840
+to cover today and it could also be measured. These are essentially just triangular structures
+
+05:19.920 --> 05:32.080
+that form a graph and it actually helps to define some surfaces. It could also be continuous
+
+05:33.840 --> 05:40.720
+representation, explicit representation. In terms of neural adults, implicit representation
+
+05:40.720 --> 05:48.400
+would be what we in the discrete form would be boxes or grids or more commonly
+
+05:48.400 --> 05:55.760
+you guys might have heard of this occupancy grid. So that means that we split the world
+
+05:55.760 --> 06:03.920
+into a constellation of regular grids where each one of these grids will assign a value inside
+
+06:03.920 --> 06:11.040
+there. It's either zero or one. It's either empty or occupied. But usually we will just relax this
+
+06:11.040 --> 06:19.520
+as a range of number from zero to one to indicate whether this the occupancy of that particular grid
+
+06:19.520 --> 06:27.040
+in the three new worlds. Of course it could also be in continuous form. In the discrete form it
+
+06:27.040 --> 06:31.360
+will be occupancy grid. In the continuous form it will be called the neural fields.
+
+06:33.680 --> 06:39.680
+We'll definitely talk about this next week. The two types of neural fields that is popular
+
+06:39.680 --> 06:47.280
+right now would be the side distance function and also the radiance field. These are the two types
+
+06:47.280 --> 06:57.120
+that are interesting right now. Hopefully I will also find some
+
+06:58.480 --> 07:03.600
+that I will have some time to talk about the most recent papers that links these two together.
+
+07:03.600 --> 07:09.360
+There are several papers because radiance field you can only do volumetric rendering
+
+07:09.360 --> 07:15.600
+and side distance field you can only do surface rendering. But then it would be cool to...
+
+07:15.600 --> 07:22.480
+Most of the earlier works on side distance field requires the 3D surface for supervision but the
+
+07:22.480 --> 07:30.080
+radiance field would allow you to render from one view into another view so that you can
+
+07:30.080 --> 07:36.080
+actually use the image itself as a self-supervision. But there are some works that actually
+
+07:36.880 --> 07:43.760
+tie these two together. There are some formulations that allow you to
+
+07:44.800 --> 07:53.520
+convert SDF into the radiance field and first you will be able to render the side distance
+
+07:53.600 --> 08:03.520
+view into a novel view for supervision. Right now there are three papers which dominated this
+
+08:04.480 --> 08:07.920
+conversion here. I will talk about hopefully I have some time to
+
+08:07.920 --> 08:15.280
+talk about this but at least I will cover one or two of them. Mathematically, parametric
+
+08:15.280 --> 08:22.400
+surfaces are defined by a vector value parameterization function. This function
+
+08:22.960 --> 08:29.840
+is actually mapping a 2D parametric domain represented by omega into a 3D
+
+08:29.840 --> 08:40.320
+surface represented by S over here. So this 2D to 3D mapping is possible
+
+08:41.520 --> 08:47.200
+since all the 3D surfaces are too many folds. So what I meant by too many folds is that
+
+08:48.160 --> 08:53.040
+regardless of whatever surface that you have, when you are walking on that surface,
+
+08:54.320 --> 09:00.720
+it's always two-dimensional locally just like Earth. Earth is actually living in a 3D world
+
+09:01.440 --> 09:07.760
+but locally when you stand on Earth, anywhere else, you are actually looking at
+
+09:07.760 --> 09:13.760
+you are actually on too many folds where everything is you can move everywhere.
+
+09:14.720 --> 09:20.960
+So there are some problems with this representation although intuitively it
+
+09:20.960 --> 09:28.240
+seems to work. We'll look at what's the problem next week in more detail but an intuition is that
+
+09:28.960 --> 09:38.240
+because the intuition here is that you would always be able to have a 2D domain omega that
+
+09:38.240 --> 09:44.160
+is living in the R2 space. So if I have some coordinates which I call u and v,
+
+09:44.160 --> 09:51.200
+whatever coordinates over here, the assumption is that I'm able to always map it, map every
+
+09:51.200 --> 09:58.080
+single point into a surface. This is actually a too many fold over here but this assumption might
+
+09:58.080 --> 10:07.600
+not always be true and vice versa. So in P2 space, when we look at P2 mapping to P2 mapping, we say
+
+10:08.560 --> 10:15.680
+P3 mapping to P3 mapping, we say that that is a homography. When we look at a topology like this,
+
+10:15.680 --> 10:23.920
+we say that there is a homeology. We'll look at it next week. So it's not always true here
+
+10:23.920 --> 10:32.720
+such as for example it's impossible to actually map a plane onto a sphere such as Earth. That's
+
+10:32.720 --> 10:37.760
+why when you unroll the map, the world map, some parts of it are actually distorted.
+
+10:38.880 --> 10:45.680
+And examples of this are coin clouds because when you look at the 3D surfaces on the coin
+
+10:45.680 --> 10:50.880
+clouds, if you are actually locally, it's actually a 2D, it's actually a too many fold.
+
+10:51.520 --> 10:59.920
+So it's theoretically you should be able to map this and that meshes and also spline surfaces.
+
+10:59.920 --> 11:07.360
+So you can represent each one of these using some control points and then you do a linear
+
+11:07.360 --> 11:14.560
+combination of it, spline surfaces or atlas maps which I'm going to most likely talk about
+
+11:14.560 --> 11:23.200
+next week. There's also another major type which is called the implicit or volumetric
+
+11:23.200 --> 11:31.040
+surface representation and this is defined to be the zero set of a scalar value function.
+
+11:31.040 --> 11:38.080
+So on 2D, what this means is that let's say I have a surface over here,
+
+11:39.760 --> 11:50.720
+I can easily represent this by either occupancy grid, occupancy value or a sign distance value.
+
+11:50.720 --> 11:58.080
+Sign distance value means that everything here would be zero. It's a level set or zero level set
+
+11:58.080 --> 12:07.440
+over here. Then as you move out from the surface, when you're inside the object, it becomes
+
+12:07.440 --> 12:12.400
+negative. Let's say this is inside the solid, it becomes negative. When you're outside, it becomes
+
+12:12.400 --> 12:19.840
+positive. At any point continuously, the sign distance value here would be the
+
+12:20.480 --> 12:27.520
+closest distance that you meet with the closest surface. Therefore, we are looking at
+
+12:27.520 --> 12:36.640
+any point that you sample from the renewal. The surface is defined such that
+
+12:37.200 --> 12:45.840
+this implicit value is equal to zero. Examples are occupancy grids, sign distance view,
+
+12:45.840 --> 12:52.560
+radiance view or adaptive data structures such as Op3. You can actually represent Op3
+
+12:52.560 --> 13:00.960
+such that you don't waste space. I mean in the 2D space, it will be called 3D.
+
+13:01.360 --> 13:08.560
+So you can divide the world into, that means that you have a root and then every time you go
+
+13:08.560 --> 13:15.280
+down there's four of these data structures. Let's say all these are empty space, only something here,
+
+13:15.280 --> 13:21.760
+then you can further divide it again. Then you further divide it into this level.
+
+13:21.760 --> 13:27.760
+So all the rest you can stop because there's no, you can represent one whole empty space here.
+
+13:28.080 --> 13:34.960
+Then this is the Op3, but in the 3D space you would have a cube and then you partition it into
+
+13:34.960 --> 13:42.720
+eight parts every time at every level you go. So that's Op3 over here. If you look at this
+
+13:42.720 --> 13:49.440
+this two definition here, mathematically it also makes sense because mathematically this is really
+
+13:49.440 --> 13:54.640
+your implicit and explicit functions. When you talk about implicit functions,
+
+13:55.600 --> 14:00.080
+when you talk about for example, I didn't include this in the slides, but
+
+14:00.800 --> 14:07.600
+let's say I talk about a circle, just a 2D circle. I can use polar coordinates to represent it.
+
+14:07.600 --> 14:16.480
+So you'll be sine t cosine t and then t where t is the angle and radius for example. So these are
+
+14:16.480 --> 14:24.080
+implicit representations because you're implicitly representing the function.
+
+14:27.280 --> 14:35.040
+That function here is directly mapping your input to the surface itself. So that's the
+
+14:35.040 --> 14:41.680
+implicit representation. You can also represent this via x square plus y square equals to r
+
+14:41.680 --> 14:49.280
+square. This is actually an implicit function. You need to solve for the root
+
+14:50.000 --> 15:00.640
+in order to get the surface. That's your zero level set actually. The way that we say implicit
+
+15:00.640 --> 15:09.920
+and explicit representation is not for no reason. It's because mathematically it's as such.
+
+15:11.680 --> 15:18.560
+So any question on the 3D representation? I'm giving a very brief introduction to this.
+
+15:20.000 --> 15:27.440
+All right, so today we are going to look at just the 3D point cloud in detail, which is a
+
+15:27.440 --> 15:34.160
+type of explicit representation. As I mentioned, you can see that why is it explicit representation
+
+15:34.160 --> 15:42.240
+because, for example, this forest shape over here. When you walk on the surface, it's actually
+
+15:42.240 --> 15:54.480
+a 2D manifold. But then you are mapping it on the 3D surface. We are actually representing
+
+15:54.480 --> 16:02.080
+every sample. That means that we're sampling from that surface in terms of a 3D point cloud.
+
+16:02.800 --> 16:08.880
+And this would be just simply, if you think of it in a more computer science way, this is nothing
+
+16:08.880 --> 16:16.160
+but just a data structure for 3D representation. And that would be n by 3 matrix that looks like
+
+16:16.160 --> 16:23.200
+this. Every point here would be x, y, z. And you have n number of points that forms the whole
+
+16:23.200 --> 16:29.840
+3D point cloud over here. But that's not stopping you from having a higher dimension
+
+16:29.840 --> 16:35.440
+representation. That means that you can have the first three dimensions that represent the spatial
+
+16:35.440 --> 16:43.280
+coordinates of each point. But you could also have the next d dimension as any other features
+
+16:43.280 --> 16:49.200
+that you have. It could be surface normal. That means that I can take any point here and compute
+
+16:49.200 --> 16:56.960
+the surface normal and then append it to my x, y, z. It could also be RGB information. That means
+
+16:56.960 --> 17:04.240
+that it's a textured point cloud and you can have RGB information on it. You can also include
+
+17:04.240 --> 17:13.600
+everything. You can have the surface normal as well as the RGB value. So this d here is up to
+
+17:13.600 --> 17:22.080
+your imagination. And the usual data sources that we have for 3D point cloud is usually LiDAR or
+
+17:22.720 --> 17:29.120
+LiDAR. It's a type of laser sensor. So what's happening is that it's emitting out
+
+17:30.240 --> 17:37.360
+laser beams and then it's measuring the time of flight. Of course, you cannot really measure the
+
+17:38.480 --> 17:44.000
+time of flight. I mean you cannot really measure the reflection and then it's actually over phase
+
+17:44.000 --> 17:54.640
+shift. So there is some sensor inside the LiDAR sensor that measures when you are emitting out
+
+17:54.640 --> 18:04.480
+some laser readings or laser beams onto this thing here. It's reflecting and there is a phase shift
+
+18:04.480 --> 18:10.320
+when it's reflected back. So when you measure this phase shift, you are able to measure what's
+
+18:10.320 --> 18:18.080
+the distance away from here. And there's also an RGB camera. As I mentioned in one of the lectures
+
+18:18.080 --> 18:24.720
+that your Kinect is actually the RGB camera. And what it's doing here is that it's actually
+
+18:24.720 --> 18:31.760
+projecting out certain patterns of infrared light. And then based on the distortion,
+
+18:32.480 --> 18:40.800
+it's actually measuring what's the shape of the or what's the distance away
+
+18:40.800 --> 18:51.680
+the depth of the surface to the camera. And in fact, one of the very old topics in
+
+18:51.680 --> 18:59.360
+3D computer vision, very early 3D computer vision, I think unfortunately I don't have time to cover
+
+18:59.440 --> 19:06.240
+this in the lecture. But if you are interested, you could actually look at things like shape from
+
+19:07.520 --> 19:16.960
+I mean shape from X or shape from silhouette. So this actually talks about how to measure some
+
+19:16.960 --> 19:23.440
+kind of projection and then what's the distortion that you can actually infer the 3D shape.
+
+19:24.080 --> 19:29.120
+All right, it could also be in terms of CAD model. That means that you can actually create it
+
+19:29.120 --> 19:39.760
+using things like SOLIDWORKS or Pro-E or AutoCAD. So CAD model can also help you to create this,
+
+19:39.760 --> 19:51.440
+but it's usually in the .obj format or apply format. And you can also sample from these surfaces
+
+19:51.440 --> 19:56.560
+and to generate a 3D point cloud. And of course, we can also do this by
+
+19:57.120 --> 20:01.360
+acquire the 3D point cloud by structure for motion, which is what we have already
+
+20:01.360 --> 20:08.480
+seen previously. And then depth of images, etc. All right, so some of the important
+
+20:10.560 --> 20:17.120
+applications of 3D point cloud are land surveying. So you can have terrain. So this is actually
+
+20:17.680 --> 20:23.760
+part of photogrammetry. A lot of the stuff that we are doing in 3D computer vision
+
+20:23.760 --> 20:31.760
+are actually stolen from photogrammetry. So land surveying, photogrammetry, urban planning.
+
+20:31.760 --> 20:40.480
+So if you do things like city planning and so on, you can actually send a drone to map the terrain
+
+20:40.480 --> 20:50.560
+and do things like this. Or architecture, you can actually do buildings and survey the buildings or
+
+20:50.560 --> 20:59.040
+even monitor the integrity, the structure integrity of buildings. Actually, it can also,
+
+20:59.920 --> 21:05.840
+things like 3D computer vision, not just point cloud, but also what we have learned before,
+
+21:06.480 --> 21:13.520
+in images. It can also be used in all these applications here. And I didn't put another
+
+21:13.520 --> 21:20.000
+one which I'm actually personally very interested, which is actually forensic science. So you can
+
+21:20.000 --> 21:28.960
+actually use this kind of technology to preserve a crime scene, for example, or to even tell you
+
+21:29.040 --> 21:36.720
+things that are beyond what you can see. So because it's actually picking up all the
+
+21:38.000 --> 21:44.720
+structural details, or you can use another type of cameras that actually picks up things that
+
+21:44.720 --> 21:52.480
+you cannot see using the eye. So these are actually things, something that I'm always very interested
+
+21:52.480 --> 22:02.800
+in. But I have no chance to do this in detail. So you can also do archaeology preservation of,
+
+22:02.800 --> 22:10.400
+for example, this is actually the statue of David that is carved by Michelangelo.
+
+22:12.160 --> 22:21.120
+This was actually a SIGGRAPH project by Stanford University in 2002 or 2003. They actually took
+
+22:21.120 --> 22:27.600
+the whole project and then they digitized the whole Michelangelo using this. But nowadays,
+
+22:27.600 --> 22:33.600
+I think you can just use images and apply nerves on it. Maybe you can already get that kind of
+
+22:33.600 --> 22:44.560
+detail. And also metrology, where you do some structure or manufacturing kind of stuff. And
+
+22:45.520 --> 22:53.120
+also the robotics that you can map the world and then do planning and sound driving on this
+
+22:53.120 --> 23:04.080
+map on roads. So there are also pros and cons of 3D Point Club. It's not the ideal case or
+
+23:04.080 --> 23:11.200
+it's actually not the only choice. So the pros of 3D Point Club is that it has 3D information.
+
+23:11.200 --> 23:17.920
+There's no depth in the 3D. That means that you know every point in the 3D space. Unlike images
+
+23:17.920 --> 23:25.200
+where you do structure for motion but you lose the scale. You don't know how big is the object
+
+23:25.200 --> 23:31.920
+unless you know something about the scene. And as well as in terms of coding or in terms of
+
+23:31.920 --> 23:37.600
+mathematics, this is mathematically simple and concise because all you need is that you need
+
+23:37.600 --> 23:44.160
+XYZ for every point. And you can actually represent the surface, any surface, regardless
+
+23:44.160 --> 23:51.600
+of how complicated or how sophisticated it is. But there are also a bunch of weaknesses for 3D
+
+23:51.600 --> 24:00.160
+Point Club. First is that it's very sparse. So even though you can have very dense point
+
+24:00.160 --> 24:07.360
+club, it's still sparse compared to meshes for example. Because meshes is just watertight.
+
+24:07.360 --> 24:18.000
+Okay and it's also irregular. That means that every point in the, there's no structured format
+
+24:18.000 --> 24:23.840
+to this. So you don't know where is your nearest neighbor or in order to find the nearest neighbor
+
+24:23.840 --> 24:30.880
+it's actually computationally much more expensive than to find the nearest pixel on the image.
+
+24:30.880 --> 24:37.680
+Because pixels in the image is actually arranged in a regular tessellation of
+
+24:37.680 --> 24:45.360
+array. So you know where's the nearest neighbor, all the eight neighbors. But for 3D Point Club,
+
+24:45.360 --> 24:51.440
+if you want to do this in a very efficient way, probably you would have to use like kd3 or
+
+24:51.440 --> 24:56.320
+things like this. Okay I want to talk about what is kd3. I hope all of you know what is kd3.
+
+24:58.480 --> 25:03.920
+Oh in this assignment? Yeah. Oh really? I can't remember. Okay good.
+
+25:06.960 --> 25:16.080
+All right so good that you know that what kd3, it can also be used to do fast search.
+
+25:16.080 --> 25:21.120
+There are also libraries that do fast search. There's this fast approximate nearest neighbor
+
+25:21.440 --> 25:27.200
+library. But this is irregular. It's nonetheless compared to an image counterpart. It's much more
+
+25:27.200 --> 25:34.560
+difficult to search. And there's a lack of texture information because at the rawless form,
+
+25:36.640 --> 25:43.920
+what it means is that you only have every single point. There's no extra or no RGB information to
+
+25:43.920 --> 25:53.200
+it. And we'll see that what's interesting about this is that or what PointNet, which is the next
+
+25:53.200 --> 25:59.840
+thing that we'll talk about, is interesting is that because points are actually unordered.
+
+26:00.400 --> 26:12.560
+That means that if you take x1 x2 x3 okay x1 x2 and x3 and you flip it around you do some
+
+26:12.560 --> 26:19.520
+permutation. That's all all together. Let's say you only consider three points. There are
+
+26:19.520 --> 26:27.280
+three factorial six combinations here. So you can do x1 x3 x2. They are still going to be the
+
+26:27.280 --> 26:37.360
+same point. But this will have some detrimental effect impact on our deep learning. We'll see why.
+
+26:38.320 --> 26:45.360
+And the last problem here which is we also did some work on this. We have a paper on this but
+
+26:45.360 --> 26:54.560
+I'm not going to mention this. That is rotational, equivariant, and invariance. But I'm going to give
+
+26:54.560 --> 27:03.760
+you some insight behind this. Let's say I have this chair. It's upright. I look at different
+
+27:03.840 --> 27:10.640
+types of chairs. They are all upright. And then I train a network that is upright. That network
+
+27:10.640 --> 27:17.200
+will not be able to work well if I rotate the chair upside down for example. Because deep
+
+27:17.200 --> 27:25.280
+networks are not rotationally invariant. CNNs itself is translational invariance or equivariant
+
+27:25.280 --> 27:33.600
+but it's not rotational invariant. The difference between invariant and equivariance is that
+
+27:34.400 --> 27:40.400
+invariant means that you take the input upright, you rotate it, it's still going to give you the
+
+27:40.400 --> 27:48.000
+same result. Equivariance simply means that there is a very deep mathematical formulation. We
+
+27:48.000 --> 27:52.800
+actually wrote all this in the paper as well. But I'm just going to give you a very quick insight.
+
+27:53.440 --> 28:00.080
+Equivariance simply means that if you take this chair, you flip it upside down,
+
+28:00.640 --> 28:06.960
+the output will also be flipped upside down. You have to undo it and then it will still match up
+
+28:06.960 --> 28:16.080
+with the original upright chair. That's equivariant. Invariant means that you flip it upside down,
+
+28:16.080 --> 28:22.320
+the output will still be the same as upright. You don't have to do any undoing of the rotation. But
+
+28:22.320 --> 28:29.600
+this is a very tough problem. Actually it's very tough in deep learning. We did something
+
+28:29.600 --> 28:39.680
+in this direction and we follow most of the works in studying the group theory. Because
+
+28:39.680 --> 28:48.720
+SO3 is actually a group and we make use of some group theory to actually study this equivariance
+
+28:48.720 --> 28:54.160
+and equivariance. But I won't say that we have fully solved the problem. I also don't think that
+
+28:54.720 --> 28:59.600
+the problem has been fully solved yet. Nonetheless, I won't go too much into this.
+
+29:03.040 --> 29:08.400
+You can also see that LIDAR actually directly gives that it's much more accurate than the image
+
+29:09.280 --> 29:19.120
+based reconstruction. The city is actually using some LIDAR to map out. This is somewhere in
+
+29:19.120 --> 29:27.280
+Germany. Here you can see that during structure for motion, the reconstruction is usually
+
+29:28.000 --> 29:35.760
+less precise. Also, you don't get absolute scale from structure for motion if you don't know
+
+29:35.760 --> 29:41.280
+anything about the scene. But for 3D point cloud, you get the absolute scale. Everything is one to
+
+29:41.280 --> 29:56.480
+one. That's the advantage of this 3D point cloud. Let's look at now after I define
+
+29:56.480 --> 30:02.800
+what is the 3D point cloud and the pros and cons. Let's just go into how deep learning can be used
+
+30:03.360 --> 30:09.920
+for this 3D point cloud. The pioneering work for this is actually PointNet
+
+30:11.280 --> 30:24.240
+by this guy Steve Adloff from CVPR 2017. This is the pioneering work and what it does is that
+
+30:24.240 --> 30:30.880
+you it takes in n by three point cloud and then it inputs into the PointNet and it does three things
+
+30:31.440 --> 30:37.920
+classification. Given any point cloud of an object, it's able to tell you the
+
+30:37.920 --> 30:44.640
+semantic class of the object and then it's able to also do semantic segmentation of a scene.
+
+30:44.640 --> 30:51.760
+Each color here represents a semantic class of a scene and then it's also
+
+30:51.760 --> 30:58.560
+able to do part segmentation. This means that given this model of an aeroplane, for example,
+
+30:58.640 --> 31:05.360
+it's able to tell you where are the wings, where's the body, and where are the tails for the 3D point.
+
+31:06.720 --> 31:14.320
+But the main problem that this PointNet has to resolve when it's actually taking in point
+
+31:14.320 --> 31:22.160
+cloud is that for all the neural networks that we know, it's MLP or CNN. I'm elaborating here
+
+31:22.240 --> 31:28.720
+using an MLP, just one neuron. CNN also works in the same way actually.
+
+31:30.000 --> 31:35.040
+You can see that they are not permutation invariant. What I meant by not permutation
+
+31:35.040 --> 31:42.240
+invariant is this. I have a neuron here which is a function. This is just a
+
+31:43.840 --> 31:50.640
+non-linear activation. It's a linear mapping followed by a non-linear activation.
+
+31:51.120 --> 31:58.080
+So I'm going to represent it as H and then this would be a non-linear activation function F and
+
+31:58.080 --> 32:03.920
+linear mapping of W transpose X. You can see that basically what happens here is that
+
+32:06.160 --> 32:12.160
+let's just take the simplest case that the activation function is also linear in its identity
+
+32:12.160 --> 32:18.240
+so we don't care about it. I'm going to just evaluate the inner term to become this part over
+
+32:18.240 --> 32:25.440
+here and you can see that if I were to swap the order because I have three points here. I'm going
+
+32:25.440 --> 32:33.040
+to swap the order from X1, X2, and X3. I'm going to swap into X3, X1, X2. But they are still the
+
+32:33.040 --> 32:39.680
+same point. They are still the same point cloud regardless of how you swap them. In 3D, in the
+
+32:39.680 --> 32:46.400
+spatial relation, it still remains the same. Nonetheless, you can see that if I were to train
+
+32:46.960 --> 32:53.120
+the MLP using this way, the width is actually trained for X1, X2, and X3 in this order.
+
+32:54.400 --> 33:00.160
+During inference time, if I were to sort the point cloud even using the same training data,
+
+33:00.800 --> 33:07.280
+the output is totally different. This means that the network is not permutation invariant.
+
+33:07.600 --> 33:14.880
+And in contrast to our image, you can see that the convolution here,
+
+33:15.920 --> 33:22.640
+it's always in a regular, arranged in a regular order. So there's no such problem
+
+33:22.640 --> 33:29.600
+for the image. There's no permutation problems in the image counterpart.
+
+33:30.640 --> 33:36.320
+And nonetheless, if you look at the point cloud, it's actually orderless. You look at
+
+33:38.000 --> 33:44.800
+if I have X1, X2, X3 to Xn number of points over here, I can arrange them in n factorial
+
+33:46.720 --> 33:52.800
+combinations. And each one of these combinations, it still represents the same point cloud.
+
+33:52.800 --> 33:59.200
+Group 4's way to make it permutation invariant is that you augment the training data with all
+
+33:59.200 --> 34:05.600
+these n factorial combinations. But each sample that you give, you're going to permute the n
+
+34:05.600 --> 34:10.880
+factorial number of times. So this is a serious way of doing it because what it means is that
+
+34:10.880 --> 34:19.360
+you will end up with factorial complexity. That's not good. So this is not a correct way to do it.
+
+34:19.920 --> 34:25.440
+So nonetheless, for PointNet, what they propose here is that they propose something that's
+
+34:25.440 --> 34:32.800
+super simple. So since it's permutation, I mean, since a point cloud is orderless,
+
+34:32.800 --> 34:39.280
+there's no order to it. And you want to make the network permutation invariant. Then what they do
+
+34:39.280 --> 34:46.160
+here is that they just treat every point separately, independently. So if you have n
+
+34:46.160 --> 34:52.080
+number of points, then I would put each point through an NLP, the same NLP. So these are
+
+34:52.080 --> 34:59.680
+basically shared NLP. I'll put each point inside the same NLP. So I process each one of them
+
+34:59.680 --> 35:07.760
+independently until I get the final feature here. So I will get n by 1024. That means that
+
+35:07.760 --> 35:18.560
+each point that I have from R3, now I'm mapping it into R1024. And I have n number of them
+
+35:18.560 --> 35:27.120
+that go through the same network n times. But these are all shared weights. That means that
+
+35:27.120 --> 35:33.360
+essentially there's only one network that goes through here. Alright, then finally you end up with
+
+35:33.360 --> 35:42.960
+this 1024 dimension, each one of the features. Then what happens here is that they cleverly use
+
+35:42.960 --> 35:49.120
+a max-pool operation, which is permutation invariant, to get the global feature. Then after
+
+35:49.120 --> 35:57.120
+that, you do all the semantic segmentation and also classification over here. So there is a proof
+
+35:57.120 --> 36:04.960
+in the paper, but I'm going to just simplify it into a diagram like this to show you why
+
+36:04.960 --> 36:11.680
+is it permutation invariant. Because the max-pool operation, if you have x1, x2, x3, let's say the
+
+36:11.680 --> 36:18.400
+max-pool operation will be going along the rows and picking up the element that is the maximum
+
+36:18.400 --> 36:25.040
+among all the inputs. And then you concatenate it into the final output over here. So you can see
+
+36:25.040 --> 36:34.400
+that if I were to input x1, x2, x3, and x2, x1, x3, my output is still the same because I'm taking
+
+36:34.400 --> 36:43.680
+the max operation. And max operation is regardless of the order. Therefore, because I maintain
+
+36:43.680 --> 36:50.800
+every feature independently at the beginning, then I do a max-pool here, which is
+
+36:50.800 --> 36:55.600
+permutation invariant. Therefore, the whole thing here is actually permutation invariant. That means
+
+36:55.600 --> 37:03.600
+that whatever inputs that I give in whichever order, it will still work the same. It will still work
+
+37:03.600 --> 37:11.360
+the same way. And that's the point. It is very simple, but he came up with this idea. Now I think
+
+37:11.360 --> 37:23.360
+this paper has been cited like 10,000 times. It's a truly nice work, I think. After this work,
+
+37:23.360 --> 37:29.760
+a lot of people actually started working on Point Cloud. We were one of them. Actually,
+
+37:30.640 --> 37:41.200
+when we first saw this paper, we were so excited that we did a lot more work in this area here.
+
+37:42.320 --> 37:51.520
+But one of the, although it's nice, there's a limitation of PointN. And that limitation is that
+
+37:52.400 --> 37:58.080
+so if you compare with CNN, CNN has many receptive views because it's actually
+
+37:58.080 --> 38:05.600
+convolving the kernel at many layers. So that means that if you look at one point here at the
+
+38:05.600 --> 38:13.280
+end, you are not surprised that it actually maps back to a large patch of the image. So it actually
+
+38:13.280 --> 38:18.240
+has a very large receptive view. And the larger the receptive view means that you gather more
+
+38:18.240 --> 38:24.160
+information and the more powerful your network will be. But then if you just look at PointN,
+
+38:24.160 --> 38:28.960
+because we are treating every single point independently, and then we just do a max-pool
+
+38:28.960 --> 38:36.160
+at the end. So essentially there's only one receptive view. And that's all the points.
+
+38:36.160 --> 38:43.680
+That's not good. That means that it lacks what it has in it. It has a global knowledge
+
+38:44.640 --> 38:51.520
+of the global shape, but then many structures, 3D Point Cloud, many shapes, it also depends
+
+38:51.520 --> 38:58.560
+on locally what's the structure. So it actually completely ignores this because it treats every
+
+38:58.560 --> 39:07.120
+single point independently. It doesn't take into account the neighbors. And there are many papers
+
+39:07.120 --> 39:16.080
+and one of them that follow up, which is PointN, by the same guy again. So we also have a paper on
+
+39:16.080 --> 39:21.600
+this. We call it the SolNets. They came up with this PointN pass pass to resolve this because
+
+39:21.600 --> 39:28.320
+the limitation of PointN is that they treat every single point independently. So what this suggests
+
+39:28.320 --> 39:34.800
+is that let's just do some clustering. So from the input here, it's all going to do some
+
+39:35.520 --> 39:42.880
+local sampling using the FPS, the furthest point sampling. Then it's doing some k-nearest neighbor
+
+39:42.880 --> 39:49.840
+locally and grouping. And then it's passing through the PointN for every cluster here.
+
+39:50.400 --> 39:55.360
+So that means that the PointN, although it's independent, it's treating every point
+
+39:55.440 --> 40:02.080
+independently. It's now treating the cluster, every point inside the cluster independently.
+
+40:02.960 --> 40:09.440
+But what it means is that you have the local feature because each PointN is local now. And then
+
+40:10.240 --> 40:19.520
+you end up with a coarser output over here. And we do sampling and grouping again. So FPS again,
+
+40:19.520 --> 40:27.440
+and then the k-nearest neighbor again, and we do this. So as a result, this becomes very similar
+
+40:27.440 --> 40:37.360
+to your multi-layered CNNs. That means that your hierarchical CNN. So first, we just simply do
+
+40:38.000 --> 40:43.440
+further point sampling. What it means is that given the set of points, we're going to choose
+
+40:43.440 --> 40:50.800
+a subset of n points such that each one of the points in the furthest point sampling,
+
+40:52.960 --> 40:58.720
+it's actually furthest from the rest of the points. And this is a very standard algorithm
+
+40:58.720 --> 41:05.360
+in computer graphics, actually. And then next, for each one of these furthest points,
+
+41:05.360 --> 41:11.840
+we treat it as the local centroid. And we find the k-nearest neighbor around the neighborhood
+
+41:11.840 --> 41:17.920
+and cluster it together. Then we put it into the PointNet. But now, each PointNet here,
+
+41:17.920 --> 41:25.280
+because we know the cluster, we're going to center it locally with respect to the centroid.
+
+41:25.280 --> 41:30.160
+That means that I'm going to subtract every point in the cluster with its respective centroid.
+
+41:31.120 --> 41:36.240
+Then I put it into the PointNet. And I'm also going to do a multi-resolution grouping. That
+
+41:36.240 --> 41:43.120
+means that at every layer, I'm going to group this together and then I'm going to put it into
+
+41:43.120 --> 41:49.040
+a PointNet, a local PointNet. And I get the final output over here. So let's say I have three outputs
+
+41:49.040 --> 41:57.600
+over here. But the final output here, I'm going to take the last layer, the output of the last layer,
+
+41:57.600 --> 42:03.280
+and concatenate it with the outputs of the first layer. That means that the first three points here
+
+42:03.280 --> 42:10.160
+are all going to be concatenated together. You can see this something like your skip link
+
+42:10.160 --> 42:18.560
+architecture, the ResNet or skip link architecture in ResNet. It's actually very similar
+
+42:19.840 --> 42:33.040
+to that kind of concept. So this is the upgrade of PointNet into PointNet++. But of course,
+
+42:33.040 --> 42:41.040
+there are many other variants to do this. And usually if you now do this kind of work,
+
+42:41.040 --> 42:50.160
+you would need to cite a whole bunch of papers and to do benchmark again. This has been very popular
+
+42:50.160 --> 42:58.160
+for the last five years or so. Now of course the type has changed. Now it changes to the
+
+42:59.040 --> 43:06.000
+Radians view, the 3D representation. But PointCloud was very popular. And I believe
+
+43:06.000 --> 43:12.400
+that it's still popular. Right now people are actually looking at how to do self-training
+
+43:12.400 --> 43:16.960
+representation learning. So using contrastive laws and all these things.
+
+43:17.760 --> 43:30.720
+So after defining or introducing you to the two tasks or the two networks that have pioneered
+
+43:30.720 --> 43:37.920
+the PointCloud processing, I'm going to next tell you about various PointCloud-based tasks.
+
+43:38.720 --> 43:45.760
+So essentially I'm going to talk about six different tasks over here. The place recognition,
+
+43:45.760 --> 43:50.560
+viewpoint detector, descriptor, 3D object detection, 3D semantic optimization,
+
+43:50.560 --> 43:56.800
+PointCloud registration, and image to PointCloud registration. So I'm going to introduce you to
+
+43:57.440 --> 44:03.680
+some of the pioneering work in all these respective areas over here.
+
+44:04.480 --> 44:11.920
+So let me talk about the first task, which is PointCloud-based recognition. So this is the
+
+44:11.920 --> 44:19.680
+where am I problem. It's the same as the vocabulary tree that I talked about the last
+
+44:19.680 --> 44:23.840
+time when I talk about structure for motion. That means that you have a bunch of images.
+
+44:23.840 --> 44:28.080
+A given one query image, you want to find which one is the most similar one.
+
+44:28.080 --> 44:35.760
+But now I want to do this. I give you the whole map of the terrain. This is actually Oxford City.
+
+44:35.760 --> 44:44.640
+They have a data set from Oxford University. Let's say I give you the whole Oxford City
+
+44:45.440 --> 44:52.640
+map. These are all 3D PointCloud. And then I give you a local 3D PointCloud. This means that I'm
+
+44:52.640 --> 45:00.240
+maybe driving a car or a self-driving car is operating in this city. But the LIDAR sensor
+
+45:00.240 --> 45:07.200
+that is mounted onto the car can only see the local view of the scene. So this is the local
+
+45:07.200 --> 45:18.400
+view. So when I'm building up this map, I happen to have every part of the point with the GPS
+
+45:18.400 --> 45:26.240
+coordinate, GPS INF coordinate. And the question here is that the query PointCloud, if I can find
+
+45:26.240 --> 45:33.200
+where this query PointCloud is most similar inside this map, then I would have successfully
+
+45:33.200 --> 45:39.840
+localized myself. I would know where am I. According to where am I, let's say this part
+
+45:39.840 --> 45:46.720
+here, I found that it's actually this piece over here. Because this is the reference map,
+
+45:46.720 --> 45:54.160
+I know the GPS INS coordinates here. So this means that at the end, I'll be able to know
+
+45:54.160 --> 46:01.280
+what's my coordinates, where am I in the world. So this is the where am I problem.
+
+46:02.000 --> 46:12.560
+It's the most important problem in robotics or navigation. And so the idea in this paper here,
+
+46:14.720 --> 46:21.280
+is that you can actually create a database of some maps that are geotech. That means that
+
+46:21.360 --> 46:26.240
+instead of looking at the whole terrain like this, the whole 3D map,
+
+46:27.840 --> 46:34.640
+what I can do is that I can split this into many chunks of some maps. And each chunk of some map
+
+46:34.640 --> 46:40.800
+is georeferenced. That means that I know the GPS INS, and then I can down sample it for the sake of
+
+46:40.800 --> 46:48.400
+efficiency. Because computational efficiency and storage efficiency, then this is what it
+
+46:48.400 --> 46:57.120
+looks like after I split this into different chunks. And I'm going to geotech it using my GPS
+
+46:57.120 --> 47:07.120
+INS. Then now the question becomes a retriever problem. You can see that this query submap
+
+47:07.120 --> 47:16.640
+is just like your querying image. And then the reference map now becomes chunks of submaps over
+
+47:16.640 --> 47:25.360
+here, which actually looks like this one chunk of this. It becomes your database of submaps or
+
+47:26.080 --> 47:32.000
+analogously it becomes something like your database of images where you want to do the
+
+47:32.000 --> 47:39.120
+retriever. That's what we have mentioned in the structure promotion lecture. The problem now
+
+47:39.120 --> 47:46.080
+simply just becomes a retriever. In this paper here, this is the first work to actually
+
+47:46.720 --> 47:54.080
+talk about point cloud retriever. It's called point net vlab because we took point net and then
+
+47:54.080 --> 48:01.200
+there's another thing called the vlab structure. I'll talk about this very briefly. The first part
+
+48:01.280 --> 48:09.280
+here is just point net where we take the point cloud and then we put it into a point net.
+
+48:09.280 --> 48:17.440
+And finally, we remove the part of max pool. So instead of doing max cooling, we replace the max
+
+48:17.440 --> 48:23.840
+cooling with a more powerful architecture, which is the vlab architecture. And vlab architecture,
+
+48:23.840 --> 48:30.400
+I will talk about it very briefly. It's actually very similar to the visual works. So what it's
+
+48:30.400 --> 48:36.640
+actually doing here is that it's actually learning a vlab core. So this is actually
+
+48:36.640 --> 48:44.480
+all the visual works, the centroid. It looks something like this. The equation is this here,
+
+48:44.480 --> 48:54.240
+but this is part of the proof that is permutation invariant. So this is p prime here where I'm
+
+48:54.240 --> 49:00.240
+taking all these points here and putting it in. So what happens here is that every one of these
+
+49:00.800 --> 49:08.080
+is going to be assigned to a centroid. This is exactly how the visual works. If you still
+
+49:08.080 --> 49:14.080
+recall, I actually mentioned about this, that we learn the visual works and then during inference,
+
+49:14.080 --> 49:20.320
+I'm going to count the frequency. But here, instead of a hard assignment by counting frequency,
+
+49:20.320 --> 49:25.200
+we're going to do a soft assignment. So this is actually a soft assignment here. It's a soft max
+
+49:25.200 --> 49:32.240
+function here. So w, b, and the centroid here, which is a visual work, they are all parameters
+
+49:32.240 --> 49:39.440
+of the big network. So we are going to learn c, w, and b. Basically, this is the soft assignment.
+
+49:39.440 --> 49:44.000
+This part here is a soft assignment. And then these are all the visual works. So this means
+
+49:44.000 --> 49:53.280
+that we would have, in the end here, the output here is similar to the frequency count,
+
+49:53.920 --> 50:00.240
+the histogram that we have when we talk about the visual work or image retrieval.
+
+50:01.840 --> 50:10.560
+If you look at the origin, there's basically another paper called NetVLAT. That's also
+
+50:10.560 --> 50:20.960
+published in 2017, I think, or 2016 in CBPR. So that paper here basically do image and then
+
+50:21.040 --> 50:25.600
+propose this VLAT architecture. And then we were the first to actually combine them together and
+
+50:25.600 --> 50:32.720
+say that this is point net VLAT. So today, this is still a popular task, although we stopped
+
+50:32.720 --> 50:38.480
+working on this. But it's still a popular task that you still can see occasionally.
+
+50:38.480 --> 50:46.000
+There are actually almost every conference, you can see papers coming out with new techniques to
+
+50:46.640 --> 50:54.160
+solve this. And what's interesting here is that we also provide proof that, because point net uses
+
+50:54.160 --> 51:03.040
+a softmax to make this part permutation invariant. But we're replacing it using NetVLAT. So NetVLAT
+
+51:03.040 --> 51:09.360
+has to be permutation invariant as well for this to work. Otherwise, it won't work for 3D point
+
+51:09.360 --> 51:15.760
+cloud because NetVLAT was first proposed using images. Then we actually show a very simple
+
+51:16.400 --> 51:21.440
+proof. So if you have the points that order in this way, p1 prime to pn prime,
+
+51:22.320 --> 51:30.880
+and we have outputs of this vk over here. So you have to put it into the soft assignment.
+
+51:30.880 --> 51:37.200
+So this is the assignment with the centroid and then you have to sum everything together into
+
+51:38.000 --> 51:43.760
+k. And what happens here is that because there is a summation, even if I were to
+
+51:44.160 --> 51:51.040
+permutate this point over here, we can see that basically the sum is permutation invariant.
+
+51:52.160 --> 52:00.720
+So you will still end up with the same feature at the end. So this actually
+
+52:00.720 --> 52:09.040
+means that it's actually a permutation invariant network. So it shouldn't have any problem
+
+52:09.040 --> 52:17.120
+working for a 3D point cloud. The way to train this PointNetVLAT would be to use
+
+52:17.760 --> 52:25.200
+metric distance learning because we are going to compare the similarity of two features.
+
+52:25.200 --> 52:33.040
+So what happens here is that you would have the same network, the same PointNetVLAT network.
+
+52:33.040 --> 52:42.720
+Okay you will repeat it. So we will have three of these. It's a triplet network.
+
+52:43.760 --> 52:50.720
+But they are all the same thing. So we will have an anchor point cloud, a positive point cloud,
+
+52:50.720 --> 52:58.160
+and a negative point cloud. And then what happens here is that you know that the positive is the
+
+52:58.240 --> 53:02.160
+same or roughly taken at the same place as your anchor point cloud.
+
+53:03.360 --> 53:12.160
+And what we want here is that we want to create a purpose of training data where we have the
+
+53:12.800 --> 53:20.000
+positive pair and also a bunch of negative pairs. I know this is let's say taken from here.
+
+53:21.040 --> 53:27.040
+And then this would be my positive pair. The negative pair would be all the other points
+
+53:27.440 --> 53:34.720
+that are not taken at the same location. And it better not be the same thing. So in this
+
+53:34.720 --> 53:40.240
+illustration is bad because it's actually the same thing. But we actually need to traverse the
+
+53:40.240 --> 53:46.960
+route a few times. I still remember when we were doing this paper because we have the car set up
+
+53:46.960 --> 53:53.760
+with all the lidars and all this, a self-driving car actually. So we actually were on the road
+
+53:53.840 --> 53:59.280
+for like 30 over hours driving around non-stop to collect all the data sets
+
+54:02.640 --> 54:12.480
+within NUS and also in west coast. So you need to traverse several times the same route such that
+
+54:13.120 --> 54:19.360
+the positive pair cannot be exactly the same thing. But it has to be taken at the same location
+
+54:19.360 --> 54:26.960
+over a different time such that there is some subtle changes or some changes in the
+
+54:27.760 --> 54:33.840
+point cloud. Otherwise it will work. Otherwise you are just simply overfitting because it's
+
+54:33.840 --> 54:37.840
+exactly the same thing. Then that loss is always zero. You are not training the network at all.
+
+54:42.640 --> 54:48.640
+That's why we take the positive pair and also the negative pair. It has to be from a different
+
+54:48.640 --> 54:54.080
+location and it can be taken at the same time. That means that it's in the same route
+
+54:54.080 --> 54:59.600
+but at a different location. So we have this triplet or a couple of triplets.
+
+55:02.240 --> 55:09.440
+These are the features. P are the features. So we propose what we call the lazy triplet loss.
+
+55:10.880 --> 55:18.560
+So the idea here is just this. Because the positive pair, when you feed in the positive pair
+
+55:19.200 --> 55:26.560
+the output here, the positive feature and the angle. So these two pairs should be as similar
+
+55:26.560 --> 55:33.840
+as possible. That means that the distance between f plus and f a needs to be minimized.
+
+55:34.800 --> 55:45.600
+And the distance between f minus and f a needs to be maximized because they are the negative
+
+55:46.160 --> 55:54.080
+pair. So this distance has to be maximized over here and what you can do is that you can put them
+
+55:54.080 --> 55:59.280
+into the same function here such that you're maximizing the positive pair and the negative
+
+55:59.280 --> 56:05.120
+pair. But if you simply just do this, that can be a trivial solution because both are outputs
+
+56:05.120 --> 56:13.120
+of the network. The network can just simply learn everything to be zero. But then that's why you
+
+56:13.200 --> 56:19.280
+then that's why you need a L1 here, a margin and put it into a hinge loss. Hinge loss simply
+
+56:19.280 --> 56:26.240
+means that it's max of this or zero. And I'm not going to into a detail because I'm not teaching
+
+56:27.200 --> 56:39.200
+deep learning here. So the ideal case here is this. The ideal case is that when you do a triplet loss,
+
+56:39.200 --> 56:46.800
+the negative should be the hardest negative. So what do I mean by hardest negative?
+
+56:47.520 --> 56:53.200
+The hardest negative means that there's only one positive but when you do negative, ideally you
+
+56:53.200 --> 57:00.960
+should select from all the other samples that are not that anchor. And then you select the one that
+
+57:00.960 --> 57:08.240
+is closest to the anchor. That's the hardest negative because it's more similar to it but
+
+57:08.240 --> 57:14.640
+it's actually not that angle. You want to push it as far apart as possible. So that's the hardest
+
+57:14.640 --> 57:24.320
+negative. But the network is continuously updated every iteration in your training. So what it means
+
+57:24.320 --> 57:30.960
+is that the hardest negative always move around. It always changes. And at every iteration,
+
+57:30.960 --> 57:37.040
+you cannot just do it at the... because during the training, if given a batch, you have to iterate
+
+57:37.040 --> 57:43.440
+within that batch. Then after that, you escape. You need to go back to an epoch and keep on
+
+57:43.440 --> 57:50.560
+iterating. So what it means is that at the final level of iteration, after every iteration, you
+
+57:50.560 --> 57:56.320
+need to basically search through the whole database of training data in order to get the
+
+57:56.320 --> 58:02.560
+hardest negative. But this is not good because this is slow, very slow. But that's the most
+
+58:02.560 --> 58:08.880
+effective. So we just we call it lazy triplet because we're just going to take the hardest
+
+58:08.880 --> 58:17.680
+negative within that batch size. And it seems to be efficient. There's also a triplet loss where
+
+58:19.120 --> 58:26.880
+you have the negative. When you push the negative apart or pull the positive
+
+58:27.760 --> 58:37.360
+close to each other, you could unknowingly have a third pair that is supposed to be a negative one.
+
+58:37.360 --> 58:44.320
+But you could unknowingly push the anchor towards that pair. So it's actually then what is suggested
+
+58:44.320 --> 58:52.320
+that you just pick the two hardest negative such that you actually do both concurrently
+
+58:52.320 --> 58:58.480
+and make sure that they are all pushed apart. And this is the quadruplet loss. But of course
+
+58:58.480 --> 59:04.560
+it's computationally effective. And what we are doing here is that we are also searching for the
+
+59:04.560 --> 59:14.640
+hardest negative and the second hardest negative in the batch size. And here's some results that
+
+59:14.640 --> 59:23.760
+we have where we basically use the Oxford data set and then this the university, this data set
+
+59:23.760 --> 59:35.680
+is actually NUS residential area is the west coast area. Actually people cite us so many times
+
+59:36.400 --> 59:42.720
+they always use this abbreviation in the data set but nobody knows exactly where it is and what it
+
+59:42.720 --> 59:54.800
+stands for. So we have the training and the test lead and here's the result. Of course at that time
+
+59:54.800 --> 01:00:02.960
+we just need to compare to point net because we were the first to define this task actually.
+
+01:00:03.760 --> 01:00:10.400
+So before this paper there's no such task. There's only image retrieval, there's no point out
+
+01:00:10.400 --> 01:00:26.560
+retrieval. We were the first to do this. Now we are heavily beaten by
+
+01:00:26.560 --> 01:00:34.800
+like the state of the art they might have already or saturate the whole thing by a lot. But what's
+
+01:00:34.800 --> 01:00:41.920
+interesting here is that we unknowingly solved this problem where the same scene, if you do a
+
+01:00:42.800 --> 01:00:51.520
+image retrieval, the same scene day and night and winter versus spring for example, then you
+
+01:00:51.520 --> 01:00:56.640
+can see that even with our idea if I don't tell you that these two are actually the same place
+
+01:00:56.640 --> 01:01:02.800
+you probably wouldn't be able to find out. So a vocabulary tree or any form of
+
+01:01:03.600 --> 01:01:09.520
+netvilak, the original netvilak itself, it will not work under this kind of situation.
+
+01:01:10.880 --> 01:01:14.320
+But we unknowingly solved this problem using point out retriever.
+
+01:01:15.360 --> 01:01:21.360
+So this is cool because structurally it remains the same. But of course there are other
+
+01:01:21.360 --> 01:01:27.760
+other cases where you can see that such as this I query this and I have a wrong match,
+
+01:01:27.760 --> 01:01:32.560
+wrong retriever. Whereas the true match is this because what happens is that it's after
+
+01:01:32.560 --> 01:01:39.440
+some time this car that's parked here, it's actually driven away. So there's no more car
+
+01:01:39.440 --> 01:01:45.840
+here. So this is actually the same location but then you can see that it actually wrongfully
+
+01:01:46.880 --> 01:01:53.440
+retrieved something that is structurally similar. So what this means is that the network is picking
+
+01:01:53.440 --> 01:01:58.960
+up the structure. It's actually picking up some structure. It's learning the structure
+
+01:01:58.960 --> 01:02:06.400
+of the 3D point cloud to have a similarity comparison over here. Any question?
+
+01:02:08.320 --> 01:02:14.320
+I guess this is kind of straightforward. All right, so let me go into the next part which
+
+01:02:14.480 --> 01:02:25.680
+is keypoint detector and descriptor. So for image-based keypoint detector and descriptor,
+
+01:02:26.560 --> 01:02:33.200
+I think in your assignment you might have used SIP feature and SIP descriptor. So image,
+
+01:02:33.760 --> 01:02:40.000
+it's interesting. I mean you can, because you have texture RGB information, you have
+
+01:02:40.000 --> 01:02:46.560
+RGB information that you can actually use to form the descriptor. So basically key points are
+
+01:02:48.560 --> 01:02:56.240
+corner points or key points are stable points in the image such that when you have a viewpoint
+
+01:02:56.240 --> 01:03:03.760
+change, you are still able to detect the same stable set of key points. And for each one of
+
+01:03:03.760 --> 01:03:08.320
+the key points, we are going to assign a time print, a signature to it and that's the descriptor.
+
+01:03:08.320 --> 01:03:15.280
+So in SIP, it's 128 dimension such that when we have a different viewpoint, we still can
+
+01:03:15.280 --> 01:03:22.640
+detect the same set of key points with the same descriptor and then we can match it over the
+
+01:03:23.440 --> 01:03:33.760
+image pair here. So this would be the image counterpart. But for 3D point cloud,
+
+01:03:34.480 --> 01:03:40.800
+this would be difficult because there's no texture at all and the point clouds only contain,
+
+01:03:41.520 --> 01:03:51.040
+only consist of xyz input. There were works on learning the descriptors of the key points
+
+01:03:51.680 --> 01:03:59.600
+but there weren't any, there are not any point key point detector works. The reason is because
+
+01:04:00.320 --> 01:04:08.320
+before us, we were actually the pioneer to propose key point detector here and for 3D point cloud.
+
+01:04:08.320 --> 01:04:14.400
+So using deep learning but before us, there are some traditional methods to do it but then before
+
+01:04:14.400 --> 01:04:21.280
+that, there's no one actually did it. The reason, the primary reason is because you cannot supervise
+
+01:04:21.280 --> 01:04:27.280
+this. There's no full supervision, you cannot. If I give you this point cloud, can you tell me
+
+01:04:27.280 --> 01:04:34.400
+where are the key points? No. Even if you can, you are probably not going to label every key point
+
+01:04:36.640 --> 01:04:41.920
+for the full supervision. So before us, nobody actually knew how to do this.
+
+01:04:44.000 --> 01:04:50.240
+So the question is how to actually bring the network such that it's able to detect the key
+
+01:04:50.240 --> 01:05:00.640
+point. So we came up with what we call the 3D FITNET and this is actually a weakly supervised
+
+01:05:00.640 --> 01:05:06.960
+triplet network. That looks like this. So we are going to use, why is it weakly supervised?
+
+01:05:07.840 --> 01:05:14.800
+Because we only know, we only need to know the chunk of submaps such that it's the same
+
+01:05:14.800 --> 01:05:22.720
+as net relaps where we know we need to know triplets of anchor and the positive pair.
+
+01:05:22.720 --> 01:05:29.760
+That means that this needs to be taken at the same place but at a different time. And then
+
+01:05:29.760 --> 01:05:36.880
+we also need to, with the anchor, we need to know where are the negative pair. So this is the
+
+01:05:36.880 --> 01:05:43.040
+information that we need only to actually train the network to detect key point. We don't have to,
+
+01:05:43.680 --> 01:05:49.920
+we don't require any labeling at all. So before this, before our 3D FITNET,
+
+01:05:49.920 --> 01:05:57.920
+all the previous work, they used the traditional approach of computing surface normals and all this
+
+01:05:57.920 --> 01:06:03.680
+to get the stable key points. But we were the first to actually propose this method to use
+
+01:06:03.680 --> 01:06:10.960
+weakly supervision. And the idea is that we give a point clock. So we do FPS, the further
+
+01:06:10.960 --> 01:06:18.720
+point sampling to randomly sample on the pointer. And this FPS is actually inspired by,
+
+01:06:20.240 --> 01:06:27.920
+FITNET also uses this, but the original place where this algorithm was proposed
+
+01:06:27.920 --> 01:06:33.520
+is actually in computer graphics. In computer graphics, they propose FPS. The reason is because
+
+01:06:33.520 --> 01:06:39.600
+on a surface structure, the furthest point is actually the most representative points
+
+01:06:40.160 --> 01:06:46.080
+of that structure of the 3D point clock. So we do further point sampling here. And then
+
+01:06:46.960 --> 01:06:54.960
+for each point that we sample, we do clustering, we cluster the k nearest neighbor. And then
+
+01:06:54.960 --> 01:07:03.200
+after that, we formed those clusters, we would dump it into a detector. So this,
+
+01:07:03.200 --> 01:07:08.880
+basically this detector here is just a small point net over here. It's just a point net
+
+01:07:08.880 --> 01:07:15.280
+where at the end here, we output two things. One is the attention weight, the other one is the
+
+01:07:15.280 --> 01:07:25.760
+orientation. And so the attention weight over here, we'll see that it's actually used to weigh
+
+01:07:25.760 --> 01:07:34.000
+the triplet loss later. But this attention weight will also tell us whether this randomly selected
+
+01:07:34.080 --> 01:07:39.280
+cluster here, n by three, that point over here is a key point or not.
+
+01:07:41.200 --> 01:07:48.400
+So this is essentially how we actually get the output to tell us whether this is a key point or
+
+01:07:48.400 --> 01:07:55.040
+not a key point. Then orientation, because we have to make it slightly permutation invariant.
+
+01:07:55.760 --> 01:08:02.240
+Because at least locally, we have to make it permutation invariant. So this orientation
+
+01:08:02.480 --> 01:08:08.880
+will tell us where is the upright direction. So we will learn this using the workout.
+
+01:08:08.880 --> 01:08:16.000
+This is the detector part. We also have the descriptor part. This is just something like
+
+01:08:16.000 --> 01:08:21.360
+a time frame for each one of the key points that we are learning. And we'll just put this
+
+01:08:22.000 --> 01:08:29.920
+orientation into the cluster so that we can rotate it upright. And then this is also something like
+
+01:08:29.920 --> 01:08:36.480
+a point here. There's a max pooling and we concatenate it together. So finally it comes,
+
+01:08:37.200 --> 01:08:44.400
+it will output a descriptor over here. So this descriptor, we will have one descriptor per cluster
+
+01:08:45.360 --> 01:08:51.920
+in all the positive, anchor and negative pair. Then finally, once we have this,
+
+01:08:52.800 --> 01:08:58.240
+we will put it through a similarity matrix that looks like this. So what happens here is that the
+
+01:08:58.240 --> 01:09:06.160
+anchor here, it will go into each row of it in these two matrices over here. Then
+
+01:09:06.800 --> 01:09:16.800
+the positive point cloud will come in here. So each entry here would be the positive distance
+
+01:09:18.880 --> 01:09:24.560
+between the anchor and the positive point cloud. So what happens here is that for each row,
+
+01:09:25.120 --> 01:09:32.480
+we are going to take the minimum distance. This means that between the positive and anchor,
+
+01:09:33.760 --> 01:09:43.840
+for each one of the key points in the anchor, I'm going to take the closest one
+
+01:09:44.640 --> 01:09:50.400
+that is from my positive pair. And this will give me my final
+
+01:09:51.280 --> 01:09:57.360
+losses. So I'm going to sum this and this will be the distance. It's the closest match. Similarly,
+
+01:09:57.360 --> 01:10:03.520
+between the anchor and the negative, I'm also going to take the closest match over here.
+
+01:10:04.160 --> 01:10:11.360
+It's also the minimum. But instead of minimizing it, which is because this positive and anchor,
+
+01:10:11.360 --> 01:10:16.880
+they are supposed to be a match. They are from the same area. So the descriptors that we take
+
+01:10:16.880 --> 01:10:22.480
+it better be the minimum, the closest one. It better be minimized. I want it to be as
+
+01:10:22.480 --> 01:10:29.200
+close as possible. But I'm also going to take the minimum over here. This forms my hardest negative
+
+01:10:29.840 --> 01:10:38.720
+between the anchor and the negative. So I want to maximize it. So I take minus of this distance over
+
+01:10:38.720 --> 01:10:45.280
+here. And then I dump everything into a triplet, a marginal loss or a hinge loss here. Then
+
+01:10:46.960 --> 01:10:56.240
+finally, what happens is that I'm going to weigh this with my weight that I have found over here.
+
+01:10:56.240 --> 01:11:03.600
+I'm going to normalize this. Then I'm going to weigh this with w prime over here. So this
+
+01:11:03.600 --> 01:11:10.560
+attention will tell me whether this key point is significant or not, whether it should be a key
+
+01:11:10.560 --> 01:11:18.000
+point or not. If it is not a key point, then I should reduce this. So in the end, we learn this
+
+01:11:19.280 --> 01:11:26.480
+using the same, actually the same data set for PointNet VLAP. And we can see that.
+
+01:11:27.760 --> 01:11:36.720
+So basically before us, our key point is this 3D peanut key point. And then all these key
+
+01:11:36.720 --> 01:11:44.400
+points that are existing ISS or RS or RSTF, they are all standard geometrical approaches.
+
+01:11:44.400 --> 01:11:50.400
+Because we are the first to learn this using deep learning. And we can see that we actually outperform
+
+01:11:50.400 --> 01:12:02.160
+all of them. So if we compare, we can see that this attention that we have learned, it's actually
+
+01:12:02.960 --> 01:12:10.240
+more yellow, the brighter it is, the higher the attention. You can see that it's actually focusing
+
+01:12:10.240 --> 01:12:17.200
+all on the structural meaningful places. But on the road, for example, there's nothing because
+
+01:12:17.200 --> 01:12:25.360
+it's flat. So our focus is really not there. And then the key point that's obtained here is all on
+
+01:12:25.440 --> 01:12:34.000
+the structural interesting places. Whereas look at ISS, the standard conventional approach,
+
+01:12:34.000 --> 01:12:39.120
+you guys see that there are many false positives on the road, which is not meaningful at all.
+
+01:12:39.840 --> 01:12:46.640
+Yeah, so we published this at ECCB 2018. There are of course at that time, we no need to compare
+
+01:12:46.640 --> 01:12:52.880
+with all the, any other deep learning methods because we are the first. But for descriptors,
+
+01:12:52.880 --> 01:12:57.920
+there are many other methods already at that time. So there's 3Dmatch, there's CGF,
+
+01:12:59.040 --> 01:13:04.960
+FPFH, I think it's also a deep learning method, if I didn't remember. So all these are a lot of deep
+
+01:13:04.960 --> 01:13:10.880
+learning methods over here. Then we are the first to actually come up with this or to cover them
+
+01:13:10.880 --> 01:13:19.520
+together. Actually, we do both simultaneously. But we are not satisfied with this. So later on,
+
+01:13:20.240 --> 01:13:24.880
+we came up with the second approach to, because this is a weekly supervised,
+
+01:13:25.440 --> 01:13:30.560
+then we thought that we might as well do away with the INS and GPS. We do it
+
+01:13:30.560 --> 01:13:38.800
+fully self-supervised. So yeah, some of the results. So we do unsupervised learning
+
+01:13:39.680 --> 01:13:47.120
+in the next work, which is the next year in 2019 ICCB. We did this. So
+
+01:13:48.960 --> 01:13:54.560
+the idea here is that this is just for key point detection. We do an unsupervised key point
+
+01:13:54.560 --> 01:14:02.880
+detection, table key point detection. And what we want to do is that even we will just train,
+
+01:14:02.880 --> 01:14:08.080
+we will just design a network to do training without any labels of the key points,
+
+01:14:08.800 --> 01:14:15.520
+as well as we wouldn't do any labeling of where the key point is taken as compared to the previous
+
+01:14:15.520 --> 01:14:20.960
+one. We will just take that, any key point, any set of points up and do self-supervised learning
+
+01:14:20.960 --> 01:14:28.720
+on it. So nowadays, this has become quite a norm already. People will do contrastive learning
+
+01:14:29.280 --> 01:14:35.840
+where they man the same data, they rotate it or whatever, then they do some form of
+
+01:14:35.840 --> 01:14:42.000
+augmentation. But at that time, we were also one of the first to actually use this kind of idea.
+
+01:14:42.000 --> 01:14:51.600
+So given a point cut here, what we do here is that we're going to randomly generate a
+
+01:14:51.600 --> 01:14:59.680
+transformation and transform this into from x here, transform it to an x tilde. Then we put
+
+01:14:59.680 --> 01:15:05.760
+it into the feature proposal network, which is this guy over here. It's not complicated,
+
+01:15:05.760 --> 01:15:15.520
+but then I think there are many points. Actually this was taken, this was actually done or inspired
+
+01:15:15.520 --> 01:15:23.440
+by SONET. At that time, we thought of this and then the feature proposal network.
+
+01:15:25.200 --> 01:15:30.480
+Then the output here would be that from the original point out, I would get a set of key
+
+01:15:30.480 --> 01:15:38.240
+points. I'll talk about what sigma is later. Sigma is just an uncertainty and it acts as the same as
+
+01:15:38.240 --> 01:15:45.680
+the attention that we saw earlier, the uncertainty. Then when it's rotated or transformed,
+
+01:15:45.680 --> 01:15:54.560
+I would have another set of q tilde here, so the key point here. When you undo this q tilde
+
+01:15:55.680 --> 01:16:03.280
+via t inverse over here, this t inverse, then the two sets of key points should match up.
+
+01:16:03.280 --> 01:16:14.400
+Then this means that it can be fully self-supervised. What I didn't show in this
+
+01:16:15.680 --> 01:16:23.040
+slide here, we need some proof, a formal proof actually in the paper, to show that
+
+01:16:23.840 --> 01:16:30.240
+actually if you do this, just naively do something like this. That's a degenerate case
+
+01:16:30.960 --> 01:16:36.240
+because you can actually learn the centroid or learn anywhere in the principal axis.
+
+01:16:38.160 --> 01:16:41.680
+No matter how you transform it, you will still get the same point.
+
+01:16:44.400 --> 01:16:50.400
+We found a very trivial solution to this. You just limit the receptive field.
+
+01:16:54.560 --> 01:16:58.960
+What happens here is that we found out that if you don't limit the receptive field,
+
+01:16:59.600 --> 01:17:05.200
+that means that the network has a global knowledge of the shape of the point and the centroid and
+
+01:17:05.200 --> 01:17:09.840
+the principal axis are actually very good representation of the global information.
+
+01:17:10.560 --> 01:17:16.880
+It can actually degenerate. We also show experimentally it does degenerate to that
+
+01:17:16.880 --> 01:17:24.640
+if we open up, if we widen the receptive field. You have to select a narrow enough receptive field
+
+01:17:25.200 --> 01:17:36.240
+such that it's not sufficient to degenerate into the principal axis or centroid. But it's still
+
+01:17:36.240 --> 01:17:43.280
+able to give us meaningful outputs over here and it does work quite well here. So a straightforward
+
+01:17:43.280 --> 01:17:49.760
+way is that we just take the chamfer long. But then if we just do this, this is a hard
+
+01:17:49.760 --> 01:17:56.480
+assignment. It's not meaningful or it's not equally. We know that the m-proposals here
+
+01:17:56.480 --> 01:18:00.480
+from the feature proposal network, they are not going to be equally salient.
+
+01:18:02.560 --> 01:18:07.840
+So they are not going to be equally salient. So the receptive field here can be featureless
+
+01:18:07.840 --> 01:18:17.200
+surface. What we propose here is that we also output sigma which is the uncertainty.
+
+01:18:17.200 --> 01:18:23.040
+You can see it as an uncertainty. So we put it into exponential distribution here such that
+
+01:18:23.040 --> 01:18:30.960
+when we minimize it, it's actually characterized by a distribution instead of a hard assignment.
+
+01:18:32.000 --> 01:18:38.000
+So this sigma here, since it's also learned, but there's no need for any supervision. The
+
+01:18:38.000 --> 01:18:43.920
+supervision is actually to minimize this long likelihood here. So together with the sigma here,
+
+01:18:43.920 --> 01:18:50.720
+it's just the output. So if you do this, then we realize that actually the sigma will
+
+01:18:50.720 --> 01:18:58.800
+measure the uncertainty. And it's telling us how likely or how salient that particular point
+
+01:18:59.360 --> 01:19:11.600
+is as a feature. So one way that you can do the feature, the key point, which is actually in our
+
+01:19:11.600 --> 01:19:19.840
+3D feednet. In 3D feednet, we just propose the key point using one of the points in the point
+
+01:19:19.840 --> 01:19:26.320
+clock. But the key point need not necessarily be from one of the points because you are representing
+
+01:19:26.320 --> 01:19:33.760
+a continuous surface and the key points are just sampled on the surface. So it could be somewhere
+
+01:19:33.760 --> 01:19:42.800
+in between actually. But then if you force that key point to be on one of the samples of the point
+
+01:19:42.800 --> 01:19:48.880
+clock, then you are subjecting the whole thing to quantization error. So because you are quantizing,
+
+01:19:48.880 --> 01:19:53.920
+I mean when you draw samples of points from the surface, this is a form of quantization.
+
+01:19:54.720 --> 01:20:02.400
+So we would be subjected to quantization error. And therefore we say that let's not constrain
+
+01:20:02.400 --> 01:20:07.920
+the feature proposal network. We'll just let it output any point in the 3D space.
+
+01:20:09.200 --> 01:20:14.720
+But if you just do this, then that 3D point might be very far off. It might be floating away.
+
+01:20:14.720 --> 01:20:20.720
+So we enforce the point-to-point law. That means that whatever that we output, it should be the
+
+01:20:21.520 --> 01:20:30.400
+chamfer distance to the closest point should be minimized. So we don't force the output to be one
+
+01:20:30.400 --> 01:20:37.200
+of the points in the point clock, but we force it to be close to the point clock itself.
+
+01:20:38.400 --> 01:20:48.320
+And if we have the point-to-point law, it's actually all that close to the surface.
+
+01:20:49.280 --> 01:20:53.280
+And then if we don't have it, you can see that they are all floating around.
+
+01:20:54.240 --> 01:21:03.440
+So this is the whole idea here. And it turns out that this works far better than,
+
+01:21:04.560 --> 01:21:12.640
+in terms of repeatability, it works far better than our own 3D feednet. Because this
+
+01:21:13.280 --> 01:21:23.440
+3D feednet was published at ECCV 2018. This work was published at ICCV 2019.
+
+01:21:25.520 --> 01:21:34.320
+But we want the second work to compare with ourselves. That's the 3D feednet.
+
+01:21:35.200 --> 01:21:40.720
+And then you can see that actually the in terms of repeatability beats everything by a huge
+
+01:21:41.440 --> 01:21:44.480
+margin here, even though it's self-supervised.
+
+01:21:46.240 --> 01:21:51.040
+And here are some other results. We call this method the UCIT. It stands for
+
+01:21:51.920 --> 01:21:59.840
+unsupervised interest point, stable interest point. And yeah, so you can see that all this
+
+01:22:00.400 --> 01:22:05.840
+after registration is very stable. All right, any question up to this point?
+
+01:22:05.840 --> 01:22:12.640
+If not, then let me talk about the next task, which is 3D object detection.
+
+01:22:13.440 --> 01:22:18.960
+So the task is this, the objective is just this. Given the 3D input point cloud,
+
+01:22:19.920 --> 01:22:26.800
+that looks like this. And then what I want to do here is that I want to detect where are the
+
+01:22:26.800 --> 01:22:35.200
+objects and put the tightest bounding box around each object. So I want to put a bounding tightest
+
+01:22:35.200 --> 01:22:40.720
+bounding box that's parameterized by seven parameters. So X, Y, Z, which is the center
+
+01:22:40.720 --> 01:22:48.160
+of the bounding box, H, W, L is height with length of the tightest bounding box, as well as
+
+01:22:48.160 --> 01:22:55.760
+we always assume that it's upright. So there's only a yaw angle, which is theta. And that's the
+
+01:22:55.760 --> 01:23:04.080
+heading. So this is what we want to assign, as well as around each object and as well as the
+
+01:23:04.080 --> 01:23:10.960
+semantic mark of each of the bounding box. So this is the task of a 3D object detection.
+
+01:23:10.960 --> 01:23:17.280
+It's much more difficult than the 2D object detection counterpart. Although there are many
+
+01:23:20.480 --> 01:23:27.440
+methods already in 2D object detection, like FASTA, CNN, things like this, I think the
+
+01:23:28.000 --> 01:23:38.320
+latest state-of-the-art is data using the transformer. So the visual transform,
+
+01:23:38.320 --> 01:23:44.880
+the 16 by 16 transform. So things like this already, but 2D object detection is much more
+
+01:23:44.880 --> 01:23:51.120
+difficult because you have very sparse point cloud. And some of the objects, you can see that
+
+01:23:51.120 --> 01:24:01.360
+because of our perception. So if you use a laser sensor or you use a RGB camera,
+
+01:24:02.880 --> 01:24:07.440
+we're all subjected to what we call the A-modal perception.
+
+01:24:09.200 --> 01:24:13.920
+So A-modal perception means that when I look at you, I cannot see what's behind you.
+
+01:24:14.800 --> 01:24:21.680
+Okay, I only see what's in front of you. And when I look at this, from this point of view,
+
+01:24:21.680 --> 01:24:27.680
+I only see the front part of the chair that is in my view. But the back, I don't see at all.
+
+01:24:27.680 --> 01:24:33.440
+There's no points at all. You will basically cast a shadow on anything that is behind.
+
+01:24:34.160 --> 01:24:42.960
+So that's the difficult part of when you do 3D object detection, that is the main difficulty
+
+01:24:43.040 --> 01:24:54.800
+there. And then this guy, the same guy who proposed PointNet, he came up with this VoteNet.
+
+01:24:55.840 --> 01:25:02.320
+It was one of the first works in 3D object detection. It's pretty cool, this work. So
+
+01:25:02.320 --> 01:25:10.800
+the idea is very simple. The idea is that I give you this 3D point cloud. It's actually generating
+
+01:25:10.800 --> 01:25:18.000
+votes to the object center. So it first generates a set of seats. Then in each seats,
+
+01:25:18.880 --> 01:25:25.040
+it's actually casting a vote that points towards the object center, the closest object center.
+
+01:25:25.680 --> 01:25:32.960
+Then what we do is that we aggregate those votes. And then finally, each vote also contains a
+
+01:25:32.960 --> 01:25:39.840
+feature. Then finally, it uses that aggregated feature to request for the bounding box.
+
+01:25:40.800 --> 01:25:47.920
+So 3D object detection is challenging because it's both a regression and a detection problem.
+
+01:25:49.360 --> 01:25:57.440
+The reason is because this part here is regression and this part here is classification.
+
+01:25:58.640 --> 01:26:07.520
+Classification is easier than regression. That's why I won't talk about the details of the losses,
+
+01:26:07.520 --> 01:26:15.440
+but the detail of the losses here is actually greatly inspired by the line of works in
+
+01:26:15.440 --> 01:26:23.600
+like FastRCNN, FasterRCNN kind of work where you would need to do anchor box.
+
+01:26:24.480 --> 01:26:31.600
+So basically you have a proposal and then you actually subtract from the anchor or from the
+
+01:26:31.600 --> 01:26:39.920
+proposal because deep network also has a problem when you are going to ask it to predict unbounded
+
+01:26:39.920 --> 01:26:49.920
+numbers. Let's say in this 3D scene, if I just tell the network to say that or predict a bounding box
+
+01:26:51.280 --> 01:26:58.240
+given that point cloud of the order chance out of nowhere, you ask it to regress xyz
+
+01:26:59.200 --> 01:27:04.960
+all the seven parameters that are not bounded at all. Because it basically ranges from minus
+
+01:27:04.960 --> 01:27:11.200
+infinity to infinity. Then deep network is very poor at doing this. That's why the idea
+
+01:27:11.200 --> 01:27:18.160
+of anchor boxes. So you treat it as like you discretize the whole space into anchor boxes.
+
+01:27:18.160 --> 01:27:26.800
+Actually, FastRCNN just for every point you have nine anchor boxes. Then you actually check what
+
+01:27:26.800 --> 01:27:36.800
+is the deviation and this becomes relative instead of absolute. Deep networks are
+
+01:27:36.800 --> 01:27:43.280
+better at doing this because when you do relative, it becomes more bounded in a bounded space.
+
+01:27:44.960 --> 01:27:51.840
+And the room margin for error is actually better. So probably you would have learned all this in
+
+01:27:51.840 --> 01:27:56.480
+deep learning classes because all these are classic in deep learning.
+
+01:28:01.760 --> 01:28:07.440
+They use the same thing but in 3D object detection, there is an additional challenge
+
+01:28:07.440 --> 01:28:15.280
+which is A-modality because you see only parts of the object. But whereas compared to the 2D
+
+01:28:15.840 --> 01:28:20.960
+part image, you see everything is dense. Although the A-modality perception also
+
+01:28:21.680 --> 01:28:26.160
+exists, it's not so severe there because you are just putting a 2D bounding box.
+
+01:28:26.960 --> 01:28:33.760
+The parameter is far lower than this. All right so the idea here is this.
+
+01:28:33.760 --> 01:28:41.920
+So vote net looks like this. So the first part here is the voting for is a seed to generate seed.
+
+01:28:41.920 --> 01:28:49.760
+For input point count, you generate a set of seeds. Then for each seed, you cast a vote.
+
+01:28:49.760 --> 01:28:59.040
+So basically you output what is the delta distance from every seed here to the nearest object center.
+
+01:28:59.920 --> 01:29:09.120
+So these are the illustrations after you point those delta distance to the object center.
+
+01:29:09.120 --> 01:29:16.880
+Then finally we cast the vote and then that is of a certain nearest neighbor away.
+
+01:29:16.880 --> 01:29:23.280
+Then we use these votes to regress for the output here. So these are your proposers actually.
+
+01:29:23.280 --> 01:29:30.240
+Once you have your proposers, the regression would be more or less anchored at a certain part.
+
+01:29:30.240 --> 01:29:37.680
+So here's some details. For the input points, we just use 0.8++ to generate m seeds.
+
+01:29:37.920 --> 01:29:44.720
+Okay and plus a feature. So you still have the xyz of the location of the seeds and then plus
+
+01:29:44.720 --> 01:29:52.400
+a feature that we learn from a c-dimensional feature. Then after that, we do half voting
+
+01:29:52.400 --> 01:30:00.000
+with the deep network. So what it means is that I have the seed m number of seeds here.
+
+01:30:00.640 --> 01:30:08.000
+Then I'm going to, for each seed, I have the seed location xyz as well as a feature that's
+
+01:30:08.000 --> 01:30:19.920
+learned from 0.8++. Then I will use an mlp to take in f and output a delta x such that
+
+01:30:20.560 --> 01:30:30.240
+y equals to x plus delta x. Because I have a seed, I'm going to plus delta x and this part
+
+01:30:30.240 --> 01:30:37.280
+here is y. So this is delta x and this is x. So this y here would be the object center.
+
+01:30:37.280 --> 01:30:43.440
+It would be pointing towards the object center as well as I'm going to generate a delta f such
+
+01:30:43.440 --> 01:30:50.080
+that I have a new feature which I call g. So these are the votes that I'm going to
+
+01:30:52.480 --> 01:30:59.280
+generate and I'm going to supervise this delta because I have the ground truth. So
+
+01:30:59.280 --> 01:31:07.120
+I'm going to supervise this such that the delta can compute and then have a vote regularization
+
+01:31:07.120 --> 01:31:14.320
+loss here. And this is supposed to be this. What happens is that for the set of votes,
+
+01:31:15.360 --> 01:31:21.680
+I'm going to, because I have n number of votes here, I'm going to sample k votes,
+
+01:31:21.680 --> 01:31:29.680
+which is k subset, using the ftf. I'm going to use the furthest point sampling to get the
+
+01:31:29.680 --> 01:31:38.960
+k number of votes. Then I'm going to form k clusters. So each one of these k votes that I
+
+01:31:38.960 --> 01:31:47.360
+selected using the furthest point, I'm going to use it as a centroid and then find all those
+
+01:31:47.360 --> 01:31:53.840
+points that are within a radius of r, all those other votes that are within radius of r for me.
+
+01:31:54.800 --> 01:32:09.040
+Then this will form my k cluster. Given the k clusters, that means that I have k number of
+
+01:32:09.040 --> 01:32:14.000
+clusters now and each cluster there will be all the votes inside there. Now suppose I'm looking
+
+01:32:14.000 --> 01:32:20.800
+at one cluster where all the votes inside that I'm going to now call w in i equals to one to n,
+
+01:32:21.600 --> 01:32:30.880
+where I have the w is actually the vote center, the spatial location and the vote feature.
+
+01:32:31.840 --> 01:32:40.960
+And I'm going to now center with respect to the centroid because I can compute the centroid here
+
+01:32:40.960 --> 01:32:45.360
+inside the cluster. I have all the spatial locations. I can compute the centroid, which
+
+01:32:45.360 --> 01:32:51.760
+I'm going to call zj here. Then I can actually centralize it divided by the radius because
+
+01:32:51.760 --> 01:32:57.920
+I'm selecting it based on the radius here. So I will take it as z prime to make it local.
+
+01:32:58.960 --> 01:33:07.680
+Then finally, I'm going to put these votes, all these votes into an MLP and I'm going to
+
+01:33:08.640 --> 01:33:21.200
+two layers of MLP here. Finally, the output will be just an m-dimensional vector where this p
+
+01:33:21.200 --> 01:33:28.880
+vector here is the objectness score. That means that it's zero to one. Closer to one means that
+
+01:33:28.880 --> 01:33:34.320
+there is an object there. If it is zero, there's no object. Then I'll ignore all the parameters.
+
+01:33:34.320 --> 01:33:43.280
+It doesn't matter anymore. If there's an object in p here, it will also output my bounding box
+
+01:33:43.280 --> 01:33:51.040
+parameters and the semantic classification score. Note that the way that they parameterize this
+
+01:33:51.040 --> 01:33:58.080
+is this. Now I have all this z already. I know roughly where are the votes.
+
+01:33:58.640 --> 01:34:04.080
+So the bounding box parameters are all parameterized with respect to the
+
+01:34:05.040 --> 01:34:10.880
+these votes. That means that you don't have to predict. You will never predict the absolute
+
+01:34:10.880 --> 01:34:16.560
+coordinates. Otherwise, it's unbounded and also the semantic classification score.
+
+01:34:19.600 --> 01:34:22.240
+I didn't write down the log function but the log function here,
+
+01:34:22.880 --> 01:34:28.720
+since this is just a clock entropy and then this bounding box here is a regression
+
+01:34:29.360 --> 01:34:34.720
+loss but anchored around the ground truth. So you are actually predicting just the delta
+
+01:34:34.720 --> 01:34:39.920
+or you are actually supervising the delta away from the ground truth.
+
+01:34:42.160 --> 01:34:51.840
+Here's the result. Any questions? This is all for the vote net.
+
+01:34:51.920 --> 01:34:59.600
+It's a very useful framework. I think up to today is still one of the best. If I'm not wrong,
+
+01:34:59.600 --> 01:35:07.120
+there's another one which is the 3D transformer. I think it's using 3D detail if I didn't remember
+
+01:35:07.120 --> 01:35:16.800
+wrongly. That is based on 2D. I mean detail for 2D object detection and it seems to perform better
+
+01:35:16.800 --> 01:35:22.560
+than vote net. But otherwise vote net is also not that much worse. It still remains
+
+01:35:23.280 --> 01:35:26.560
+one of the most powerful 3D object detector up to now.
+
+01:35:33.840 --> 01:35:40.560
+Of course you need to weigh. I mean if you have different objectives in different scale,
+
+01:35:40.640 --> 01:35:50.080
+you need to weigh. It's very important. Let's say you have two objective functions.
+
+01:35:52.080 --> 01:35:56.400
+My objective function is just in one dimension. That means I only have one variable and this is
+
+01:35:56.400 --> 01:36:03.680
+my cost, my objective function. Let's say I have l1 and l2 and if l1 is
+
+01:36:03.680 --> 01:36:18.640
+of this scale and l2 is of this scale, then you better scale up l2 to be the same as l1.
+
+01:36:19.200 --> 01:36:25.440
+Otherwise, you are not going to meet both objectives. You are forever optimizing just
+
+01:36:25.440 --> 01:36:39.040
+the dominant one. This is important. One of the important things, it's not just deep learning but
+
+01:36:39.040 --> 01:36:46.640
+also in general optimization. In computer vision, especially 3D computer vision, because you can
+
+01:36:46.640 --> 01:36:52.800
+actually be optimizing in the 3D space. If you have a point cloud, you optimize in a 3D space,
+
+01:36:53.360 --> 01:36:59.040
+then when you project it back onto the pixel, you minimize those errors on the pixel space.
+
+01:37:00.320 --> 01:37:06.000
+Pixel space is that no dimension. It's unitless. You just know how many pixels are weighed.
+
+01:37:06.560 --> 01:37:12.960
+But in 3D space, there might be metric distance. If you are going to optimize both together,
+
+01:37:14.000 --> 01:37:18.880
+one is in the 3D space, one is in the pixel space. Obviously, they don't live in the same world.
+
+01:37:19.520 --> 01:37:26.000
+So you cannot optimize them together like that. You have to scale it. Any other question?
+
+01:37:27.840 --> 01:37:34.480
+All right, if no other question, then let's go for five minutes break. Shall we continue and
+
+01:37:34.480 --> 01:37:42.560
+then try to finish everything? All right, so the next task that I'm talking about, I will talk
+
+01:37:42.560 --> 01:37:51.280
+about is 3D semantic segmentation. So the idea here is that for each point in the point cloud,
+
+01:37:51.280 --> 01:38:01.200
+I want to label one of k classes. So this is the most naive way of semantic labeling because now
+
+01:38:01.200 --> 01:38:07.280
+there are more sophisticated definitions of this like panoptic segmentation, instant segmentation
+
+01:38:08.240 --> 01:38:15.760
+and all this. Basically, we don't differentiate the naive way of doing segmentation here. We
+
+01:38:15.760 --> 01:38:23.680
+don't differentiate between different instances. For example, if I have a chair class or books,
+
+01:38:23.680 --> 01:38:31.920
+for example, then I will just label every book as that in that class. I don't differentiate between
+
+01:38:31.920 --> 01:38:39.360
+different instances of books. So instant segmentation does that. And then there's also
+
+01:38:39.360 --> 01:38:45.680
+panoptic segmentation where basically panoptic segmentation is just instant segmentation. But
+
+01:38:45.680 --> 01:38:53.440
+anything that's in the background that you cannot have the final definition into instances,
+
+01:38:53.440 --> 01:39:02.400
+you'll just let it remain as segmentation. So this 3D segmentation, there are many works
+
+01:39:03.120 --> 01:39:09.600
+in the early days of when this Hoi Net was introduced. So many that I forgot which one
+
+01:39:09.600 --> 01:39:16.320
+is actually the most significant one. Because I was actually putting all the slides together
+
+01:39:16.400 --> 01:39:28.720
+only yesterday. I should have done it better to try to recall which is the earliest work.
+
+01:39:28.720 --> 01:39:35.200
+Then in the end, I did it last minute. So I decided that instead of finding the most
+
+01:39:35.200 --> 01:39:40.880
+significant work in the fully supervised one, I'll tell you which is the most significant work
+
+01:39:40.880 --> 01:39:48.880
+in the non- or weakly supervised one. This is actually the first work for weak supervision,
+
+01:39:48.880 --> 01:39:54.560
+weakly supervised learning in 3D semantic segmentation. Because when you do segmentation
+
+01:39:54.560 --> 01:40:01.600
+in 3D compared to 2D images, it's actually a lot more tedious to label in 3D. So suppose I give
+
+01:40:01.600 --> 01:40:06.880
+you a point out that looks like this, or looks like this, allows you to label every point.
+
+01:40:06.880 --> 01:40:13.680
+This is actually kind of tedious compared to an image. An image is already tedious,
+
+01:40:13.680 --> 01:40:20.720
+but at least it's just an array on a plane. You can actually ask anyone to go and label it.
+
+01:40:20.720 --> 01:40:27.200
+And to an untrained eye, that means that if you don't look at point clouds very frequently,
+
+01:40:28.080 --> 01:40:32.560
+actually our eyes are not accustomed to, we are not meant to look at point clouds.
+
+01:40:33.360 --> 01:40:41.840
+We are more looking at, so in terms of deep learning, when you look at
+
+01:40:41.840 --> 01:40:45.440
+different layers of deep learning, because they discover that at different layers,
+
+01:40:45.440 --> 01:40:51.840
+you are looking at the finest, finest feature, lowest level feature, and then
+
+01:40:51.840 --> 01:40:57.440
+subsequently higher level feature. So at some level, it's the lines and curves and contours.
+
+01:40:58.080 --> 01:41:03.440
+So actually you and I actually function at that level. We are better in terms of looking at the
+
+01:41:04.160 --> 01:41:08.080
+contours rather than the point clouds. So it's actually very difficult to
+
+01:41:08.080 --> 01:41:16.720
+labor using, I mean to go and do this kind of tedious job of labeling every point.
+
+01:41:17.520 --> 01:41:28.320
+So for 3D shape segmentation, the problem is that you need 1k to 10k points of labor,
+
+01:41:28.320 --> 01:41:35.840
+and it's even worse for indoor scene segmentation. It drastically changes to millions of points
+
+01:41:35.840 --> 01:41:42.240
+that you need to labor for every scene. So it's kind of tedious to do that. Therefore,
+
+01:41:42.800 --> 01:41:52.880
+this was also the first work that we proposed in 2020 to do with supervision in the
+
+01:41:52.880 --> 01:42:02.240
+semantic point cloud labeling. So we discovered that actually by doing even full supervision,
+
+01:42:02.240 --> 01:42:08.800
+it's 100% labored, and then you know the, sorry, sidetracked a little bit, you know why we
+
+01:42:09.680 --> 01:42:20.880
+decided to do this. Besides the whole idea of it's really genuinely very tedious to labor
+
+01:42:20.880 --> 01:42:28.160
+large amounts of training data. So it actually makes more sense to reduce this and such that
+
+01:42:28.160 --> 01:42:34.800
+you can actually make use of unlabeled data as well, because there is a lot of unlabeled data
+
+01:42:34.800 --> 01:42:45.760
+in the world. So we can easily collect all this data. And nowadays, people are also looking at
+
+01:42:45.760 --> 01:42:51.920
+how to use synthetic data. So synthetic to real, that's actually a volume shift.
+
+01:42:53.280 --> 01:42:59.520
+That's why we came up with this to provide. So instead of having a full labor training data,
+
+01:42:59.520 --> 01:43:06.000
+we only have a few points. And to the extent that we discovered that even just one point
+
+01:43:06.000 --> 01:43:14.640
+is sufficient. Semantic class, I mean, as far as it continues, so one point is actually sufficient
+
+01:43:14.640 --> 01:43:21.200
+in our framework. So basically it consists of four components inside here. Of course,
+
+01:43:21.200 --> 01:43:26.800
+that is this component of feature extraction. So from the point cloud, we augment it, and then
+
+01:43:27.280 --> 01:43:36.320
+this is just by random flipping, rotation, and so on. And then we have two, the same encoder
+
+01:43:36.320 --> 01:43:44.800
+network that gives the features of the point cloud. And we would have an incomplete supervision
+
+01:43:44.800 --> 01:43:54.160
+branch, because this is the, we only have weak labors. That means that we have incomplete labors,
+
+01:43:54.160 --> 01:44:00.880
+very sparsely labored. And here, what we do here is that we will just add a mask. All those with
+
+01:44:00.880 --> 01:44:05.920
+labors, we will have the mark of one, and all those without labors, we will have a mark of
+
+01:44:05.920 --> 01:44:13.200
+zero, or meet this law here. So we only supervise on those parts that there are labors. But this
+
+01:44:13.200 --> 01:44:20.000
+itself is not sufficient. So we would also have, in today's world, because at that time,
+
+01:44:20.960 --> 01:44:28.480
+people don't use contrastive learning yet. But actually what we are doing here is similar to,
+
+01:44:28.480 --> 01:44:32.080
+it's not to the extent of contrastive learning, because contrastive learning,
+
+01:44:32.080 --> 01:44:38.560
+besides the positive, you also divide by all the negatives to normalize, to push it apart.
+
+01:44:39.200 --> 01:44:45.840
+But here, what we use is just a naive L2 divergence. Of course, you can also use
+
+01:44:46.640 --> 01:44:52.880
+KL divergence, or things like this, and the minimum distance,
+
+01:44:54.880 --> 01:45:03.120
+and other forms of divergence to measure this. So we just use the L2 loss, and we realize that
+
+01:45:03.120 --> 01:45:10.400
+it actually works pretty well. So it's just a Siamese loss. And then we also have a third branch,
+
+01:45:10.400 --> 01:45:18.480
+which is the inexact supervision branch. This is inspired by multi-instance labor. This is
+
+01:45:18.480 --> 01:45:26.400
+actually a bag of labors. Because you have the very sparsely labored, and you can actually
+
+01:45:26.400 --> 01:45:33.440
+propagate those labors to everywhere else in the labors. So you can actually group them together,
+
+01:45:33.520 --> 01:45:43.520
+and then do a supervision by saying that every one of the whole bunch of it is actually,
+
+01:45:43.520 --> 01:45:50.560
+if they are similar in the features, then they should take the same labors. So this is what we
+
+01:45:50.560 --> 01:45:58.080
+call the multi-instance labeling here. And the fourth one, which is actually probably the most
+
+01:45:58.080 --> 01:46:04.240
+important one, that is some form of propagation. So when you look at semi-supervised learning,
+
+01:46:04.240 --> 01:46:12.000
+because semantic segmentation is essentially a classification task. So what you want to do here
+
+01:46:12.000 --> 01:46:22.800
+is that we introduce a smoothness law. So basically this term over here is just saying that
+
+01:46:23.760 --> 01:46:31.360
+we form this width over here, ij, because it's a point cloud. So we have a lot of points
+
+01:46:31.360 --> 01:46:38.320
+in the point cloud. And we form what we call the k and n tree. That means that for every point,
+
+01:46:39.040 --> 01:46:46.160
+I'm going to take the k nearest neighbor and adjust the width. So ij here would be the
+
+01:46:46.160 --> 01:46:56.080
+every edge in the k and n tree. And the way that we take the k and n tree adding edges is by
+
+01:46:56.080 --> 01:47:01.360
+spatial and color smoothness. That means that if they are spatially close to each other,
+
+01:47:02.000 --> 01:47:08.400
+k nearest neighbor spatially, we add the edges there. Of course you can also have a fully
+
+01:47:08.400 --> 01:47:15.760
+connected graph, but the fully connected graph is expensive. So what you need to do is that
+
+01:47:16.560 --> 01:47:26.560
+then the computational complexity will increase. Basically you use this as a weight. It's a
+
+01:47:26.560 --> 01:47:36.720
+weighted graph. So let's say between f xi and xj, you have xi and xj here. So the feature that
+
+01:47:36.720 --> 01:47:44.080
+we extracted is the output. Actually this is the output f here. It's a feature over here that we
+
+01:47:44.080 --> 01:47:51.200
+extracted. We want it to be because we are minimizing this smoothness loss. So if they
+
+01:47:51.200 --> 01:47:57.360
+are very close to each other spatially, then ideally the feature should be the same.
+
+01:47:58.560 --> 01:48:05.200
+Because what we are saying here is that neighboring points are likely to take the same
+
+01:48:05.680 --> 01:48:11.280
+semantic labor. Because otherwise they are neighbors because of the reason,
+
+01:48:11.840 --> 01:48:18.800
+not because it's fated to be that way. It's because semantically they are most
+
+01:48:18.800 --> 01:48:23.920
+likely going to be related. And also we are also introducing a color smoothness. So that means that
+
+01:48:23.920 --> 01:48:30.480
+if they take the same color and the same spatial relation, then we would have w to be almost the
+
+01:48:31.440 --> 01:48:36.000
+same. So what we did, if you look at the paper in detail, what we did is that we compute this
+
+01:48:37.040 --> 01:48:43.760
+k and n graph twice. One for spatial, the other one for color. Then we have two weights
+
+01:48:43.760 --> 01:48:48.640
+and we will take an average of it. We take the sum and then we take an average of it.
+
+01:48:50.480 --> 01:48:54.560
+Then the reason why we can take an average is because it's exponential a
+
+01:48:54.560 --> 01:49:01.760
+squeeze to become zero and one. And then we put it inside here. So
+
+01:49:03.280 --> 01:49:10.240
+what happens here is that, in our paper we also show this, that you can actually evaluate this
+
+01:49:10.240 --> 01:49:18.640
+further. What happens is that it's equivalent to labor propagation in semi-supervised learning.
+
+01:49:18.640 --> 01:49:23.440
+So what happens here is that in semi-supervised learning, if I form this graph
+
+01:49:24.080 --> 01:49:30.000
+k and n graph. Let's say I have a k and n graph where all the edges tells me
+
+01:49:30.880 --> 01:49:37.040
+either they are spatially related or semantically related. So if I have a labor here
+
+01:49:38.640 --> 01:49:46.160
+and I don't have the labor for other points, then basically labor propagation means that
+
+01:49:46.720 --> 01:49:54.000
+I can start from any unlabored point and then I take random walks. That means that I will
+
+01:49:54.960 --> 01:50:01.840
+do random walks. Let's say these are actually Markov matrix because when you do this w,
+
+01:50:01.840 --> 01:50:07.120
+you can turn it into a Markov matrix to do random walks along the edges.
+
+01:50:08.800 --> 01:50:14.880
+What happens here is that you can walk like a drunken man according to the Markov matrix. Then
+
+01:50:14.960 --> 01:50:22.640
+when you first end up, you start at a point where you're unlabored. But when you hit the first
+
+01:50:22.640 --> 01:50:33.680
+labeled node, you take that labeled, that's labeled computation. It ends up to be an
+
+01:50:33.680 --> 01:50:43.920
+eigenvalue eigenvector problem. Actually the way that we do pitch rank algorithm is the same.
+
+01:50:44.880 --> 01:50:54.880
+It's conceptually the same thing. It turns out that this function here can be evaluated
+
+01:50:54.880 --> 01:51:01.440
+to that function. You can actually evaluate it and form a Laplace matrix and then you do random
+
+01:51:01.440 --> 01:51:12.400
+walks on it. L0 simply means that we only count those because w here will be turned into one or
+
+01:51:12.400 --> 01:51:19.920
+zero. We force it to become one or zero and L0 means that we only count the total number of
+
+01:51:20.560 --> 01:51:28.080
+those entries with one inside there. With this smoothness constraint, then what happens here is
+
+01:51:28.080 --> 01:51:37.760
+that you are propagating the labels with all the labeled data to the unlabored
+
+01:51:37.760 --> 01:51:44.160
+points. Therefore at the end of this, all the four branches work together to actually
+
+01:51:44.160 --> 01:51:51.040
+turn it into a weak supervision 3D semantic segmentation. Of course there are some
+
+01:51:52.080 --> 01:51:58.960
+results. We can even see that with 10% of the label points, we are almost
+
+01:52:00.160 --> 01:52:07.040
+equivalent to the fully supervised learning or even some of them actually are even better.
+
+01:52:08.560 --> 01:52:18.000
+The reason is because it is largely due to this complication and also because we are doing
+
+01:52:18.000 --> 01:52:24.640
+something similar to contrastive learning at that time. It's self-training. This branch here
+
+01:52:24.640 --> 01:52:31.440
+basically is a self-training branch. But now of course, because you have to take that discount
+
+01:52:31.440 --> 01:52:39.040
+of three years. That was in 2020. But now of course people look at contrastive learning. It's
+
+01:52:39.040 --> 01:52:44.720
+much more powerful than this. At that time, we were still quite unaware. I don't know
+
+01:52:44.720 --> 01:52:52.560
+when was contrastive learning introduced. Probably also around that time. But now in today's term,
+
+01:52:52.560 --> 01:52:56.960
+you probably won't do this anymore. You will replace this with just contrastive learning.
+
+01:52:57.920 --> 01:53:03.600
+It's much more powerful because you have a positive pair and then you have all the negatives
+
+01:53:03.600 --> 01:53:14.320
+and you try to do it. This is quite effective and here's some qualitative design.
+
+01:53:15.040 --> 01:53:22.240
+So you can see that even one point supervision, we are almost close to the full supervision.
+
+01:53:23.200 --> 01:53:28.160
+In fact, if you look at the comparison here, we might be actually better than the full supervision
+
+01:53:28.160 --> 01:53:35.280
+even with just one point supervision. This shows that the self-training is actually good.
+
+01:53:35.280 --> 01:53:44.720
+It's actually excellent. I think that now we also have many follow-up works that are on this.
+
+01:53:46.400 --> 01:53:51.200
+I think recently there are also quite a few of the works that actually benchmark against us
+
+01:53:51.840 --> 01:53:56.880
+because we also leave room for others. When we did this, we didn't do it to the maximum.
+
+01:53:59.040 --> 01:54:06.480
+No, I'm just kidding. That's the best that we can do at that time. That's the reality.
+
+01:54:11.760 --> 01:54:17.520
+I think that now it gets a lot better because of all the more sophisticated techniques.
+
+01:54:17.520 --> 01:54:25.280
+This is the semantic customization. Here's the part-based semantic segmentation. You can see
+
+01:54:26.080 --> 01:54:32.880
+that even one point looks visually quite good compared to the draw-through.
+
+01:54:35.120 --> 01:54:43.920
+Any questions on segmentation? If not, then I move on to the next task which is the point cloud
+
+01:54:44.000 --> 01:54:54.240
+registration. Point cloud registration is also an interesting task for 3D
+
+01:54:54.240 --> 01:55:03.120
+point clouds. The idea here is that the task is given two point clouds, any pair of point clouds.
+
+01:55:04.800 --> 01:55:13.360
+It's defined in their own respective local frame. What you want to do is that you want to find what
+
+01:55:13.360 --> 01:55:19.120
+is the relative transformation, the rotation and translation, such that you register this.
+
+01:55:20.240 --> 01:55:30.480
+Let's say I find the registration of all this and then I can put it into the registered ones
+
+01:55:30.480 --> 01:55:40.480
+to form a room, for example, this whole scan of a room. Of course, the expansion to this problem
+
+01:55:40.480 --> 01:55:48.160
+is rotation averaging. That's what we have mentioned in the global structure from motion
+
+01:55:48.160 --> 01:55:56.080
+case. But in this case, you don't have the translation ambiguity because the point cloud
+
+01:55:56.080 --> 01:56:05.600
+is with absolute scale. There are some robust ways to do this where you can actually enforce
+
+01:56:05.600 --> 01:56:12.080
+low-rank constraints because rotation always is rank-free. So you can actually enforce a
+
+01:56:12.080 --> 01:56:22.160
+low-rank constraint here. What we are going to focus on in today's lecture is just a pair of
+
+01:56:22.160 --> 01:56:28.320
+points clouds. Here are some applications where you can use this for localization of autonomous
+
+01:56:28.320 --> 01:56:35.040
+vehicles. There are actually two steps to the localization. The first step is that because
+
+01:56:35.040 --> 01:56:41.680
+let's say you are given a very big map, the whole of Singapore, then you give a local query.
+
+01:56:42.720 --> 01:56:49.840
+You want to narrow down the search first before you find a post of where it is. So you narrow
+
+01:56:49.840 --> 01:56:54.560
+down the search. In fact, I already talked about it that the place recognition, you treat it as
+
+01:56:54.560 --> 01:57:01.840
+a retriever. But after the retriever, basically you just get a very cross localization. You know
+
+01:57:01.840 --> 01:57:08.320
+that it's roughly there, but you don't know what is the exact post with respect to the point cloud.
+
+01:57:08.320 --> 01:57:14.000
+So the point cloud registration would be the second step to do that, to get the precise
+
+01:57:14.000 --> 01:57:22.960
+location. Contrast this to image-based retriever and post estimation. So we know PMP perspective
+
+01:57:22.960 --> 01:57:30.320
+endpoint algorithm. We learned this already in the lecture. We also saw vocabulary to the retriever.
+
+01:57:30.320 --> 01:57:38.000
+So let's say I give you the whole database of NUS. I have a map or I geotag every image
+
+01:57:38.640 --> 01:57:44.960
+of NUS. That would be in my database. I might have millions of images there. And then I'm in
+
+01:57:44.960 --> 01:57:50.480
+one location. Let's say I'm in LT15 right now. I take a picture and I want to find out where is my
+
+01:57:50.480 --> 01:57:57.680
+exact location. Or I have done structure promotion already using all the database. Now I take one
+
+01:57:57.680 --> 01:58:03.280
+picture and I want to find where am I inside that location. The first step is obviously not
+
+01:58:03.280 --> 01:58:10.960
+to do PMP because to get that 2D, 3D correspondences, how are you going to search over the whole
+
+01:58:10.960 --> 01:58:17.520
+database? You have millions of images. That means that you could have hundreds of millions of
+
+01:58:17.520 --> 01:58:23.520
+key points. So that would be basically impossible or intractable to do. So the obvious choice is
+
+01:58:23.520 --> 01:58:29.200
+that you do a place recognition, a retriever. So that would be the vocabulary tree that we have
+
+01:58:29.200 --> 01:58:36.560
+learned. You do a retriever or NetV lab actually that can do it using deep learning. Then after
+
+01:58:36.560 --> 01:58:45.200
+you narrow down a cost location, you do the 2D, 3D correspondence search and do PMP. So it's
+
+01:58:45.200 --> 01:58:52.080
+exactly the same idea here. So you do point card registration, the point card retriever, then you
+
+01:58:52.080 --> 01:58:59.360
+do a registration. So localization of autonomous vehicles can do this and we can also do change
+
+01:58:59.360 --> 01:59:06.960
+detection from here. So if you have two, so if you traverse the same location by number, you can see
+
+01:59:06.960 --> 01:59:13.280
+that there are basically two splitting image of the map. But what you really want is to align them
+
+01:59:13.280 --> 01:59:20.960
+like this. So this is if I pass the same road here, if I pass the same road here, by the way,
+
+01:59:20.960 --> 01:59:27.360
+this is one north. This is one part of one north. We actually took some data sets from there.
+
+01:59:28.160 --> 01:59:37.680
+So you can see that if you traverse over two times over a very long period of time,
+
+01:59:37.680 --> 01:59:45.280
+some part of the scene has changed and it's hard to register them together. So what you want to do
+
+01:59:45.280 --> 01:59:50.800
+is that you want to be able to do this registration such that it becomes like that and then comparing
+
+01:59:50.800 --> 01:59:57.920
+once it's registered together, you can compare the two and detect all the changes in the scene.
+
+01:59:59.120 --> 02:00:06.880
+So we actually did a paper on this to do change detection in the scene, but the registration
+
+02:00:06.880 --> 02:00:15.920
+will be the first step. All right, so when we talk about registration, point card registration,
+
+02:00:15.920 --> 02:00:22.080
+we cannot, don't mention this, the iterative closest point is the
+
+02:00:22.960 --> 02:00:31.040
+classic of the classic in point registration. This is also called the, in short, the ICP.
+
+02:00:31.040 --> 02:00:38.880
+So the idea here is that given a source point and a reference point cloud, what we want to do is that
+
+02:00:38.880 --> 02:00:44.240
+we want to find the rotation and translation that this is a rigid registration. That means that the
+
+02:00:44.240 --> 02:00:50.160
+point cloud doesn't move. Eternally, it doesn't change. 3D vignette is white baseline matching.
+
+02:00:51.280 --> 02:01:01.920
+This is iterative, some kind of iterative registration. So the idea here is that we have
+
+02:01:01.920 --> 02:01:08.240
+the rotation and translation over here. And so iteratively, we'll do this starting from the
+
+02:01:08.240 --> 02:01:14.320
+beginning. Let's say the red points are here and the blue points are here. I'll find the closest
+
+02:01:14.320 --> 02:01:21.760
+points for every point in the reference. I'll find the closest point in the source. This can
+
+02:01:21.760 --> 02:01:27.680
+be done effectively by using the kd tree. You basically use a kd tree to search for the nearest
+
+02:01:27.680 --> 02:01:35.600
+neighbor. And then one iteration, you find this, the closest neighbor. Then you basically for every
+
+02:01:35.600 --> 02:01:45.040
+pair of the closest neighbor, you minimize the error, the point plus. So you have to rotate this
+
+02:01:46.080 --> 02:01:53.920
+source into the reference. And then plus a t. So this should be minus. So you want,
+
+02:01:53.920 --> 02:02:03.760
+essentially you want to minimize this error here. You transform this, you rotate this point,
+
+02:02:03.760 --> 02:02:10.960
+you transform the source into the reference and you minimize the total error.
+
+02:02:11.600 --> 02:02:17.200
+But you do this iteratively because we are just basing it on the nearest neighbor.
+
+02:02:18.160 --> 02:02:26.160
+So we do this iteratively. So after the next iteration, once you finish finding this,
+
+02:02:26.160 --> 02:02:32.720
+basically this is just solving the SVD. We actually talk about this when we do the PNP.
+
+02:02:32.720 --> 02:02:42.480
+After you found the depth, we actually do this. So if you still remember. But that's just one step
+
+02:02:42.480 --> 02:02:46.880
+because the correspondence here is just the nearest neighbor. So you iterate, you move a
+
+02:02:46.880 --> 02:02:52.880
+little bit and then you recalculate the nearest neighbor again. Then you do this minimization
+
+02:02:52.880 --> 02:03:00.560
+again and you find the nearest neighbor again iteratively until there's no more change in this
+
+02:03:00.560 --> 02:03:08.560
+error or it stabilizes. Then you reach a local minima. So finally it will look like this. But
+
+02:03:08.560 --> 02:03:14.960
+the main limitation is that it's susceptible to local minima. That means that what it means is
+
+02:03:14.960 --> 02:03:22.400
+that it has a very narrow range of convergence, a very narrow basin of convergence. This means that
+
+02:03:22.400 --> 02:03:28.080
+because it's iterative, it's susceptible to local minima. When you talk about local minima,
+
+02:03:28.640 --> 02:03:34.560
+let's say one-dimensional, this is my global minima here. I have a local minima. If I start
+
+02:03:34.560 --> 02:03:40.960
+here, then I end up here instead of here. Because it's some sort of gradient descent,
+
+02:03:41.840 --> 02:03:47.760
+I will end up to get stuck in a local minima. So this means that the initialization needs to be
+
+02:03:47.760 --> 02:03:57.680
+close to the correct solution. It has a very narrow basin of convergence. So this is not good.
+
+02:03:57.840 --> 02:04:06.640
+That's where deep learning or learning from data can potentially help. So what we did here is that
+
+02:04:06.640 --> 02:04:15.920
+we proposed this RPM net. By the way, there's also one problem with this. If there is an outlier
+
+02:04:15.920 --> 02:04:22.800
+anywhere, then it might potentially screw up everything. So we proposed this RPM net,
+
+02:04:23.520 --> 02:04:39.360
+the robust coin matching network. So basically it's based on RPM. There's an old work called RPM.
+
+02:04:40.080 --> 02:04:49.200
+What happens here is that we have a rigid source and reference. So we will do some form of feature
+
+02:04:49.200 --> 02:04:58.480
+extraction first. Then we get for source, we get fx and for reference, we get fy. The next step is
+
+02:04:58.480 --> 02:05:07.040
+that we compute a match matrix here. This match matrix can be seen as an assignment matrix. So
+
+02:05:07.040 --> 02:05:12.480
+basically our assignment matrix is just a permutation matrix in the hard case. So this
+
+02:05:12.480 --> 02:05:20.480
+means that if you have, I believe that most of you know the job assignment problem. You have
+
+02:05:20.480 --> 02:05:26.960
+n number of workers and n number of jobs. So only one worker can take one job. So that means that
+
+02:05:27.920 --> 02:05:36.160
+you can treat it as that you have n number of jobs here and then n number of workers here.
+
+02:05:36.880 --> 02:05:42.080
+You want to assign each worker to one job. That means that
+
+02:05:44.720 --> 02:05:52.000
+the row and the column must sum up to one and every entry can be only zero and one.
+
+02:05:52.880 --> 02:05:59.280
+So this is a permutation matrix. But that's the hard assignment case. Soft assignment case means
+
+02:05:59.280 --> 02:06:11.200
+that it just needs to sum up to one. It just needs to sum up to one, the row and the column,
+
+02:06:11.200 --> 02:06:19.040
+but every entry can be any number. The only constraint is that it needs to sum up to one.
+
+02:06:20.000 --> 02:06:25.040
+So this is what we call the double stochastic matrix
+
+02:06:27.200 --> 02:06:33.040
+in contrast to permutation matrix. So double stochastic matrix is also a
+
+02:06:33.840 --> 02:06:40.080
+Markov matrix because it sums to one. So it can be left-right stochastic
+
+02:06:40.800 --> 02:06:45.440
+or it can be double stochastic. So in this case it has to be a doubly stochastic
+
+02:06:46.080 --> 02:06:52.960
+matrix. What's interesting here is that if it is a hard assignment, that is not differentiable.
+
+02:06:53.760 --> 02:06:59.120
+But fortunately there's something called a Sinkhorn layer or Sinkhorn matrix.
+
+02:07:01.520 --> 02:07:10.480
+So what it says is this. I just briefly give you the idea. Sinkhorn matrix or Sinkhorn layer says
+
+02:07:11.040 --> 02:07:16.800
+that if I start off with a matrix that has positive numbers inside that,
+
+02:07:17.920 --> 02:07:25.760
+and then I keep on normalizing the rows and columns, I keep on iteratively normalizing it,
+
+02:07:26.400 --> 02:07:34.160
+eventually it will settle down to become the double stochastic matrix. And this process
+
+02:07:34.720 --> 02:07:42.000
+is actually differentiable. So that means that the Sinkhorn layer can double as my
+
+02:07:42.000 --> 02:07:49.520
+matching matrix or my permutation matrix in a relaxed form. And therefore we introduce this.
+
+02:07:50.880 --> 02:08:00.960
+So the two main components is that first we use this PPSNet feature. These are local features.
+
+02:08:01.120 --> 02:08:09.600
+We do FPS to select all the further sample points and then we take the Sinkhorn and
+
+02:08:10.560 --> 02:08:17.360
+compute all the delta x, y, z. And then we compute the angle between the normal and
+
+02:08:17.360 --> 02:08:23.920
+between every one of these delta x, y, z. So this will form the PPS. It's actually in this
+
+02:08:23.920 --> 02:08:34.160
+paper here. So this is good for local features because it's taking locally the geometrical
+
+02:08:34.160 --> 02:08:41.680
+structure into account. So it actually captures that essence of it. So once you have this,
+
+02:08:41.680 --> 02:08:46.560
+then we would have the feature. And the next thing is actually to compute the match matrix.
+
+02:08:46.560 --> 02:08:51.520
+As I mentioned, what we want is a doubly stochastic matrix. That means that it just
+
+02:08:51.600 --> 02:09:02.880
+needs to sum up to one, the rows and columns. So what happens here is that you can start off
+
+02:09:02.880 --> 02:09:09.040
+with computing the distance and then put it into a Sinkhorn layer because the distance here is
+
+02:09:09.040 --> 02:09:17.360
+always positive. So it eventually will evolve into summing up, everything summing up to one
+
+02:09:17.360 --> 02:09:26.000
+that looks like this. So the good assignment means that there won't be conflict between the
+
+02:09:26.000 --> 02:09:34.080
+row and column. It becomes a doubly stochastic matrix. If you take the maximum and just put it
+
+02:09:34.080 --> 02:09:40.880
+as one and all the rest putting it as zero, then you would see a permutation matrix occurring.
+
+02:09:41.840 --> 02:09:46.000
+So this is a good assignment. And this is the objective. We want it to be like that.
+
+02:09:49.520 --> 02:09:56.640
+And what happens here is that this can be done using a Sinkhorn layer. So basically the score
+
+02:09:56.640 --> 02:10:02.000
+inside here can be exponential negative of the distance so that you know that it's always going
+
+02:10:02.320 --> 02:10:12.000
+to be more than zero and equals to be zero to one. So there is a weight here that we need to learn.
+
+02:10:12.000 --> 02:10:19.040
+We set it as a learning parameter in the deep network such that when you evolve through the
+
+02:10:19.040 --> 02:10:24.080
+Sinkhorn layer, eventually it will give you something like this, the doubly stochastic
+
+02:10:24.080 --> 02:10:30.640
+matrix. But what happens here is that some points they might not have correspondences.
+
+02:10:32.000 --> 02:10:39.600
+Because it's not always equal number on both sides. And it might also be outliers.
+
+02:10:40.480 --> 02:10:49.680
+So the idea here is that we create a dustbin column and dustbin row. We call it the slack
+
+02:10:49.680 --> 02:10:59.920
+column or slack row such that anything that cannot be assigned to the rows and columns here
+
+02:10:59.920 --> 02:11:07.680
+in the main part, we can dump it inside the slack column or slack row such that the constraint
+
+02:11:07.680 --> 02:11:14.320
+it can still be put into the Sinkhorn layer such that the constraint will still sum up to one.
+
+02:11:14.320 --> 02:11:19.520
+But now what happens is that it need not necessarily be the main portion of this
+
+02:11:19.520 --> 02:11:26.400
+summing up to one anymore. So you can actually push everything to the slack column and let all
+
+02:11:26.400 --> 02:11:34.480
+the rest become zero. But there might be a degeneracy here. So everything can get dumped
+
+02:11:34.480 --> 02:11:40.080
+into the dustbin column or dustbin row. So there's a threshold here. That's why there's a threshold
+
+02:11:40.080 --> 02:11:50.560
+here to prevent. And that threshold, we also don't set it as hyperparameter. We dump it inside there
+
+02:11:50.560 --> 02:11:58.240
+and define a loss on it and let it learn. So this is the way that we make it robust
+
+02:11:59.200 --> 02:12:07.760
+such that it allows for outliers to occur. But it's still able to do it. And interestingly,
+
+02:12:10.000 --> 02:12:16.720
+this is how it looks like when you... There's a toilet bowl actually. Then the table.
+
+02:12:17.600 --> 02:12:24.080
+Though if you compare with ICP and all this, you can see that our error is much lower. We are not
+
+02:12:24.080 --> 02:12:30.960
+the first one in this. So like RPM. RPM is the original one. And when we compare, we actually
+
+02:12:31.680 --> 02:12:39.040
+visit by quite a bit because it's data-driven. We're actually learning the features. So it's
+
+02:12:39.040 --> 02:12:49.040
+actually kind of interesting here. And PointLK and ICP, these are big learning methods. We're
+
+02:12:49.040 --> 02:12:57.040
+not the first to do this. But at that time, we actually did that. And actually, this is also not
+
+02:12:57.040 --> 02:13:05.440
+the latest work that we have. We also have another one, but I didn't include this. That was Zhen's
+
+02:13:05.440 --> 02:13:15.600
+last work before he defended his cases. That was at CBPR last year. We call it RECTOR. R-E-G-T-R.
+
+02:13:17.040 --> 02:13:25.280
+It sounds similar to D-TOG. As you guessed, it's actually Transformer inside there.
+
+02:13:25.280 --> 02:13:31.120
+So it's actually a very, very simple thing because we thought that the Transformer with
+
+02:13:31.120 --> 02:13:38.080
+self-attention and cross-attention actually captures both the internal, because you have
+
+02:13:38.080 --> 02:13:42.480
+a source and a reference point cloud. The self-attention will capture for every point,
+
+02:13:42.480 --> 02:13:49.600
+it will capture its relation with every other point in that respective point cloud. And the
+
+02:13:49.600 --> 02:13:55.600
+other one as well. Because they are doing registration, the cross-attention here will matter
+
+02:13:55.600 --> 02:14:02.880
+a lot. So what happens here is that instead of doing, in this case here, we are doing matching.
+
+02:14:04.000 --> 02:14:09.120
+We are doing matching explicitly here. We have a match metric. This is something like an
+
+02:14:09.120 --> 02:14:15.920
+assignment metric. But in RECTOR, what we do here is that for the source point cloud,
+
+02:14:15.920 --> 02:14:22.480
+because each one of them comes with a reference to its own frame, reference frame. So what we do
+
+02:14:22.480 --> 02:14:28.240
+here is that we directly predict how the source point cloud will transform into the reference
+
+02:14:28.800 --> 02:14:35.280
+and then how the reference will transform into the source point cloud using just the Transformer.
+
+02:14:35.280 --> 02:14:42.320
+And it actually works very well. That was actually the last work done before the
+
+02:14:44.080 --> 02:14:51.280
+graduates. And that was published last year in CVPR. So these are the works that we have done
+
+02:14:51.280 --> 02:14:59.360
+in the registration. And then finally, you can also see that the weights here,
+
+02:14:59.920 --> 02:15:06.320
+the reference weights here, it tells you something. It actually, when we visualize the
+
+02:15:06.320 --> 02:15:15.200
+weights on the reference and source, we can see that it's actually the parts where they overlap
+
+02:15:15.200 --> 02:15:21.040
+gives the highest weight. It should be true because this is where
+
+02:15:22.160 --> 02:15:29.840
+fx is assigned to fy as a match. When it's assigned to fy and fx as a match,
+
+02:15:29.840 --> 02:15:38.640
+then there must be an overlap. That's why when you visualize the weights, there's no surprise that
+
+02:15:38.640 --> 02:15:46.080
+it shows up as the overlapping point. So this is quite intuitive here.
+
+02:15:47.360 --> 02:15:53.520
+Any questions on the registration, point cloud registration? So this is also one big task in
+
+02:15:53.520 --> 02:16:02.400
+3D point cloud, the point cloud registration. Then the last thing that I want to talk about is
+
+02:16:03.040 --> 02:16:09.680
+also registration, but you might find this slide familiar. So this slide here,
+
+02:16:13.040 --> 02:16:22.000
+this slide is actually from our lecture slide PMP. So the idea here is that when we do perspective
+
+02:16:22.000 --> 02:16:30.960
+and pose, we want to, given the 3D, 2D correspondence here, we want to find what is the
+
+02:16:30.960 --> 02:16:37.520
+3D points is defined with respect to a world frame, but the image is defined with respect to
+
+02:16:37.520 --> 02:16:44.720
+a camera frame. So given the 2D, 3D correspondence here, we want to find what is the rotation and
+
+02:16:44.720 --> 02:16:51.600
+translation that register this. The camera pose with respect to the world frame.
+
+02:16:54.000 --> 02:17:00.160
+This involves two different modalities. I recall that during the lecture, someone actually asked
+
+02:17:00.160 --> 02:17:06.480
+me, how do we, actually before this lecture, someone actually asked me, how do we, when you
+
+02:17:06.480 --> 02:17:13.920
+have the 3D point clouds, how do you actually register this to check that the 2D, 3D is actually
+
+02:17:14.000 --> 02:17:18.800
+a correspondence? So usually what we do in structure for motion is that we will store
+
+02:17:19.440 --> 02:17:28.000
+all the SIP or SERP key points into the 3D point. Then in the image, we will extract the same key
+
+02:17:28.000 --> 02:17:36.320
+points and then we will match it using the, but this is actually not that robust. The thing is
+
+02:17:36.320 --> 02:17:42.960
+that if you have a drastic change in the appearance, then it becomes difficult. So this
+
+02:17:43.040 --> 02:17:46.720
+comes back to the same problem as the place recognition. I mentioned that
+
+02:17:48.080 --> 02:17:55.600
+if I have day and night, place recognition is difficult. This 2D, 3D key point correspondence
+
+02:17:55.600 --> 02:18:01.920
+of such is even more difficult. So the thing is that, let's say I have my map that is taken,
+
+02:18:02.640 --> 02:18:11.600
+that is built in the daytime. Let's say I go out in the 3Pm in the afternoon to map out the thing.
+
+02:18:12.160 --> 02:18:19.040
+I do structure for motion and I do this key point with the descriptor in the afternoon.
+
+02:18:19.040 --> 02:18:26.720
+But at night, I go into the same route again, or even heavy rain without rain, sunny, cloudy.
+
+02:18:27.680 --> 02:18:33.680
+So the 2D key point that I'm extracting here, the SIP features, it might not match because
+
+02:18:33.680 --> 02:18:41.600
+there's an appearance change already. That is the key challenge here. And it's very difficult
+
+02:18:41.600 --> 02:18:48.160
+to learn this because again, it's also because of the data limitation. You don't know how to label
+
+02:18:48.160 --> 02:18:57.120
+it. And then also at the same time, you don't have so much data to capture the variation.
+
+02:18:57.920 --> 02:19:03.520
+So anyway, this is difficult. This is known as the PMP problem.
+
+02:19:05.120 --> 02:19:12.320
+So this triggers me to think about, or triggers us to think about at some point of time. I actually
+
+02:19:12.320 --> 02:19:21.040
+also wrote this in my PhD. Ten years ago, I wrote this inside there. And then it took quite a while
+
+02:19:21.040 --> 02:19:29.600
+before we came up with this. So the thing is that the question is this, whether we can establish
+
+02:19:29.600 --> 02:19:36.320
+the 2D, 3D correspondences directly using point cloud. Let's say my point cloud is built based
+
+02:19:36.320 --> 02:19:43.760
+on laser sensor. That originally or inherently, there's no such thing as descriptors or SIF
+
+02:19:43.760 --> 02:19:47.760
+descriptors anymore. Because I don't no longer build that point cloud from
+
+02:19:48.720 --> 02:19:55.840
+images. And as I've mentioned or motivated earlier that 3D point clouds for the models,
+
+02:19:55.840 --> 02:20:02.320
+the digital models that is constructed from LiDAR lasers are actually much more accurate.
+
+02:20:02.320 --> 02:20:09.440
+So why don't we just use that map as a reference map? But then the problem here is that now we live
+
+02:20:09.440 --> 02:20:15.680
+in two different modalities. So the advantage of LiDAR is that it's very accurate, but the
+
+02:20:15.760 --> 02:20:22.000
+disadvantage of it is high maintenance because there's rotating parts. Anything that's rotating
+
+02:20:22.000 --> 02:20:30.480
+is no good. It's hard to maintain. It breaks down very easily. Trust this with your camera,
+
+02:20:31.280 --> 02:20:35.520
+like this camera over here, no matter how I break it or I drop it, it still works.
+
+02:20:36.480 --> 02:20:45.360
+So the thing is that, and it's also much cheaper, LiDAR Velo 964 costs about $70,000.
+
+02:20:47.680 --> 02:20:54.800
+Camera like this cost about, I don't know, like $100, $100 Singapore dollars. Probably less than
+
+02:20:54.800 --> 02:21:04.800
+$100 USD. So then it actually makes more sense to use LiDAR for the acquisition of large scale
+
+02:21:04.800 --> 02:21:12.480
+model, digital model, because it's more accurate. But for the deployment, you just need one LiDAR
+
+02:21:12.480 --> 02:21:18.240
+to do that mapping. But for the deployment, you have the reference map already, very accurate
+
+02:21:18.240 --> 02:21:26.480
+reference map that is obtained by your very expensive LiDAR once. Then your deployment,
+
+02:21:26.480 --> 02:21:31.360
+you can send out all your autonomous vehicles. You have many of those, let's say you have a
+
+02:21:31.360 --> 02:21:37.760
+full fleet of taxi or full fleet of self-driving buses mounted. You don't mount one of those,
+
+02:21:37.760 --> 02:21:43.680
+every one of those with a 60 or 70,000 USD LiDAR sensor that's so hard to maintain.
+
+02:21:43.680 --> 02:21:50.080
+The obvious choice is that you mount camera on it. So now then it comes to the question of,
+
+02:21:50.080 --> 02:21:55.520
+there is a cost modality challenge here. How to establish the 2D, 3D correspondences.
+
+02:21:55.920 --> 02:22:02.640
+Right. So that if you cannot do this, the next step here, which we have learned will fail badly.
+
+02:22:03.200 --> 02:22:09.040
+Okay. Because wrong correspondence means that nothing can be computed anymore. Right. So
+
+02:22:10.640 --> 02:22:17.440
+we actually did also the first work on this, that we thought that we just use at that time,
+
+02:22:17.440 --> 02:22:25.520
+it was triplet loss, the triplet network. So we thought that we just register because
+
+02:22:26.880 --> 02:22:33.440
+this data set here has LiDAR and camera calibrated, it's mounted rigidly on the car.
+
+02:22:34.320 --> 02:22:40.400
+So according to that transformation, the calibration, we will know how to back project
+
+02:22:40.400 --> 02:22:47.280
+the 3D LiDAR points onto the image. And then what happens here is that we can extract the
+
+02:22:47.360 --> 02:22:54.080
+image key point. We can extract the image key point and find the corresponding ones on the
+
+02:22:56.880 --> 02:23:01.840
+3D point card. So basically the 3D point card will use ISS or whatever key point detector,
+
+02:23:02.640 --> 02:23:09.760
+our 3D feednet. And then the 2D ones we use SIP and we try to minimize the, we try to do
+
+02:23:10.080 --> 02:23:18.400
+some sort of a triplet loss to learn a new descriptor that can work across modality.
+
+02:23:19.600 --> 02:23:25.920
+But the problem with this is that although we show the initial work here, this was the first
+
+02:23:25.920 --> 02:23:35.280
+work to actually show this. And the matching count is quite low here because we are inherently
+
+02:23:36.080 --> 02:23:42.640
+living in two modalities. What happens here is that we increase the idea a little bit
+
+02:23:42.640 --> 02:23:49.920
+instead of doing 2D, 3D matches here because they live in different modalities. So why you
+
+02:23:49.920 --> 02:23:58.800
+force them together, right? So now we are going to say that each camera here, we would have a
+
+02:23:58.800 --> 02:24:05.840
+bottom of the camera. We know where the, which points are in the view of the camera. They are
+
+02:24:05.840 --> 02:24:13.200
+projected into the camera. So instead of learning the descriptors across modalities, we twist the
+
+02:24:13.200 --> 02:24:18.320
+problem to become this. We just twist the problem to become that given a set of point clouds,
+
+02:24:18.320 --> 02:24:27.520
+we want to do a 1-0 binary labeling. If it is 1, that is in the view of the camera. If it is 0,
+
+02:24:28.160 --> 02:24:37.600
+that is not in the view of the camera. So as simple as that. So it becomes a classification
+
+02:24:38.240 --> 02:24:46.000
+problem in the first. So once you give, that means that I give the point clock and I give the camera
+
+02:24:46.000 --> 02:24:52.640
+image at the same time. So we would have to design a network that fuses the two modalities in terms
+
+02:24:52.640 --> 02:24:59.040
+of features, but it will output for every point a label of 1 or 0, whether it is inside the view
+
+02:24:59.040 --> 02:25:06.880
+of the camera or outside the view of the camera. Then once we have this, so we design an
+
+02:25:08.160 --> 02:25:14.240
+optimization. So this is just a Gauss-Newton solver. But in contrast to what we have learned
+
+02:25:14.240 --> 02:25:19.120
+in bandai adjustment that we minimize the reprojection error, now we formulate this such
+
+02:25:19.120 --> 02:25:25.840
+that if you are having a camera, you know where are the points that should be inside the view of
+
+02:25:25.840 --> 02:25:30.240
+the camera, but you don't know what is the pose of the camera with respect to the point cloud.
+
+02:25:30.240 --> 02:25:35.600
+So what we want to optimize is that we want to optimize for the pose such that when we do our
+
+02:25:35.600 --> 02:25:41.280
+optimization, the cost function is that we want to move the camera such that all those points that
+
+02:25:41.280 --> 02:25:48.080
+are labeled 1 should be reprojected back onto the image as much as possible. So that becomes our
+
+02:25:48.080 --> 02:25:54.240
+cost function. This is the tool step. Of course it's not so trivial. We need a lot of, we actually
+
+02:25:54.240 --> 02:26:00.640
+need to use the exponential map and the logarithmic map. Actually all these are part in class.
+
+02:26:01.680 --> 02:26:11.360
+So the bodies are actually part in class and so the point classification would be simple.
+
+02:26:11.360 --> 02:26:18.160
+We just let it be every point would take lnc over here. It would be inside 0 or 1.
+
+02:26:18.160 --> 02:26:24.160
+Okay so it's either inside or outside. Then this is a network. We have a point cloud encoder
+
+02:26:24.880 --> 02:26:32.960
+and also a image encoder. Then we do attention fusion here. So this is the fusion. We just
+
+02:26:33.840 --> 02:26:40.320
+attention fusion. But nowadays if you want to do this, I guess you do it using transformer. So you
+
+02:26:41.040 --> 02:26:48.400
+have a point cloud encoder. Actually you can just use the VIT as well. VIT works for image
+
+02:26:49.040 --> 02:26:56.800
+16x16 patches. Point cloud you can do the same too. You can actually cluster it. You can do a FPS
+
+02:26:58.240 --> 02:27:04.480
+and make it into 16 clusters or whatever. Then you make it into a 16x16 cluster.
+
+02:27:05.200 --> 02:27:10.720
+Then you dump it inside the transformer. Two different sets of tokens and then you output
+
+02:27:11.280 --> 02:27:17.200
+whatever stuff that you want, the features. So in today's context that will be what we
+
+02:27:17.200 --> 02:27:25.040
+should be doing. But this was published 2019. Then we put it inside a decoder and where this
+
+02:27:25.920 --> 02:27:34.800
+will just simply be a binary classification 1 or 0. Once we know this 1 or 0 label,
+
+02:27:34.800 --> 02:27:41.520
+given the point cloud 1 or 0, we design our optimization algorithm to find out the probe.
+
+02:27:42.160 --> 02:27:48.800
+So this would be the cross function optimal probe. There are two terms to it. One of them is that
+
+02:27:49.600 --> 02:28:02.000
+we want to shift the probe G over here such that if the points are inside the
+
+02:28:02.880 --> 02:28:10.000
+viewpoint, then it would be 1 if it is outside the viewpoint. When we shift this thing,
+
+02:28:10.000 --> 02:28:16.080
+the reproduction, if the point is inside, we will give it 1. If it is outside, then we will give it
+
+02:28:16.080 --> 02:28:25.440
+0. So 0.5 here. And then the other part here is that we want to take the label, every point
+
+02:28:25.440 --> 02:28:34.480
+that is the label that we have seen. That is given by the network and minus it by 0.5.
+
+02:28:36.400 --> 02:28:41.600
+Then what happens here is that if you maximize this term over here.
+
+02:28:42.560 --> 02:28:50.640
+So what you want to do, because this term here, if it is wrong, if it is wrong, it could be minus.
+
+02:28:51.360 --> 02:28:58.560
+It becomes negative. And this term here, if it is wrong, it will also be negative. So there is only
+
+02:28:58.560 --> 02:29:04.960
+one combination where both must be right. Then it's positive. Then you maximize it. So we want
+
+02:29:04.960 --> 02:29:11.600
+to optimize it over G, the point, such that this term, say when you multiply together,
+
+02:29:11.600 --> 02:29:20.640
+they must all be positive. They must be all maximizing it. And this, we turn this into
+
+02:29:20.640 --> 02:29:27.520
+unconstrained optimization, but the derivation is kind of complicated. So I omitted all the details
+
+02:29:27.520 --> 02:29:32.880
+if you are interested, you look at the paper. And you should be able to understand right now.
+
+02:29:32.880 --> 02:29:42.400
+I hope so. So yeah, so the, and you can easily use the Gauss Newton
+
+02:29:43.120 --> 02:29:52.480
+solver to do it. So this is just an idea here. You can see that the labor point is in green. So
+
+02:29:53.200 --> 02:29:59.840
+the network can predict pretty well the labor point. Then as the Gauss Newton optimizer
+
+02:29:59.840 --> 02:30:08.000
+from zero, we do three checkpoints over here. So zero, 40 and 80. Zero, 40, 80 iteration. So
+
+02:30:08.000 --> 02:30:16.400
+you can see that it gradually moves towards the correct post such that the whole labor point is
+
+02:30:16.400 --> 02:30:25.920
+inside the viewpoint of the camera. Then we know that we find the correct post here. We cleverly
+
+02:30:25.920 --> 02:30:32.640
+just make use of deep learning to give us one view, but all the rest are still done in the
+
+02:30:32.640 --> 02:30:42.480
+correct way of optimization and mathematics. So this is the thing that I think that we should be
+
+02:30:42.480 --> 02:30:49.440
+looking at in this way, because it doesn't make sense to dump everything into a deep network
+
+02:30:50.080 --> 02:30:57.600
+and treat it like a black box. Including like just now the RPM net, you can see that
+
+02:30:57.600 --> 02:31:02.560
+the synchronous layer that is a relation is actually doing the assignment matrix.
+
+02:31:03.600 --> 02:31:12.080
+So these are the things that we try to do. Any questions so far? If not, then I guess I'm at the
+
+02:31:12.080 --> 02:31:22.160
+end of the video. We are the first method to actually do this. Although it's not perfect,
+
+02:31:22.160 --> 02:31:28.800
+there's still a large room to improve this. So this is a cool idea that
+
+02:31:29.760 --> 02:31:40.000
+we thought of. Here are some results after the correct optimization. Any questions?
+
+02:31:41.360 --> 02:31:47.120
+If no questions, then that's it for today's lecture. In summary, I talked about implicit
+
+02:31:47.120 --> 02:31:53.360
+explicit surface. I'll talk more about this next week. Then I'll talk about the representation of
+
+02:31:53.440 --> 02:31:59.040
+point cloud and how deep learning can be used for point cloud representation. Finally,
+
+02:31:59.040 --> 02:32:05.280
+I talked about the six different tasks of point cloud, but note that it's not limited to these
+
+02:32:05.280 --> 02:32:11.440
+six different tasks. There are more other tasks like point cloud completion, scene flow, and
+
+02:32:11.440 --> 02:32:19.200
+things like this that I didn't talk about. That's it for today's lecture. I'll see everyone again
+
+02:32:19.200 --> 02:32:26.480
+next week for the last lecture and I'll talk about neural fields representation. Thank you.
+

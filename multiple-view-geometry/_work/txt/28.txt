@@ -1,0 +1,227 @@
+[00:00] So after having computed the scene graph, the next thing to do in large scale 3D reconstruction
+[00:06] would be the structure for motion to get the sparse 3D reconstruction.
+[00:13] In general, there are three paradigms of structure for motion.
+[00:16] The incremental structure for motion, global structure for motion, as well as the hierarchical
+[00:22] structure for motion.
+[00:23] We will look at incremental structure for motion in more detail and I will just briefly
+[00:28] go through global and hierarchical structure for motion in this lecture.
+[00:32] As the name implies, it does structure for motion in an incremental way.
+[00:39] First we will choose from the scene graph any two views where the translation is a non-zero
+[00:47] translation.
+[00:48] This means that we omit any two views with pure rotation and this can be computed or
+[00:54] obtained from the two view geometry that we use to compute the scene graph.
+[01:00] And there are many pairs of images in the scene graph that might fulfil this criteria
+[01:06] over here, the first criteria over here.
+[01:08] And the best choice out of all these possible choices would be the one that has the highest
+[01:14] inlier count.
+[01:15] And the reason is because we learned in the earlier lecture that the computation of our
+[01:22] fundamental matrix and all the essential matrices is essentially a least square computation.
+[01:29] And a least square computation would be much more accurate when we have more observations
+[01:34] from the correspondences.
+[01:36] Hence, we want to choose the initial pair, which we also call the seed pair of images
+[01:44] to do our incremental structure for motion as the one with the highest inlier count.
+[01:51] So after we have chosen this seed pair, the next thing to do would be to use the eight-point
+[01:56] algorithm to compute the fundamental matrix or the essential matrix for non-planar scene.
+[02:01] Alternatively, we can also use the four-point algorithm to compute the homography for planar
+[02:08] scene.
+[02:09] And in both cases, we can use the fundamental matrix, essential matrix or the homography
+[02:13] to decompose it into the camera matrices for this first two views.
+[02:22] We will also set the scale to one.
+[02:26] What this means is that after computing the fundamental matrix, or especially the essential
+[02:31] matrix, which you can decompose to the rotation and translation, we will simply set the scale
+[02:37] of the translation to one.
+[02:39] And in the case of the fundamental matrix, we recall that from the lecture of fundamental
+[02:45] matrix, the fundamental matrix can be decomposed into two camera projection matrices P and
+[02:52] P', where we will simply set this P' to a scale of one.
+[03:00] And the next step after we have obtained this P and P', the two camera projection matrices
+[03:07] of the seat views, then we will do a triangulation based on the inlier correspondences from RANSAC,
+[03:15] from the robust estimation of the fundamental matrix, essential matrix or the homography.
+[03:22] And we will do this using the linear triangulation algorithm that we have seen earlier on to
+[03:26] get the 3D points.
+[03:28] So for these two views, for example, X1, J in the first view, and we'll use I and J to
+[03:36] denote the view index as well as the point index.
+[03:40] And in the second view, it will be the correspondence of X, I, J would be X2, J. And we will make
+[03:46] use of these image correspondences as well as the two camera projection matrices to do
+[03:52] a linear triangulation to get the 3D point X, J.
+[03:56] And once we have done this, we will apply the bundle adjustment, we will talk about
+[04:01] the detail later, to refine the camera matrices as well as the 3D points by minimizing the
+[04:07] reprojection errors.
+[04:09] And subsequently, after we have these first two views and the reconstructed 3D points,
+[04:15] we will subsequently add more views into the reconstruction.
+[04:20] And this is also why this method or this paradigm of structure for motion is called incremental
+[04:27] structure for motion, because we start off from a two view, seed views over here, and
+[04:34] then we incrementally add on new views into the reconstruction.
+[04:39] So an example here would be, we start off with P1, P2, and then we reconstruct all these
+[04:44] 3D points with the seed views of P1, P2, and we'll do image correspondences for P3, which
+[04:53] is linked to P2 in the scene graph.
+[04:56] So for example, let's say if I choose this as my seed view, and this is my P1, and this
+[05:02] is my P2, so I would choose from P2 over here all the other possible paths from those that
+[05:10] link to P2, for example.
+[05:12] So suppose that I chose this view over here, because it's linked to P2, and this I would
+[05:17] call P3 to add on to the structure for motion pipeline.
+[05:22] And now P3, once I decided P3 from the third view from the scene graph, the next thing
+[05:30] that I would do would be to establish the 2D-2D correspondences.
+[05:34] So 2D-2D correspondences, and this is done by the image correspondences, so I can extract
+[05:42] the seed feature from here, for example, and then I will establish these correspondences
+[05:48] from P3 to P2.
+[05:51] So once I have established the 2D-2D correspondences, I can see that from this correspondence, for
+[05:58] example, I know that these two points are correspondences from the 2D-2D correspondences,
+[06:03] and I know that the corresponding point in the second view is used to reconstruct this
+[06:10] particular 3D point over here.
+[06:13] So from this relation, I'll be able to establish the 2D-3D correspondences over here.
+[06:23] And by doing this for all the other 2D image features on P3 to P2, I'll be able to establish
+[06:32] a set of 2D-3D correspondences from P3 to the existing 3D point in the scene.
+[06:40] So once we have established the 2D-3D correspondences, we can use the PMP algorithm to compute P3,
+[06:49] the pose of the third image, with respect to the 3D scene, and this would be with respect
+[06:55] to the world frame as well, since we are expressing all the 3D coordinates of the points with
+[07:03] respect to a 3D world frame.
+[07:07] And once we have done this, the next thing that we can do would be to establish more
+[07:11] correspondences, other correspondences, between P2 and P3, such that we can do linear triangulation
+[07:20] on these four correspondences between P2 and P3.
+[07:23] Since P3 now is already computed by the PMP algorithm, we can use it to do a linear triangulation
+[07:30] of additional points and add it to the scene.
+[07:33] And we can do this for subsequent views, for example, a fourth view, where we establish
+[07:38] the 2D-2D correspondences first, and use it to establish the 2D-3D correspondences to
+[07:44] compute P4 using the PMP algorithm.
+[07:48] Similarly, we can find additional correspondences between P3 and P4, and do linear triangulation
+[07:55] to get more points.
+[07:56] And we do this for many other views until we complete every image in the scene graph.
+[08:06] Now once we get the initial reconstruction from the two views, fundamental matrix, essential
+[08:14] matrix or homography, as well as PMP to add in more views in the incremental structure
+[08:20] for motion.
+[08:21] Finally, we can do a refinement, a non-linear refinement, in the multi-view setting, over
+[08:30] the multi-view camera poses as well as the 3D structures, with what we call the banded
+[08:34] adjustment.
+[08:35] So essentially what this means is that we are going to minimize the reprojection error.
+[08:40] So for every single camera pose, we are going to project the 3D points that is seen in that
+[08:49] particular image and minimize its error with the corresponding observation of the point
+[08:54] in that particular view over the camera matrices as well as the 3D points.
+[09:00] We'll talk about this in more detail in the next few slides.
+[09:04] The second paradigm of structure for motion would be the global structure for motion.
+[09:10] And what this means is that the first step here, we will still make use of the scene
+[09:17] graph, but the question can be posed in this way.
+[09:20] For every edge in the scene graph, we will compute the relative pose, which is represented
+[09:26] by R and T. So these are all the relative poses between every pair of images that is
+[09:34] linked by the scene graph edges.
+[09:38] And here we can easily compute these relative poses from either the fundamental matrix or
+[09:44] the essential matrix or the homography and depending on whether this is a tool view.
+[09:50] So in the usual case, we wouldn't use homography because most of the scenes in the 3D worlds
+[09:56] are non-planar.
+[09:57] So the homography can only be applied to planar scenes.
+[10:01] And a preferred choice or much more accurate choice is actually the essential matrix when
+[10:05] the camera is calibrated because we wouldn't have a projective ambiguity here.
+[10:12] So once we have computed all the relative transformation, which we can decompose from
+[10:18] the essential matrix, so the essential matrix will give us R and T.
+[10:23] So for every one of this pair of images in the scene graph, we can compute the relative
+[10:29] transformation from the essential matrix and we do obtain this particular graph over here.
+[10:35] So where each one of the nodes here represents a camera location.
+[10:42] So there is an absolute location at each one of the points here.
+[10:47] And now what we are given here, the edges, the relative pose, the R and T between each
+[10:53] one of the nodes here.
+[10:54] So this, let's say, if I were to denote this as R1 and T1, for example, this would be the
+[11:01] global pose of that particular camera with respect to a global frame, fw, for example.
+[11:08] And this would be R2, T2, for example, and the relative edge over here would be denoted
+[11:16] as R12 and T12 between the two views of 1 and 2.
+[11:23] So similarly, we can denote this over here as R3, T3, the absolute pose with respect
+[11:30] to the world frame.
+[11:33] And the relative pose between these two views would be denoted as R23 and T23.
+[11:40] So we will do this for every single node in the graph to represent it as an absolute pose.
+[11:47] Problem now becomes, given all the relative measurements, all the relative rotation and
+[11:53] translation between every single pair of views in our scene graph, can we find a way to compute
+[12:01] the absolute poses of all these camera poses in the scene graph?
+[12:08] And the way to do this can be simply summarized as follows.
+[12:13] We'll first estimate the global rotation by minimizing this cost function over here.
+[12:19] So what we are trying to do here is that Ri and Rj here represents the global pose of
+[12:26] any pair of images, for example, R1 and R2.
+[12:30] So Ri is this guy over here, and Rj is this guy over here.
+[12:36] And what we want to do here is that we want to minimize by computing the relative transformation
+[12:42] which is given by Ri and Rj transpose over here, we'll be able to compute the relative
+[12:49] rotation between these two poses that is given by R12.
+[12:54] And since R12 is what we observe over here, and these are the unknown global poses that
+[12:59] we have to find out.
+[13:01] In other words, what we want to do would be to minimize, to find out what are all the
+[13:06] global poses such that when we formulate it in this way, when we compute the relative
+[13:11] transformation between these two rotations over here, we'll be able to minimize its difference
+[13:18] from what we observe, the relative transformation of the rotation between Ri and Rj.
+[13:27] And in order to solve for this optimization, the first step that we need to do would be
+[13:34] to convert the rotation matrix, which is a 3x3 matrix in the special octagonal group.
+[13:41] In short, we denote this as SO3 group to omega, which is a vector of three dimensions, such
+[13:50] that the 3x3 rotation matrix is given by this formulation over here, exponential of
+[13:57] the skew symmetric matrix, so this is a 3x3 skew symmetric matrix that is obtained from
+[14:04] the omega over here, which is in the R3 space, and we call this the exponential map.
+[14:11] That means that the mapping function that takes in omega and outputs R, and the inverse
+[14:18] of this exponential map, would be denoted as the logarithmic map that is given by the
+[14:24] skew symmetric matrix over here, 3x3 matrix that is formed by the omega over here, would
+[14:30] be equal to the log of R. And so, more specifically, what we wish to do here is that given this
+[14:39] rotation over here, which is a 3x3 matrix, we want to reformulize this, or reformulate
+[14:45] this cost function over here into the format of omega, where omega is just a vector of
+[14:54] three, so that we can actually do an optimization over the three parameters over here.
+[15:02] So in other words, what we can do over here would be to simply compute the logarithmic
+[15:09] map. Given Rij, for example, we want to compute the logarithmic map and convert it into omega,
+[15:18] and similarly, for the unknowns Ri and Rj's and all the global rotations over here, we
+[15:24] can put it into the logarithmic map to get omega. And more specifically, given a rotation
+[15:31] matrix over here that looks like this, which is a 3x3 matrix, omega can be obtained from
+[15:38] this equation over here. So after we have converted the rotation matrix into omega using
+[15:46] the logarithmic map, we can rewrite this relation over here, Rij equals to Rij transpose into
+[15:54] the linear equation in terms of omega over here, where omega ij is the equivalent of
+[16:02] Rij after we put in the logarithmic map, and we get omega ij, which can also be written
+[16:10] as omega j minus omega i, and that is representing the relative transformation between the two
+[16:20] global rotations over here. And what we can do here is that we can rewrite this particular
+[16:26] omega j and omega i into this linear form over here, where omega global is simply a
+[16:35] vector of omega 1, omega 2, and all the way until omega n, where n here denotes the number
+[16:45] of global poses in the scene graph. And aij would be simply made out of all the identity
+[16:55] matrices, where it would be identity if it corresponds to that selection of that particular
+[17:04] pose in that location, otherwise it would be zero. And then now this particular minimization
+[17:14] function over here of Rij can be solved as a least square problem, because we have simply
+[17:21] reformulated it into this linear homogeneous system of equations, and it could be rewritten
+[17:29] as A omega global equals to omega relative over here, this is omega relative, where A
+[17:37] and omega relative are simply made out of stacking multiple of these equations together,
+[17:44] all the relative poses together. So every Rij over here will give us one equation over
+[17:53] here, and we can do this for every single edge that we have in our scene graph. And
+[17:59] by stacking all these equations together, we will get A omega global equals to omega
+[18:05] relative. Now the unknowns over here would be omega global, which we can solve for it
+[18:13] using the linearly square algorithm. And once we have computed omega global, we can convert
+[18:21] it back into the rotation matrix by using the inverse of the logarithmic map, which
+[18:28] is the exponential map as shown in this equation over here. So similarly, we can solve for
+[18:33] the global translations using similar methods. But one complication over here is that the
+[18:39] scale between every relative translation is unknown. So we can formulate it as Tij,
+[18:47] which is the relative translation between any two views, let's call this Ti and this
+[18:51] Tj over here. So the relative translation over here would be Tij, and this is all computed
+[18:58] up to a scale. And we will normalize that scale to one by simply, after we compute T
+[19:06] from the essential matrix, for example, we will simply normalize this observation to
+[19:10] be equal to one. And now we want to make sure that the difference between the observed Tij
+[19:17] over here, it's minimized with respect to the relative transformation that is computed
+[19:23] from global post Ti and Tj over here. So we can formalize this as Ti minus Tj, and taking
+[19:32] the difference between this and Tij that is observed from the computation of the essential
+[19:39] matrix. And of course, we have to also normalize this particular Tij over here. And we'll follow
+[19:48] the same method as before, as what we have seen earlier on in our rotation matrix, which
+[19:54] we can cast this into a least square problem of Ax equals to b, and we will solve for x,
+[20:00] which consists of all the unknown global translations. Then after we have gotten all the global poses
+[20:11] from the in the scene graph, the next thing that we can do would be to compute the 3D
+[20:19] scene points using the linear triangulation algorithm with the image correspondences as
+[20:25] well as all the global poses that we have obtained from our global structure for motion
+[20:30] technique that was described earlier on. And once we have obtained all the camera poses as well as
+[20:36] the 3D points, we can apply bundle adjustment to refine the 3D reconstruction. More detail of
+[20:43] bundle adjustment will be discussed. And the third paradigm which we will look at will be the
+[20:48] hierarchical structure for motion. I will very briefly go through this technique in today's
+[20:53] lecture. And the first thing that we will do here would be from the scene graph, we will do
+[20:59] hierarchical clustering to get clusters of the scenes that are closely related to each other.
+[21:06] So each one of these clusters could be seen as a strong connected component which are closely
+[21:13] related to each other. We'll apply hierarchical clustering where the edges here will be weighted
+[21:18] by the number of inliers between a pair of images that is computed from the robust tool
+[21:25] view geometry that we have discussed earlier on. And once we get all these clusters in hierarchical
+[21:31] structure for motion, the next thing that we will do is that we will do incremental structure for
+[21:37] motion on each one of these cluster independently. So here is an illustration where this cluster we
+[21:44] will do apply incremental structure for motion to get a certain view of this as well as to get
+[21:51] the camera poses with respect to a world frame which we call FW1 over here. And then the next
+[21:58] step we will do the similar approach on the next cluster over here. So all the 3D reconstruction
+[22:06] as well as the camera poses would be with respect to another local world frame which we call FW over
+[22:12] here and so on so forth. Then finally once we reconstructed all the 3D points and the camera
+[22:21] poses of each respective cluster, the final step would be to merge all these clusters together to
+[22:27] form a global 3D reconstruction. And this merging of the clusters together would be done using
+[22:34] similarity transform. So this is similar to the absolute orientation algorithm that we have seen
+[22:40] earlier on when we talk about the PNP problem. When we have all the 3D-3D correspondences which
+[22:47] can be established from the 2D-2D correspondences between clusters, we can apply the absolute
+[22:53] orientation problem to get the rotation translation. And finally we will just need one point
+[22:59] correspondence to compute the scale difference between the two clusters before we can merge
+[23:07] them all into a single consistent 3D model that looks something like this here.
