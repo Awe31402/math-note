@@ -1,0 +1,404 @@
+Image Compression
+    L15, EE274, Fall 23
+Announcements
+● HW3 due today!
+   ● Check clarifications thread on Ed if struggling with P1/P4
+● Coming up this week:
+   ● HW4 — released this Fri, will be due Mon 12/4
+● Thanksgiving break next week — no classes
+● Start working on your projects!
+   ● Milestone due Mon right after thanksgiving break: 11/27
+         ● Details on website project page
+   ● Final presentations in last week of class: 12/6
+Recap
+1. Transform Coding
+   KLT example
+   Two knobs!
+Quiz Q1
+In which of the following cases do you expect vector quantization to improve the lossy
+compression performance?
+(select all the correct options)
+I
+[ ] i.i.d. data compressed with scalar quantization
+[ ] non-i.i.d. (correlated) data with scalar quantization
+In which of the following cases do you expect transform coding to improve the lossy
+compression performance?
+(select all the correct options)
+[ ] i.i.d. data
+[ ] non-i.i.d. (correlated) data
+Recap
+2. DCT
+Quiz Q2
+Match the signals to their DCT!
+Quiz Q3
+For the signal shown above, we take the DCT and truncate (zero out) the 16 highest frequencies (out of 32
+total components in the DCT). Identify the reconstructed signal obtained after performing the inverse DCT.
+X                                      V                                     x
+Recap
+3. Audio Compression
+Today’s Lecture
+Image Compression!
+   • Bring together everything we have learnt so-far
+   • Learn about JPEG basics
+Slide resources
+-   “The Unreasonable Effectiveness of JPEG: A Signal Processing Approach”
+    (Youtube video -> Reducible, beautiful illustrations!)
+    https://www.youtube.com/watch?v=0me3guauqOU
+-   EE398A Stanford Lecture Notes: (Bernd Girod)
+    https://web.stanford.edu/class/ee398a/handouts
+What is an image?
+What is an image?
+Array of pixels: (Height, Width, Channels)
+Image Compression
+                                       764x512x3 bytes
+                             764x512   = 1.1MB!
+                                       (Uncompressed)
+                                       11 764
+                                       W 512
+                                              3
+  Image from Kodak dataset
+                                        I byte
+Image Compression -> JPEG 40x
+                                       Uncompressed -> 1.1MB
+                             764x512   JPEG -> 27KB (~40X!)
+  Image from Kodak dataset
+Image Compression -> JPEG 80x
+                                       Uncompressed -> 1.1MB
+                             764x512   JPEG -> 14KB (~80X!)
+  Image from Kodak dataset
+Image Compression -> JPEG 137x
+                                       Uncompressed -> 1.1MB
+                             764x512   JPEG -> 8KB (~137X!)
+  Image from Kodak dataset
+Image Compression -> BPG
+                                       Uncompressed -> 1.1MB
+                             764x512   BPG -> 8KB (~137X!)
+  Image from Kodak dataset
+HiFiC -> ML-based image compression
+                                       Uncompressed -> 1.1MB
+                             764x512   BPG -> 8KB (~137X!)
+  Image from Kodak dataset
+Lossy Compression
+-   Incredible performance gains! ~40x-137x gains without much noticeable
+    difference (depending upon the codec)
+-   So ubiquitous, e.g. DSLR camera does JPEG compression by default
+    (difficult to find a “dataset” of non-compressed images)
+-   JPEG, JPEG2000, BPG (HEIC), AVIF, JPEG-XL, ML-based image
+    compressors …
+JPEG Image Compression
+Rate-Distortion Tradeoff
+                           What is the distortion metric?
+                                                       21
+Lossy Compression: Problem definition
+      Distortion metric -> MSE?
+      MSE - basis for much of rate-distortion theory!
+Given source image
+(a) which of the
+following images
+do you prefer
+visually?
+(b), (c), (d), (e), (f)
+Given source image
+(a) which of the
+following images
+does a compressor
+with MSE distortion
+prefer?
+(b), (c), (d), (e), (f)
+Lossy Compression -> Problem definition
+                                               Lots of research into understanding “Human
+                                               Perceptual loss”...
+                   Distortion metric -> MSE?   For simplicity, we will consider MSE (+heuristics)
+Lossy Compression: Problem caveats
+  -   Typically we care about compressing a single image, and not a
+      group of images
+  -   Non-asymptotic performance of various techniques is important
+  -   Data is most likely non-stationary:
+      need to convert/transform appropriately
+Lossy Compression: Tools we know
+  -   Scalar Quantization: fast, not the best
+  -   Vector Quantization: very good, but slow as dim increases
+  -   Transform Coding: Decorrelate data, and then use simpler (scalar)
+      quantization
+  -   Predictive coding: Fancier delta coding
+                    AllAll
+            All are useful in different contexts!
+Compress Image — what’s the first obvious thought?
+                                       Array of pixels:
+                                       (H, W, C)
+              AllAll
+Compress Image — what’s the first obvious thought?
+                                              GWC             H HID
+                         • Downsample Original Image!                 WILD
+                           e.g. (H//2, W//2, Channels)
+                           compresses by 4X!
+                                                                           C
+                         • Typically upsampled at the decoder to recover
+                           original array of (H, W, C)
+                         • Very common in practice!
+              AllAll
+Vector Quantization / Color Quantization
+                                           Original Image
+                                       Simple Idea:
+                                       quantize the 3-dim vector (R,G,B)
+                                                               d
+                                                            8bit
+               AllAll
+                                              28.28.28
+                                              K             B
+Vector Quantization / Color Quantization
+                                           Simple Idea:
+                                           quantize the 3-dim vector
+                                           (R,G,B)
+                                           Number of colors = 256
+                                           (3X compression!)
+               AllAll
+Vector Quantization / Color Quantization
+                                           Simple Idea:
+                                           quantize the 3-dim vector
+                                           (R,G,B)
+                                           Number of colors = 16
+                                           (6X compression!)
+               AllAll
+Vector Quantization / Color Quantization
+                                           Number of colors = 256
+                                           (3x compression!)
+                                           Q: How can we further improve
+                                           compression?
+               AllAll
+Vector Quantization / Color Quantization
+               AllAll
+Vector Quantization / Color Quantization
+                                           Number of colors = 256
+                                           (3X compression!)
+                                           Q: How can we further improve
+                                           compression?
+                                           Ans: Exploit “correlation”
+                                           between neighboring pixels
+               AllAll
+Color Cell Compression
+                                                                                     Use Correlation between
+                                                                                     neighboring pixels
+                                                                                          326
+                                                                                                       4 4
+Color Cell Compression (1984): use 2 colors (among 256) for each 4x4 block                   2b     pixel
+Uses 16 (=8+8) bits/block for storing colors and a bit/pixel to decide which color to use for that pixel
+Effectively 2 bits/pixel = 12X compression!
+Color Cell Compression
+                                                                                     Use Correlation between
+                                                                                     neighboring pixels
+                         AllAll
+Color Cell Compression (1984): use 2 colors (among 256) for each 4x4 block
+Uses 16 (=8+8) bits/block for storing colors and a bit/pixel to decide which color to use for that pixel
+Effectively 2 bits/pixel = 12X compression!
+Exploiting Spatial correlation in the data
+  Key Idea:
+  We need to somehow exploit/remove the correlation between neighboring pixels
+                       AllAll
+Exploiting Spatial correlation in the data
+  Key Idea:
+  We need to somehow exploit/remove the correlation between neighboring pixels
+                       AllAll
+              TRANSFORM CODING!
+Block Transform Coding
+             AllAll
+Linear Transform Coding
+                          TO
+        f
+                               m
+              AllAll
+Recall 1D-DCT vectors
+Average value           Block-Size (X) = N
+(DC component)          DCT-Size = NxN
+Higher
+frequency
+components
+ AC
+ components
+Transform Coding: 2D-DCT
+Block-Size (X) = NxN
+DCT-Size = (NxN) x (NxN)
+    to
+2D-DCT basis vectors
+                                 pots4858
+(apply 1D along x, and then y)   g
+                                 I
+Transform Coding: 2D-DCT
+          Average value
+          (DC component)
+Transform Coding: 2D-DCT
+     Horizontal Frequencies
+Transform Coding: 2D-DCT
+     Vertical Frequencies
+Transform Coding: 2D-DCT
+     Horizontal + Vertical
+     Frequencies
+Transform Coding: DCT
+Transform Coding: DCT
+Transform Coding: DCT
+Transform Coding: DCT
+                  DCT is Sparse!
+Transform Coding: DCT
+                  DCT is Sparse!
+Transform Coding: DCT
+              DCT is Sparse!
+              but some higher frequency components
+Transform Coding -> DCT of noise
+                        X           notspane
+               DCT is Sparse!
+               but some higher frequency components
+Transform Coding: DCT
+   -   Observation: For most of the “natural” image blocks, the DCT is sparse,
+       and concentrated in the lower frequencies
+Transform Coding: DCT
+   -   Observation: For most of the “natural” image blocks, the DCT is sparse,
+       and concentrated in the lower frequencies
+Transform Coding: DCT
+   -   Observation: For most of the “natural” image blocks, the DCT is sparse,
+       and concentrated in the lower frequencies
+Transform Coding: DCT
+  -   Observation: For most of the “natural” image blocks, the DCT is sparse, and
+      concentrated in the lower frequencies
+  -   Energy Compaction: Most of the high-frequency DCT coefficients have low
+      magnitude, so can be ignored during lossy-compression (i.e. perform low-
+      pass filtering)
+ This key observation forms the basis of JPEG image compression
+JPEG Image Compression
+                         Familiar Block!
+JPEG Image Compression
+   A lot of design decision for JPEG compressor are based on human vision properties!
+   (we will have a dedicated lecture on this)
+JPEG Image Compression
+      Color transform + Subsampling
+JPEG Image Compression
+      Color transform        Luma
+                         2
+                                    aroma
+JPEG Image Compression   Chroma Subsampling
+JPEG Image Compression
+First step is Color Transformation from RGB to YCbCr (or Y’CbCr, YUV, Y’UV)
+But why? Human-aspect (more on this later)
+ - Reason 1:
+   perceptual color space based on opponent process theory of color vision
+ - Reason 2:
+   diﬀerent contrast sensitivity of Y, Cb, Cr channels
+JPEG Image Compression
+                         Familiar Block!
+JPEG Image Compression: 2D-Block DCT
+STEP-1:
+Cut the image into blocks of size 8x8
+STEP-1.5:
+subtract 128, to center the pixels
+                                        Input 8x8 block
+JPEG Image Compression: 2D-Block DCT
+STEP-2:
+2D DCT of each 8x8 block
+                           Input 8x8 block   2D DCT
+                           (zero centered)
+JPEG Image Compression: 2D-Block DCT
+       Input 8x8 block                 1D DCT
+       (zero centered)                 (along x)
+JPEG Image Compression: 2D-Block DCT
+  Input 8x8 block
+  (zero centered)
+                                       2D DCT
+JPEG Image Compression: 2D-Block DCT
+STEP-2:
+2D DCT of each 8x8 block
+                           Input 8x8 block   2D DCT
+                           (zero centered)
+JPEG Image Compression
+                    Efficient separable
+                    DCT implementation
+                                              N 8
+                                                        NZ
+                    Complexity:
+                    2*8*8, instead of 64*64
+                                               ID DC
+                                                        NAN
+                2   11              Fix N2      space
+JPEG Image Compression -> Quantization                                          Rate
+STEP-3:
+uniform scalar quantize DCT coefficients based on the quantization table
+                                                                               controller
+               2D-DCT                                                      Quantized-DCT
+                                                                           coefficients
+JPEG Image Compression
+                                 Different quantization tables
+                                 For different compression rate
+                Designed based on water-filling + human vision properties
+                                                   go    40
+  JPEG Image Compression: Entropy coding
+                                                       010,0 5
+                 Y                           RLE
+                                                   GO
+                                                         40113,01
+                                                         5
+  zero                                  can lengthen
+pedtg t.t                                              coding
+                                   I
+Variable-length code:
+Huffman Encode the length;
+                                                 ios     I
+                                bits in unary encoding of90
+store the value as-is in bits
+Q. Why?
+JPEG Image Compression: Entropy coding
+Quite complicated:
+— Signs of coeﬃcients
+— DC vs AC coeﬃcients
+    — smoother variation in DC vs AC
+    — DC more important to preserve
+— Combining across blocks
+— Luma vs Chroma channels
+— Chroma subsampling
+AllAll
+JPEG Compression Summary
+ -   Color Conversion: RGB is converted to YUV color space
+ -   Color Channels: Each color channel is encoded independently of
+     each other
+ -   Block Coding: JPEG encodes each 8x8 almost independently
+     (except the DC coefficient)
+ -   Huffman/Arithmetic: JPEG also has support for using Arithmetic
+     coding, but is rarely used. Lots of caveats on how Huffman is used!
+Image Compression: Analysis
+                                       Uncompressed -> 1.1MB
+                             764x512   JPEG -> 27KB (~40x!)
+  Image from Kodak dataset
+Image Compression: Analysis
+                                       Uncompressed -> 1.1MB
+                             764x512   JPEG -> 14KB (~80X!)
+                                       Notice BLOCKY artifacts!
+  Image from Kodak dataset
+JPEG Decoder specification
+              AllAll
+How would you improve upon JPEG?
+ BPG:
+ -   Larger and variable-sized blocks are allowed
+ -   Blocks are not independent
+     Predict the next block based on the previous ones
+Image Compression: JPEG 137X
+                                       Uncompressed -> 1.1MB
+                             764x512   JPEG -> 8KB (~137X!)
+  Image from Kodak dataset
+Image Compression: BPG 137X
+                                       Uncompressed -> 1.1MB
+                             764x512   BPG -> 8KB (~137X!)
+  Image from Kodak dataset
+BPG/H.265-Iframe
+        Larger and variable-sized blocks are allowed (up to 32x32)
+BPG/H.265-Iframe
+        Larger and variable-sized blocks are allowed (up to 32x32)
+BPG/H.265-Iframe
+          Blocks are not independent anymore!
+          Predictive coding
+BPG Prediction modes
+BPG/H.265-Iframe
+       Larger and variable-sized blocks are allowed (up to 32x32)
+What next?
+  -   Beyond Linear transform: JPEG/JPEG2000/BPG all use variants of
+      DCT, DWT, etc. Can we obtain better performance with non-linear
+      transforms?
+  -   End-to-End RD Optimization: JPEG the R-D optimization is not
+      accurate. Rate needs to be shared between different channels etc.
+      Can we make that end-to-end?

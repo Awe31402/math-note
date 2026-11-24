@@ -1,0 +1,726 @@
+            Learned Image Compression
+                                 s
+                                     L16, EE274, Fall 23
+Slides Credit: Kedar Tatwawadi
+Recap: What is an image?
+Array of pixels: (Height, Width, Channels)
+Recap: Image Compression
+                                       764x512x3 bytes
+                             764x512   = 1.1MB!
+                                       (Uncompressed)
+  Image from Kodak dataset
+Recap: Image Compression -> JPEG 40x
+                                       Uncompressed -> 1.1MB
+                             764x512   JPEG -> 27KB (~40X!)
+  Image from Kodak dataset
+Recap: Image Compression -> JPEG 80x
+                                       Uncompressed -> 1.1MB
+                             764x512   JPEG -> 14KB (~80X!)
+  Image from Kodak dataset
+Recap: Image Compression -> JPEG 137x
+                                       Uncompressed -> 1.1MB
+                             764x512   JPEG -> 8KB (~137X!)
+  Image from Kodak dataset
+Recap: Image Compression -> BPG
+                                       Uncompressed -> 1.1MB
+                             764x512   BPG -> 8KB (~137X!)
+  Image from Kodak dataset
+Quiz Q1
+          Q1.1 What's the expected raw size of this image?
+          Ans: 370 x 370 x (24+8) bits = 370 x 370 x (3+1) bytes = 547.6 KB
+          Q1.2 In this image you can see that there are basically just two colors
+          (white and a bad version of Berkeley blue color). What will be the
+          expected image size if we use only 2 colors to compress this image in
+          KB?
+          Ans: 370 x 370 x (1+8) bits = 154.012 KB
+          Q1.3 Now you also see that along with having just 2 colors, the image
+          also has only two levels of transparency (perfectly transparent and
+          perfectly opaque). Using these properties what will be the expected image
+          size in KB?
+          Ans: 370 x 370 x (1+1) bits = 34.225 KB
+          Q1.4 PNG seems to perform better than even using 1 bit for color and 1
+          bit for alpha!
+          Ans: Better entropy coding!
+          PNG performs better because it also uses a version of LZ77 to look for
+          matching pixels and store match length/offset pairs, rather than each pixel
+          individually. Because this image has a lot of redundancy, there are
+          probably many matches LZ77 can identify.
+Quiz Q2
+Ideas:
+1. Higher resolution same image => less correlation between neighboring
+   pixels => need to increase block size
+2. More homogenous blocks => better predictive coding using previous
+   blocks => more savings
+Quiz Q3
+               Q1.1 What's the absolute value of the reconstruction
+               error | Xn − Xn̂ | for the last symbol?
+               Ans:
+               X6 = 2.9; X6̂ = 2.4 => error = 0.5
+               Q1.2 Given the transmitted sequence
+               X1, e2̂ , e3̂ , … = 1.1,0,1, − 1,2, − 1, what is the nal
+               decoded value of X6̂ ?
+               Ans:
+               1.1 + 0 + 1 + 0 -1 +2 -1 = 2.1
+          fi
+Recap: Image Compression -> JPEG 137x
+                                       Uncompressed -> 1.1MB
+                             764x512   JPEG -> 8KB (~137X!)
+  Image from Kodak dataset
+Recap: Image Compression -> BPG
+                                       Uncompressed -> 1.1MB
+                             764x512   BPG -> 8KB (~137X!)
+  Image from Kodak dataset
+Recap: HiFiC -> ML-based image compression
+                                       Uncompressed -> 1.1MB
+                             764x512   BPG -> 8KB (~137X!)
+  Image from Kodak dataset
+Recap: JPEG
+How can we improve further?
+Beyond Linear transform: JPEG/JPEG2000/BPG all use variants of DCT, DWT
+etc. can we obtain better performance with non-linear transforms
+       Ballé, Johannes, et al. "Nonlinear transform coding." IEEE Journal of Selected Topics in Signal Processing 15.2 (2020): 339-353.
+What next?
+Beyond Linear transform: JPEG/JPEG2000/BPG all use variants of DCT, DWT
+etc. can we obtain better performance with non-linear transforms
+End-to-End RD Optimization: JPEG uses very smart albeit heuristics for R-D
+optimization, e.g. rate needs to be shared between different channels. Can we
+make R-D decisions end-to-end?
+Recent Learned Image/Video Codec Works
+ ‣ Learned Image Compression:
+   [Toderici, CVPR15], [Theis, ICLR17], [Agustsson, NIPS17], [Baig, NIPS17],
+   [Balle, ICLR17], [Rippel, ICML17], [Balle, ICLR18], [Johnston, CVPR18],
+   [Mentzer, CVPR18], [Choi, ICLR19], [Balle, ICLR19], [Lee, ICLR19], [Mentzer, CVPR19]
+   [Lu, 2021], [Ma et al, 2021], [Yang et al, NIPS2021], [Mentzer et al. NIPS2021] . . .
+ ‣ Learned Video Compression
+   [Wu. et al, ECCV18], [Lu et al, CVPR19], [Cheng et al, CVPR19]
+   [Rippel et al ICCV19], [Hu et al, 2020], [Agustsson et al. 2020], [Golinski et al. 2020]
+   [Habiban et al.2019], [Lu et al. 2020], [Liu el.al.2020], [DVC, Lu et al. 2019] . . .
+ ‣ The CLIC Challenge
+   “Challenge on Learned Image Compression”
+   -> ongoing image compression contest at Data Compression Conference
+                           Lots of interesting works!
+                           Our Goal: Understand the Key concepts
+ML 101 Review
+‣ Data: (X, y)
+‣ Non-linear Model and Di erentiable Architectures: f (X; θ)
+‣ Loss Function: loss(y, y)̂
+                                   ŷ
+         X              f (X; θ)        loss(y, y)̂
+                                            y
+                   ff
+ML 101 Review
+‣ Use back-propagation/gradients to “learn” (update) model parameters θ
+  ‣ Does this by taking gradients (back-propagation) of loss (y, f (X; θ)) wrt θ
+                                  ŷ                              minθ loss (y, f (X; θ))
+         X             f (X; θ)        loss (y, f (X; θ))
+                                                            θn = θn−1 − ∇θ (loss (y, f (X; θ)))
+                                               y
+ML 101 Review
+‣ Uses data to learn the model parameters θ for optimizing a loss( ⋅ )
+‣ Does this by taking gradients (back-propagation) of loss (y, f (X; θ)) wrt θ
+‣ Advantage over standard models:
+  ‣ Allows optimizing any objective function loss as long as f ( ⋅ ; θ) is di erentiable!
+    ‣ doesn’t play well with discrete distributions
+  ‣ Allows stacking of non-linear layers (linear layer + non-linearity)
+    ‣ recall stacking of linear layers is not so-powerful: ABC…= D if ABCD are matrices
+                                                           ŷ
+                             X                f (X; θ)           loss (y, f (X; θ))
+                                                                         y
+For more details check out CS231N course notes: https://cs231n.github.io/
+                                                                              ff
+ML 101 Review: Auto-encoder architecture
+                   https://lilianweng.github.io/posts/2018-08-12-vae/
+The Image Compression Problem
+         I                                                     ̂I
+                Encoder                Decoder
+                           bits
+      Target                                                   Target
+      Image                                                   reconst
+                   Goal:     min d(I, I)̂
+                           L(bits)≤B
+                    Rate                         Distortion
+Traditional Image Codecs
+         I                                                                    I ̂
+                                                    Encoding proceeds in 3 steps:
+             DCT
+                      z     Q        ẑ
+                                                   ‣ DCT Transform:
+                                                    ẑ
+                                                     Linear transform
+                                                               I-DCT to uncorrelate the pixels
+                                                   ‣ Quantize -> Loss of precision
+  Target                                             Q([2.3,3.7]) = [2,4]    Target
+  Image                   Arithmetic
+                                                                                  reconst
+                                                   ‣Arithmetic
+                                                       Arithmetic Coding -> Lossless Compression
+                          Encoding                  Decoding
+                                                       In the simplest form, uses a discrete distribution
+                                                        P(z)̂ to encode z ̂ into a bitstream of length
+                         1                  bits
+                    log       ≈ L(bits)     bits                L(bits) ≈ log
+                                                                               1
+                        P(z)̂                                                 P(z)̂
+                                                          Goal:       min d(I, I)̂
+                                                                    L(bits)≤B
+                   CAUTION: Simpli ed framework
+    fi
+Traditional Image Codecs
+         I                                                                   I ̂
+                                                   Encoding proceeds in 3 steps:
+             DCT
+                      z    Q        ẑ
+                                                  ‣ DCT Transform:
+                                                   ẑ
+                                                    Linear transform
+                                                              I-DCT to decorrelate the pixels
+                                                  ‣ Quantize -> Loss of precision
+  Target                                            Q([2.3,3.7]) = [2,4]    Target
+  Image                   Arithmetic
+                                                                                 reconst
+                                                  ‣Arithmetic
+                                                      Arithmetic Coding -> Lossless Compression
+                          Encoding                 Decoding
+                                                      In the simplest form, uses a discrete distribution
+                                                       P(z)̂ to encode z ̂ into a bitstream of length
+                        1                  bits
+                   log       ≈ L(bits)     bits                L(bits) ≈ log
+                                                                              1
+                       P(z)̂                                                 P(z)̂
+                                                         Goal:       min d(I, I)̂
+                                                                   L(bits)≤B
+                   CAUTION: Simpli ed framework
+    fi
+Traditional Image Codecs
+         I                                                                   I ̂
+                                                   Encoding proceeds in 3 steps:
+             DCT
+                      z    Q        ẑ
+                                                  ‣ DCT Transform:
+                                                   ẑ
+                                                    Linear transform
+                                                              I-DCT to decorrelate the pixels
+                                                  ‣ Quantize -> Loss of precision
+  Target                                            Q([2.3,3.7]) = [2,4]    Target
+  Image                   Arithmetic
+                                                                                 reconst
+                                                  ‣Arithmetic
+                                                      Arithmetic Coding -> Lossless Compression
+                          Encoding                 Decoding
+                                                      In the simplest form, uses a discrete distribution
+                                                       P(z)̂ to encode z ̂ into a bitstream of length
+                        1                  bits
+                   log       ≈ L(bits)     bits                L(bits) ≈ log
+                                                                              1
+                       P(z)̂                                                 P(z)̂
+                                                         Goal:       min d(I, I)̂
+                                                                   L(bits)≤B
+                   CAUTION: Simpli ed framework
+    fi
+Traditional Image Codecs
+              I                                                                   I ̂
+                                                        Encoding proceeds in 3 steps:
+                  DCT
+                           z    Q        ẑ
+                                                       ‣ DCT Transform:
+                                                        ẑ
+                                                         Linear transform
+                                                                   I-DCT to decorrelate the pixels
+                                                       ‣ Quantize -> Loss of precision
+  Target                                                 Q([2.3,3.7]) = [2,4]    Target
+  Image                        Arithmetic
+                                                                                      reconst
+                                                       ‣Arithmetic
+                                                           Arithmetic/Hu man -> Lossless Compression
+                               Encoding                 Decoding
+                                                           In the simplest form, uses a discrete distribution
+                                                            P(z)̂ to encode z ̂ into a bitstream of length
+                             1                  bits
+                        log       ≈ L(bits)     bits                L(bits) ≈ log
+                                                                                   1
+                            P(z)̂                                                 P(z)̂
+                                                              Goal:       min d(I, I)̂
+                                                                        L(bits)≤B
+                        CAUTION: Simpli ed framework
+    ff
+         fi
+Traditional Image Codecs
+     I                                                                    ̂I
+           DCT
+                   z     Q        ẑ          ẑ           I-DCT
+  Target                                                                 Target
+  Image                Arithmetic             Arithmetic
+                                                                        reconst
+                       Encoding               Decoding
+                      1
+                 log       ≈ L(bits)   bits
+                     P(z)̂
+                                                    Goal:     min d(I, I)̂
+                                                            L(bits)≤B
+Traditional Image Codecs
+     I                                                                    ̂I
+           DCT
+                   z     Q        ẑ          ẑ           I-DCT
+  Target                                                                 Target
+  Image                Arithmetic             Arithmetic
+                                                                        reconst
+                       Encoding               Decoding
+                      1
+                 log       ≈ L(bits)   bits
+                     P(z)̂
+                                                    Goal:     min d(I, I)̂
+                                                            L(bits)≤B
+Learned Image Codecs
+                                                                 ̂I
+               Deep Feed-Forward Networks
+     I
+                   z              ẑ          ẑ           D
+           E             Q
+  Target                                                        Target
+  Image                Arithmetic             Arithmetic
+                                                               reconst
+                       Encoding               Decoding
+                      1
+                 log       ≈ L(bits)   bits
+                     P(z)̂
+Learned Image Codecs
+                                                                     ̂I
+                   Deep Feed-Forward Networks
+     I
+                       z              ẑ          ẑ           D
+               E             Q
+  Target                                                            Target
+  Image                    Arithmetic             Arithmetic
+                                                                   reconst
+                           Encoding               Decoding
+                          1
+                     log       ≈ L(bits)   bits
+                         P(z)̂
+   Question: How do we train the parameters?
+Learned Image Codecs
+                                                                       ̂I
+                     Deep Feed-Forward Networks
+     I
+                         z              ẑ          ẑ           D
+                E              Q
+  Target                                                              Target
+  Image                      Arithmetic             Arithmetic
+                                                                     reconst
+                             Encoding               Decoding
+                            1
+                       log       ≈ L(bits)   bits
+                           P(z)̂
+   Loss Function = L(bits) + λd(I, I)̂
+              Rate
+Learned Image Codecs
+                                                                       ̂I
+                     Deep Feed-Forward Networks
+     I
+                         z              ẑ          ẑ           D
+               E               Q
+  Target                                                              Target
+  Image                      Arithmetic             Arithmetic
+                                                                     reconst
+                             Encoding               Decoding
+                            1
+                       log       ≈ L(bits)   bits
+                           P(z)̂
+                                             1             ̂
+                                    ̂
+   Loss Function = L(bits) + λd(I, I) ≈ log       + λd(I, I)
+                                            P(z)̂
+              Rate
+Learned Image Codecs
+     I                                                                         ̂I
+                      z               ẑ                   ẑ            D
+               E             Q
+  Target                                                                      Target
+  Image                          Probability            1                    reconst
+                                                   log       ≈ L(bits)
+                                   Model               P(z)̂
+                      discrete prob
+                      distribution
+                                           P(z)̂
+                        1             ̂
+   Loss Function = log       + λd(I, I)
+                       P(z)̂
+Learned Image Codecs
+     I                                                                         ̂I
+                      z               ẑ                   ẑ            D
+               E             Q
+  Target                                                                      Target
+  Image                          Probability            1                    reconst
+                                                   log       ≈ L(bits)
+                                   Model               P(z)̂
+                      discrete prob
+                      distribution
+                                           P(z)̂
+                        1             ̂
+   Loss Function = log       + λd(I, I)
+                       P(z)̂
+Learned Image Codecs
+     I
+                      z         ẑ
+               E          Q
+                                          ‣ Quantizer -> Q([2.3,3.7]) = [2,4]
+  Target
+  Image
+                        1             ̂
+   Loss Function = log       + λd(I, I)
+                       P(z)̂
+Learned Image Codecs
+     I
+                      z         ẑ
+               E          Q               ‣ Quantizer -> Q([2.3,3.7]) = [2,4]
+                                          ‣ Workaround-1: model the quantizer
+  Target                                     as adding noise during training
+  Image
+                                             z ̂ = z + ϵ, where ϵ ∼ U(−0.5,0.5)
+                        1             ̂
+   Loss Function = log       + λd(I, I)
+                       P(z)̂
+Learned Image Codecs
+     I
+                      z +       ẑ
+               E                          ‣ Quantizer -> Q([2.3,3.7]) = [2,4]
+                                          ‣ Workaround-1: model the quantizer
+  Target                  ϵ                  as adding noise during training
+  Image
+                                             z ̂ = z + ϵ, where ϵ ∼ U(−0.5,0.5)
+                        1             ̂
+   Loss Function = log       + λd(I, I)
+                       P(z)̂
+Learned Image Codecs
+     I                                                                         ̂I
+                      z               ẑ                   ẑ            D
+               E             Q
+  Target                                                                      Target
+  Image                          Probability            1                    reconst
+                                                   log       ≈ L(bits)
+                                   Model               P(z)̂
+                      discrete prob
+                      distribution
+                                           P(z)̂
+                        1             ̂
+   Loss Function = log       + λd(I, I)
+                       P(z)̂
+    Learned Image Codecs
+         I                                                           ∂P(z)̂
+                                                                   ‣ ∂z ̂   is not de ned!
+                          z               ẑ
+                     E           Q
+                                                                                      P(z)̂ using a density
+                                                                   ‣ Idea: Parmetrize(0,1)
+      Target                                                          function (for ex:          )
+      Image                          Probability            1
+                                                       log            P(z)̂ = CDF(z ̂ + 0.5) − CDF(z ̂ − 0.5)
+                                       Model               P(z)̂
+                          discrete prob
+                          distribution
+                                               P(z)̂
+                                                                   ‣ Gradient is now well de ned!
+                                                                      ∂P(z)̂
+                                                                             = PDF(z ̂ + 0.5) − PDF(z ̂ − 0.5)
+                                                                       ∂z ̂
+                            1             ̂
+       Loss Function = log       + λd(I, I)
+                           P(z)̂
+𝒩
+         fi
+                fi
+    Learned Image Codecs
+         I                                                           ∂P(z)̂
+                                                                   ‣ ∂z ̂   is not de ned!
+                          z               ẑ
+                     E           Q
+                                                                   ‣ Idea: Parametrize P(z)̂ using a
+      Target                                                         density function (for ex:       (0,1) )
+      Image                          Probability            1
+                                                       log           P(z)̂ = CDF(z ̂ + 0.5) − CDF(z ̂ − 0.5)
+                                       Model               P(z)̂
+                          discrete prob
+                          distribution
+                                               P(z)̂
+                                                                   ‣ Gradient is now well de ned!
+                                                                      ∂P(z)̂
+                                                                             = PDF(z ̂ + 0.5) − PDF(z ̂ − 0.5)
+                                                                       ∂z ̂
+                            1             ̂
+       Loss Function = log       + λd(I, I)
+                           P(z)̂
+𝒩
+         fi
+                fi
+    Learned Image Codecs
+                                                              ∂P(z)̂
+                                                            ‣ ∂z ̂   is not de ned!
+                                                            ‣ Idea: Parametrize P(z)̂ using a
+                                                              density function (for ex:       (0,1) )
+                                                              P(z)̂ = CDF(z ̂ + 0.5) − CDF(z ̂ − 0.5)
+                                                            ‣ Gradient is now well de ned!
+        P(z)̂ = GaussCDF(z ̂ + 0.5) − GaussCDF(z ̂ − 0.5)      ∂P(z)̂
+                                                                      = PDF(z ̂ + 0.5) − PDF(z ̂ − 0.5)
+                                                                ∂z ̂
+𝒩
+        fi
+                    fi
+    Learned Image Codecs
+                                                              ∂P(z)̂
+                                                            ‣ ∂z ̂   is not de ned!
+                                                            ‣ Idea: Parametrize P(z)̂ using a
+                                                              density function (for ex:       (0,1) )
+                                                              P(z)̂ = CDF(z ̂ + 0.5) − CDF(z ̂ − 0.5)
+                                                            ‣ Gradient is now well de ned!
+        P(z)̂ = GaussCDF(z ̂ + 0.5) − GaussCDF(z ̂ − 0.5)      ∂P(z)̂
+                                                                      = PDF(z ̂ + 0.5) − PDF(z ̂ − 0.5)
+                                                                ∂z ̂
+𝒩
+        fi
+                    fi
+    Learned Image Codecs
+         I                                                           ∂P(z)̂
+                                                                   ‣ ∂z ̂   is not de ned!
+                          z               ẑ
+                     E           Q
+                                                                   ‣ Idea: Parametrize P(z)̂ using a
+      Target                                                         density function (for ex:       (0,1) )
+      Image                          Probability            1
+                                                       log           P(z)̂ = CDF(z ̂ + 0.5) − CDF(z ̂ − 0.5)
+                                       Model               P(z)̂
+                          discrete prob
+                          distribution
+                                               P(z)̂
+                                                                   ‣ Gradient is now well de ned!
+                                                                      ∂P(z)̂
+                                                                             = PDF(z ̂ + 0.5) − PDF(z ̂ − 0.5)
+                                                                       ∂z ̂
+                            1             ̂
+       Loss Function = log       + λd(I, I)
+                           P(z)̂
+𝒩
+         fi
+                fi
+End-to-End Learned Image Codec
+    I                                                                                ̂I
+                     z                ẑ                   ẑ            D
+              E            Q
+ Target                                                                            Target
+ Image                          Probability             1                         reconst
+                                                   log       ≈ L(bits)
+                                  Model                P(z)̂
+                     P(z)̂ = GaussCDF(z ̂ + 0.5)
+                          −GaussCDF(z ̂ − 0.5)
+                                                                Possible to train end-to-end!
+                       1             ̂
+  Loss Function = log       + λd(I, I)
+                      P(z)̂
+Example -> MNIST
+   https://colab.research.google.com/drive/1O3eQAaxlyLYI1HO7K1b12eJQsQKxjWwx?usp=sharing
+   Learned Image Codecs
+  I                                                                     Î
+                z Q            ẑ                   ẑ            D             No hand-tuning parameters
+          E
+                                                                                Can “learn” the parameters
+Target                                                                Reconst
+Image                     Probability            1
+                                            log       ≈ L(bits)
+                            Model               P(z)̂
+               discrete prob        P(z)̂
+               distribution
+                               1
+          Loss Function = log       + λd(I, I)̂
+                              P(z)̂
+         Possible to train end-to-end!
+ML O ers Adaptivity Not Possible With Traditional Codecs
+       Domain-aware                  Content-aware                                       Task-aware
+                                                                                                   Task:
+                                                                                                Watch Tennis!
+                                    Focus on
+                                  faces and text
+                                                                            Task: Face
+                                                                            Recognition
+                                                   Deprioritize shrubbery
+                                                                             Computation on compressed
+Custom codec for each domain   Focus on areas of high importance
+                                                                                  representation
+  ff
+   Learned Image Codecs
+  I                                                                         Î
+                   z Q             ẑ                   ẑ            D             No hand-tuning parameters
+          E
+                                                                                    Can “learn” the parameters
+Target                                                                    Reconst
+Image                         Probability            1
+                                                log       ≈ L(bits)
+                                Model               P(z)̂                           Better distortion-Model separation
+                   discrete prob        P(z)̂                                       Easy to tune model to di erent distortion metrics
+                   distribution
+                               1
+          Loss Function = log       + λd(I, I)̂
+                              P(z)̂
+         Possible to train end-to-end!
+              ff
+Given source image
+(a) which of the
+following images do
+you prefer visually?
+(b), (c), (d), (e), (f)
+Given source image
+(a) which of the
+following images
+does a compressor
+with MSE distortion
+prefer?
+(b), (c), (d), (e), (f)
+Design Decisions: (i) Backbones
+     I                                                                               ̂I
+                            z              ẑ                 ẑ           D
+                   E              Q
+  Target                                                                            Target
+  Image                               Probability            1                     reconst
+                                                        log       ≈ L(bits)
+                                        Model               P(z)̂
+           ‣ Question: How
+                         P(z)can  the same
+                             ̂ = GaussCDF(       model work for any image sizes?
+                                           z ̂ + 0.5)
+                                −GaussCDF(z ̂ − 0.5)
+                              1
+                         log       + λd(I, I)̂
+                             P(z)̂
+Design Decisions: (i) Backbones
+     I                                                                              ̂I
+                            z              ẑ                ẑ           D
+                   E              Q
+  Target                                                                           Target
+  Image                               Probability            1                    reconst
+                                                       log       ≈ L(bits)
+                                        Model              P(z)̂
+           ‣ Question: How can   the same
+                            ̂ = GaussCDF(
+                         P(z)             z ̂ + model
+                                                0.5)  work for any image sizes?
+                                −GaussCDF(z ̂ − 0.5)
+              - Only use Conv, Deconv … (no Fully Connected Layers)
+                              1
+                         log       + λd(I, I)̂
+                             P(z)̂
+Design Decisions: (i) Backbones
+     I                                                                   ̂I
+                      z            ẑ                      ẑ      D
+              E            Q
+  Target                                                                Target
+  Image                                                                reconst
+           ‣ Other Improvements:
+             - Multiscale Encoder/Decoder: [Rippel et. al. 2018]
+             - using GDN non-linearity: [Balle, 2017/18]
+    Design Decisions: (ii) Probability Model
+         I                                                                     ̂I
+                    z                 ẑ                   ẑ            D
+               E        Q
+      Target                                                                  Target
+      Image                  Probability                1                    reconst
+                                                   log       ≈ L(bits)
+                               Model                   P(z)̂
+                            P(z)̂ ∼        (0,1)
+𝒩
+    Design Decisions: (ii) Probability Model
+                I
+                        z                 ẑ
+                    E       Q                          ‣ More complex Probability models
+                                                       ‣ PDF(zî ) →        (μi, σi),
+      Target                                             i.e: μ, σ are di erent per element of z ̂
+      Image                      Probability           ‣ Need to now encode μ, σ tensors:
+                                   Model
+                                                         - Hyperprior approach
+                                P(z)̂ ∼        (0,1)
+                                                          [Balle, ICLR18]
+       𝒩
+𝒩
+           ff
+       I                                                                                ̂I
+                             z               ẑ                    ẑ             D
+                     E           Q
+    Target                                                                             Target
+    Image                                                                             reconst
+                                       AEC-E                     AEC-D
+                                 (μ, σ)                bits
+                                                                         (μ, σ)
+             y
+      Ê         Q    ŷ              ŷ          D̂      μ, σ
+                     AEC-E           AEC-D
+                                                                         Subnet
+                     (0,1)             (0,1)
+𝒩
+𝒩
+𝒩
+𝒩
+Design Decisions: (ii) Probability Model
+                                  Variational image compression with a scale hyperprior
+                                  Balle et.al. 2018
+Design Decisions: (ii) Probability Model
+Design Decisions: (ii) Probability Model
+  Hyper-hyper-prior models:
+  https://huzi96.github.io/coarse-to- ne-compression.html
+                          fi
+Benchmarks
+             ELIC: E cient Learned Image Compression with Unevenly Grouped
+             Space-Channel Contextual Adaptive Coding
+             He et.al. 2022
+ffi
+Benchmarks
+             M2T: Masking Transformers Twice for Faster Decoding
+             Mentzer et.al. 2023
+Issues: (i) Speed!
+ Slide from Dr. Toderici’s talk at CVPR20
+Issues: (i) Speed!
+‣ Design decisions: Need to choose frameworks, which aren’t fundamentally slow/causal
+  (eg: avoid autoregressive image compression methods)
+‣ For example: [ELF-VC, Rippel et.al. 2021, ArXiv]
+  real-time HD 720 decode on mid-range GPU
+  - VGA 640x480: encode @ 47 FPS, decode @ 91 FPS
+  - HD 1280x720: encode @ 19 FPS, decode @ 35 FPS
+Issues: (i) Speed!
+‣ Design decisions: Need to choose frameworks, which aren’t fundamentally slow/causal
+  (eg: avoid autoregressive image compression methods)
+‣ For example: [ELF-VC, Rippel et.al. 2021, ArXiv]
+  real-time HD 720 decode on mid-range GPU
+  - VGA 640x480: encode @ 47 FPS, decode @ 91 FPS
+  - HD 1280x720: encode @ 19 FPS, decode @ 35 FPS
+Issues: (i) Speed!
+‣ Design decisions: Need to choose frameworks, which aren’t fundamentally slow/causal
+  (eg: avoid autoregressive image compression methods)
+‣ Faster Hardware: Hardware support for NN keeps improving year by year
+Issues: (i) Speed!
+Issues: (i) Speed!
+                             Qualcomm Hexagon
+                30
+               22.5
+        TOPS
+                15
+                7.5
+                 0
+                      2018    2019      2020    2021
+          Issues: (ii) Determinism!
+          Di erent hardware =>
+          di erent oating point implementation =>
+          catastrophic failures!
+ff
+     ff
+              fl
+Issues: (ii) Determinism!
+‣ Encoding/decoding must yield exactly the same outputs,
+  irrespective of hardware architecture
+‣ Floating point (FP32/16) models don’t work:
+  Model Quantization necessary [E.g: Ballé 2019]
+Take-aways from Today
+ML-based codecs allow for learned encoder-decoder transforms and therefore
+   (i) better delity to chosen probability model over latents => better rate-distortion
+   (ii) allow for substituting distortion of the choice
+   (iii) domain adaptable and exible
+Main idea to achieve ML-based codec is to overcome (automatic) di erentiation over
+   (i) quantization and (ii) discrete probability models
+ML-based methods will likely form the basis of future compression
+    fi
+                           fl
+                                                                  ff

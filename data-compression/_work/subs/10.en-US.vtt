@@ -1,0 +1,6814 @@
+WEBVTT
+Kind: captions
+Language: en-US
+
+00:00:05.460 --> 00:00:06.700
+Hi, everyone.
+
+00:00:09.920 --> 00:00:14.180
+So today's the last lecture
+of lossless compression.
+
+00:00:14.180 --> 00:00:19.250
+And so we'll look at one
+of the most important
+
+00:00:19.250 --> 00:00:21.860
+lossless compression
+technique, LZ77.
+
+00:00:21.860 --> 00:00:25.100
+And in the second half
+today, we will look at some--
+
+00:00:25.100 --> 00:00:27.410
+sort of to conclude the
+lossless compression
+
+00:00:27.410 --> 00:00:29.240
+part, we will look at
+some practical tips
+
+00:00:29.240 --> 00:00:32.630
+on lossless compression, based
+on mine and other people's
+
+00:00:32.630 --> 00:00:34.940
+experience working
+with compression.
+
+00:00:38.470 --> 00:00:40.060
+So in the last
+couple of lectures,
+
+00:00:40.060 --> 00:00:43.450
+we have been looking at
+compression for non-iid data,
+
+00:00:43.450 --> 00:00:48.310
+and we started looking at
+conditional entropy, right,
+
+00:00:48.310 --> 00:00:49.690
+conditional probabilities.
+
+00:00:49.690 --> 00:00:51.760
+And then we went into
+probability rate,
+
+00:00:51.760 --> 00:00:53.775
+which was, for the
+purpose of this lecture,
+
+00:00:53.775 --> 00:00:55.900
+all you need to know is,
+it's the fundamental limit
+
+00:00:55.900 --> 00:00:58.900
+of lossless compression
+for stationary sources.
+
+00:00:58.900 --> 00:01:01.480
+Just like entropy is the
+fundamental limit for iid
+
+00:01:01.480 --> 00:01:04.090
+sources and conditional entropy
+is the fundamental limit
+
+00:01:04.090 --> 00:01:06.100
+for Markov sources, right?
+
+00:01:06.100 --> 00:01:09.640
+And if you recall, we defined
+the entropy rate in two ways,
+
+00:01:09.640 --> 00:01:12.940
+one is, like, the incremental
+conditional probability,
+
+00:01:12.940 --> 00:01:14.920
+what is the limit as
+n goes to infinity,
+
+00:01:14.920 --> 00:01:16.720
+and the other is
+that if you think
+
+00:01:16.720 --> 00:01:18.790
+in terms of blocks
+of size n, what
+
+00:01:18.790 --> 00:01:22.840
+is the average entropy per block
+as n becomes larger and larger.
+
+00:01:22.840 --> 00:01:24.940
+And then in the last
+lecture, we looked
+
+00:01:24.940 --> 00:01:26.980
+at context-based
+arithmetic coding
+
+00:01:26.980 --> 00:01:29.590
+where we will end this
+very important concept,
+
+00:01:29.590 --> 00:01:31.090
+that prediction
+implies compression.
+
+00:01:31.090 --> 00:01:31.590
+Right?
+
+00:01:31.590 --> 00:01:34.060
+If you have a good predictor,
+that's a good compressor.
+
+00:01:34.060 --> 00:01:37.370
+And then, we looked at some
+specific models for prediction,
+
+00:01:37.370 --> 00:01:39.500
+k-th order adaptive
+arithmetic coding,
+
+00:01:39.500 --> 00:01:42.620
+which we had a quiz
+question on, and we
+
+00:01:42.620 --> 00:01:49.230
+looked at some more advanced
+models in less detail.
+
+00:01:49.230 --> 00:01:51.690
+But then, we looked at the
+most advanced model of all
+
+00:01:51.690 --> 00:01:54.480
+in more detail, which was
+the large language models,
+
+00:01:54.480 --> 00:01:57.615
+and we looked at how you can
+push compression to its limits.
+
+00:02:01.050 --> 00:02:03.720
+All of this was based on very
+carefully modeling the data
+
+00:02:03.720 --> 00:02:06.375
+or learning the probability
+distribution of the data.
+
+00:02:06.375 --> 00:02:08.250
+Today, we will see a
+very different technique
+
+00:02:08.250 --> 00:02:10.680
+where you don't do that,
+basically, and still
+
+00:02:10.680 --> 00:02:11.775
+achieve excellent results.
+
+00:02:14.450 --> 00:02:16.340
+OK, so lots to cover today.
+
+00:02:16.340 --> 00:02:19.640
+So what I'm going to do is, I
+will not spend a lot of time
+
+00:02:19.640 --> 00:02:21.230
+on the quiz.
+
+00:02:21.230 --> 00:02:23.840
+So for the first question,
+you had a sequence
+
+00:02:23.840 --> 00:02:27.050
+that you wanted to encode
+with the first order adaptive
+
+00:02:27.050 --> 00:02:28.370
+arithmetic coding, right.
+
+00:02:28.370 --> 00:02:31.910
+We did an example of this
+in class, very similar.
+
+00:02:31.910 --> 00:02:35.750
+And you will have some practice
+in your homework as well.
+
+00:02:35.750 --> 00:02:38.660
+But what I did was, I
+created this table for you,
+
+00:02:38.660 --> 00:02:40.670
+just to make sure
+you understand, like,
+
+00:02:40.670 --> 00:02:41.720
+how to do this right.
+
+00:02:41.720 --> 00:02:44.090
+So, at every step, you
+have the previous symbol,
+
+00:02:44.090 --> 00:02:47.420
+you have the current symbol,
+you have the counts before,
+
+00:02:47.420 --> 00:02:52.420
+and then you update the counts
+so you get the counts after.
+
+00:02:52.420 --> 00:02:55.270
+And please, take
+a look at these.
+
+00:02:55.270 --> 00:02:57.550
+Unless anybody has any
+specific question on the quiz,
+
+00:02:57.550 --> 00:02:59.860
+I will skip this
+question for now.
+
+00:03:03.830 --> 00:03:05.540
+OK, yeah.
+
+00:03:05.540 --> 00:03:07.850
+Please talk to us
+after class if you
+
+00:03:07.850 --> 00:03:09.950
+didn't get any of
+these or these answers
+
+00:03:09.950 --> 00:03:13.418
+are not what you
+thought they were.
+
+00:03:13.418 --> 00:03:15.710
+The second question, or the
+first question in the quiz,
+
+00:03:15.710 --> 00:03:19.190
+maybe let's talk
+about that a bit more.
+
+00:03:19.190 --> 00:03:22.370
+So the first question was, you
+know that your data is roughly
+
+00:03:22.370 --> 00:03:25.387
+second order Markov but do
+not know the actual transition
+
+00:03:25.387 --> 00:03:25.970
+probabilities.
+
+00:03:25.970 --> 00:03:27.710
+And we asked you
+whether you should
+
+00:03:27.710 --> 00:03:30.770
+use context-based arithmetic
+coding or adaptive arithmetic
+
+00:03:30.770 --> 00:03:31.460
+coding.
+
+00:03:31.460 --> 00:03:33.695
+How many think
+it's the first one?
+
+00:03:36.400 --> 00:03:38.560
+Second one?
+
+00:03:38.560 --> 00:03:39.190
+OK.
+
+00:03:39.190 --> 00:03:40.300
+So, correct, right.
+
+00:03:40.300 --> 00:03:42.947
+Adaptive just means that you
+don't assume some initial model
+
+00:03:42.947 --> 00:03:44.530
+that you know, and
+you learn the model
+
+00:03:44.530 --> 00:03:47.380
+from the data which just seems
+more appropriate for-- when
+
+00:03:47.380 --> 00:03:49.720
+you don't know the
+sequence-- the probabilities.
+
+00:03:53.230 --> 00:03:54.900
+Here, it's a third
+order Markov and you
+
+00:03:54.900 --> 00:03:56.170
+know the exact distribution.
+
+00:03:56.170 --> 00:03:57.490
+So since you know
+the distribution,
+
+00:03:57.490 --> 00:03:59.740
+there is no point in trying
+to learn it from the data.
+
+00:03:59.740 --> 00:04:01.600
+That's just less efficient.
+
+00:04:01.600 --> 00:04:03.400
+And therefore,
+here, the answer is,
+
+00:04:03.400 --> 00:04:07.107
+you just do the context-based
+arithmetic coding.
+
+00:04:07.107 --> 00:04:08.940
+There was a third
+question in the quiz which
+
+00:04:08.940 --> 00:04:10.620
+we had to remove
+because I didn't
+
+00:04:10.620 --> 00:04:12.960
+cover the material in time.
+
+00:04:12.960 --> 00:04:15.880
+You know nothing
+about the input data.
+
+00:04:15.880 --> 00:04:18.160
+So you have literally
+no idea what's in there.
+
+00:04:18.160 --> 00:04:20.320
+What would you do in that case?
+
+00:04:20.320 --> 00:04:20.950
+Right?
+
+00:04:20.950 --> 00:04:23.710
+And actually, this is
+what you will do, LZ77.
+
+00:04:23.710 --> 00:04:25.387
+That is the topic
+of today's lecture,
+
+00:04:25.387 --> 00:04:27.595
+where you don't make any
+assumptions about your data.
+
+00:04:30.450 --> 00:04:32.850
+OK, so before I
+start, any questions
+
+00:04:32.850 --> 00:04:34.125
+on the previous material?
+
+00:04:38.630 --> 00:04:39.130
+OK.
+
+00:04:47.050 --> 00:04:51.280
+--did his-- 1948 paper
+people worked on iid sources.
+
+00:04:51.280 --> 00:04:54.030
+They did this
+context-based stuff.
+
+00:04:54.030 --> 00:04:57.020
+But nobody had an
+idea, whether for
+
+00:04:57.020 --> 00:04:58.770
+a general stationary
+distribution, can you
+
+00:04:58.770 --> 00:05:01.590
+have a compressor that works for
+any distribution, irrespective
+
+00:05:01.590 --> 00:05:04.230
+of, like, don't need to know
+the distribution in advance.
+
+00:05:04.230 --> 00:05:07.290
+And then, there were
+A sequence of papers
+
+00:05:07.290 --> 00:05:12.690
+by Abraham Lempel and
+Jacob Ziv at Bell Labs
+
+00:05:12.690 --> 00:05:16.890
+at the time, who basically just
+change the world of compression
+
+00:05:16.890 --> 00:05:20.760
+in 1977 and '78.
+
+00:05:20.760 --> 00:05:23.760
+So what we'll study today
+is something-- the concept
+
+00:05:23.760 --> 00:05:25.530
+of universal compressors.
+
+00:05:25.530 --> 00:05:27.240
+A universal
+compressor is a scheme
+
+00:05:27.240 --> 00:05:29.790
+that does well on
+any stationary input
+
+00:05:29.790 --> 00:05:32.730
+without prior knowledge of
+the source distribution.
+
+00:05:32.730 --> 00:05:37.800
+So it assumes nothing and still
+gets you the optimal results.
+
+00:05:37.800 --> 00:05:41.370
+And as part of that, we'll
+look at really the most common
+
+00:05:41.370 --> 00:05:45.270
+scheme used in compression
+today, the zip compressor,
+
+00:05:45.270 --> 00:05:46.650
+as you might have heard of.
+
+00:05:49.730 --> 00:05:53.180
+So let me define
+universal compression,
+
+00:05:53.180 --> 00:05:55.460
+just to be slightly formal.
+
+00:05:55.460 --> 00:05:56.990
+So you have a compressor.
+
+00:05:56.990 --> 00:05:59.130
+The compressor has
+some length function,
+
+00:05:59.130 --> 00:06:02.420
+which is the number of bits
+it takes to describe xn.
+
+00:06:02.420 --> 00:06:09.310
+And it is universal if the
+expected length per symbol
+
+00:06:09.310 --> 00:06:13.840
+matches the entropy rate for
+any stationary ergodic source.
+
+00:06:13.840 --> 00:06:15.940
+Ergodic it is just a
+technical condition,
+
+00:06:15.940 --> 00:06:18.170
+no need to worry about it.
+
+00:06:18.170 --> 00:06:19.900
+But really, for any
+stationary source.
+
+00:06:19.900 --> 00:06:23.170
+So for any stationary source,
+it achieves the entropy rate.
+
+00:06:23.170 --> 00:06:27.202
+No qualifiers, no
+mention that it
+
+00:06:27.202 --> 00:06:28.910
+will achieve the
+entropy for a k-th order
+
+00:06:28.910 --> 00:06:30.650
+but not for a k plus
+1 i-th order, no.
+
+00:06:30.650 --> 00:06:32.540
+For any stationary
+source, however
+
+00:06:32.540 --> 00:06:34.560
+complicated it might be.
+
+00:06:34.560 --> 00:06:38.810
+So really a single compressor
+is asymptotically optimal.
+
+00:06:38.810 --> 00:06:41.240
+Asymptotically because
+this happens in the limit
+
+00:06:41.240 --> 00:06:42.920
+for every distribution.
+
+00:06:45.520 --> 00:06:48.610
+For a long time before Lempel
+and Ziv did their work people,
+
+00:06:48.610 --> 00:06:49.860
+believed this was impossible.
+
+00:06:49.860 --> 00:06:52.420
+So even at the time
+and even today,
+
+00:06:52.420 --> 00:06:56.560
+this is a very surprising result
+that such a thing is possible.
+
+00:06:56.560 --> 00:06:57.520
+And we'll see.
+
+00:06:57.520 --> 00:06:58.900
+It's actually very simple.
+
+00:07:04.860 --> 00:07:06.570
+Another sort of on
+the flip side a way
+
+00:07:06.570 --> 00:07:10.530
+to think about this in terms
+of universal prediction,
+
+00:07:10.530 --> 00:07:13.140
+recall from last lecture
+that every compressor
+
+00:07:13.140 --> 00:07:14.790
+induces a distribution.
+
+00:07:14.790 --> 00:07:17.370
+So for any compressor
+which gives you
+
+00:07:17.370 --> 00:07:20.670
+a length function, l,
+you get a p-hat, which
+
+00:07:20.670 --> 00:07:23.380
+is 2 power minus l.
+
+00:07:23.380 --> 00:07:28.510
+And what this is saying is that
+a universal compressor's p-hat,
+
+00:07:28.510 --> 00:07:32.980
+the distribution is learning
+over the data approximates
+
+00:07:32.980 --> 00:07:36.940
+any stationary distribution
+arbitrarily closely as n grows.
+
+00:07:36.940 --> 00:07:42.080
+So just as like a
+rough figure, so this
+
+00:07:42.080 --> 00:07:50.110
+is like the p for different
+stationary distributions,
+
+00:07:50.110 --> 00:07:52.330
+the distribution for
+all of them, basically.
+
+00:07:55.720 --> 00:08:01.250
+And somehow, there is this
+one point here, p-hat LZ,
+
+00:08:01.250 --> 00:08:03.740
+which is close to every other
+point in the distribution.
+
+00:08:03.740 --> 00:08:05.540
+So there exists one
+single distribution
+
+00:08:05.540 --> 00:08:09.170
+that's a good approximator
+of every other distribution.
+
+00:08:12.520 --> 00:08:17.320
+So I spoke of it in
+a very handwavy way,
+
+00:08:17.320 --> 00:08:20.320
+you need to rigorously formulate
+it, which we won't do here.
+
+00:08:20.320 --> 00:08:24.430
+But talk to Tsachy, he's like
+an expert in these matters.
+
+00:08:24.430 --> 00:08:27.070
+He has extended the theory
+of universal compression
+
+00:08:27.070 --> 00:08:30.610
+to universal denoising,
+universal lossy compression.
+
+00:08:30.610 --> 00:08:34.240
+And look at his lecture notes,
+or whenever he teaches it
+
+00:08:34.240 --> 00:08:38.049
+next time, this EE 376C,
+which is completely focused
+
+00:08:38.049 --> 00:08:40.150
+on the theory of
+universal compression
+
+00:08:40.150 --> 00:08:43.030
+and universal
+denoising and so on.
+
+00:08:43.030 --> 00:08:46.610
+You can also look at this
+paper if you are interested.
+
+00:08:46.610 --> 00:08:49.492
+But for now, let's
+come back to LZ.
+
+00:08:52.590 --> 00:08:54.300
+Any questions on
+the general concept
+
+00:08:54.300 --> 00:08:57.480
+of universal compression,
+or universal prediction?
+
+00:08:57.480 --> 00:08:59.573
+We are just saying that
+you have a compressor
+
+00:08:59.573 --> 00:09:00.990
+or you have a
+predictor that works
+
+00:09:00.990 --> 00:09:02.940
+well for any
+stationary distribution
+
+00:09:02.940 --> 00:09:04.710
+without making any assumptions.
+
+00:09:04.710 --> 00:09:06.510
+And we'll see how that happens.
+
+00:09:11.100 --> 00:09:11.700
+OK.
+
+00:09:11.700 --> 00:09:17.910
+So the LZ77, or Lempel-Ziv
+family of universal algorithms,
+
+00:09:17.910 --> 00:09:20.800
+there are many, many
+implementations.
+
+00:09:20.800 --> 00:09:24.400
+So they had two papers--
+one in 1977, one in 1978,
+
+00:09:24.400 --> 00:09:26.650
+both of them describing
+different schemes.
+
+00:09:26.650 --> 00:09:31.180
+The one in 1977 is called
+LZ77, the other one LZ78,
+
+00:09:31.180 --> 00:09:33.670
+and then people made
+modifications of those
+
+00:09:33.670 --> 00:09:36.190
+by adding different things.
+
+00:09:36.190 --> 00:09:41.150
+All of these are used in a bunch
+of these different compressors.
+
+00:09:41.150 --> 00:09:42.980
+You see gzip and
+zstandard, you see
+
+00:09:42.980 --> 00:09:45.530
+PNG, which is an
+image compressor, ZIP,
+
+00:09:45.530 --> 00:09:47.840
+which is, again, a
+very common compressor.
+
+00:09:47.840 --> 00:09:52.340
+You see GIF here,
+which is image, right?
+
+00:09:52.340 --> 00:09:56.465
+And here are some references
+if you want to look at these.
+
+00:09:56.465 --> 00:09:58.340
+We we'll look at some
+of these in more detail
+
+00:09:58.340 --> 00:10:01.292
+as we move along the lecture.
+
+00:10:01.292 --> 00:10:03.750
+But this is just to say that
+most of the common compressors
+
+00:10:03.750 --> 00:10:06.953
+today are built upon some
+version of Lempel-Ziv.
+
+00:10:10.060 --> 00:10:13.150
+So I don't know if
+you'll listen to music,
+
+00:10:13.150 --> 00:10:16.080
+or to this particular song.
+
+00:10:16.080 --> 00:10:18.405
+The idea of LZ77
+algorithms is very simple.
+
+00:10:21.500 --> 00:10:23.390
+History repeats itself.
+
+00:10:23.390 --> 00:10:25.520
+You have some data,
+you see some sequence,
+
+00:10:25.520 --> 00:10:28.660
+you have probably
+seen that before
+
+00:10:28.660 --> 00:10:30.670
+in some form or the other.
+
+00:10:30.670 --> 00:10:34.220
+And if you have seen
+it before, why not
+
+00:10:34.220 --> 00:10:40.130
+just put a pointer that I
+saw this word 100 words ago.
+
+00:10:40.130 --> 00:10:42.890
+Or I saw this sentence,
+1,000 sentences ago.
+
+00:10:42.890 --> 00:10:44.330
+Something like that.
+
+00:10:44.330 --> 00:10:45.020
+Right?
+
+00:10:45.020 --> 00:10:47.540
+This song in particular,
+as you might imagine,
+
+00:10:47.540 --> 00:10:50.270
+is very well compressible
+with this technique.
+
+00:10:50.270 --> 00:10:51.500
+It just repeats.
+
+00:10:51.500 --> 00:10:53.945
+Each line is a repeat
+of the previous line.
+
+00:10:58.520 --> 00:11:03.080
+And [INAUDIBLE] last time made
+the class listen to the song,
+
+00:11:03.080 --> 00:11:06.050
+so that was good.
+
+00:11:06.050 --> 00:11:06.680
+Right.
+
+00:11:06.680 --> 00:11:07.940
+So this is the idea, right.
+
+00:11:07.940 --> 00:11:08.870
+Idea is simple.
+
+00:11:08.870 --> 00:11:12.050
+Replace repeated segments in
+data with pointers and lengths.
+
+00:11:12.050 --> 00:11:15.080
+So if we wanted to
+draw it here, you
+
+00:11:15.080 --> 00:11:20.290
+would say that this
+around the world--
+
+00:11:20.290 --> 00:11:23.880
+so this a is like
+this whole thing is
+
+00:11:23.880 --> 00:11:26.010
+a match of this previous thing.
+
+00:11:26.010 --> 00:11:28.880
+So you need to
+store some length.
+
+00:11:28.880 --> 00:11:31.040
+And they need to
+store this offset.
+
+00:11:31.040 --> 00:11:34.580
+Offset is, like, how far in the
+past has this thing occurred,
+
+00:11:34.580 --> 00:11:38.100
+and how long is the match.
+
+00:11:38.100 --> 00:11:41.910
+So with that in mind,
+let's just do an example,
+
+00:11:41.910 --> 00:11:44.400
+I think will give you a
+very good sense of what
+
+00:11:44.400 --> 00:11:46.540
+we are talking about.
+
+00:11:46.540 --> 00:11:50.010
+So what LZ77, that's the
+version we will look at in more
+
+00:11:50.010 --> 00:11:51.780
+detail because that's
+the one used in most
+
+00:11:51.780 --> 00:11:53.490
+of the popular algorithms.
+
+00:11:56.350 --> 00:11:59.960
+Starts-- you start with
+a sequence like this.
+
+00:11:59.960 --> 00:12:03.830
+And then what you do is you
+divide it into three streams,
+
+00:12:03.830 --> 00:12:07.220
+one is the unmatched
+literals, the match length,
+
+00:12:07.220 --> 00:12:11.690
+and the match offset, and let's
+understand these one by one.
+
+00:12:11.690 --> 00:12:24.490
+So OK.
+
+00:12:24.490 --> 00:12:27.403
+So, I see the first A here.
+
+00:12:27.403 --> 00:12:28.570
+This is the first character.
+
+00:12:28.570 --> 00:12:29.980
+I've never seen
+it before clearly
+
+00:12:29.980 --> 00:12:31.438
+because that's the
+first character.
+
+00:12:31.438 --> 00:12:33.520
+So that has to go into
+an unmatched literal,
+
+00:12:33.520 --> 00:12:35.830
+there is no match.
+
+00:12:35.830 --> 00:12:38.890
+I see a B. I've never
+seen a B before, it's
+
+00:12:38.890 --> 00:12:43.620
+the first B. So again, that
+goes into unmatched literal.
+
+00:12:43.620 --> 00:12:44.760
+Now how about this guy?
+
+00:12:44.760 --> 00:12:46.650
+Have I seen a B before?
+
+00:12:46.650 --> 00:12:48.240
+Yeah, I just saw a B, right?
+
+00:12:48.240 --> 00:12:50.220
+So nice.
+
+00:12:50.220 --> 00:12:52.490
+I got a match.
+
+00:12:52.490 --> 00:12:55.878
+How long is the Match
+
+00:12:55.878 --> 00:12:57.420
+Right, the matches
+just of length one
+
+00:12:57.420 --> 00:12:58.795
+because I can't
+extend it, right,
+
+00:12:58.795 --> 00:13:02.040
+because I've seen B before
+but I've never seen BA before.
+
+00:13:02.040 --> 00:13:06.240
+So it's a match of length
+one at offset one, right,
+
+00:13:06.240 --> 00:13:08.580
+because it occurred just
+one character before.
+
+00:13:08.580 --> 00:13:10.390
+OK.
+
+00:13:10.390 --> 00:13:13.290
+Now have I seen an A?
+
+00:13:13.290 --> 00:13:16.330
+Have seen A B?
+
+00:13:16.330 --> 00:13:17.230
+Have I seen ABB?
+
+00:13:19.800 --> 00:13:22.950
+Have I seen ABBA?
+
+00:13:22.950 --> 00:13:25.590
+Right, so here, I
+see some disagreement
+
+00:13:25.590 --> 00:13:27.720
+among the students.
+
+00:13:27.720 --> 00:13:32.400
+I have indeed seen
+an ABB, right, we
+
+00:13:32.400 --> 00:13:34.470
+are seeing this
+ABBA here, and we'll
+
+00:13:34.470 --> 00:13:37.920
+come to this sort of overlapping
+matches in a little bit.
+
+00:13:37.920 --> 00:13:40.430
+But for now, trust me.
+
+00:13:40.430 --> 00:13:43.430
+Have I seen ABBABB?
+
+00:13:43.430 --> 00:13:46.391
+Yes, I have.
+
+00:13:46.391 --> 00:13:55.270
+You see, this sequence is an
+exact match of this sequence,
+
+00:13:55.270 --> 00:13:56.260
+right?
+
+00:13:56.260 --> 00:13:59.260
+At least, this I think we can
+agree with that this ABBABB is
+
+00:13:59.260 --> 00:14:00.700
+match of the previous thing.
+
+00:14:05.470 --> 00:14:09.613
+So there was no unmatched
+literal, nothing here.
+
+00:14:09.613 --> 00:14:10.655
+What is the match length?
+
+00:14:19.000 --> 00:14:19.960
+Six.
+
+00:14:19.960 --> 00:14:21.870
+I hope I heard a six.
+
+00:14:21.870 --> 00:14:22.370
+OK.
+
+00:14:22.370 --> 00:14:23.120
+What's the offset?
+
+00:14:26.400 --> 00:14:29.700
+How far is the start position
+of-- how far is this from this,
+
+00:14:29.700 --> 00:14:32.190
+basically?
+
+00:14:32.190 --> 00:14:33.090
+It's a three, right?
+
+00:14:33.090 --> 00:14:39.850
+Because the previous are three
+characters before, so this, OK.
+
+00:14:39.850 --> 00:14:42.610
+Now I get a C, C I've
+never seen a match, right?
+
+00:14:42.610 --> 00:14:44.350
+So c is unmatched.
+
+00:14:44.350 --> 00:14:49.152
+And then I see AB, this one is
+simple, I just saw an AB here.
+
+00:14:49.152 --> 00:14:50.360
+OK, this time please help me.
+
+00:14:50.360 --> 00:14:51.410
+What is the offset?
+
+00:14:51.410 --> 00:14:52.400
+The length is two.
+
+00:14:52.400 --> 00:14:55.640
+What is the offset, just to
+make sure people are following?
+
+00:14:59.400 --> 00:15:00.730
+Can you repeat, please, sorry.
+
+00:15:00.730 --> 00:15:01.230
+Four.
+
+00:15:01.230 --> 00:15:02.930
+Four.
+
+00:15:02.930 --> 00:15:05.900
+Yep, so if you call this 0,
+then this is minus 1, minus 2,
+
+00:15:05.900 --> 00:15:08.115
+minus 3, minus 4, yes, 4.
+
+00:15:08.115 --> 00:15:08.615
+Right.
+
+00:15:12.630 --> 00:15:14.070
+OK, that's it, basically.
+
+00:15:14.070 --> 00:15:14.970
+That's LZ77.
+
+00:15:14.970 --> 00:15:18.480
+That's how you pass a sequence
+into these three streams.
+
+00:15:18.480 --> 00:15:20.865
+Unmatched literals, match
+length, and match offset.
+
+00:15:23.670 --> 00:15:27.570
+For now, trust me for just
+a second on this thing
+
+00:15:27.570 --> 00:15:29.820
+that this overlapping
+match thing will be fine,
+
+00:15:29.820 --> 00:15:33.060
+and we'll do a
+decoding very soon.
+
+00:15:33.060 --> 00:15:34.860
+Other than that, any questions?
+
+00:15:39.830 --> 00:15:41.630
+OK, good.
+
+00:15:41.630 --> 00:15:43.850
+You will get
+experience on practice
+
+00:15:43.850 --> 00:15:47.130
+on this, as usual in the quiz.
+
+00:15:47.130 --> 00:15:52.290
+So, we did it at home,
+we got the same things
+
+00:15:52.290 --> 00:15:54.720
+that we just got, right?
+
+00:15:54.720 --> 00:15:57.060
+Now we will decode it.
+
+00:15:57.060 --> 00:15:59.280
+OK, let's try to
+decode the same thing.
+
+00:15:59.280 --> 00:16:03.000
+You know the answer, but let's
+try to not cheat, and actually
+
+00:16:03.000 --> 00:16:04.290
+try to decode it.
+
+00:16:04.290 --> 00:16:07.960
+So, what do I start with?
+
+00:16:07.960 --> 00:16:10.230
+What is the first character?
+
+00:16:14.680 --> 00:16:15.220
+A, right?
+
+00:16:15.220 --> 00:16:19.030
+A and then followed by--
+
+00:16:19.030 --> 00:16:25.040
+A followed by a B, because you
+first copy the unmatched part.
+
+00:16:25.040 --> 00:16:28.130
+Now you have a match length of
+one and offset of one, right?
+
+00:16:28.130 --> 00:16:29.840
+So the character
+that's coming here
+
+00:16:29.840 --> 00:16:32.780
+has to be, like, from
+here, just one past,
+
+00:16:32.780 --> 00:16:35.720
+and it has a length, just
+one length match, so ABB.
+
+00:16:35.720 --> 00:16:36.830
+OK.
+
+00:16:36.830 --> 00:16:40.880
+Now, you have a match length
+of 6 and a match offset of 3.
+
+00:16:40.880 --> 00:16:42.770
+OK, so let's do it
+character by character.
+
+00:16:42.770 --> 00:16:44.330
+Here, I have a offset of 3.
+
+00:16:47.500 --> 00:16:49.270
+So that goes here.
+
+00:16:49.270 --> 00:16:58.330
+I get A. Then I do the next
+one, here, here, right?
+
+00:16:58.330 --> 00:16:59.410
+So far, I think--
+
+00:16:59.410 --> 00:17:01.750
+I hope we are all happy, right.
+
+00:17:01.750 --> 00:17:03.910
+Now we come to that
+overlapping part.
+
+00:17:03.910 --> 00:17:06.790
+Now try to decode this thing.
+
+00:17:06.790 --> 00:17:09.849
+But the offset is 3 and this
+guy is already decoded, right,
+
+00:17:09.849 --> 00:17:10.960
+this red part.
+
+00:17:10.960 --> 00:17:13.900
+So I can actually decode
+this one, based on this one.
+
+00:17:13.900 --> 00:17:18.339
+This is again A,
+this is a B. And this
+
+00:17:18.339 --> 00:17:21.472
+is a B. Was that clear?
+
+00:17:21.472 --> 00:17:23.180
+Basically, if you
+sequentially decode it,
+
+00:17:23.180 --> 00:17:26.599
+it's fine if the matches
+overlap with each other.
+
+00:17:26.599 --> 00:17:29.550
+Like the match overlaps
+with itself, really.
+
+00:17:29.550 --> 00:17:33.030
+And then you get a C, which
+is an unmatched literal.
+
+00:17:33.030 --> 00:17:35.820
+And then you have a
+match length of two,
+
+00:17:35.820 --> 00:17:39.940
+so you have two things that
+match at a offset of four.
+
+00:17:39.940 --> 00:17:49.200
+So, from here, you go here, so
+A. And from here, you go here.
+
+00:17:49.200 --> 00:17:51.920
+That's B. OK.
+
+00:17:51.920 --> 00:17:55.410
+So just wanted to do
+one example in class.
+
+00:17:55.410 --> 00:17:59.580
+So that you can do the
+quiz question on your own.
+
+00:17:59.580 --> 00:18:00.080
+Right.
+
+00:18:02.710 --> 00:18:04.870
+OK.
+
+00:18:04.870 --> 00:18:09.930
+So, we have the decoding.
+
+00:18:09.930 --> 00:18:13.065
+So you can write this in the
+form of a pseudocode, right?
+
+00:18:13.065 --> 00:18:14.820
+A very, very simple pseudocode.
+
+00:18:14.820 --> 00:18:18.100
+So for an input sequence , which
+is like x 0, x 1 dot, dot, dot,
+
+00:18:18.100 --> 00:18:18.600
+right?
+
+00:18:18.600 --> 00:18:22.860
+And suppose we have
+done until x i minus 1,
+
+00:18:22.860 --> 00:18:28.870
+then what you will try to do
+is find the largest k, where
+
+00:18:28.870 --> 00:18:30.595
+k is the match length here.
+
+00:18:36.300 --> 00:18:40.100
+And i minus j is your offset.
+
+00:18:40.100 --> 00:18:44.390
+So this is basically telling
+you that x i to x i plus k
+
+00:18:44.390 --> 00:18:47.270
+should match x j to x plus k.
+
+00:18:47.270 --> 00:18:51.030
+Just the definition of a
+match, that it matches.
+
+00:18:51.030 --> 00:18:56.270
+And if no match found,
+store as literal.
+
+00:18:56.270 --> 00:18:57.710
+That's it, basically.
+
+00:18:57.710 --> 00:18:59.090
+Very simple, basic idea.
+
+00:19:02.270 --> 00:19:05.180
+The decoding pseudocode,
+you read any literals,
+
+00:19:05.180 --> 00:19:07.730
+and you copy to the output.
+
+00:19:07.730 --> 00:19:11.680
+And if you have a match
+of length l and offset o,
+
+00:19:11.680 --> 00:19:13.443
+you basically copy
+it over, right?
+
+00:19:13.443 --> 00:19:14.860
+And there are two
+cases-- one case
+
+00:19:14.860 --> 00:19:18.040
+is if the length of the match
+is less than the offset.
+
+00:19:18.040 --> 00:19:21.820
+So that's a scenario,
+like, you are here,
+
+00:19:21.820 --> 00:19:25.280
+and this is your
+length of the match,
+
+00:19:25.280 --> 00:19:27.320
+and this is your
+offset, which is, like,
+
+00:19:27.320 --> 00:19:29.060
+much bigger than length.
+
+00:19:29.060 --> 00:19:32.850
+So then what you need
+to do is you just
+
+00:19:32.850 --> 00:19:36.990
+copy this whole thing here it's
+a very simple copy operation.
+
+00:19:36.990 --> 00:19:37.770
+Right?
+
+00:19:37.770 --> 00:19:45.240
+And the other case, so this
+is like case I, l less than o,
+
+00:19:45.240 --> 00:19:47.880
+so length is less
+than offset, and then
+
+00:19:47.880 --> 00:19:54.020
+the case II is where again
+you have a match of length l
+
+00:19:54.020 --> 00:19:56.360
+but offset is very small.
+
+00:19:56.360 --> 00:20:00.680
+So in this case, what
+happens is the thing
+
+00:20:00.680 --> 00:20:03.910
+overlaps as we just
+saw, and then you
+
+00:20:03.910 --> 00:20:07.510
+have to be more careful
+when you're decoding it.
+
+00:20:07.510 --> 00:20:09.130
+But what we did it just now.
+
+00:20:09.130 --> 00:20:10.630
+If you do it by
+hand, you can do it.
+
+00:20:10.630 --> 00:20:12.940
+If you do it in code,
+you can, again, do it.
+
+00:20:12.940 --> 00:20:13.855
+So OK.
+
+00:20:17.390 --> 00:20:19.730
+So this question
+will be in your quiz.
+
+00:20:23.110 --> 00:20:28.210
+You will just do the unparsing,
+basically of this guy,
+
+00:20:28.210 --> 00:20:30.820
+we'll ask you to decode it,
+and I think if you decode it,
+
+00:20:30.820 --> 00:20:33.550
+then you've understood
+the algorithm well enough.
+
+00:20:33.550 --> 00:20:36.580
+And actually we
+encoded it in a way
+
+00:20:36.580 --> 00:20:39.538
+that doesn't match the way we--
+
+00:20:39.538 --> 00:20:41.080
+one thing you will
+learn very quickly
+
+00:20:41.080 --> 00:20:44.050
+is that there are many ways
+to encode it with LZ77.
+
+00:20:44.050 --> 00:20:46.182
+For example, maybe
+you are very lazy,
+
+00:20:46.182 --> 00:20:47.890
+you don't try to match
+anything, you just
+
+00:20:47.890 --> 00:20:49.300
+put everything as a literal.
+
+00:20:49.300 --> 00:20:52.960
+That's a valid LZ77 encoding.
+
+00:20:52.960 --> 00:20:55.300
+Or you try it very hard
+and find the best matches.
+
+00:20:55.300 --> 00:20:58.030
+That's also valid LZ77 encoding.
+
+00:20:58.030 --> 00:21:01.270
+Maybe you don't allow your match
+lengths to be more than 100,
+
+00:21:01.270 --> 00:21:01.990
+for some reason.
+
+00:21:01.990 --> 00:21:03.040
+That's a valid thing.
+
+00:21:03.040 --> 00:21:04.780
+So there are many
+encoding choices
+
+00:21:04.780 --> 00:21:07.870
+you can make that all work with
+the same decoding algorithm.
+
+00:21:12.220 --> 00:21:15.850
+OK any questions so far?
+
+00:21:15.850 --> 00:21:17.810
+Hopefully this is good.
+
+00:21:17.810 --> 00:21:18.310
+OK.
+
+00:21:22.560 --> 00:21:25.970
+So, encoding step.
+
+00:21:25.970 --> 00:21:28.880
+Start with the input data,
+do this LZ77 parsing,
+
+00:21:28.880 --> 00:21:32.370
+you get your literals
+and you get your matches.
+
+00:21:32.370 --> 00:21:34.980
+And then you do some
+sort of entropy coding.
+
+00:21:34.980 --> 00:21:37.815
+You use one of your things
+like Huffman coding or ANS
+
+00:21:37.815 --> 00:21:40.560
+or arithmetic coding, which
+we have been listening about.
+
+00:21:40.560 --> 00:21:43.910
+And then you get
+the compressed file.
+
+00:21:43.910 --> 00:21:46.250
+Different implementations
+differ in this,
+
+00:21:46.250 --> 00:21:51.380
+and we'll come back to this
+in much more detail shortly.
+
+00:21:51.380 --> 00:21:55.130
+But before we do that,
+let me spend not too much
+
+00:21:55.130 --> 00:21:58.460
+time but a little time
+talking about why this
+
+00:21:58.460 --> 00:22:00.140
+works, why is this optimal.
+
+00:22:00.140 --> 00:22:03.470
+We made a very strong
+claim that LZ77
+
+00:22:03.470 --> 00:22:05.120
+works for any
+stationary sequence,
+
+00:22:05.120 --> 00:22:08.000
+irrespective of
+the distribution.
+
+00:22:08.000 --> 00:22:11.270
+So we should at least try to
+get some intuition into that,
+
+00:22:11.270 --> 00:22:12.605
+if not the full proof.
+
+00:22:15.880 --> 00:22:17.650
+OK, so consider
+this iid sequence.
+
+00:22:17.650 --> 00:22:18.910
+You just have an iid sequence.
+
+00:22:22.120 --> 00:22:24.310
+And if you have a
+symbol, like value a,
+
+00:22:24.310 --> 00:22:27.430
+for example, which has
+probability p of a,
+
+00:22:27.430 --> 00:22:31.510
+what is the expected gap between
+consecutive occurrences of a?
+
+00:22:31.510 --> 00:22:35.800
+How often would consecutive
+occurrences of a b on average?
+
+00:22:38.820 --> 00:22:40.200
+OK, tell me one thing.
+
+00:22:40.200 --> 00:22:42.240
+If a has a high
+probability, would you
+
+00:22:42.240 --> 00:22:44.310
+occur the gap between
+consecutive a's
+
+00:22:44.310 --> 00:22:45.735
+to be more or less?
+
+00:22:50.130 --> 00:22:50.630
+Less, right?
+
+00:22:50.630 --> 00:22:53.213
+Because if it a is more common,
+it will occur very frequently.
+
+00:22:53.213 --> 00:22:55.640
+So the gap between consecutive
+a's will be small, OK.
+
+00:22:55.640 --> 00:22:59.780
+And if a is less likely then
+there will be a big gap between
+
+00:22:59.780 --> 00:23:01.125
+consecutive a's.
+
+00:23:01.125 --> 00:23:01.625
+OK.
+
+00:23:04.540 --> 00:23:07.120
+Let's try to do it in two steps.
+
+00:23:07.120 --> 00:23:09.820
+So in a block of size
+n, how many times
+
+00:23:09.820 --> 00:23:11.340
+do you expect to see a?
+
+00:23:17.140 --> 00:23:20.200
+S iid, the probability
+of a is P a.
+
+00:23:29.548 --> 00:23:31.520
+And multiply by P a.
+
+00:23:31.520 --> 00:23:32.090
+Yes.
+
+00:23:32.090 --> 00:23:33.855
+And multiplied by P a, right.
+
+00:23:33.855 --> 00:23:34.355
+Why?
+
+00:23:37.650 --> 00:23:42.392
+Each [INAUDIBLE]
+probability of P a.
+
+00:23:42.392 --> 00:23:48.370
+[INAUDIBLE] expectation of the
+sum of all those [INAUDIBLE]..
+
+00:23:48.370 --> 00:23:51.580
+Yeah, so the answer was, each of
+them has a probability of p a,
+
+00:23:51.580 --> 00:23:55.840
+of being a, therefore the
+expected number of occurrences
+
+00:23:55.840 --> 00:23:57.940
+will be n times P a.
+
+00:23:57.940 --> 00:24:00.520
+But as we as we saw
+in the AP lecture,
+
+00:24:00.520 --> 00:24:03.360
+or you might have seen
+before, you can say much more.
+
+00:24:03.360 --> 00:24:05.110
+You can actually say
+that it will actually
+
+00:24:05.110 --> 00:24:07.210
+be very close to n,
+n times P a because
+
+00:24:07.210 --> 00:24:08.390
+of the law of large numbers.
+
+00:24:08.390 --> 00:24:08.890
+Right?
+
+00:24:08.890 --> 00:24:13.180
+So that is correct
+and as n gets larger,
+
+00:24:13.180 --> 00:24:15.070
+you actually see it
+with a high probability,
+
+00:24:15.070 --> 00:24:18.110
+being close to n times P a.
+
+00:24:18.110 --> 00:24:25.010
+OK, so let's say n is,
+like, let's say, 1,000,
+
+00:24:25.010 --> 00:24:28.640
+and let's say n
+times P a is 200.
+
+00:24:28.640 --> 00:24:34.100
+So what is your expected
+gap between consecutive a's?
+
+00:24:34.100 --> 00:24:36.650
+How far apart are
+a is on average?
+
+00:24:36.650 --> 00:24:41.780
+If you have, say you have 1,000
+total, and you have 200 a's.
+
+00:24:45.810 --> 00:24:47.100
+Anyone, anybody?
+
+00:24:50.720 --> 00:24:51.725
+How many think it's 4?
+
+00:24:54.440 --> 00:24:55.960
+5?
+
+00:24:55.960 --> 00:24:56.720
+OK, I hear 5.
+
+00:24:56.720 --> 00:24:57.220
+Good.
+
+00:24:57.220 --> 00:24:58.870
+So 5 is 1,000 by 200.
+
+00:24:58.870 --> 00:25:02.320
+This is just, like,
+counting type arguments.
+
+00:25:04.785 --> 00:25:07.160
+Right, because we have 1,000
+things and you have 200 a's,
+
+00:25:07.160 --> 00:25:09.540
+so on average, they're
+like five apart, roughly.
+
+00:25:09.540 --> 00:25:10.830
+OK.
+
+00:25:10.830 --> 00:25:18.860
+So, really, the average spacing
+in 1 over P a, n over n--
+
+00:25:18.860 --> 00:25:21.620
+n times P a, so 1 over P a
+is the average gap between
+
+00:25:21.620 --> 00:25:25.010
+consecutive a's.
+
+00:25:25.010 --> 00:25:26.750
+So now, we have this.
+
+00:25:26.750 --> 00:25:31.280
+We will take a very giant
+leap, and let's not read this,
+
+00:25:31.280 --> 00:25:35.960
+I just pasted it, but really
+read this second part.
+
+00:25:35.960 --> 00:25:40.470
+So if you have
+some sequence, x 0
+
+00:25:40.470 --> 00:25:44.640
+to n minus 1, the same
+sequence, x 0 to n minus 1 also
+
+00:25:44.640 --> 00:25:47.490
+occurred roughly these
+many positions ago.
+
+00:25:47.490 --> 00:25:52.890
+So, we were just talking about
+iid and the single symbol.
+
+00:25:52.890 --> 00:25:55.140
+But you can extend
+this to sequences
+
+00:25:55.140 --> 00:25:56.940
+in a stationary distribution.
+
+00:25:56.940 --> 00:25:59.730
+You can actually show
+with this Kac's lemma
+
+00:25:59.730 --> 00:26:04.170
+that if you see some
+sequence of length n now,
+
+00:26:04.170 --> 00:26:06.750
+the average sort of time
+before-- like, last time you
+
+00:26:06.750 --> 00:26:09.300
+saw the sequence is
+actually 1 over probability
+
+00:26:09.300 --> 00:26:10.620
+of that sequence.
+
+00:26:10.620 --> 00:26:13.050
+It's like a straightforward
+extension of, like, a,
+
+00:26:13.050 --> 00:26:17.370
+you saw one by P a ago, x
+n, you saw one by p x n ago.
+
+00:26:17.370 --> 00:26:22.590
+That sort of like the idea here.
+
+00:26:22.590 --> 00:26:25.110
+And now, if you
+connect it to LZ77,
+
+00:26:25.110 --> 00:26:29.040
+this roughly means that
+the match offset in LZ77
+
+00:26:29.040 --> 00:26:32.055
+is 1 over p of x n, right?
+
+00:26:32.055 --> 00:26:33.180
+Because this is the offset.
+
+00:26:33.180 --> 00:26:34.620
+You found a match basically.
+
+00:26:34.620 --> 00:26:36.270
+You are likely to
+find the match, like,
+
+00:26:36.270 --> 00:26:39.980
+these many symbols ago.
+
+00:26:39.980 --> 00:26:42.500
+So any questions so far?
+
+00:26:42.500 --> 00:26:44.180
+This is very high
+level proof, right,
+
+00:26:44.180 --> 00:26:47.180
+like the actual proof will have
+many nuances and so on, which
+
+00:26:47.180 --> 00:26:49.790
+we'll not try to cover here.
+
+00:26:49.790 --> 00:26:53.960
+It's in the [INAUDIBLE] book,
+it's in the EE 376C notes
+
+00:26:53.960 --> 00:26:56.720
+and so on.
+
+00:26:56.720 --> 00:26:58.130
+For now, this will suffice.
+
+00:27:01.450 --> 00:27:04.900
+Actually-- OK, actually this.
+
+00:27:04.900 --> 00:27:08.050
+So now, if you have an integer,
+which is like 1 over p x n,
+
+00:27:08.050 --> 00:27:10.660
+do you remember like if
+you have an integer n,
+
+00:27:10.660 --> 00:27:12.460
+then you can use like
+a fixed length code,
+
+00:27:12.460 --> 00:27:14.860
+roughly encode it in
+log n bits, right,
+
+00:27:14.860 --> 00:27:17.860
+like the usual thing where
+you can encode an integer
+
+00:27:17.860 --> 00:27:20.640
+n with log n bits.
+
+00:27:20.640 --> 00:27:25.980
+So similarly, you can encode
+this match offset, 1 over p,
+
+00:27:25.980 --> 00:27:30.480
+with roughly log 1 over p bits.
+
+00:27:30.480 --> 00:27:32.655
+What does this log 1
+over p remind you of?
+
+00:27:37.270 --> 00:27:39.250
+Any rule that we
+have been talking
+
+00:27:39.250 --> 00:27:41.950
+about from the second
+lecture, basically, the thumb
+
+00:27:41.950 --> 00:27:47.150
+rule of compression that if you
+can achieve log 1 over p bits,
+
+00:27:47.150 --> 00:27:49.280
+you are basically optimal.
+
+00:27:49.280 --> 00:27:51.866
+Right?
+
+00:27:51.866 --> 00:27:56.700
+So, minor note that you
+can show relatively easily
+
+00:27:56.700 --> 00:27:58.470
+that the lengths and
+literals don't really
+
+00:27:58.470 --> 00:27:59.303
+contribute anything.
+
+00:27:59.303 --> 00:28:01.290
+It's really the
+offsets that take up,
+
+00:28:01.290 --> 00:28:04.890
+theoretically, all
+of the space in LZ77.
+
+00:28:04.890 --> 00:28:07.820
+So we'll just focus
+on the offsets.
+
+00:28:07.820 --> 00:28:11.810
+And then, expanding these many
+bits, log 1 over p x n bits,
+
+00:28:11.810 --> 00:28:13.880
+means we are following
+the thumb rule,
+
+00:28:13.880 --> 00:28:17.270
+and we use, on average, if
+you take the expectation here,
+
+00:28:17.270 --> 00:28:19.460
+you get basically H
+of X n, so therefore,
+
+00:28:19.460 --> 00:28:22.550
+for encoding n symbols,
+you are using H of X n bits
+
+00:28:22.550 --> 00:28:25.680
+on average, which as we know,
+is the optimal thing to do.
+
+00:28:25.680 --> 00:28:27.020
+You can't do better than that.
+
+00:28:27.020 --> 00:28:29.120
+And then you just
+take n to the limit,
+
+00:28:29.120 --> 00:28:31.690
+and you get your entropy rate.
+
+00:28:31.690 --> 00:28:34.915
+So, good.
+
+00:28:37.750 --> 00:28:40.480
+So the idea is as
+simple as a sequence
+
+00:28:40.480 --> 00:28:44.530
+is likely to be seen 1 over
+p of that sequence before
+
+00:28:44.530 --> 00:28:48.070
+and therefore you can encode
+it with log 1 over p bits,
+
+00:28:48.070 --> 00:28:51.340
+and therefore, you can
+achieve the entropy rate.
+
+00:28:51.340 --> 00:28:54.080
+Right?
+
+00:28:54.080 --> 00:28:54.710
+Any questions?
+
+00:28:54.710 --> 00:28:57.440
+Is the high level sort
+of flow of logic clear?
+
+00:29:00.160 --> 00:29:04.570
+If you are unhappy with
+some of the details,
+
+00:29:04.570 --> 00:29:06.980
+you have a full right to do so.
+
+00:29:06.980 --> 00:29:08.860
+Maybe we can point
+you to references
+
+00:29:08.860 --> 00:29:11.080
+if you want to look
+at the actual proof.
+
+00:29:13.940 --> 00:29:14.440
+Yeah.
+
+00:29:14.440 --> 00:29:15.910
+So there are proofs.
+
+00:29:15.910 --> 00:29:18.460
+Sadly, the LZ77 proof,
+even though the idea
+
+00:29:18.460 --> 00:29:21.250
+sounds very simple, it's
+somewhat tricky to prove.
+
+00:29:21.250 --> 00:29:26.110
+LZ78 is much better
+in terms of theory.
+
+00:29:26.110 --> 00:29:29.170
+But there is a reason we look
+at this more because it's
+
+00:29:29.170 --> 00:29:30.860
+used much more in practice.
+
+00:29:30.860 --> 00:29:33.160
+So the proofs are not as
+satisfying from a theory
+
+00:29:33.160 --> 00:29:33.700
+perspective.
+
+00:29:33.700 --> 00:29:36.850
+But this argument is like
+the core of the proof
+
+00:29:36.850 --> 00:29:39.630
+and then you need to
+do a lot of things
+
+00:29:39.630 --> 00:29:42.360
+to actually get there, which
+I have not actually seen.
+
+00:29:42.360 --> 00:29:43.980
+So yeah.
+
+00:29:46.610 --> 00:29:48.560
+There's another reason,
+like, the proof maybe
+
+00:29:48.560 --> 00:29:50.540
+is less important to
+us in this lecture is
+
+00:29:50.540 --> 00:29:56.970
+that this asymptotic theory
+doesn't fully explain
+
+00:29:56.970 --> 00:29:58.590
+how well it does in practice.
+
+00:29:58.590 --> 00:30:00.090
+The theory-- the
+theoretical proofs
+
+00:30:00.090 --> 00:30:03.710
+are, like, somehow not
+able to convince us
+
+00:30:03.710 --> 00:30:06.140
+that LZ77 should be so good.
+
+00:30:06.140 --> 00:30:08.570
+For a k-th order
+Markov process, you
+
+00:30:08.570 --> 00:30:11.060
+can show that LZ77 will
+achieve its entropy rate,
+
+00:30:11.060 --> 00:30:12.710
+the conditional
+entropy in the limit.
+
+00:30:12.710 --> 00:30:17.420
+But for normal-sized data, you
+don't expect it to do so well.
+
+00:30:17.420 --> 00:30:18.570
+There is a big--
+
+00:30:18.570 --> 00:30:20.570
+like, if you think of
+terms of, like, the proof,
+
+00:30:20.570 --> 00:30:22.940
+right, if something is
+converging to something,
+
+00:30:22.940 --> 00:30:24.230
+there is a convergence rate.
+
+00:30:24.230 --> 00:30:26.540
+How fast does it approach
+the entropy rate,
+
+00:30:26.540 --> 00:30:29.450
+and the convergence
+rates are not amazing.
+
+00:30:29.450 --> 00:30:33.650
+However, in practice, it
+does very well on real data,
+
+00:30:33.650 --> 00:30:35.900
+not on these k-th
+order Markov processes.
+
+00:30:35.900 --> 00:30:39.320
+And reason is that the world is
+not really a k-th order Markov
+
+00:30:39.320 --> 00:30:39.830
+process.
+
+00:30:39.830 --> 00:30:42.320
+Your English text,
+you see far longer
+
+00:30:42.320 --> 00:30:43.880
+repeats than you
+would ever imagine
+
+00:30:43.880 --> 00:30:45.890
+seeing with a k-th
+order Markov process.
+
+00:30:45.890 --> 00:30:48.050
+English is much
+more complicated.
+
+00:30:48.050 --> 00:30:51.440
+Like a person's name in a text
+will repeat so many times.
+
+00:30:51.440 --> 00:30:53.960
+If you are trying to model
+it with a k-th order Markov
+
+00:30:53.960 --> 00:30:57.830
+process, you won't be really
+able to model it very well.
+
+00:30:57.830 --> 00:31:00.380
+So that's why, like,
+we saw last time,
+
+00:31:00.380 --> 00:31:04.350
+this simplistic k-th order
+models and so on, and the LLMs
+
+00:31:04.350 --> 00:31:07.830
+just, like, beat them
+by a wide, wide margin
+
+00:31:07.830 --> 00:31:11.520
+because they are able to
+model it in a much better way
+
+00:31:11.520 --> 00:31:14.385
+than any of these small
+order models can do.
+
+00:31:20.500 --> 00:31:23.525
+Of course, in terms of compute,
+that's a different story.
+
+00:31:23.525 --> 00:31:24.025
+OK.
+
+00:31:26.720 --> 00:31:29.450
+So that's it for the proof.
+
+00:31:29.450 --> 00:31:34.010
+We will now look at some
+practical aspects of LZ77.
+
+00:31:34.010 --> 00:31:38.480
+And I do want to spend some time
+on practical tips which is new
+
+00:31:38.480 --> 00:31:39.110
+this year.
+
+00:31:39.110 --> 00:31:39.610
+OK.
+
+00:31:43.870 --> 00:31:46.060
+So what we did, as
+we have been doing,
+
+00:31:46.060 --> 00:31:48.550
+is we implemented
+LZ77 in SCL, so we
+
+00:31:48.550 --> 00:31:50.050
+had an implementation
+from last year
+
+00:31:50.050 --> 00:31:54.340
+and then, yesterday, night
+time, I implemented another one
+
+00:31:54.340 --> 00:31:56.230
+in the last couple of days.
+
+00:31:56.230 --> 00:32:00.075
+So we will look at
+some things about how
+
+00:32:00.075 --> 00:32:01.450
+the matches look
+in practice, how
+
+00:32:01.450 --> 00:32:02.700
+the match lengths and offsets.
+
+00:32:02.700 --> 00:32:05.620
+Of course, this year, with
+ChatGPT, the code-writing part
+
+00:32:05.620 --> 00:32:07.510
+became much easier.
+
+00:32:07.510 --> 00:32:09.280
+Anyway.
+
+00:32:09.280 --> 00:32:13.280
+So, I don't know if
+anybody identifies this.
+
+00:32:13.280 --> 00:32:17.660
+This Is Alice in Wonderland
+which is in one of the text,
+
+00:32:17.660 --> 00:32:19.700
+like, the standard
+compression corpuses.
+
+00:32:19.700 --> 00:32:21.770
+So I just took it.
+
+00:32:21.770 --> 00:32:24.260
+And see, this is a match.
+
+00:32:24.260 --> 00:32:27.057
+So this sort of match, like, a
+k-th order model won't explain.
+
+00:32:27.057 --> 00:32:28.640
+Like, this is a very
+long, long match.
+
+00:32:28.640 --> 00:32:32.570
+Beautiful soup, beautiful
+soup, soup of the evening.
+
+00:32:32.570 --> 00:32:34.670
+So yeah.
+
+00:32:34.670 --> 00:32:38.390
+You see the selected text
+exactly matches between the two
+
+00:32:38.390 --> 00:32:40.190
+paragraphs, right?
+
+00:32:40.190 --> 00:32:41.210
+LZ77 would just kill it.
+
+00:32:41.210 --> 00:32:41.900
+Like, think of it.
+
+00:32:41.900 --> 00:32:42.170
+Right?
+
+00:32:42.170 --> 00:32:44.750
+Each of these will take you
+some number of bits to describe.
+
+00:32:44.750 --> 00:32:48.020
+But LZ77, all of this it would
+describe in just two numbers--
+
+00:32:48.020 --> 00:32:49.740
+the offset and the length.
+
+00:32:49.740 --> 00:32:50.240
+Right?
+
+00:32:50.240 --> 00:32:51.470
+So that's the whole idea.
+
+00:32:51.470 --> 00:32:53.210
+Like, the text--
+after you parse it,
+
+00:32:53.210 --> 00:32:55.610
+it becomes so much smaller and--
+
+00:32:55.610 --> 00:32:56.110
+yeah.
+
+00:33:02.090 --> 00:33:09.790
+So this is, I think, from
+a CSS file, I believe.
+
+00:33:09.790 --> 00:33:12.740
+Like, this web styling things.
+
+00:33:12.740 --> 00:33:16.360
+And here, also, you see
+these very long matches,
+
+00:33:16.360 --> 00:33:20.920
+this transparent 25%,
+transparent 25%, something.
+
+00:33:20.920 --> 00:33:24.160
+So again, very suitable
+for LZ77 compression.
+
+00:33:27.880 --> 00:33:29.890
+But not always do you
+find these long matches.
+
+00:33:29.890 --> 00:33:31.720
+Even short matches
+are good, and we
+
+00:33:31.720 --> 00:33:36.430
+will do some quick math to make
+sure that that makes sense.
+
+00:33:36.430 --> 00:33:40.075
+So, pleasure-- this word,
+in this particular book,
+
+00:33:40.075 --> 00:33:41.700
+occurs-- like, the
+first time it occurs
+
+00:33:41.700 --> 00:33:46.020
+and the second time it occurs
+is like 150 kilobytes, 150,000
+
+00:33:46.020 --> 00:33:47.340
+bytes apart.
+
+00:33:47.340 --> 00:33:50.070
+And it's on the first
+page of the book,
+
+00:33:50.070 --> 00:33:51.720
+and the last page of the book.
+
+00:33:51.720 --> 00:33:56.490
+So let's see if I can find it--
+
+00:33:56.490 --> 00:34:00.880
+"pleasure" here,
+and "pleasure" here.
+
+00:34:00.880 --> 00:34:01.530
+Right?
+
+00:34:01.530 --> 00:34:03.630
+So now, let's do a
+quick calculation, just
+
+00:34:03.630 --> 00:34:06.930
+a back of the envelope thing,
+just to just to compute, like,
+
+00:34:06.930 --> 00:34:09.179
+is it worth it to
+encode this as a match.
+
+00:34:09.179 --> 00:34:15.860
+So these are the
+best compressors,
+
+00:34:15.860 --> 00:34:19.510
+spend roughly one bit per byte,
+but like a usual Huffman code,
+
+00:34:19.510 --> 00:34:20.510
+I would spend much more.
+
+00:34:20.510 --> 00:34:22.850
+It would spend like let's
+say three bits per byte,
+
+00:34:22.850 --> 00:34:25.380
+just the back of the envelope.
+
+00:34:25.380 --> 00:34:26.969
+And "pleasure" has how many?
+
+00:34:26.969 --> 00:34:33.420
+It has eight characters so you
+would spend like 24 bits on it.
+
+00:34:33.420 --> 00:34:35.639
+Just doing a rough calculation.
+
+00:34:35.639 --> 00:34:40.170
+OK, now, you have one 50
+kilobytes, which is what?
+
+00:34:40.170 --> 00:34:43.719
+150,000.
+
+00:34:43.719 --> 00:34:46.480
+So to describe it, you need
+roughly these many bits
+
+00:34:46.480 --> 00:34:47.619
+log of this thing.
+
+00:34:51.889 --> 00:34:53.710
+Can anybody help me?
+
+00:34:53.710 --> 00:34:55.219
+Sorry.
+
+00:34:55.219 --> 00:34:58.680
+Calculate this, roughly.
+
+00:34:58.680 --> 00:34:59.760
+If you have a calculator?
+
+00:35:07.230 --> 00:35:08.724
+[INAUDIBLE]
+
+00:35:08.724 --> 00:35:11.730
+[INAUDIBLE]
+
+00:35:11.730 --> 00:35:13.850
+And make sure it's log base 2.
+
+00:35:13.850 --> 00:35:16.410
+It's like around 16.
+
+00:35:16.410 --> 00:35:19.170
+OK, somewhere in
+the 14 to 17 range.
+
+00:35:19.170 --> 00:35:20.610
+[INAUDIBLE]
+
+00:35:20.610 --> 00:35:21.170
+17.
+
+00:35:21.170 --> 00:35:22.260
+[INAUDIBLE]
+
+00:35:22.260 --> 00:35:23.700
+17, good, OK.
+
+00:35:23.700 --> 00:35:24.350
+0.2.
+
+00:35:24.350 --> 00:35:26.390
+OK 0.2.
+
+00:35:26.390 --> 00:35:26.890
+Right.
+
+00:35:26.890 --> 00:35:29.260
+So you already see that
+even this very short
+
+00:35:29.260 --> 00:35:33.910
+match at a very long distance,
+that is still saving you bits
+
+00:35:33.910 --> 00:35:34.658
+by encoding it.
+
+00:35:34.658 --> 00:35:36.700
+And, like, these three
+bits is not out of random,
+
+00:35:36.700 --> 00:35:39.430
+right, like this is the zeroth
+order entropy of English,
+
+00:35:39.430 --> 00:35:40.300
+as we saw.
+
+00:35:40.300 --> 00:35:42.700
+I think it was actually
+roughly around four bits.
+
+00:35:42.700 --> 00:35:44.950
+So, right.
+
+00:35:44.950 --> 00:35:48.880
+So you see the idea here is
+that far away short matches
+
+00:35:48.880 --> 00:35:51.850
+even those are beneficial
+because it's so much
+
+00:35:51.850 --> 00:35:53.650
+cheaper to encode this 150--
+
+00:35:53.650 --> 00:35:56.380
+just the length 150,000
+as compared to encoding
+
+00:35:56.380 --> 00:36:00.560
+the P-L-E-A-S-U-R-E,
+these eight characters.
+
+00:36:00.560 --> 00:36:01.060
+Right?
+
+00:36:01.060 --> 00:36:04.848
+And you can play with this
+more, and actually see.
+
+00:36:04.848 --> 00:36:06.640
+There will be-- like,
+as you might imagine,
+
+00:36:06.640 --> 00:36:09.490
+there will be a crossing
+point where it just--
+
+00:36:09.490 --> 00:36:12.940
+if you have a match of length
+two at a billion offset,
+
+00:36:12.940 --> 00:36:14.470
+that point, you
+might say, OK, maybe
+
+00:36:14.470 --> 00:36:15.670
+it's not a worthwhile match.
+
+00:36:15.670 --> 00:36:19.935
+But still it is, in this case,
+it is a worthwhile match.
+
+00:36:19.935 --> 00:36:20.435
+OK.
+
+00:36:26.080 --> 00:36:30.190
+And we will just gather
+the data, try to look at,
+
+00:36:30.190 --> 00:36:33.730
+like, what is the
+distribution of match offsets
+
+00:36:33.730 --> 00:36:36.100
+and match lengths after
+you do this LZ77 parsing
+
+00:36:36.100 --> 00:36:38.330
+for a particular
+implementation of LZ77.
+
+00:36:38.330 --> 00:36:41.560
+We will see it's not
+like a unique thing.
+
+00:36:41.560 --> 00:36:44.380
+So you see, mostly you
+have smaller offsets,
+
+00:36:44.380 --> 00:36:46.240
+and sometimes, you
+have bigger offsets.
+
+00:36:46.240 --> 00:36:49.130
+So it's an exponential scale.
+
+00:36:49.130 --> 00:36:49.630
+Right?
+
+00:36:49.630 --> 00:36:52.570
+So in this case, the longest
+offsets are around 150,000,
+
+00:36:52.570 --> 00:36:56.050
+because the text itself
+is around 150,000 long.
+
+00:36:56.050 --> 00:36:57.490
+And in terms of
+match lengths, you
+
+00:36:57.490 --> 00:36:59.920
+see, oftentimes, you see
+relatively small match lengths.
+
+00:36:59.920 --> 00:37:04.450
+Once in a while, you see match
+lengths more than 100 bytes.
+
+00:37:04.450 --> 00:37:05.680
+Right?
+
+00:37:05.680 --> 00:37:08.230
+This is very important
+to understand that this
+
+00:37:08.230 --> 00:37:09.460
+is for this particular file.
+
+00:37:09.460 --> 00:37:11.800
+From file to file, from
+data set to data set,
+
+00:37:11.800 --> 00:37:13.570
+this distribution
+looks different.
+
+00:37:13.570 --> 00:37:17.950
+And that should influence
+what particular LZ77 technique
+
+00:37:17.950 --> 00:37:19.555
+you use, as we'll see shortly.
+
+00:37:22.590 --> 00:37:25.650
+This is the CSS
+file we saw earlier,
+
+00:37:25.650 --> 00:37:29.340
+the one with the percent,
+50%, that sort of thing.
+
+00:37:29.340 --> 00:37:34.550
+Bootstrap min.css-- match
+offset maybe looks similar.
+
+00:37:34.550 --> 00:37:36.035
+Match lengths, you
+will notice here
+
+00:37:36.035 --> 00:37:37.160
+something different, right?
+
+00:37:37.160 --> 00:37:39.080
+There are some
+extremely long matches,
+
+00:37:39.080 --> 00:37:42.470
+more than like 500 bytes long.
+
+00:37:42.470 --> 00:37:47.370
+So you can do this for any
+file and just play with it,
+
+00:37:47.370 --> 00:37:48.510
+try to understand.
+
+00:37:48.510 --> 00:37:52.850
+Like if you imagine
+structured pieces of data,
+
+00:37:52.850 --> 00:37:55.250
+like code, for example,
+would have a lot of matches
+
+00:37:55.250 --> 00:37:57.920
+of the exactly same type.
+
+00:37:57.920 --> 00:38:00.540
+Because the same keywords
+occur many, many times.
+
+00:38:00.540 --> 00:38:01.040
+Right?
+
+00:38:01.040 --> 00:38:03.320
+The same variable names,
+the same function names.
+
+00:38:03.320 --> 00:38:06.080
+So that distribution will look
+different, compared to text.
+
+00:38:06.080 --> 00:38:08.270
+Where you have repeated
+words, but maybe not,
+
+00:38:08.270 --> 00:38:11.900
+like, repeated
+sentences exactly.
+
+00:38:11.900 --> 00:38:15.380
+If you have a table, like a CSV
+file, maybe some of the rows
+
+00:38:15.380 --> 00:38:16.850
+are exact matches of each other.
+
+00:38:16.850 --> 00:38:20.600
+So again, that's
+different from text.
+
+00:38:20.600 --> 00:38:23.750
+If you have random data, maybe
+you don't find any matches,
+
+00:38:23.750 --> 00:38:25.580
+or you find very few matches.
+
+00:38:25.580 --> 00:38:28.940
+So this will be different
+for different data sets.
+
+00:38:31.580 --> 00:38:35.510
+OK, any questions so far?
+
+00:38:35.510 --> 00:38:36.760
+Right.
+
+00:38:36.760 --> 00:38:41.290
+So just want to say one thing
+that LZ77 is, like, I think,
+
+00:38:41.290 --> 00:38:43.900
+today, the most popular
+compression technique.
+
+00:38:43.900 --> 00:38:46.180
+It's the one that's most
+widely used in practice.
+
+00:38:46.180 --> 00:38:48.940
+To do full justice
+to it, to explain
+
+00:38:48.940 --> 00:38:51.717
+even like how gzip works would
+take me several lectures,
+
+00:38:51.717 --> 00:38:53.800
+and to explain how something
+like Zstandard, which
+
+00:38:53.800 --> 00:38:55.840
+is a modern version
+works would probably
+
+00:38:55.840 --> 00:38:57.490
+take me the entire course.
+
+00:38:57.490 --> 00:39:00.850
+Plus I don't think I'm
+qualified to actually talk
+
+00:39:00.850 --> 00:39:02.320
+so much about LZ77.
+
+00:39:02.320 --> 00:39:06.700
+But we will try to look at
+some practical aspects of LZ77,
+
+00:39:06.700 --> 00:39:09.910
+things that I'm more
+confident to speak about
+
+00:39:09.910 --> 00:39:12.670
+without bringing in, like, the
+creator of these algorithms.
+
+00:39:12.670 --> 00:39:13.300
+OK.
+
+00:39:13.300 --> 00:39:16.343
+So first thing,
+there's this whole idea
+
+00:39:16.343 --> 00:39:17.260
+is very simple, right?
+
+00:39:17.260 --> 00:39:20.410
+But do I need to keep
+this infinite past memory?
+
+00:39:20.410 --> 00:39:23.860
+Do I need to keep all of
+the past, at every time,
+
+00:39:23.860 --> 00:39:25.030
+to find matches?
+
+00:39:25.030 --> 00:39:26.950
+Like if I have a
+1 gigabyte file,
+
+00:39:26.950 --> 00:39:29.740
+do I need to keep the
+last gigabyte in my memory
+
+00:39:29.740 --> 00:39:32.320
+and then look for matches
+in that last one gigabyte?
+
+00:39:32.320 --> 00:39:35.830
+That doesn't sound efficient
+and people don't do that.
+
+00:39:35.830 --> 00:39:39.640
+What people do is use something
+called a sliding window LZ77
+
+00:39:39.640 --> 00:39:41.590
+where you only try
+to find matches
+
+00:39:41.590 --> 00:39:43.750
+in the last 10
+kilobytes or a few
+
+00:39:43.750 --> 00:39:45.820
+megabytes, that sort of thing.
+
+00:39:45.820 --> 00:39:47.110
+So you limit the scope.
+
+00:39:47.110 --> 00:39:49.960
+You don't look for matches
+that are arbitrarily far away.
+
+00:39:49.960 --> 00:39:52.150
+So that's one thing.
+
+00:39:52.150 --> 00:39:53.920
+And some technical
+details, like, you
+
+00:39:53.920 --> 00:39:57.460
+can use circular buffers,
+some particular techniques
+
+00:39:57.460 --> 00:40:00.190
+to efficiently handle windows
+without reallocating memory
+
+00:40:00.190 --> 00:40:02.395
+every time, or moving a
+bunch of data every time.
+
+00:40:04.970 --> 00:40:08.322
+And we'll see this
+one in the next slide.
+
+00:40:08.322 --> 00:40:10.280
+That bigger windows give
+you better compression
+
+00:40:10.280 --> 00:40:12.115
+because now you have more--
+
+00:40:12.115 --> 00:40:14.240
+basically, it's just making
+the compression encoder
+
+00:40:14.240 --> 00:40:15.200
+more powerful.
+
+00:40:15.200 --> 00:40:18.350
+Like it can find
+faraway matches.
+
+00:40:18.350 --> 00:40:20.470
+But it needs more
+memory because then you
+
+00:40:20.470 --> 00:40:22.220
+need to store that
+entire window with you,
+
+00:40:22.220 --> 00:40:25.850
+both in the compression
+and the decompression.
+
+00:40:25.850 --> 00:40:29.390
+We have implemented this in SCL.
+
+00:40:29.390 --> 00:40:30.800
+I encourage you to look at it.
+
+00:40:30.800 --> 00:40:32.150
+It's, I think, well-documented.
+
+00:40:32.150 --> 00:40:35.750
+And I had a hard
+time like actually
+
+00:40:35.750 --> 00:40:39.290
+finding an implementation
+that was easy to explain.
+
+00:40:39.290 --> 00:40:42.080
+So I hope this will be
+useful, especially if you
+
+00:40:42.080 --> 00:40:44.420
+are doing a project on this.
+
+00:40:44.420 --> 00:40:49.200
+I will mention some specific
+project ideas shortly.
+
+00:40:49.200 --> 00:40:51.240
+So I took the Alice
+in Wonderland book.
+
+00:40:51.240 --> 00:40:55.800
+I increased the window size
+in an exponential scale,
+
+00:40:55.800 --> 00:40:59.570
+and I looked at the
+compressed size in bytes.
+
+00:40:59.570 --> 00:41:01.880
+So what you see is that
+as you expect, right?
+
+00:41:01.880 --> 00:41:06.280
+As you improve the window,
+you get better and better
+
+00:41:06.280 --> 00:41:07.300
+compression.
+
+00:41:07.300 --> 00:41:08.952
+At some point, it
+starts leveling off.
+
+00:41:08.952 --> 00:41:11.410
+In this case, because the file
+itself has a certain length,
+
+00:41:11.410 --> 00:41:13.327
+so making the window
+bigger than the file size
+
+00:41:13.327 --> 00:41:14.620
+obviously is not going to help.
+
+00:41:14.620 --> 00:41:16.298
+But even in general,
+after a point,
+
+00:41:16.298 --> 00:41:17.965
+it doesn't help to
+have a bigger window.
+
+00:41:20.210 --> 00:41:22.210
+Again, this is something
+which is data-specific.
+
+00:41:22.210 --> 00:41:24.400
+For your data, may be
+bigger windows are better.
+
+00:41:24.400 --> 00:41:27.490
+Or for your application, maybe
+you can afford a lot of memory.
+
+00:41:27.490 --> 00:41:30.130
+So it's all about
+what you want to do.
+
+00:41:30.130 --> 00:41:33.820
+There are no hard rules that
+always use 100,000 windows.
+
+00:41:33.820 --> 00:41:35.380
+That's not the
+lesson of this plot.
+
+00:41:40.190 --> 00:41:41.210
+Another question.
+
+00:41:41.210 --> 00:41:43.040
+The basic question, right?
+
+00:41:43.040 --> 00:41:46.190
+We did it by hand,
+by eye earlier.
+
+00:41:46.190 --> 00:41:50.590
+But clearly, like, a
+computer won't do that.
+
+00:41:50.590 --> 00:41:52.090
+How to find matches?
+
+00:41:52.090 --> 00:41:54.340
+Match-finding, this
+is like the core
+
+00:41:54.340 --> 00:41:56.350
+of an encoder, not the decoder.
+
+00:41:56.350 --> 00:41:57.730
+This is important to understand.
+
+00:41:57.730 --> 00:41:59.200
+No matter how you
+find the matches,
+
+00:41:59.200 --> 00:42:01.150
+the decoder can still
+decode your data.
+
+00:42:01.150 --> 00:42:04.690
+It's an encoder-only property,
+this match-finding business.
+
+00:42:04.690 --> 00:42:06.940
+How do I find a
+match in the past?
+
+00:42:06.940 --> 00:42:12.070
+And the basic idea, which again,
+you can find the code, is to--
+
+00:42:16.630 --> 00:42:19.500
+what you do
+basically is that you
+
+00:42:19.500 --> 00:42:22.200
+take all of these
+different common patterns,
+
+00:42:22.200 --> 00:42:25.020
+like the patterns that
+you have seen in the past,
+
+00:42:25.020 --> 00:42:28.500
+and you say that A B C D
+has occurred at position 1,
+
+00:42:28.500 --> 00:42:33.150
+position 10, position 15,
+position 20, let's say.
+
+00:42:33.150 --> 00:42:35.400
+And this guy has
+occurred at position 2
+
+00:42:35.400 --> 00:42:38.010
+and position 14 or something.
+
+00:42:38.010 --> 00:42:40.260
+So you make this
+big table where each
+
+00:42:40.260 --> 00:42:42.300
+of these four-length
+sequences, when have they
+
+00:42:42.300 --> 00:42:43.620
+occurred in the past?
+
+00:42:43.620 --> 00:42:49.420
+And now, you are at some point
+in the file you see an A B C D.
+
+00:42:49.420 --> 00:42:53.140
+So you see, oh, I have seen
+A B C D, past occurrences,
+
+00:42:53.140 --> 00:42:53.890
+basically.
+
+00:42:57.000 --> 00:43:00.730
+Are at 1, 10, 15, 20.
+
+00:43:00.730 --> 00:43:01.230
+Right?
+
+00:43:01.230 --> 00:43:05.740
+Because you store this in
+a hash table, basically.
+
+00:43:05.740 --> 00:43:07.690
+So you store this
+table, which is
+
+00:43:07.690 --> 00:43:09.760
+like for every
+four-length sequence, when
+
+00:43:09.760 --> 00:43:13.940
+have I seen it in the past
+for all possible sequences?
+
+00:43:13.940 --> 00:43:16.640
+And then, when you find
+the sequence in the future,
+
+00:43:16.640 --> 00:43:18.380
+you look at its
+past occurrences.
+
+00:43:18.380 --> 00:43:20.065
+And you try to see
+which one of them
+
+00:43:20.065 --> 00:43:21.440
+would give you
+the longest match.
+
+00:43:21.440 --> 00:43:26.180
+So maybe you saw A B C D at,
+like, position 10 in the past,
+
+00:43:26.180 --> 00:43:30.680
+and at position 1 in the past.
+
+00:43:30.680 --> 00:43:33.890
+However, in this case this was
+followed by E F. In this case,
+
+00:43:33.890 --> 00:43:36.020
+this was followed by, like, ZX.
+
+00:43:36.020 --> 00:43:39.180
+And here, it's followed
+by E F. So you would
+
+00:43:39.180 --> 00:43:41.520
+prefer the first one, right?
+
+00:43:41.520 --> 00:43:42.750
+This seems a better match.
+
+00:43:42.750 --> 00:43:47.500
+This is a longer match
+instead of this one.
+
+00:43:47.500 --> 00:43:49.510
+So you have a lot of
+candidate positions
+
+00:43:49.510 --> 00:43:52.180
+where this A B C D occurred
+and then in the past,
+
+00:43:52.180 --> 00:43:55.810
+you look at where did you find
+the longer match to this A B C
+
+00:43:55.810 --> 00:43:57.010
+D E F.
+
+00:43:57.010 --> 00:44:00.890
+So this is like a basic
+idea commonly used
+
+00:44:00.890 --> 00:44:03.230
+in many algorithms, like
+a seed-type idea, where
+
+00:44:03.230 --> 00:44:05.270
+to find a match,
+what you do is you
+
+00:44:05.270 --> 00:44:08.390
+take a four-length, or a
+three-length, five-length seed.
+
+00:44:08.390 --> 00:44:11.120
+Seed is the thing you
+index in your hash table.
+
+00:44:11.120 --> 00:44:13.430
+So in this case, it's all
+four-length sequences that
+
+00:44:13.430 --> 00:44:15.020
+are hashed in the sequence.
+
+00:44:15.020 --> 00:44:17.480
+You use that to find
+candidate matches.
+
+00:44:17.480 --> 00:44:21.200
+And then you find the best match
+out of those candidate matches.
+
+00:44:21.200 --> 00:44:23.210
+So really, like,
+reduces the search space
+
+00:44:23.210 --> 00:44:25.010
+when you're looking for things.
+
+00:44:25.010 --> 00:44:29.300
+So index past occurrences of
+sequences in a data structure,
+
+00:44:29.300 --> 00:44:33.080
+like hash table, binary tree,
+you can choose your favorite.
+
+00:44:33.080 --> 00:44:35.300
+And for the given
+position, do a lookup
+
+00:44:35.300 --> 00:44:39.170
+to find previous occurrences and
+then extend the candidate match
+
+00:44:39.170 --> 00:44:40.292
+to find the longest match.
+
+00:44:40.292 --> 00:44:41.750
+So you extend it
+in the future, you
+
+00:44:41.750 --> 00:44:43.505
+see how long does
+it keep matching.
+
+00:44:47.660 --> 00:44:48.260
+Again--
+
+00:44:48.260 --> 00:44:49.160
+[INAUDIBLE]
+
+00:44:49.160 --> 00:44:51.322
+Yep.
+
+00:44:51.322 --> 00:44:54.080
+Do we just consider
+not worth it matching
+
+00:44:54.080 --> 00:44:57.910
+two or three substrates then?
+
+00:44:57.910 --> 00:45:01.390
+So you are asking why I took
+four instead of two or three?
+
+00:45:01.390 --> 00:45:01.900
+Yeah.
+
+00:45:01.900 --> 00:45:03.160
+Yes, that's a good question.
+
+00:45:06.770 --> 00:45:09.560
+There is a trade-off there,
+which we'll see shortly.
+
+00:45:09.560 --> 00:45:14.530
+But just to answer
+the specific thing,
+
+00:45:14.530 --> 00:45:17.650
+a two-length thing would give
+you a lot of false positives.
+
+00:45:17.650 --> 00:45:20.845
+Because you have seen A B much
+more than you have seen the A B
+
+00:45:20.845 --> 00:45:22.120
+C D whole thing, right?
+
+00:45:22.120 --> 00:45:25.300
+So now, if you are just indexing
+two length or three length,
+
+00:45:25.300 --> 00:45:27.790
+you will find many
+more possible things.
+
+00:45:27.790 --> 00:45:30.310
+So it will increase your
+complexity quite a bit
+
+00:45:30.310 --> 00:45:33.730
+just to find all
+of the possible--
+
+00:45:33.730 --> 00:45:35.440
+to find the longest one.
+
+00:45:35.440 --> 00:45:37.283
+On the other hand, if
+you really work hard,
+
+00:45:37.283 --> 00:45:39.700
+you will actually find maybe
+a better match than you would
+
+00:45:39.700 --> 00:45:41.270
+find with a four-length thing.
+
+00:45:41.270 --> 00:45:42.970
+So that's the
+trade-off, basically.
+
+00:45:42.970 --> 00:45:46.750
+It will often make you slower,
+but may be better compression.
+
+00:45:46.750 --> 00:45:48.670
+But in practice, we will
+see when that is not
+
+00:45:48.670 --> 00:45:50.050
+true for a particular reason.
+
+00:45:53.210 --> 00:45:55.310
+But yes, if you make it
+too big, that's very bad.
+
+00:45:55.310 --> 00:45:57.435
+Because then you will miss
+out on a lot of matches.
+
+00:46:01.730 --> 00:46:06.750
+OK, another sort of thing
+that's not immediately obvious
+
+00:46:06.750 --> 00:46:10.560
+is that the LZ77
+that we presented,
+
+00:46:10.560 --> 00:46:12.620
+like, the theoretical
+version that is greedy.
+
+00:46:12.620 --> 00:46:16.280
+Greedy means that the
+first time it sees a match,
+
+00:46:16.280 --> 00:46:17.630
+it picks up that match.
+
+00:46:17.630 --> 00:46:19.130
+It doesn't think
+of the future, it
+
+00:46:19.130 --> 00:46:22.490
+doesn't try to do some complex
+optimization problem where,
+
+00:46:22.490 --> 00:46:24.200
+oh, maybe I should
+not take this match,
+
+00:46:24.200 --> 00:46:26.300
+maybe I should take a
+longer match in the future.
+
+00:46:26.300 --> 00:46:27.890
+Let me give you an example.
+
+00:46:27.890 --> 00:46:30.190
+I'll make it very clear.
+
+00:46:30.190 --> 00:46:48.500
+So, OK.
+
+00:46:48.500 --> 00:46:50.500
+So let's say this is your
+sequence at some point
+
+00:46:50.500 --> 00:46:55.310
+in the past you saw a B C D E F.
+I'd say B B C E D F A B E F A B
+
+00:46:55.310 --> 00:46:57.980
+C D. OK, so now you're here.
+
+00:46:57.980 --> 00:47:00.130
+So the algorithm we
+were just discussing,
+
+00:47:00.130 --> 00:47:03.100
+you would see an A B. You will
+say, oh I found a match to A B,
+
+00:47:03.100 --> 00:47:04.540
+and you will say, good.
+
+00:47:04.540 --> 00:47:05.210
+I'm done.
+
+00:47:05.210 --> 00:47:05.710
+Right?
+
+00:47:08.430 --> 00:47:11.100
+However, maybe you
+can be smarter.
+
+00:47:11.100 --> 00:47:13.380
+You might say, OK, maybe
+I saw this match of A B,
+
+00:47:13.380 --> 00:47:14.280
+but it's too short.
+
+00:47:14.280 --> 00:47:15.690
+It's just of length two.
+
+00:47:15.690 --> 00:47:17.070
+What if I skipped A?
+
+00:47:17.070 --> 00:47:21.510
+Let me skip A. Let me try to
+find a match starting at B.
+
+00:47:21.510 --> 00:47:24.870
+And suddenly, I find
+a very long match.
+
+00:47:24.870 --> 00:47:27.450
+A match of length five
+instead of length two.
+
+00:47:27.450 --> 00:47:28.170
+Right?
+
+00:47:28.170 --> 00:47:29.730
+So the first one is greedy.
+
+00:47:29.730 --> 00:47:32.250
+This one is, like--
+the first one is greedy
+
+00:47:32.250 --> 00:47:37.340
+because it just takes the first
+thing and says, OK, that's it.
+
+00:47:37.340 --> 00:47:38.900
+The second one is lazy.
+
+00:47:38.900 --> 00:47:42.770
+Lazy in the sense that it says,
+OK, maybe I found a match,
+
+00:47:42.770 --> 00:47:44.060
+but let's not get too excited.
+
+00:47:44.060 --> 00:47:45.410
+Let's look a bit in the future.
+
+00:47:45.410 --> 00:47:46.822
+Maybe I will find
+a better match.
+
+00:47:46.822 --> 00:47:48.155
+Let's not pick it up right away.
+
+00:47:50.980 --> 00:47:51.855
+Does that make sense?
+
+00:47:54.455 --> 00:47:54.955
+Right?
+
+00:47:59.600 --> 00:48:04.460
+And as you can imagine,
+the real, like--
+
+00:48:04.460 --> 00:48:07.730
+people who have looked into
+this, didn't stop at this lazy.
+
+00:48:07.730 --> 00:48:10.970
+This seems like, OK, but how do
+you exactly do the lazy thing?
+
+00:48:10.970 --> 00:48:13.580
+They said, OK, let's make it
+into an optimization problem.
+
+00:48:13.580 --> 00:48:15.740
+Let's solve a perfect
+optimization problem.
+
+00:48:15.740 --> 00:48:18.210
+Let's make a dynamic
+program out of it.
+
+00:48:18.210 --> 00:48:20.650
+And you can do a lot of things.
+
+00:48:20.650 --> 00:48:22.400
+There is something
+called optimal parsing.
+
+00:48:22.400 --> 00:48:24.050
+There is a big theory
+around it where
+
+00:48:24.050 --> 00:48:26.720
+what is the LZ77
+parsing that gives you
+
+00:48:26.720 --> 00:48:28.790
+the fewest number
+of literals, or that
+
+00:48:28.790 --> 00:48:30.320
+gives you the best compression?
+
+00:48:30.320 --> 00:48:33.080
+But they just get progressively
+slower and slower.
+
+00:48:33.080 --> 00:48:34.910
+The more complex
+their strategy is.
+
+00:48:34.910 --> 00:48:37.700
+So you can imagine greedy is
+very fast because you just
+
+00:48:37.700 --> 00:48:39.110
+take the first match.
+
+00:48:39.110 --> 00:48:41.570
+Lazy is slower because you
+don't take sometimes matches,
+
+00:48:41.570 --> 00:48:44.120
+then you try-- in the future,
+try to find a longer match.
+
+00:48:44.120 --> 00:48:47.040
+And leave some
+things as literals.
+
+00:48:47.040 --> 00:48:49.860
+Is this concept clear,
+roughly, that sometimes being
+
+00:48:49.860 --> 00:48:51.540
+greedy is not the best option?
+
+00:48:51.540 --> 00:48:53.220
+Sometimes you want
+to be a bit lazy,
+
+00:48:53.220 --> 00:48:55.380
+see if there is a better
+match in the future.
+
+00:49:00.180 --> 00:49:05.310
+OK, so just to show you
+what a typical encoder would
+
+00:49:05.310 --> 00:49:09.360
+be structured like, so
+this is from the SCL class,
+
+00:49:09.360 --> 00:49:11.870
+sliding window encoder.
+
+00:49:11.870 --> 00:49:15.290
+So the encoder would take a
+match finder which basically
+
+00:49:15.290 --> 00:49:19.700
+gives you the matches, and it
+would take a window size, which
+
+00:49:19.700 --> 00:49:23.370
+is the size of the window, and
+then the match finder would
+
+00:49:23.370 --> 00:49:26.070
+have some way to extend matches,
+but, really, the main function
+
+00:49:26.070 --> 00:49:28.650
+is this, find_best_match,
+where given some sequence,
+
+00:49:28.650 --> 00:49:30.480
+it will try to find
+the best match.
+
+00:49:30.480 --> 00:49:32.220
+And there can be
+various implementation.
+
+00:49:32.220 --> 00:49:33.970
+You could have a lazy
+thing, greedy thing,
+
+00:49:33.970 --> 00:49:38.190
+just a bunch of different
+ideas there-- optimal thing.
+
+00:49:38.190 --> 00:49:40.740
+And then this particular
+match finder we implemented,
+
+00:49:40.740 --> 00:49:43.380
+you see it has so many
+parameters-- hash_length,
+
+00:49:43.380 --> 00:49:46.200
+which is four in the
+example we just--
+
+00:49:46.200 --> 00:49:47.580
+we were talking about.
+
+00:49:47.580 --> 00:49:50.400
+There's a hash_table_size
+because you don't want
+
+00:49:50.400 --> 00:49:53.190
+an arbitrary large hash table.
+
+00:49:53.190 --> 00:49:56.550
+Something on max_chain_length,
+which we will not talk about.
+
+00:49:56.550 --> 00:49:58.920
+Whether you are lazy or
+whether you are greedy.
+
+00:49:58.920 --> 00:50:02.100
+Is there a minimum match length?
+
+00:50:02.100 --> 00:50:05.730
+So this is just like an
+implementation I did.
+
+00:50:05.730 --> 00:50:07.800
+If you look at
+Zstandard or gzip,
+
+00:50:07.800 --> 00:50:12.260
+they have more
+complexities around it.
+
+00:50:12.260 --> 00:50:14.080
+But you can imagine that--
+
+00:50:14.080 --> 00:50:16.040
+the really nice thing
+is that all of these
+
+00:50:16.040 --> 00:50:17.570
+are compliant with
+the same decoder.
+
+00:50:17.570 --> 00:50:18.860
+The decoder is not
+changing, right?
+
+00:50:18.860 --> 00:50:20.090
+We are just playing
+with the encoder,
+
+00:50:20.090 --> 00:50:22.520
+trying to find a better and
+better parsing of the data
+
+00:50:22.520 --> 00:50:24.260
+while using the best decoder.
+
+00:50:24.260 --> 00:50:26.900
+And that's a very nice idea,
+because that allows you to--
+
+00:50:26.900 --> 00:50:29.510
+without breaking your
+consumers, people
+
+00:50:29.510 --> 00:50:31.010
+who are reading
+your files, they can
+
+00:50:31.010 --> 00:50:32.480
+keep using the same decoder.
+
+00:50:32.480 --> 00:50:34.700
+But you just get better
+and better compression
+
+00:50:34.700 --> 00:50:38.580
+by using these fancy
+complex strategies.
+
+00:50:38.580 --> 00:50:39.080
+OK.
+
+00:50:39.080 --> 00:50:41.850
+Are we happy?
+
+00:50:41.850 --> 00:50:43.335
+Or at least satisfied?
+
+00:50:43.335 --> 00:50:43.835
+OK.
+
+00:50:51.560 --> 00:50:53.297
+So, this is like
+an experiment I did
+
+00:50:53.297 --> 00:50:55.880
+where I had something called a
+minimum match length, which is,
+
+00:50:55.880 --> 00:50:58.430
+like, what is the shortest
+match I'm going to allow.
+
+00:50:58.430 --> 00:51:01.610
+And I kept increasing the
+minimum match length for,
+
+00:51:01.610 --> 00:51:03.820
+again, this Alice
+In Wonderland book.
+
+00:51:03.820 --> 00:51:06.250
+And what I'm showing here
+is that as I increase
+
+00:51:06.250 --> 00:51:08.890
+the minimum match length, I
+get more and more literals
+
+00:51:08.890 --> 00:51:11.020
+but fewer and fewer matches.
+
+00:51:11.020 --> 00:51:14.320
+Can somebody roughly explain
+why that might be happening?
+
+00:51:14.320 --> 00:51:15.970
+So I'm basically
+rejecting any match
+
+00:51:15.970 --> 00:51:18.205
+that's shorter than a
+particular match length.
+
+00:51:21.780 --> 00:51:24.915
+Why would I say more literals
+as I increase my match length?
+
+00:51:30.792 --> 00:51:33.720
+The match then the
+store is moving.
+
+00:51:33.720 --> 00:51:34.440
+Yeah.
+
+00:51:34.440 --> 00:51:35.670
+The answer is, if you
+don't have a match,
+
+00:51:35.670 --> 00:51:36.870
+you have to store it
+as a literal, right?
+
+00:51:36.870 --> 00:51:38.760
+And now you're disallowing
+a lot of matches.
+
+00:51:38.760 --> 00:51:41.010
+Any short sequence you
+don't even allow as a match.
+
+00:51:41.010 --> 00:51:44.580
+So therefore, you just get
+much more unmatched literals.
+
+00:51:44.580 --> 00:51:47.250
+And therefore, you pay less to
+store the matches because there
+
+00:51:47.250 --> 00:51:48.540
+are just fewer matches, right?
+
+00:51:48.540 --> 00:51:51.120
+You only take very long matches
+you say no short matches are
+
+00:51:51.120 --> 00:51:52.800
+not something I care about.
+
+00:51:52.800 --> 00:51:55.620
+However, you see there is a
+trade-off now because you get
+
+00:51:55.620 --> 00:51:58.710
+more and more literals,
+fewer and fewer--
+
+00:51:58.710 --> 00:52:01.020
+so there is, like, some
+sort of middle ground
+
+00:52:01.020 --> 00:52:04.050
+where you don't want your
+minimum match to be too small.
+
+00:52:04.050 --> 00:52:07.300
+If it's too small, literals--
+
+00:52:07.300 --> 00:52:09.800
+everything matches, but then
+you have just too many matches.
+
+00:52:09.800 --> 00:52:12.258
+You have too many matches of,
+like, length one, length two.
+
+00:52:12.258 --> 00:52:14.390
+And those matches cost a lot.
+
+00:52:14.390 --> 00:52:16.970
+Maybe it's better to not have
+these super small matches.
+
+00:52:16.970 --> 00:52:19.610
+Instead use a bigger match.
+
+00:52:19.610 --> 00:52:21.500
+And leave a few literals.
+
+00:52:21.500 --> 00:52:25.265
+So there is a trade-off
+as in a lot of things.
+
+00:52:31.830 --> 00:52:33.330
+And then this is
+another thing I did
+
+00:52:33.330 --> 00:52:36.120
+where I looked at the lazy
+and the greedy strategy,
+
+00:52:36.120 --> 00:52:37.920
+again, for this particular file.
+
+00:52:37.920 --> 00:52:40.320
+Where the greedy strategy
+just picks the first match
+
+00:52:40.320 --> 00:52:43.050
+it finds of that
+minimum match length.
+
+00:52:43.050 --> 00:52:45.570
+The lazy strategy tries
+to go a bit further,
+
+00:52:45.570 --> 00:52:47.063
+see if it can find
+a bigger match.
+
+00:52:47.063 --> 00:52:48.480
+And if it finds a
+bigger match, it
+
+00:52:48.480 --> 00:52:52.110
+takes the bigger match instead
+of taking the greedy match.
+
+00:52:52.110 --> 00:52:54.600
+And you see that the
+lazy strategy like always
+
+00:52:54.600 --> 00:52:57.600
+outperforms the greedy
+strategy in this case
+
+00:52:57.600 --> 00:52:59.040
+for any minimum match.
+
+00:53:04.770 --> 00:53:06.720
+So yeah, I encourage
+you to look at the code.
+
+00:53:06.720 --> 00:53:09.708
+I think only once you
+look at it and you
+
+00:53:09.708 --> 00:53:11.250
+think about it a
+little bit, you will
+
+00:53:11.250 --> 00:53:12.780
+appreciate this more and more.
+
+00:53:12.780 --> 00:53:15.330
+But the basic point
+I'm trying to make
+
+00:53:15.330 --> 00:53:19.440
+is, lots of choices you can make
+at the encoder, which lead to--
+
+00:53:19.440 --> 00:53:22.500
+maybe it makes it slower
+but better compression.
+
+00:53:22.500 --> 00:53:24.900
+Or it takes more memory,
+but better compression.
+
+00:53:24.900 --> 00:53:28.470
+So there are all
+these trade-offs.
+
+00:53:28.470 --> 00:53:32.550
+Any questions so far
+on this match finding?
+
+00:53:32.550 --> 00:53:36.090
+So one thing we try to do
+in the implementation in SCL
+
+00:53:36.090 --> 00:53:37.140
+is we try to--
+
+00:53:37.140 --> 00:53:40.200
+not like this here, try to
+separate the match finder
+
+00:53:40.200 --> 00:53:41.700
+so that you can plug and play.
+
+00:53:41.700 --> 00:53:45.120
+You can try different match
+finders with the same encoder.
+
+00:53:45.120 --> 00:53:47.100
+The decoder doesn't
+change, just the encoder,
+
+00:53:47.100 --> 00:53:49.883
+you can implement your
+own favorite match finder.
+
+00:53:49.883 --> 00:53:52.050
+You can implement some DP,
+dynamic programming-based
+
+00:53:52.050 --> 00:53:52.550
+thing.
+
+00:53:56.160 --> 00:53:58.020
+OK?
+
+00:53:58.020 --> 00:54:00.750
+And then, obviously, you need to
+entropy code everything, right?
+
+00:54:00.750 --> 00:54:02.510
+It's not enough to--
+
+00:54:02.510 --> 00:54:04.260
+just producing, this
+is not enough, right?
+
+00:54:04.260 --> 00:54:07.380
+At the end of the day, you need
+to actually store it in bits.
+
+00:54:07.380 --> 00:54:10.620
+And that's, again, something
+people have played with a lot.
+
+00:54:10.620 --> 00:54:12.540
+The current sort
+of standard thing
+
+00:54:12.540 --> 00:54:14.910
+that everybody does, this
+is not what gzip does,
+
+00:54:14.910 --> 00:54:17.760
+gzip does it a bit differently,
+but all the modern compressors
+
+00:54:17.760 --> 00:54:24.270
+do this, is you take all the
+unmatched literals in a block,
+
+00:54:24.270 --> 00:54:29.900
+you concatenate them together
+into a single, long thing,
+
+00:54:29.900 --> 00:54:31.550
+and then you store
+the number here--
+
+00:54:31.550 --> 00:54:33.440
+5, 0, 4, the length here.
+
+00:54:33.440 --> 00:54:36.710
+So, really, what you get-- this
+is sort of a technical point,
+
+00:54:36.710 --> 00:54:38.750
+but really what you
+have is you have
+
+00:54:38.750 --> 00:54:41.720
+the literals which is a
+sequence of just, like, bytes.
+
+00:54:41.720 --> 00:54:45.740
+And you have three integer
+sequences, literal counts,
+
+00:54:45.740 --> 00:54:48.253
+match length, match offset.
+
+00:54:48.253 --> 00:54:50.420
+Very technical point, don't
+worry about it too much.
+
+00:54:50.420 --> 00:54:53.540
+But this is how everybody
+does it nowadays.
+
+00:54:53.540 --> 00:54:55.670
+And then you have to
+encode each of these.
+
+00:54:55.670 --> 00:54:58.850
+And we have all of the
+entropy coders we saw, right?
+
+00:54:58.850 --> 00:55:01.490
+So that's the power of
+these entropy coders
+
+00:55:01.490 --> 00:55:04.190
+because all LZ77 is
+doing is converting
+
+00:55:04.190 --> 00:55:07.160
+your very complex stationary
+distribution into a much
+
+00:55:07.160 --> 00:55:09.770
+simpler iid distribution.
+
+00:55:09.770 --> 00:55:13.910
+So now you can use your favorite
+coders for iid distribution
+
+00:55:13.910 --> 00:55:16.010
+and they will basically
+give you the results.
+
+00:55:18.990 --> 00:55:19.490
+Right?
+
+00:55:19.490 --> 00:55:22.840
+So you can use Huffman coding,
+gzip just uses Huffman coding.
+
+00:55:22.840 --> 00:55:24.950
+Zstandard uses
+Huffman for literals.
+
+00:55:24.950 --> 00:55:29.210
+You can use tANS, which is
+recently becoming more popular.
+
+00:55:29.210 --> 00:55:31.690
+C-standard uses it for--
+
+00:55:31.690 --> 00:55:33.790
+oh, what are this?
+
+00:55:33.790 --> 00:55:36.560
+Not for literals.
+
+00:55:36.560 --> 00:55:40.210
+It uses for match
+lengths and offsets.
+
+00:55:40.210 --> 00:55:42.400
+Yeah.
+
+00:55:42.400 --> 00:55:45.400
+Or you can use context-based
+arithmetic coding,
+
+00:55:45.400 --> 00:55:47.920
+which is very slow to
+encode and decode, which
+
+00:55:47.920 --> 00:55:52.987
+is what LZMA or XZ or
+7-Zip, all these guys use.
+
+00:55:52.987 --> 00:55:54.570
+Or you could just
+skip entropy coding.
+
+00:55:54.570 --> 00:55:55.560
+Say that, OK, I don't care.
+
+00:55:55.560 --> 00:55:56.850
+I will just use a simple code.
+
+00:55:56.850 --> 00:55:59.640
+I won't do like any fancy
+entropy coding because I
+
+00:55:59.640 --> 00:56:00.780
+want to be very, very fast.
+
+00:56:00.780 --> 00:56:04.050
+And that's what
+LZ4 and Snappy do.
+
+00:56:04.050 --> 00:56:09.060
+All these names probably don't
+sound very familiar to you.
+
+00:56:09.060 --> 00:56:09.882
+And that's fine.
+
+00:56:09.882 --> 00:56:12.090
+I think really there are
+only a couple of compressors
+
+00:56:12.090 --> 00:56:14.382
+you should know about, really,
+and then everything else
+
+00:56:14.382 --> 00:56:16.440
+you can--
+
+00:56:16.440 --> 00:56:19.780
+if you need it, you
+look at it, sort of.
+
+00:56:19.780 --> 00:56:20.920
+Let me skip this slide.
+
+00:56:20.920 --> 00:56:23.410
+It's like a technical point
+about how do you actually
+
+00:56:23.410 --> 00:56:25.840
+entropy code integers.
+
+00:56:25.840 --> 00:56:28.860
+Please read it at home.
+
+00:56:28.860 --> 00:56:32.400
+OK, so, really, the lesson
+is that the parsing or match
+
+00:56:32.400 --> 00:56:35.040
+finding strategy, the window
+size, the entropy coder,
+
+00:56:35.040 --> 00:56:36.553
+implementation
+details, like, are
+
+00:56:36.553 --> 00:56:38.970
+you using SIMD, are you using
+these advanced instructions,
+
+00:56:38.970 --> 00:56:42.300
+are you parallelizing things
+matter a lot in determining
+
+00:56:42.300 --> 00:56:43.890
+speed and memory usage.
+
+00:56:43.890 --> 00:56:46.800
+So let's look at this plot.
+
+00:56:46.800 --> 00:56:48.780
+So this is showing
+Zstandard, which
+
+00:56:48.780 --> 00:56:53.490
+is a modern LZ77-based
+compressor and Zlib, which
+
+00:56:53.490 --> 00:56:55.530
+is the library
+behind gzip, which
+
+00:56:55.530 --> 00:57:00.270
+is an older, around like 30
+years old now, compressor.
+
+00:57:00.270 --> 00:57:03.630
+The x-axis is compression speed.
+
+00:57:03.630 --> 00:57:06.360
+The y-axis is compression ratio.
+
+00:57:06.360 --> 00:57:09.300
+And where you want to be
+is on this side, basically.
+
+00:57:09.300 --> 00:57:12.420
+You want higher speed, lower
+compression ratio-- sorry,
+
+00:57:12.420 --> 00:57:15.640
+higher speed and higher
+compression ratio.
+
+00:57:15.640 --> 00:57:17.620
+And you see-- and the
+different dots here
+
+00:57:17.620 --> 00:57:20.530
+are the different levels, like,
+different parameters where
+
+00:57:20.530 --> 00:57:23.320
+you take a bigger window, or
+you use a more powerful entropy
+
+00:57:23.320 --> 00:57:24.340
+coder.
+
+00:57:24.340 --> 00:57:27.710
+Sorry, not-- use a more
+powerful match finder.
+
+00:57:27.710 --> 00:57:33.050
+And you see that zstandard just
+like beats Zlib on all fronts.
+
+00:57:33.050 --> 00:57:34.910
+Partly because it has
+better algorithms,
+
+00:57:34.910 --> 00:57:36.800
+partly because it
+uses more memory,
+
+00:57:36.800 --> 00:57:40.100
+partly because it is implemented
+better to use modern hardware
+
+00:57:40.100 --> 00:57:41.120
+instructions.
+
+00:57:41.120 --> 00:57:44.720
+So all of these things
+matter, these small decisions
+
+00:57:44.720 --> 00:57:48.860
+end up impacting where you
+lie in this curve, basically.
+
+00:57:51.390 --> 00:57:55.320
+And this is decompression
+speed where, again, zstandard
+
+00:57:55.320 --> 00:57:56.940
+achieves like amazing results.
+
+00:57:56.940 --> 00:57:59.940
+It's like 1.4 GBPS in this--
+
+00:57:59.940 --> 00:58:02.130
+for some data set.
+
+00:58:02.130 --> 00:58:06.390
+Again, this is mostly because of
+how the decoder is implemented.
+
+00:58:06.390 --> 00:58:07.440
+That's a big role.
+
+00:58:07.440 --> 00:58:09.960
+And also because how they
+structured the format, which
+
+00:58:09.960 --> 00:58:11.670
+is a bit technical.
+
+00:58:11.670 --> 00:58:13.500
+LZMA uses arithmetic coding.
+
+00:58:13.500 --> 00:58:15.870
+So it's just very
+slow to decode, sadly.
+
+00:58:15.870 --> 00:58:20.300
+Arithmetic decoding, as
+we saw, is slow to decode.
+
+00:58:20.300 --> 00:58:23.180
+Another thing you notice is that
+we don't show any levels here.
+
+00:58:23.180 --> 00:58:25.770
+And the reason is
+that regardless
+
+00:58:25.770 --> 00:58:29.130
+of what match finding you use,
+the decoding stays the same.
+
+00:58:29.130 --> 00:58:31.650
+Decoding is just copying
+stuff from the past
+
+00:58:31.650 --> 00:58:35.910
+so it affects us slightly,
+but not too much.
+
+00:58:35.910 --> 00:58:39.240
+The different encoders can
+still produce the same sort
+
+00:58:39.240 --> 00:58:41.280
+of decompression speed.
+
+00:58:46.560 --> 00:58:48.330
+And then, here, you
+can just like look
+
+00:58:48.330 --> 00:58:51.300
+at so many different
+LZ77, each of them
+
+00:58:51.300 --> 00:58:53.490
+have their own levels
+from one to whatever.
+
+00:58:53.490 --> 00:58:55.470
+You have the zstandard,
+zlib is gzip,
+
+00:58:55.470 --> 00:58:57.990
+basically, you have
+Brotli from Google.
+
+00:58:57.990 --> 00:59:00.450
+You have LZ4, again,
+from Yann Collet
+
+00:59:00.450 --> 00:59:02.130
+who also wrote zstandard.
+
+00:59:02.130 --> 00:59:03.840
+You have Snappy from Google.
+
+00:59:03.840 --> 00:59:07.710
+So, just all these guys keep
+making their own versions.
+
+00:59:07.710 --> 00:59:10.243
+And we'll look at for,
+like a practitioner,
+
+00:59:10.243 --> 00:59:11.410
+how do you think about this?
+
+00:59:11.410 --> 00:59:12.660
+There are so many compressors.
+
+00:59:12.660 --> 00:59:14.250
+Like, you Google
+data compression.
+
+00:59:14.250 --> 00:59:16.170
+You get like a million results.
+
+00:59:16.170 --> 00:59:17.910
+What do you do?
+
+00:59:17.910 --> 00:59:20.455
+Before we go there, just a
+quick note that universal
+
+00:59:20.455 --> 00:59:21.330
+doesn't mean perfect.
+
+00:59:21.330 --> 00:59:22.760
+Right?
+
+00:59:22.760 --> 00:59:25.790
+LZ77 is universal in
+an asymptotic sense.
+
+00:59:25.790 --> 00:59:27.530
+Again, as n goes to
+infinity, it will
+
+00:59:27.530 --> 00:59:30.560
+achieve the entropy wrote for
+any stationary distribution.
+
+00:59:30.560 --> 00:59:33.350
+But your data is probably
+not infinitely large.
+
+00:59:33.350 --> 00:59:34.760
+It's a finite thing.
+
+00:59:34.760 --> 00:59:37.370
+So it need not be the best
+choice for your particular data
+
+00:59:37.370 --> 00:59:38.810
+set.
+
+00:59:38.810 --> 00:59:42.200
+Even if it is the perfect choice
+in terms of compression ratio,
+
+00:59:42.200 --> 00:59:43.700
+maybe it is too slow for you.
+
+00:59:43.700 --> 00:59:46.633
+Maybe it has too high
+of a memory usage.
+
+00:59:46.633 --> 00:59:48.800
+So all these things should
+go into your calculation.
+
+00:59:48.800 --> 00:59:51.497
+Just don't think that
+LZ77 is universal,
+
+00:59:51.497 --> 00:59:52.580
+so that's what I will use.
+
+00:59:52.580 --> 00:59:54.440
+I will never consider
+any other compressor.
+
+00:59:54.440 --> 00:59:57.680
+That's not how we should think.
+
+00:59:57.680 --> 01:00:01.250
+And obviously, as we
+saw, right, gzip is LZ77,
+
+01:00:01.250 --> 01:00:04.190
+zstandard is LZ77, but
+they are not the same.
+
+01:00:04.190 --> 01:00:07.760
+So there are a lot of, like,
+beyond this base algorithm,
+
+01:00:07.760 --> 01:00:10.490
+the basic idea that works
+in theory, there are so many
+
+01:00:10.490 --> 01:00:12.290
+minor things you can do which--
+
+01:00:12.290 --> 01:00:14.870
+or major things you can do,
+which really change the world.
+
+01:00:17.180 --> 01:00:17.680
+OK.
+
+01:00:17.680 --> 01:00:19.810
+So that's it on LZ.
+
+01:00:19.810 --> 01:00:21.430
+We didn't talk about LZ78.
+
+01:00:21.430 --> 01:00:22.480
+It is very interesting.
+
+01:00:22.480 --> 01:00:25.270
+I think-- I encourage
+you to read up on it,
+
+01:00:25.270 --> 01:00:29.170
+or do a project on
+it, if you want to.
+
+01:00:29.170 --> 01:00:31.810
+Tsachy covers it in
+much detail in EE 376C.
+
+01:00:31.810 --> 01:00:37.670
+The course is called "Universal
+Schemes In Information Theory."
+
+01:00:37.670 --> 01:00:40.250
+It's a bit like
+theoretical course.
+
+01:00:40.250 --> 01:00:44.027
+I think quite a while
+since it was last taught,
+
+01:00:44.027 --> 01:00:45.860
+but I think we can share
+the notes with you,
+
+01:00:45.860 --> 01:00:49.370
+if you are interested in
+the theory aspect here.
+
+01:00:49.370 --> 01:00:52.070
+And there are a lot
+of things in LZ77--
+
+01:00:52.070 --> 01:00:54.080
+things like repcodes,
+optimal parsing,
+
+01:00:54.080 --> 01:00:56.090
+which we don't have
+time to cover here.
+
+01:00:56.090 --> 01:00:58.610
+All of these are good
+project ideas, talk to us
+
+01:00:58.610 --> 01:01:03.710
+and we can point you to
+the relevant resources.
+
+01:01:03.710 --> 01:01:04.280
+OK.
+
+01:01:04.280 --> 01:01:11.420
+So let's-- so short, the
+summary is that LZ77 is a great
+
+01:01:11.420 --> 01:01:12.230
+compressor.
+
+01:01:12.230 --> 01:01:13.798
+So now-- but you
+have been-- like,
+
+01:01:13.798 --> 01:01:16.340
+every compressor we teach you,
+we tell you it's a great idea.
+
+01:01:16.340 --> 01:01:18.890
+Last time, we said context-based
+arithmetic coding is great.
+
+01:01:18.890 --> 01:01:21.680
+Before that, Huffman was great.
+
+01:01:21.680 --> 01:01:24.500
+Everybody seems
+optimal in some sense.
+
+01:01:24.500 --> 01:01:27.290
+So how do you think
+about data compression?
+
+01:01:27.290 --> 01:01:29.620
+OK.
+
+01:01:29.620 --> 01:01:31.268
+So, you have a lot of data.
+
+01:01:31.268 --> 01:01:32.560
+You want to compress that data.
+
+01:01:32.560 --> 01:01:33.190
+First thing.
+
+01:01:33.190 --> 01:01:34.870
+First thing, always
+to think about,
+
+01:01:34.870 --> 01:01:37.240
+is it possible you don't
+need all this data?
+
+01:01:37.240 --> 01:01:38.530
+Do you really need this data?
+
+01:01:38.530 --> 01:01:40.900
+Maybe just delete it.
+
+01:01:40.900 --> 01:01:42.220
+Really, this is very important.
+
+01:01:42.220 --> 01:01:46.450
+And like, that's how
+most of the cost savings
+
+01:01:46.450 --> 01:01:49.390
+come from, because you just
+identify that, oh, I don't
+
+01:01:49.390 --> 01:01:51.010
+need this exabyte of data.
+
+01:01:51.010 --> 01:01:52.450
+Let's just delete the data.
+
+01:01:52.450 --> 01:01:56.710
+And that's basically saving
+you millions of dollars.
+
+01:01:56.710 --> 01:02:00.510
+So again, maybe you can't
+delete the whole thing,
+
+01:02:00.510 --> 01:02:02.550
+but maybe you can
+identify with whatever
+
+01:02:02.550 --> 01:02:04.860
+you have learned that
+some parts of the data
+
+01:02:04.860 --> 01:02:07.080
+are costing you more than
+other parts of the data.
+
+01:02:07.080 --> 01:02:10.390
+Let's say, you
+are writing a log.
+
+01:02:10.390 --> 01:02:12.490
+There are multiple fields
+in the log, let's say.
+
+01:02:12.490 --> 01:02:15.520
+Maybe some fields are
+much more compressible.
+
+01:02:15.520 --> 01:02:17.530
+Things that look very
+long, like if you
+
+01:02:17.530 --> 01:02:20.410
+have a log of some
+sort of web server log,
+
+01:02:20.410 --> 01:02:23.590
+for example, it will
+have the host name.
+
+01:02:23.590 --> 01:02:26.132
+But maybe the host name is
+the same for every log line
+
+01:02:26.132 --> 01:02:28.090
+because the host name is
+the name of that host.
+
+01:02:28.090 --> 01:02:29.710
+It is the IP address
+of that host.
+
+01:02:29.710 --> 01:02:31.395
+So anything that
+just keeps repeating
+
+01:02:31.395 --> 01:02:32.770
+is going to be
+very compressible,
+
+01:02:32.770 --> 01:02:34.450
+even if it looks long.
+
+01:02:34.450 --> 01:02:37.450
+But maybe there is some
+request ID or some access ID
+
+01:02:37.450 --> 01:02:40.060
+or something, which is
+like a random small string.
+
+01:02:40.060 --> 01:02:42.220
+It looks very small
+when you look at it
+
+01:02:42.220 --> 01:02:43.750
+in the uncompressed domain.
+
+01:02:43.750 --> 01:02:46.230
+If you have like--
+
+01:02:46.230 --> 01:02:49.520
+if you have hostname,
+which is like 10.1--
+
+01:02:49.520 --> 01:02:54.860
+sorry, 10.1.1.12 or
+something like this,
+
+01:02:54.860 --> 01:02:57.515
+and then that just
+repeats every line,
+
+01:02:57.515 --> 01:02:59.390
+so this is-- like, even
+though it looks long,
+
+01:02:59.390 --> 01:03:00.800
+it's easy to compress.
+
+01:03:00.800 --> 01:03:03.350
+It doesn't take any bits
+in the compressed domain.
+
+01:03:03.350 --> 01:03:05.390
+But maybe you have this
+like random thing--
+
+01:03:05.390 --> 01:03:11.880
+XYA, ZXX, BDC,
+something like this.
+
+01:03:11.880 --> 01:03:12.570
+Right?
+
+01:03:12.570 --> 01:03:15.198
+This is very hard to compress.
+
+01:03:15.198 --> 01:03:17.490
+So that sort of thing, like,
+after you do a compression
+
+01:03:17.490 --> 01:03:19.032
+class, you should
+have some intuition
+
+01:03:19.032 --> 01:03:22.560
+like, does my identifier, my
+uuid, some unique identifier
+
+01:03:22.560 --> 01:03:24.000
+does it need to be so random?
+
+01:03:24.000 --> 01:03:25.620
+Does it need to be 64 bytes?
+
+01:03:25.620 --> 01:03:27.690
+Can I do it with like 10 bytes?
+
+01:03:27.690 --> 01:03:30.300
+Can I make it sequential,
+instead of random?
+
+01:03:30.300 --> 01:03:33.220
+So just, like, this is how
+you can think about it.
+
+01:03:33.220 --> 01:03:33.720
+Right?
+
+01:03:33.720 --> 01:03:36.540
+For any type of data,
+just to plug an example.
+
+01:03:39.212 --> 01:03:40.670
+If you're storing
+this data, right?
+
+01:03:40.670 --> 01:03:42.860
+And again, I'm thinking more
+from like a company perspective
+
+01:03:42.860 --> 01:03:45.260
+rather than personal storage,
+but even personal storage,
+
+01:03:45.260 --> 01:03:48.500
+you take these photos,
+do you need all of them,
+
+01:03:48.500 --> 01:03:49.760
+to look at them, really?
+
+01:03:49.760 --> 01:03:53.362
+So for companies,
+obviously, sometimes there
+
+01:03:53.362 --> 01:03:54.320
+are legal requirements.
+
+01:03:54.320 --> 01:03:56.120
+You need to keep some
+data for some time,
+
+01:03:56.120 --> 01:03:58.160
+or maybe there are reasons
+you want to keep it.
+
+01:03:58.160 --> 01:04:00.077
+So sure, OK, maybe, you
+need to keep the data.
+
+01:04:00.077 --> 01:04:02.250
+But think hard about this.
+
+01:04:02.250 --> 01:04:06.270
+And finally, think about what
+is your data access pattern?
+
+01:04:06.270 --> 01:04:08.590
+Take photos, for example.
+
+01:04:08.590 --> 01:04:10.170
+Photos maybe you don't--
+
+01:04:10.170 --> 01:04:12.960
+you want to keep them, maybe
+in future, at some point,
+
+01:04:12.960 --> 01:04:14.070
+you want to look at them.
+
+01:04:14.070 --> 01:04:16.650
+But it's not like you're going
+through your like one-year-old
+
+01:04:16.650 --> 01:04:17.910
+photos every day.
+
+01:04:17.910 --> 01:04:20.310
+So maybe, you store it in
+a cheaper, cold storage
+
+01:04:20.310 --> 01:04:22.020
+sort of thing, rather
+than storing it
+
+01:04:22.020 --> 01:04:24.480
+in the most expensive storage.
+
+01:04:24.480 --> 01:04:25.350
+Right?
+
+01:04:25.350 --> 01:04:29.840
+So just like a computer,
+if you read about cache
+
+01:04:29.840 --> 01:04:30.840
+in your computer, right?
+
+01:04:30.840 --> 01:04:33.420
+It keeps the things that
+are more frequently accessed
+
+01:04:33.420 --> 01:04:35.910
+in a very sort of
+expensive storage.
+
+01:04:35.910 --> 01:04:38.160
+And it keeps everything
+that's used less in like RAM
+
+01:04:38.160 --> 01:04:39.870
+or on disk, or something.
+
+01:04:39.870 --> 01:04:42.480
+Similarly, store your
+data in that way.
+
+01:04:42.480 --> 01:04:45.750
+And finally, for a
+lot of types of data,
+
+01:04:45.750 --> 01:04:47.340
+you can't do
+lossless compression
+
+01:04:47.340 --> 01:04:49.110
+and be, like, practical.
+
+01:04:49.110 --> 01:04:51.570
+Videos are the prime
+example of that.
+
+01:04:51.570 --> 01:04:53.760
+And that's basically the
+next half of the course
+
+01:04:53.760 --> 01:04:55.822
+where sometimes just
+lossy compression,
+
+01:04:55.822 --> 01:04:57.780
+it's just unreasonable
+to do lossy compression.
+
+01:04:57.780 --> 01:05:00.770
+So, OK.
+
+01:05:00.770 --> 01:05:03.285
+And one more thing, before
+you get too discouraged,
+
+01:05:03.285 --> 01:05:04.910
+why do we learn all
+this if you're just
+
+01:05:04.910 --> 01:05:06.380
+going to delete all our data.
+
+01:05:06.380 --> 01:05:08.070
+Compression is not
+only about storage.
+
+01:05:08.070 --> 01:05:10.280
+It reduces memory,
+it reduces bandwidth.
+
+01:05:10.280 --> 01:05:13.040
+You can sometimes query your
+data faster with compression.
+
+01:05:13.040 --> 01:05:15.890
+So many times, you
+need to do compression
+
+01:05:15.890 --> 01:05:18.980
+and you need to know
+how to do compression.
+
+01:05:18.980 --> 01:05:22.560
+OK, any questions?
+
+01:05:22.560 --> 01:05:23.160
+Yeah.
+
+01:05:23.160 --> 01:05:24.840
+Some of this might
+sound like a joke,
+
+01:05:24.840 --> 01:05:26.257
+but, like, when
+we talk to people,
+
+01:05:26.257 --> 01:05:27.990
+and this is what
+the unique thing
+
+01:05:27.990 --> 01:05:30.540
+you can offer once you
+know about compression.
+
+01:05:30.540 --> 01:05:32.820
+Many of these things are not
+at all obvious to people.
+
+01:05:32.820 --> 01:05:34.800
+Like, this thing
+where people think
+
+01:05:34.800 --> 01:05:36.420
+that, oh, this is
+so long, this should
+
+01:05:36.420 --> 01:05:37.800
+be very hard to compress.
+
+01:05:37.800 --> 01:05:38.370
+Right?
+
+01:05:38.370 --> 01:05:40.050
+But now, you know
+that the entropy here
+
+01:05:40.050 --> 01:05:42.820
+is zero, basically, because
+everything is the same.
+
+01:05:42.820 --> 01:05:43.320
+Right?
+
+01:05:43.320 --> 01:05:45.945
+You can easily predict the next
+one, based on the previous one.
+
+01:05:45.945 --> 01:05:48.000
+Where here, you have
+a lot of entropy,
+
+01:05:48.000 --> 01:05:49.800
+predicting the next one is
+not-- because they are random,
+
+01:05:49.800 --> 01:05:50.280
+actually.
+
+01:05:50.280 --> 01:05:50.700
+Right?
+
+01:05:50.700 --> 01:05:52.140
+So this is sort
+of intuition that
+
+01:05:52.140 --> 01:05:56.120
+will be useful, like, when you
+look at a real application.
+
+01:05:56.120 --> 01:05:57.830
+OK, so now you
+decide, OK, I need
+
+01:05:57.830 --> 01:05:59.240
+to store this data losslessly.
+
+01:05:59.240 --> 01:05:59.840
+Now what?
+
+01:05:59.840 --> 01:06:03.000
+Now, what's the next step?
+
+01:06:03.000 --> 01:06:05.090
+The things not to do.
+
+01:06:05.090 --> 01:06:07.750
+OK, so maybe you think,
+OK, I learned EE274.
+
+01:06:07.750 --> 01:06:09.220
+Now, I'm very smart.
+
+01:06:09.220 --> 01:06:12.880
+I will just implement
+my own compressor.
+
+01:06:12.880 --> 01:06:13.540
+Right?
+
+01:06:13.540 --> 01:06:17.470
+I will use LZ77 and
+I will use Huffman,
+
+01:06:17.470 --> 01:06:22.090
+or maybe I will just design
+my own LLM or something.
+
+01:06:22.090 --> 01:06:24.370
+OK, don't do this.
+
+01:06:24.370 --> 01:06:26.290
+I will talk about why.
+
+01:06:26.290 --> 01:06:28.960
+Or maybe you think, OK,
+I will not implement
+
+01:06:28.960 --> 01:06:32.110
+and I will not discover
+a new algorithm
+
+01:06:32.110 --> 01:06:35.440
+or invent a new algorithm, but
+I know all these LZ77 entropy
+
+01:06:35.440 --> 01:06:36.040
+coders.
+
+01:06:36.040 --> 01:06:39.700
+So let me implement them, right?
+
+01:06:39.700 --> 01:06:41.800
+Let me implement them
+from scratch in Python
+
+01:06:41.800 --> 01:06:46.330
+or in C. Or maybe you say,
+no, I'm just not up to it.
+
+01:06:46.330 --> 01:06:48.790
+I didn't like listening the
+lectures carefully enough.
+
+01:06:48.790 --> 01:06:51.910
+I will just Google
+search online and see
+
+01:06:51.910 --> 01:06:57.500
+some very expensive compressor,
+and just buy the license to it.
+
+01:06:57.500 --> 01:07:00.650
+Or, maybe you just, like,
+listen to some small part
+
+01:07:00.650 --> 01:07:04.010
+of this lecture, you
+decide, LZ77 is universal,
+
+01:07:04.010 --> 01:07:06.140
+gzip is an
+implementation of LZ77.
+
+01:07:06.140 --> 01:07:07.980
+It has to be the
+perfect compressor.
+
+01:07:07.980 --> 01:07:08.480
+Right?
+
+01:07:08.480 --> 01:07:10.940
+You didn't listen to the
+lecture very carefully.
+
+01:07:10.940 --> 01:07:13.820
+And-- OK, that's the
+popular thing, right?
+
+01:07:13.820 --> 01:07:16.020
+Everybody says gzip is
+the compressor to use.
+
+01:07:16.020 --> 01:07:16.520
+OK.
+
+01:07:16.520 --> 01:07:17.020
+Sure.
+
+01:07:17.020 --> 01:07:17.810
+We'll use that.
+
+01:07:17.810 --> 01:07:19.830
+So don't do this.
+
+01:07:19.830 --> 01:07:22.670
+Use your skills from this class.
+
+01:07:22.670 --> 01:07:25.700
+All of this can make sense
+but not as the first step.
+
+01:07:25.700 --> 01:07:29.710
+The first thing you should do is
+to understand your application.
+
+01:07:29.710 --> 01:07:31.090
+Why are you using compression?
+
+01:07:31.090 --> 01:07:32.530
+What is the need?
+
+01:07:32.530 --> 01:07:34.420
+And where are you
+using compression?
+
+01:07:34.420 --> 01:07:36.070
+So what is the speed you need?
+
+01:07:36.070 --> 01:07:37.930
+What is the memory
+usage you need?
+
+01:07:37.930 --> 01:07:39.640
+Where is the
+compression happening?
+
+01:07:39.640 --> 01:07:41.230
+Is it happening on
+your own machine?
+
+01:07:41.230 --> 01:07:43.270
+Is it happening on
+somebody else's machine?
+
+01:07:43.270 --> 01:07:44.770
+Is it an open source library?
+
+01:07:44.770 --> 01:07:48.670
+Is it a closed source thing
+within your organization?
+
+01:07:48.670 --> 01:07:49.930
+Is it like a hobby project?
+
+01:07:49.930 --> 01:07:51.472
+Is it like something
+that needs to be
+
+01:07:51.472 --> 01:07:57.520
+used in production on, like,
+gigabytes or petabytes of data?
+
+01:07:57.520 --> 01:07:59.500
+How will compression and
+decompression happen?
+
+01:07:59.500 --> 01:08:01.125
+We don't talk about
+it as often, right,
+
+01:08:01.125 --> 01:08:03.910
+but gzip, zstandard,
+all of these have a CLI,
+
+01:08:03.910 --> 01:08:05.620
+they have a command
+line interface.
+
+01:08:05.620 --> 01:08:10.370
+You can run it like zstandard,
+dash c, whatever, whatever.
+
+01:08:10.370 --> 01:08:13.580
+Or they have a library, there
+is a C library, Python library,
+
+01:08:13.580 --> 01:08:16.520
+Java library, all
+languages imaginable,
+
+01:08:16.520 --> 01:08:18.770
+there is a zstandard
+or a gzip library.
+
+01:08:18.770 --> 01:08:21.250
+So where will it happen?
+
+01:08:21.250 --> 01:08:23.590
+Is the data homogeneous?
+
+01:08:23.590 --> 01:08:27.880
+So for example, do you have
+a lot of genomics data?
+
+01:08:27.880 --> 01:08:30.370
+So all of the data looks
+similar to each other.
+
+01:08:30.370 --> 01:08:32.740
+Or are you like a
+cloud storage service,
+
+01:08:32.740 --> 01:08:35.649
+where everybody wants to store
+their data on your system?
+
+01:08:35.649 --> 01:08:37.569
+So therefore the data
+is not up to you.
+
+01:08:37.569 --> 01:08:40.180
+Everybody else decides what
+data they put in your thing.
+
+01:08:40.180 --> 01:08:42.640
+So whether the data
+is homogeneous or not
+
+01:08:42.640 --> 01:08:44.779
+will influence how you
+design your compressor.
+
+01:08:44.779 --> 01:08:45.279
+Right?
+
+01:08:45.279 --> 01:08:46.689
+If it's homogeneous,
+if you have a lot
+
+01:08:46.689 --> 01:08:49.240
+of the data of the same kind,
+you have lots of genomics data,
+
+01:08:49.240 --> 01:08:51.430
+maybe you want to design
+your own special compressor
+
+01:08:51.430 --> 01:08:52.750
+for genomics.
+
+01:08:52.750 --> 01:08:54.910
+But if it's not homogeneous,
+so other people are
+
+01:08:54.910 --> 01:08:56.620
+putting in their
+data, you don't know
+
+01:08:56.620 --> 01:08:57.828
+what the data is going to be.
+
+01:08:57.828 --> 01:09:00.439
+So then maybe you should use a
+universal compressor like LZ.
+
+01:09:00.439 --> 01:09:00.939
+Right?
+
+01:09:00.939 --> 01:09:02.500
+So all of this
+should influence how
+
+01:09:02.500 --> 01:09:04.899
+you think about
+building your own thing,
+
+01:09:04.899 --> 01:09:06.385
+or not building your own thing.
+
+01:09:09.180 --> 01:09:11.850
+So one thing I find
+often useful is
+
+01:09:11.850 --> 01:09:14.580
+to use these benchmarks
+that people have done,
+
+01:09:14.580 --> 01:09:16.680
+or you can do.
+
+01:09:16.680 --> 01:09:20.550
+The idea is that you take some
+corpus, you take some data set,
+
+01:09:20.550 --> 01:09:22.109
+like maybe you
+take genomics data,
+
+01:09:22.109 --> 01:09:24.600
+maybe you take a mixture of
+different types of files.
+
+01:09:24.600 --> 01:09:26.670
+You run a bunch of
+different compressors
+
+01:09:26.670 --> 01:09:31.620
+in their different parameters,
+and then you make a plot.
+
+01:09:31.620 --> 01:09:35.390
+So you make a plot,
+like this one.
+
+01:09:35.390 --> 01:09:39.890
+So the x-axis is
+compression speed.
+
+01:09:39.890 --> 01:09:43.510
+So this is better, basically.
+
+01:09:43.510 --> 01:09:47.920
+Let me just write
+faster compression.
+
+01:09:47.920 --> 01:09:49.899
+And this is more compression.
+
+01:09:53.930 --> 01:09:57.110
+And you see, for example,
+that if speed is your thing,
+
+01:09:57.110 --> 01:09:58.340
+LZ4 is the way to go.
+
+01:09:58.340 --> 01:10:00.230
+There is nobody
+even close to it.
+
+01:10:00.230 --> 01:10:04.490
+It's just like several times
+faster than everybody else.
+
+01:10:04.490 --> 01:10:06.240
+Maybe if you want the
+extreme compression,
+
+01:10:06.240 --> 01:10:08.460
+then these things
+called ZPAQ or ZMIX,
+
+01:10:08.460 --> 01:10:11.130
+or these very, very
+slow but very powerful
+
+01:10:11.130 --> 01:10:13.590
+compressors, maybe
+those are the way to go.
+
+01:10:13.590 --> 01:10:15.090
+Maybe we want
+something in between.
+
+01:10:15.090 --> 01:10:17.490
+So maybe you want
+to use zstandard.
+
+01:10:17.490 --> 01:10:19.170
+Maybe you want something
+slightly slower
+
+01:10:19.170 --> 01:10:21.212
+than zstandard that gives
+you better compression.
+
+01:10:21.212 --> 01:10:23.282
+So maybe you use BZIP2 or BSC.
+
+01:10:23.282 --> 01:10:24.990
+These might just sound
+like names to you,
+
+01:10:24.990 --> 01:10:26.240
+if you have not heard of them.
+
+01:10:26.240 --> 01:10:28.260
+But basically these are
+the popular compressors
+
+01:10:28.260 --> 01:10:31.490
+that many times people
+would want to consider.
+
+01:10:31.490 --> 01:10:35.440
+In this plot, this
+green one is gzip,
+
+01:10:35.440 --> 01:10:37.870
+this brown one is zstandard.
+
+01:10:37.870 --> 01:10:40.060
+Would you ever use
+gzip over zstandard
+
+01:10:40.060 --> 01:10:41.095
+by looking at this plot?
+
+01:10:46.390 --> 01:10:48.390
+At the top right is the
+better direction, right?
+
+01:10:48.390 --> 01:10:50.850
+And you see just the zstandard,
+every level of zstandard
+
+01:10:50.850 --> 01:10:52.860
+is just better than--
+
+01:10:52.860 --> 01:10:55.350
+zstandard just gives you a
+better Pareto optimal sort
+
+01:10:55.350 --> 01:10:57.525
+of frontier, as
+compared to gzip,
+
+01:10:57.525 --> 01:11:01.020
+because it's very similar
+idea but just modern.
+
+01:11:01.020 --> 01:11:02.970
+It does use more
+memory, so if you
+
+01:11:02.970 --> 01:11:05.280
+are like running
+on a Raspberry Pi,
+
+01:11:05.280 --> 01:11:08.940
+or you're running on like a
+1970s computer for some reason,
+
+01:11:08.940 --> 01:11:10.800
+then you want to use
+gzip because gzip
+
+01:11:10.800 --> 01:11:13.680
+can work with even kilobytes
+of memory, versus zstandard,
+
+01:11:13.680 --> 01:11:15.353
+would at least take megabytes.
+
+01:11:15.353 --> 01:11:16.770
+When I was small,
+I had a computer
+
+01:11:16.770 --> 01:11:18.930
+just like 128 MB total RAM.
+
+01:11:18.930 --> 01:11:21.060
+So there, I could
+imagine like zstandard
+
+01:11:21.060 --> 01:11:22.650
+would might be too expensive.
+
+01:11:22.650 --> 01:11:27.090
+But really, today,
+it's not that common.
+
+01:11:27.090 --> 01:11:29.500
+Same for decompression speed.
+
+01:11:29.500 --> 01:11:35.680
+So this is, like,
+faster decompression.
+
+01:11:35.680 --> 01:11:38.530
+And this is more
+compression, basically.
+
+01:11:38.530 --> 01:11:42.010
+So again, the
+y-axis is the same.
+
+01:11:42.010 --> 01:11:45.030
+And here you again see
+LZ4 is the clear winner.
+
+01:11:45.030 --> 01:11:47.597
+Fast compression or fast
+decompression, just use LZ4.
+
+01:11:47.597 --> 01:11:48.930
+Don't worry about anything else.
+
+01:11:48.930 --> 01:11:50.495
+All of them have
+multiple parameters.
+
+01:11:50.495 --> 01:11:52.620
+So that's why you see
+multiple points corresponding
+
+01:11:52.620 --> 01:11:54.530
+to the same thing.
+
+01:11:54.530 --> 01:11:56.690
+Zstandard is very fast,
+Brotli is very fast,
+
+01:11:56.690 --> 01:11:59.060
+gzip is slower, but
+still pretty fast.
+
+01:11:59.060 --> 01:12:03.560
+And the reason is all of
+these are based on LZ77.
+
+01:12:03.560 --> 01:12:05.860
+And LZ77--
+
+01:12:05.860 --> 01:12:09.850
+So what about the memory
+usage for gzip and zstandard?
+
+01:12:09.850 --> 01:12:10.450
+Yeah.
+
+01:12:10.450 --> 01:12:13.960
+So zstandard uses more memory
+because it-- by default,
+
+01:12:13.960 --> 01:12:16.210
+uses a bigger window than gzip.
+
+01:12:16.210 --> 01:12:17.950
+Gzip, the maximum
+window is, like,
+
+01:12:17.950 --> 01:12:21.310
+I think 32 kilobytes or 64
+kilobytes, something like that.
+
+01:12:21.310 --> 01:12:24.670
+Zstandard you can increase it to
+even gigabytes if you want to.
+
+01:12:24.670 --> 01:12:27.010
+But by default, it's
+like a few megabytes.
+
+01:12:27.010 --> 01:12:30.280
+So the memory usage of zstandard
+is like in tens of megabytes,
+
+01:12:30.280 --> 01:12:34.270
+typically, whereas gzip is like
+a couple megabytes or less.
+
+01:12:34.270 --> 01:12:36.490
+So that's the rough thing.
+
+01:12:36.490 --> 01:12:38.170
+Most applications
+today, I think,
+
+01:12:38.170 --> 01:12:39.910
+are fine with the
+zstandard memory usage.
+
+01:12:39.910 --> 01:12:41.800
+But if you're in a
+very constrained host,
+
+01:12:41.800 --> 01:12:45.430
+or constrained system, then
+you might not be able to do it.
+
+01:12:45.430 --> 01:12:46.030
+Yeah.
+
+01:12:46.030 --> 01:12:47.410
+So that's like a
+trade-off they made.
+
+01:12:47.410 --> 01:12:48.640
+Like, it's not
+like the zstandard
+
+01:12:48.640 --> 01:12:49.960
+is just better on every front.
+
+01:12:49.960 --> 01:12:52.543
+There is still, like, the memory
+front where it's not so good.
+
+01:12:52.543 --> 01:12:54.820
+But I think it's just
+made for a modern age.
+
+01:12:54.820 --> 01:12:56.500
+Where gzip made some decisions.
+
+01:12:56.500 --> 01:12:59.290
+For example, they fixed
+their maximum window size
+
+01:12:59.290 --> 01:13:01.930
+to be this 32 KB, or 64.
+
+01:13:01.930 --> 01:13:02.950
+I don't remember.
+
+01:13:02.950 --> 01:13:06.070
+There is no way in the format
+to allow it to increase.
+
+01:13:06.070 --> 01:13:08.440
+Zstandard learned
+from that lesson.
+
+01:13:08.440 --> 01:13:10.510
+They don't put a upper
+limit on the window size.
+
+01:13:10.510 --> 01:13:12.052
+They say, maybe, in
+future there will
+
+01:13:12.052 --> 01:13:15.520
+be a machine which will be able
+to handle a 1 gigabyte or a 1
+
+01:13:15.520 --> 01:13:17.380
+terabyte window.
+
+01:13:17.380 --> 01:13:19.242
+Why not let it use that?
+
+01:13:19.242 --> 01:13:21.700
+We'll just-- so there are these
+decisions that people make.
+
+01:13:21.700 --> 01:13:25.530
+So I think zstandard was
+much more careful in, like,
+
+01:13:25.530 --> 01:13:30.030
+making these decisions on what
+the format is in that sense.
+
+01:13:30.030 --> 01:13:31.950
+You can use zstandard
+with a very low memory,
+
+01:13:31.950 --> 01:13:34.408
+if you use a very small window.
+
+01:13:34.408 --> 01:13:36.730
+Yeah.
+
+01:13:36.730 --> 01:13:39.310
+And then, if you want
+more compression,
+
+01:13:39.310 --> 01:13:41.110
+but you're fine with
+slower decompression,
+
+01:13:41.110 --> 01:13:44.992
+use BSC or BZIP, which I
+will talk about in a second.
+
+01:13:44.992 --> 01:13:46.450
+But yeah, so the
+point I was making
+
+01:13:46.450 --> 01:13:48.940
+was that LZ77 is
+fast at decompression
+
+01:13:48.940 --> 01:13:52.410
+because the decompression,
+as you saw before,
+
+01:13:52.410 --> 01:13:54.030
+is just copying from the past.
+
+01:13:54.030 --> 01:13:55.710
+And mem copies are very fast.
+
+01:13:55.710 --> 01:13:57.600
+There isn't like a
+lot of logic there.
+
+01:13:57.600 --> 01:14:00.150
+You do Huffman decoding, you
+do ANS decoding, all of them
+
+01:14:00.150 --> 01:14:00.840
+are very fast.
+
+01:14:00.840 --> 01:14:03.510
+And then you just copy
+stuff from the past.
+
+01:14:03.510 --> 01:14:08.790
+So general rule of thumb is
+zstandard has a very fast
+
+01:14:08.790 --> 01:14:11.120
+decompression at any level.
+
+01:14:11.120 --> 01:14:12.740
+It has a lot of levels.
+
+01:14:12.740 --> 01:14:16.340
+It should be the first thing to
+try, I think, in today's age.
+
+01:14:16.340 --> 01:14:18.230
+If you are given a
+compression problem,
+
+01:14:18.230 --> 01:14:21.002
+try zstandard first,
+and don't use gzip
+
+01:14:21.002 --> 01:14:22.460
+unless you have a
+very good reason.
+
+01:14:22.460 --> 01:14:24.345
+Maybe you have some
+compatibility reason.
+
+01:14:24.345 --> 01:14:25.220
+A lot of people have.
+
+01:14:25.220 --> 01:14:27.950
+If you are writing data that
+other people need to read,
+
+01:14:27.950 --> 01:14:31.028
+and they don't have zstandard
+on their system, then maybe you
+
+01:14:31.028 --> 01:14:31.820
+need to write gzip.
+
+01:14:31.820 --> 01:14:36.340
+But other than that
+really, don't use gzip.
+
+01:14:36.340 --> 01:14:38.020
+To go even faster, try LZ4.
+
+01:14:38.020 --> 01:14:39.970
+So what LZ4 does
+different from zstandard
+
+01:14:39.970 --> 01:14:42.400
+is that LZ4 has a very
+fast match finder.
+
+01:14:42.400 --> 01:14:44.290
+And it doesn't do
+any entropy coding.
+
+01:14:44.290 --> 01:14:47.170
+So it skips the ANS
+or the Huffman step.
+
+01:14:47.170 --> 01:14:49.960
+It just encodes it with
+some fixed number of bits.
+
+01:14:49.960 --> 01:14:52.645
+So it's much, much
+faster in that way.
+
+01:14:55.400 --> 01:14:57.440
+Now, if you want to go
+a bit slower, right,
+
+01:14:57.440 --> 01:15:00.560
+you think that, OK, I need to
+store this data for 10 years,
+
+01:15:00.560 --> 01:15:03.950
+I don't work with it so often
+it's more for an archival type
+
+01:15:03.950 --> 01:15:04.670
+use case.
+
+01:15:04.670 --> 01:15:06.710
+Maybe you want like
+a better compressor.
+
+01:15:06.710 --> 01:15:08.780
+So now there are two
+choices, mainly, one
+
+01:15:08.780 --> 01:15:12.500
+is this LZMA-based compressors
+which are again LZ77 followed
+
+01:15:12.500 --> 01:15:14.570
+by arithmetic
+coding, which we know
+
+01:15:14.570 --> 01:15:17.780
+can be more powerful
+than like Huffman or ANS
+
+01:15:17.780 --> 01:15:19.760
+because you can do
+context-based coding.
+
+01:15:19.760 --> 01:15:22.040
+And XZ, if you have
+heard of it, or 7-zip
+
+01:15:22.040 --> 01:15:24.780
+are like prime examples of this.
+
+01:15:24.780 --> 01:15:27.300
+Or you use something called
+BWT-based compressors, which
+
+01:15:27.300 --> 01:15:30.750
+we didn't talk about
+in the class at all.
+
+01:15:30.750 --> 01:15:33.318
+I will let you look
+at it in the homework.
+
+01:15:33.318 --> 01:15:35.610
+There is a question in the
+homework that will teach you
+
+01:15:35.610 --> 01:15:37.650
+about BWT,
+Burrows-Wheeler Transform,
+
+01:15:37.650 --> 01:15:41.400
+it's a way to transform the data
+to make it very compressible.
+
+01:15:41.400 --> 01:15:45.360
+And BWT is faster than LZMA,
+typically, at compression
+
+01:15:45.360 --> 01:15:47.700
+but slower at decompression
+because the decompression
+
+01:15:47.700 --> 01:15:48.990
+is no longer just copying it.
+
+01:15:48.990 --> 01:15:52.190
+It does more advanced things.
+
+01:15:52.190 --> 01:15:54.410
+And then if you are even
+more resource intensive,
+
+01:15:54.410 --> 01:15:56.118
+you should do, like,
+make your own model,
+
+01:15:56.118 --> 01:15:58.670
+do context-based coding which
+we learned in the last lecture.
+
+01:15:58.670 --> 01:16:02.390
+And then, if you
+have nothing to do,
+
+01:16:02.390 --> 01:16:04.430
+like, you're just
+sitting idle, you're
+
+01:16:04.430 --> 01:16:08.360
+OK to have your data be
+compressed in 100 years,
+
+01:16:08.360 --> 01:16:11.450
+use these super [CLEARS THROAT]
+small compressors.
+
+01:16:11.450 --> 01:16:12.380
+This is, today, right?
+
+01:16:12.380 --> 01:16:14.570
+Maybe five years later,
+things will change.
+
+01:16:14.570 --> 01:16:17.930
+Maybe we'll have GPUs on
+every machine, or something.
+
+01:16:17.930 --> 01:16:19.050
+Anyway.
+
+01:16:19.050 --> 01:16:19.550
+Right.
+
+01:16:19.550 --> 01:16:21.710
+And now, if you decide
+you want to use zstandard,
+
+01:16:21.710 --> 01:16:23.120
+you want to use it correctly.
+
+01:16:23.120 --> 01:16:27.590
+Use the latest version of
+this thing, or any software.
+
+01:16:27.590 --> 01:16:29.840
+Or latest stable
+version, obviously.
+
+01:16:29.840 --> 01:16:31.100
+Choose the right level.
+
+01:16:31.100 --> 01:16:32.687
+There are levels 1 to 19.
+
+01:16:32.687 --> 01:16:33.770
+There are negative levels.
+
+01:16:33.770 --> 01:16:35.600
+There are some ultra
+levels above 19.
+
+01:16:35.600 --> 01:16:38.750
+There is a big range
+of compression speed,
+
+01:16:38.750 --> 01:16:41.780
+compression ratio trade-off
+you can choose with zstandard.
+
+01:16:41.780 --> 01:16:43.700
+And sometimes you want
+to go beyond this.
+
+01:16:43.700 --> 01:16:45.890
+Maybe these levels
+are not enough.
+
+01:16:45.890 --> 01:16:47.990
+As we saw in the past,
+you have the hash length,
+
+01:16:47.990 --> 01:16:49.640
+min-max length, dot, dot, dot.
+
+01:16:49.640 --> 01:16:50.870
+All these parameters.
+
+01:16:50.870 --> 01:16:52.880
+Levels are just like
+specific combinations
+
+01:16:52.880 --> 01:16:53.810
+of these parameters.
+
+01:16:53.810 --> 01:16:55.130
+You can go even deeper.
+
+01:16:55.130 --> 01:16:58.220
+You can define your own
+zstandard custom encoder
+
+01:16:58.220 --> 01:17:02.250
+by choosing this
+special parameters.
+
+01:17:02.250 --> 01:17:04.200
+You can use the CLI,
+you can use the library
+
+01:17:04.200 --> 01:17:06.090
+in the language of your choice.
+
+01:17:06.090 --> 01:17:08.130
+This is a common
+mistake that people do.
+
+01:17:08.130 --> 01:17:12.030
+Like, if you're using zstandard
+in like C or Java or Python,
+
+01:17:12.030 --> 01:17:15.120
+Rest, whatever, if you are
+compressing multiple files one
+
+01:17:15.120 --> 01:17:18.660
+after the other, you don't
+need to drop or delete
+
+01:17:18.660 --> 01:17:20.130
+your zstandard
+context every time.
+
+01:17:20.130 --> 01:17:21.210
+You can reuse it.
+
+01:17:21.210 --> 01:17:23.790
+So that speeds up your
+application quite a bit.
+
+01:17:23.790 --> 01:17:25.770
+If you're compressing
+a bunch of small
+
+01:17:25.770 --> 01:17:28.580
+files one after the other.
+
+01:17:28.580 --> 01:17:30.470
+And then if you have
+very, very small files,
+
+01:17:30.470 --> 01:17:33.410
+where you don't expect to find
+good matches within the file,
+
+01:17:33.410 --> 01:17:36.080
+you use something called
+dictionary compression, which
+
+01:17:36.080 --> 01:17:37.940
+is, again, a problem
+in homework three.
+
+01:17:37.940 --> 01:17:39.680
+This is a very, very
+interesting topic
+
+01:17:39.680 --> 01:17:42.450
+which I hope you will enjoy.
+
+01:17:42.450 --> 01:17:45.480
+Also, has some of my
+favorite cartoon characters,
+
+01:17:45.480 --> 01:17:48.500
+so that's good.
+
+01:17:48.500 --> 01:17:50.420
+OK, and I think
+this is the last.
+
+01:17:50.420 --> 01:17:52.220
+Yep.
+
+01:17:52.220 --> 01:17:54.290
+So follow up question
+on [INAUDIBLE]..
+
+01:17:54.290 --> 01:17:57.470
+So the standard is
+greater than gzip.
+
+01:17:57.470 --> 01:18:00.460
+Is that only true because
+we have much bigger--
+
+01:18:00.460 --> 01:18:02.420
+like, in terms of
+performance, we
+
+01:18:02.420 --> 01:18:05.660
+have much bigger context window,
+in which we can find matches?
+
+01:18:05.660 --> 01:18:09.045
+Is it still better if we
+limit it to 64 KB [INAUDIBLE]??
+
+01:18:09.045 --> 01:18:09.920
+It's a good question.
+
+01:18:09.920 --> 01:18:11.930
+He asks, is the
+standard only better
+
+01:18:11.930 --> 01:18:13.610
+because we give it
+a bigger window?
+
+01:18:13.610 --> 01:18:14.190
+No.
+
+01:18:14.190 --> 01:18:15.440
+There are many things they do.
+
+01:18:15.440 --> 01:18:17.582
+One thing is they replace
+the Huffman coding used
+
+01:18:17.582 --> 01:18:19.040
+for the match
+positions and lengths
+
+01:18:19.040 --> 01:18:22.730
+with tANS, which is a better
+compressor, as we saw.
+
+01:18:22.730 --> 01:18:24.920
+It was much closer
+to arithmetic coding.
+
+01:18:24.920 --> 01:18:26.390
+So that's one thing.
+
+01:18:26.390 --> 01:18:29.300
+Then zstandard has many
+more advanced match finding
+
+01:18:29.300 --> 01:18:30.170
+strategies.
+
+01:18:30.170 --> 01:18:31.940
+Many of which actually
+only make sense
+
+01:18:31.940 --> 01:18:33.500
+at longer context windows.
+
+01:18:33.500 --> 01:18:37.340
+So gzip uses a very simple
+hash-based match finder.
+
+01:18:37.340 --> 01:18:40.370
+Zstandard has many
+other things there.
+
+01:18:40.370 --> 01:18:42.020
+And the last thing
+is the zstandard
+
+01:18:42.020 --> 01:18:43.880
+is just written better.
+
+01:18:43.880 --> 01:18:46.400
+Both the compressor, the
+decompressor, the format,
+
+01:18:46.400 --> 01:18:48.810
+all of which is written
+in a way to minimize
+
+01:18:48.810 --> 01:18:50.100
+the number of loops.
+
+01:18:50.100 --> 01:18:52.260
+Loops are very expensive
+in modern hardware.
+
+01:18:52.260 --> 01:18:55.560
+So they did it in a way which is
+very suitable for the today's,
+
+01:18:55.560 --> 01:19:02.160
+like, architectures, the
+computer architecture stuff.
+
+01:19:02.160 --> 01:19:04.320
+So all of that
+basically contributes.
+
+01:19:04.320 --> 01:19:06.840
+C-- it's not like you
+shouldn't think zstandard
+
+01:19:06.840 --> 01:19:09.210
+is better compression than gzip.
+
+01:19:09.210 --> 01:19:11.820
+It's like at the same
+compression ratio,
+
+01:19:11.820 --> 01:19:16.080
+zstandard is faster,
+or at the same speed,
+
+01:19:16.080 --> 01:19:18.120
+zstandard gives
+you a smaller file.
+
+01:19:18.120 --> 01:19:20.820
+So basically, when zstandard is
+doing the same thing that gzip
+
+01:19:20.820 --> 01:19:23.040
+is doing, it does it faster.
+
+01:19:23.040 --> 01:19:25.060
+So that gives it a
+boost, basically.
+
+01:19:25.060 --> 01:19:25.560
+Right?
+
+01:19:25.560 --> 01:19:27.435
+So it's not only better
+compression it's also
+
+01:19:27.435 --> 01:19:30.720
+better speed because they
+implemented it much better.
+
+01:19:30.720 --> 01:19:33.240
+Because the architecture's
+changed over time.
+
+01:19:33.240 --> 01:19:35.340
+It's important-- we are
+not saying gzip is bad.
+
+01:19:35.340 --> 01:19:38.520
+Like, when it was made, it's
+a very, very efficient piece
+
+01:19:38.520 --> 01:19:40.770
+of code for the 1990s.
+
+01:19:40.770 --> 01:19:45.630
+Today, like, that's not like
+the thing you want to use.
+
+01:19:45.630 --> 01:19:49.140
+So last point is
+that, OK, now, you
+
+01:19:49.140 --> 01:19:51.420
+looked at all of those
+you still think, no.
+
+01:19:51.420 --> 01:19:54.390
+I have exabytes
+of my data, I want
+
+01:19:54.390 --> 01:19:56.310
+to make something
+special for my data,
+
+01:19:56.310 --> 01:19:58.710
+or I have genomics or
+some special application.
+
+01:19:58.710 --> 01:20:00.630
+I want to make my
+own compressor.
+
+01:20:00.630 --> 01:20:03.000
+So just a few
+things that you want
+
+01:20:03.000 --> 01:20:05.640
+to think about before you start
+making your own compressor.
+
+01:20:05.640 --> 01:20:07.710
+One thing is that
+you checked out
+
+01:20:07.710 --> 01:20:10.500
+zstandard and gzip and
+BZIP2 and all of these,
+
+01:20:10.500 --> 01:20:13.200
+and you found that
+the gap between them,
+
+01:20:13.200 --> 01:20:15.580
+and your estimate
+of the entropy.
+
+01:20:15.580 --> 01:20:17.152
+You can build your own models.
+
+01:20:17.152 --> 01:20:18.610
+You make your
+probability model you
+
+01:20:18.610 --> 01:20:21.520
+try to estimate what is
+the entropy of my data.
+
+01:20:21.520 --> 01:20:24.460
+And you see, oh,
+zstandard gives me 100 KB,
+
+01:20:24.460 --> 01:20:26.770
+but my entropy is around 50 KB.
+
+01:20:26.770 --> 01:20:29.800
+So there is like a 50 KB
+gap between the entropy
+
+01:20:29.800 --> 01:20:30.670
+and my data.
+
+01:20:30.670 --> 01:20:32.620
+So therefore, maybe
+I can do better.
+
+01:20:32.620 --> 01:20:34.450
+So that's sort of one thing.
+
+01:20:34.450 --> 01:20:36.430
+Another thing is that,
+OK, zstandard gives me
+
+01:20:36.430 --> 01:20:37.540
+very good compression.
+
+01:20:37.540 --> 01:20:40.090
+But it just wastes a lot
+of time because it doesn't
+
+01:20:40.090 --> 01:20:42.250
+know that my data is a table.
+
+01:20:42.250 --> 01:20:45.790
+Or my data is a genomic data,
+or my data is a CSV file,
+
+01:20:45.790 --> 01:20:47.920
+or it's like some
+specific type of data.
+
+01:20:47.920 --> 01:20:49.930
+So maybe, if I know that I'm--
+
+01:20:49.930 --> 01:20:52.060
+zstandard is a general
+purpose compressor, right?
+
+01:20:52.060 --> 01:20:54.310
+So it has to work for
+every type of data.
+
+01:20:54.310 --> 01:20:57.130
+But your special compressor
+only needs to work for one kind
+
+01:20:57.130 --> 01:20:59.830
+of data, so it has more
+flexibility in the design,
+
+01:20:59.830 --> 01:21:02.830
+it can do things that zstandard
+cannot do because it knows that
+
+01:21:02.830 --> 01:21:04.450
+your data is going
+to be a CSV file,
+
+01:21:04.450 --> 01:21:10.603
+or it's going to be a genomics
+data set or some other thing.
+
+01:21:10.603 --> 01:21:12.020
+Another thing is,
+like, if you are
+
+01:21:12.020 --> 01:21:13.880
+going to make your own
+domain-specific compressor,
+
+01:21:13.880 --> 01:21:16.490
+it's easier if it's like a
+closed ecosystem you're working
+
+01:21:16.490 --> 01:21:18.020
+within a company or something.
+
+01:21:18.020 --> 01:21:21.440
+Because it's not just
+about the compressor.
+
+01:21:21.440 --> 01:21:24.050
+If there are 100
+different people reading
+
+01:21:24.050 --> 01:21:28.370
+the compressed files with their
+own libraries, their own tools,
+
+01:21:28.370 --> 01:21:29.810
+you suddenly break everyone.
+
+01:21:29.810 --> 01:21:32.180
+As soon as you say, oh, I'm
+not using gzip or zstandard,
+
+01:21:32.180 --> 01:21:36.290
+I will use my own, like,
+[INAUDIBLE] or something
+
+01:21:36.290 --> 01:21:36.880
+like that.
+
+01:21:36.880 --> 01:21:38.630
+I will make my own
+compressor, I will just
+
+01:21:38.630 --> 01:21:39.887
+use my own compressor.
+
+01:21:39.887 --> 01:21:42.470
+But the other people don't know
+how to decode your compressor.
+
+01:21:42.470 --> 01:21:43.550
+So how will that work?
+
+01:21:43.550 --> 01:21:47.150
+So your thing should only-- will
+only work if it's a closed--
+
+01:21:47.150 --> 01:21:50.210
+it's much easier to work
+if it's a closed ecosystem.
+
+01:21:50.210 --> 01:21:53.480
+And final thing is,
+like, it's only worth
+
+01:21:53.480 --> 01:21:55.580
+it if you have a lot
+of data of that kind,
+
+01:21:55.580 --> 01:21:57.673
+or you can't live
+without it, basically.
+
+01:21:57.673 --> 01:21:59.090
+You should have a
+very strong case
+
+01:21:59.090 --> 01:22:01.790
+because a compressor
+needs design.
+
+01:22:01.790 --> 01:22:02.900
+It needs implementation.
+
+01:22:02.900 --> 01:22:04.790
+It needs a lot of testing.
+
+01:22:04.790 --> 01:22:07.070
+You need to create a
+compression format, right?
+
+01:22:07.070 --> 01:22:11.060
+You did that float question when
+you did the assignment, right?
+
+01:22:11.060 --> 01:22:14.210
+It was so tricky to
+store those floats.
+
+01:22:14.210 --> 01:22:17.480
+So many different ways of doing
+that with all their trade-offs.
+
+01:22:17.480 --> 01:22:19.343
+Think about a
+full-fledged compressor.
+
+01:22:19.343 --> 01:22:21.510
+So many different choices
+you need to make when you,
+
+01:22:21.510 --> 01:22:23.100
+like, define the format.
+
+01:22:23.100 --> 01:22:24.990
+And once you define the
+format, and you say,
+
+01:22:24.990 --> 01:22:27.870
+I'm at version one, then
+you're stuck basically.
+
+01:22:27.870 --> 01:22:30.420
+Then you should not
+change your compressor.
+
+01:22:30.420 --> 01:22:33.120
+If you change your format, then
+your-- other people's decoders
+
+01:22:33.120 --> 01:22:33.780
+will break.
+
+01:22:33.780 --> 01:22:35.790
+And everybody will
+be very unhappy.
+
+01:22:35.790 --> 01:22:38.040
+I got a zstandard file,
+but your zstandard decoder
+
+01:22:38.040 --> 01:22:38.970
+is not working.
+
+01:22:38.970 --> 01:22:41.340
+So just you need
+to be very careful
+
+01:22:41.340 --> 01:22:44.070
+about backwards compatibility,
+that sort of thing.
+
+01:22:44.070 --> 01:22:46.110
+You need to monitor
+how it's working.
+
+01:22:46.110 --> 01:22:47.340
+You will find bugs, right?
+
+01:22:47.340 --> 01:22:49.110
+Gzip, even if it's,
+like, 30 years old
+
+01:22:49.110 --> 01:22:50.970
+they found a bug in
+it like last year.
+
+01:22:50.970 --> 01:22:52.500
+So it's still, like--
+
+01:22:52.500 --> 01:22:55.290
+you need to maintain it
+for a very, very long time.
+
+01:22:55.290 --> 01:22:58.080
+And then you need to not
+only implement it once
+
+01:22:58.080 --> 01:22:59.610
+in C or Python,
+or something, you
+
+01:22:59.610 --> 01:23:01.632
+need to have it be
+supported in, like--
+
+01:23:01.632 --> 01:23:03.090
+you should have a
+Java library, you
+
+01:23:03.090 --> 01:23:05.790
+should have a C library,
+Python library, dot, dot, dot.
+
+01:23:05.790 --> 01:23:08.520
+You need to have it work
+on today's machines.
+
+01:23:08.520 --> 01:23:11.040
+You need to have it work on,
+like, yesterday's machines.
+
+01:23:11.040 --> 01:23:13.110
+And, like, 30-year-old
+processors,
+
+01:23:13.110 --> 01:23:15.790
+different architectures,
+different operating systems.
+
+01:23:15.790 --> 01:23:17.430
+So yeah.
+
+01:23:17.430 --> 01:23:19.200
+Only do it if it's
+worth it, basically.
+
+01:23:19.200 --> 01:23:21.870
+That is the point.
+
+01:23:21.870 --> 01:23:22.470
+Like, yeah.
+
+01:23:22.470 --> 01:23:24.360
+In a big company, you
+can often find cases
+
+01:23:24.360 --> 01:23:27.390
+where it is worth it, or if
+that is your whole product,
+
+01:23:27.390 --> 01:23:29.290
+maybe you find a case
+where it is worth it.
+
+01:23:29.290 --> 01:23:29.790
+Right?
+
+01:23:29.790 --> 01:23:31.790
+Genomics, for example,
+is a domain where there's
+
+01:23:31.790 --> 01:23:33.120
+a lot of data of the same kind.
+
+01:23:33.120 --> 01:23:35.730
+And it is definitely worth
+it doing a custom compressor,
+
+01:23:35.730 --> 01:23:37.110
+and they did it basically.
+
+01:23:37.110 --> 01:23:40.320
+But then everybody writes a
+paper improving it slightly
+
+01:23:40.320 --> 01:23:41.490
+in a breaking manner.
+
+01:23:41.490 --> 01:23:45.343
+But nobody uses those
+particular things, right?
+
+01:23:45.343 --> 01:23:47.760
+Basically, if you have a million
+different domain-specific
+
+01:23:47.760 --> 01:23:51.660
+compressors, how is anybody
+going to inter-operate?
+
+01:23:51.660 --> 01:23:54.840
+Like we have our language like
+English or any other language.
+
+01:23:54.840 --> 01:23:56.888
+If everybody decided, I
+will use my own language,
+
+01:23:56.888 --> 01:23:57.930
+that's not going to work.
+
+01:23:57.930 --> 01:23:59.190
+So just-- yeah.
+
+01:23:59.190 --> 01:24:02.040
+There is a limit to when
+domain-specific compressors
+
+01:24:02.040 --> 01:24:02.610
+work.
+
+01:24:02.610 --> 01:24:03.780
+But they do work.
+
+01:24:03.780 --> 01:24:08.410
+And if you have a domain
+that you are interested in,
+
+01:24:08.410 --> 01:24:10.450
+and if you think a
+domain-specific compressor is
+
+01:24:10.450 --> 01:24:13.300
+the right thing, please
+come to us and we'll
+
+01:24:13.300 --> 01:24:14.300
+do a project, basically.
+
+01:24:14.300 --> 01:24:14.800
+Yeah.
+
+01:24:14.800 --> 01:24:16.180
+Do a project on that, basically.
+
+01:24:16.180 --> 01:24:19.410
+Last year, like, people
+did on MRI data, I think,
+
+01:24:19.410 --> 01:24:21.520
+and a few other types
+of specific data
+
+01:24:21.520 --> 01:24:24.520
+that they were working with.
+
+01:24:24.520 --> 01:24:26.720
+So that's all on
+lossless compression.
+
+01:24:26.720 --> 01:24:29.530
+[INAUDIBLE] will see
+you on Wednesday.
+
+01:24:29.530 --> 01:24:30.340
+Thank you.
+
+01:24:30.340 --> 01:24:32.430
+Thank you for your patience.
+
