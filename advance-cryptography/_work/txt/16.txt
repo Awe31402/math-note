@@ -1,0 +1,2737 @@
+[00:00] [SQUEAKING]
+[00:02] [RUSTLING]
+[00:04] [CLICKING]
+[00:13] PROFESSOR: So our
+[00:13] last class, which
+[00:15] is happy, because we
+[00:15] get to go on break,
+[00:17] but there's so much more
+[00:17] I want to tell you guys.
+[00:20] But that's all we have time for.
+[00:23] There are cookies here to
+[00:23] make our last class sweet.
+[00:26] So please come and
+[00:26] get some if you want.
+[00:28] They're very small.
+[00:29] So you can take two.
+[00:33] If you didn't want to
+[00:33] commit to a large cookie,
+[00:35] you don't need to.
+[00:39] So today, finally, we're going
+[00:39] to actually construct the SNARGs
+[00:43] that we've been after.
+[00:45] That was kind of the goal is
+[00:45] to construct SNARGs, Succinct
+[00:50] Non-Interactive Arguments,
+[00:50] and like this entire course
+[00:54] was a buildup to
+[00:54] construct these SNARGs.
+[00:57] And today we're going to
+[00:57] see how to construct them.
+[00:59] There are cookies, guys--
+[01:02] cookies, if you want, from
+[01:02] flour-- really good ones.
+[01:05] So feel free to take some.
+[01:08] So what we're going
+[01:08] to do today is show
+[01:10] how to construct these SNARGs.
+[01:12] And we're going to--
+[01:14] last class,
+[01:14] Zhengzhong showed you
+[01:18] his really beautiful work
+[01:18] and constructing BARGs,
+[01:22] which are Batch Argument.
+[01:24] And on their own, you
+[01:24] can say, why do we
+[01:29] care about batch argument?
+[01:30] I'm going to recall
+[01:30] the definition.
+[01:31] But I mean, it's
+[01:31] interesting on its own.
+[01:34] But what makes it
+[01:34] super interesting
+[01:36] is that we can use it in a
+[01:36] pretty straightforward manner
+[01:40] to construct SNARGs.
+[01:41] So that's what we're
+[01:41] going to see today.
+[01:43] We're going to see how to
+[01:43] use these BARGs, that I'm
+[01:46] going to recall the
+[01:46] definition in a second,
+[01:48] and also how to use--
+[01:50] I think Zhengzhong called it
+[01:50] somewhere statistically binding
+[01:54] hash functions.
+[01:55] It's also known in the
+[01:55] literature as somewhere
+[01:57] extractable hash functions.
+[01:59] Both are used.
+[02:00] So I'm just going
+[02:00] to use the other,
+[02:01] just so you're familiar with
+[02:01] both formulations, both names.
+[02:08] So what we're going
+[02:08] to see today is
+[02:10] how to use these BARGs
+[02:10] with these hash functions
+[02:13] to get SNARGs.
+[02:15] That's kind of the
+[02:15] plan for today.
+[02:18] So let me first recall
+[02:18] what a BARG is really fast.
+[02:22] So a BARG, you want to prove
+[02:22] that many instances belong
+[02:28] to an NP language.
+[02:29] So a BARG for an NP language L
+[02:29] consists of three algorithms.
+[02:33] Gen takes as input a security
+[02:33] parameter, the number
+[02:38] of instances you want to batch.
+[02:41] Maybe I'll close-- thank you.
+[02:42] Can you close the door?
+[02:43] Thanks.
+[02:46] k, which is the number of
+[02:46] instances you want to batch,
+[02:49] and n, which is the
+[02:49] length of each instance.
+[02:52] And then output some CRS.
+[02:58] Note lambda is given in
+[02:58] unary because we want them
+[03:01] to run in time poly lambda.
+[03:04] But k and n are given in binary.
+[03:05] So because it's a
+[03:05] polynomial time algorithm,
+[03:07] it runs in time polylog in k and
+[03:07] polylog in n, the instant size.
+[03:12] And then the prover algorithm
+[03:12] takes as input the CRS,
+[03:19] and then x1 up to xn-- xk--
+[03:23] sorry.
+[03:24] So k elements with witnesses
+[03:24] and outputs, a proof pi--
+[03:35] but importantly, this
+[03:35] proof should be small.
+[03:39] So this pi is of size poly log--
+[03:47] or poly n security
+[03:47] parameter, but log k.
+[03:52] That's important.
+[03:54] We want it to depend only
+[03:54] polylogarithmically on k.
+[03:58] That's kind of our goal.
+[03:59] And then, maybe
+[03:59] ideally, also log n.
+[04:02] But the point is we
+[04:02] want it to be succinct.
+[04:05] Otherwise, it's trivial.
+[04:06] You just output the witnesses.
+[04:07] And the verifier takes as
+[04:07] input CRS, the instances,
+[04:14] and the proof.
+[04:15] And it outputs 0, 1--
+[04:20] accept or reject.
+[04:22] And this, when I say the size
+[04:22] of the proof is this, actually,
+[04:27] you can make it
+[04:27] bigger or smaller,
+[04:28] but we want it to be succinct.
+[04:31] Sorry.
+[04:33] I didn't-- we want it to depend
+[04:33] only logarithmically in k
+[04:38] and so on, but we allow it
+[04:38] to depend polynomially in one
+[04:46] witness.
+[04:48] So I can put it here, a
+[04:48] single witness, one, not many.
+[04:53] I really want to be as
+[04:53] succinct as possible,
+[04:55] but what we can get is
+[04:55] a BARG that depends--
+[04:58] grows with one instance,
+[04:58] one witness, as opposed to k
+[05:03] instances.
+[05:06] So this is kind
+[05:06] of the algorithms,
+[05:09] then we want completeness
+[05:09] and soundness.
+[05:12] Completeness is the
+[05:12] usual thing that
+[05:13] just says, if P
+[05:13] has valid witnesses
+[05:17] and it generates
+[05:17] a BARG, this BARG
+[05:20] is going to be accepting with
+[05:20] probability 1 over the CRS
+[05:24] generation.
+[05:25] So that's the
+[05:25] standard completeness.
+[05:27] And then the soundness
+[05:27] property that we have,
+[05:32] ideally, you would
+[05:32] want to say that--
+[05:36] so in soundness,
+[05:36] computational soundness,
+[05:38] we have adaptive soundness
+[05:38] and non-adaptive soundness.
+[05:41] And we want to say that a
+[05:41] cheating prover cannot convince
+[05:45] you of a false statement.
+[05:47] So he cannot generate-- he
+[05:47] cannot give you x's that are not
+[05:51] all in the language
+[05:51] with a valid proof.
+[05:54] That's soundness.
+[05:56] There's an issue with it.
+[05:57] When does the cheating prover
+[05:57] get to choose these x's?
+[06:00] Is it before he sees the CRS
+[06:00] or after he sees the CRS?
+[06:05] If he needs to decide that
+[06:05] before he sees the CRS,
+[06:08] then it's not adaptive.
+[06:10] If you get to decide it
+[06:10] after, then it's adaptive.
+[06:13] Ideally, we want to say
+[06:13] it's a cure for all very--
+[06:19] as big class
+[06:19] provers as possible.
+[06:22] And thus we would like to have
+[06:22] something against adaptive
+[06:24] provers to say, even if a
+[06:24] cheating prover chooses this x1
+[06:29] of xk, adaptively,
+[06:29] after seeing the CRS,
+[06:32] if one of them is false,
+[06:32] he cannot generate a proof.
+[06:35] That's what we
+[06:35] would like to say.
+[06:38] What we can say is what's called
+[06:38] a semi-adaptive, something
+[06:42] in between.
+[06:43] So let me just write it here.
+[06:45] So semi-adaptive soundness just
+[06:45] says the adversary needs to tell
+[06:58] you which--
+[07:00] so he's going to
+[07:00] give you k instances.
+[07:03] He can choose them
+[07:03] adaptively, but he
+[07:06] needs to choose the i on
+[07:06] which he's going to cheat.
+[07:08] So he's a cheater.
+[07:10] So one of the xi's is
+[07:10] not in the language.
+[07:13] Which i, which
+[07:13] location i, the xi,
+[07:16] is going to be not
+[07:16] in the language?
+[07:17] That should not
+[07:17] depend on the CRS.
+[07:20] So it says that for
+[07:20] any poly size P star
+[07:29] and for every i, which,
+[07:29] of course, may depend
+[07:33] on lambda, because
+[07:33] for any lambda
+[07:36] you have an i, because
+[07:36] the i is between 1 and k.
+[07:39] And k grows with--
+[07:41] can grow with lambda.
+[07:42] So for any i, you want
+[07:42] to say the probability
+[07:46] that P star, given the CRS
+[07:46] output x1 up to xk and pi,
+[07:55] such that xi is not in the
+[07:55] language and pi is accepted
+[08:01] is negligible.
+[08:03] So xi, one of them is-- the
+[08:03] xi one is not in the language.
+[08:07] And the i was chosen
+[08:07] before he saw the CRS.
+[08:10] So for any P star,
+[08:10] he tells you, I'm
+[08:14] going to cheat on location i.
+[08:17] Now, he's given a CRS.
+[08:19] The probability
+[08:19] that he gives you
+[08:21] an accepting proof for x1 of
+[08:21] xk that he chose adaptively
+[08:25] after seeing the CRS,
+[08:25] the probability that it's
+[08:28] accepting-- so CRS x1
+[08:28] up to xk and pi is 1.
+[08:39] And x is not in the language.
+[08:42] xi is negligible.
+[08:45] This equals a negligible.
+[08:52] So again, for any cheating
+[08:52] prover, he needs ahead of time,
+[08:56] I'm going to choose my xi and xk
+[08:56] adaptively after I see the CRS.
+[09:00] But I'm going to
+[09:00] cheat on location i.
+[09:04] The probability that
+[09:04] he succeeds in cheating
+[09:06] in location i in the
+[09:06] accepting way is negligible.
+[09:12] That's the
+[09:12] semi-adaptive soundness.
+[09:16] And last class,
+[09:16] Zhengzhong kind of
+[09:21] showed you the high
+[09:21] level of how you
+[09:23] construct such a-- like the
+[09:23] construction of such a BARG.
+[09:28] Any questions?
+[09:29] Yes.
+[09:29] AUDIENCE: Is this required?
+[09:31] The indices other
+[09:31] than i, are those
+[09:33] required to be in the language?
+[09:35] PROFESSOR: No, we don't care.
+[09:37] So yeah, good question.
+[09:38] So the P star can choose
+[09:38] the rest of the x's however
+[09:41] he wants-- in the language,
+[09:41] outside the language-- however
+[09:44] he wants.
+[09:46] But he wins if the xi
+[09:46] is not in the language
+[09:50] and the pi is accepting.
+[09:52] And he wins with
+[09:52] negligible probability.
+[09:54] Yes.
+[09:55] AUDIENCE: Does the--
+[09:55] transforming it
+[09:57] into fully adaptive,
+[09:57] would it imply guessing?
+[10:01] PROFESSOR: Yeah.
+[10:03] OK, good.
+[10:05] So the question is,
+[10:05] can we transform this
+[10:09] into a fully adaptive SNARG?
+[10:12] So converting it into a fully
+[10:12] adaptive SNARG is non-trivial.
+[10:21] And I'll tell you why.
+[10:24] You can guess i.
+[10:26] And you'll guess it correctly
+[10:26] with probability 1/k in general.
+[10:31] But here is-- so you can do it.
+[10:34] But here is the issue.
+[10:35] I'll tell you what
+[10:35] the complication is.
+[10:40] In the analysis--
+[10:40] so I don't want
+[10:42] to recall too much
+[10:42] of the construction,
+[10:44] but the high level idea of how
+[10:44] these BARGs are analyzed, even
+[10:48] without knowing
+[10:48] the construction,
+[10:50] the way they're analyzed--
+[10:50] in the CRS, so in the proof,
+[10:54] in the analysis, we say, suppose
+[10:54] there exists some cheating
+[10:57] prover that cheats on some i.
+[11:01] In the CRS, I'm going
+[11:01] to change the CRS now.
+[11:05] I'm going to tell the cheating
+[11:05] prover, here's a new CRS.
+[11:07] And in this new CRS, I'm
+[11:07] going to hard wire i.
+[11:11] I'm going to put some
+[11:11] information about i
+[11:13] in a way that's unnoticeable.
+[11:15] And when we'll see, I'm
+[11:15] going to call the somewhere
+[11:18] extractable hash,
+[11:18] or what Zhengzhong
+[11:20] called SSB hash, somewhere
+[11:20] statistically binding.
+[11:23] And then I'll remind you
+[11:23] a little bit how we--
+[11:26] where we stick the index i.
+[11:28] But in the analysis,
+[11:28] we say, let me change
+[11:31] the CRS to a different CRS.
+[11:33] It has a very
+[11:33] different distribution,
+[11:35] but it's indistinguishable.
+[11:36] It looks like the original CRS.
+[11:38] So P star can't distinguish
+[11:38] between the two.
+[11:41] So he'll still give
+[11:41] me a valid BARG.
+[11:44] And now I'm going to
+[11:44] say, in this new CRS,
+[11:48] actually, there's no way
+[11:48] he can cheat on location i.
+[11:50] There's no way he can cheat.
+[11:51] What is the issue?
+[11:53] So now you're saying,
+[11:53] why do we need--
+[11:55] why can't we do fully adaptive?
+[11:57] The issue is it may be the case
+[11:57] that once we switch the CRS,
+[12:03] it switches where he's cheating.
+[12:05] So here's an alternative way.
+[12:07] Let's say the prover
+[12:07] tells you, you know what?
+[12:09] I'm going to cheat
+[12:09] in location i.
+[12:11] But I can be adaptive--
+[12:11] chosen based on the CRS.
+[12:14] So now in the analysis,
+[12:14] I'm going to say--
+[12:16] I'm going to guess
+[12:16] where he cheated.
+[12:18] I'm going to say, let's guess
+[12:18] he cheated in location 7.
+[12:20] I'm going to hardwire
+[12:20] kind of the CRS
+[12:22] to depend on this location.
+[12:24] And then the cheating
+[12:24] prover doesn't cheat on 7.
+[12:27] It cheats on something else.
+[12:29] He can kind of evade me.
+[12:31] Now, you're saying, oh, if
+[12:31] he cheated on something else,
+[12:34] I can tell the difference.
+[12:35] So I shouldn't be able to tell.
+[12:37] But the thing is you don't know
+[12:37] what's in the language, what's
+[12:40] not in the language.
+[12:41] So the problem is whether
+[12:41] xi is in the language
+[12:45] or not in the language
+[12:45] can be very hard to tell.
+[12:48] It may take-- and that's why
+[12:48] kind of getting adaptive--
+[12:53] just guessing is not good
+[12:53] enough, because he needs to--
+[13:00] the issue is if you
+[13:00] could tell efficiently
+[13:03] whether x is in the language or
+[13:03] not in the language, then, yes.
+[13:07] But because it can
+[13:07] be very hard, that's
+[13:10] where things become tricky.
+[13:12] So that's-- so you can guess,
+[13:12] but it's not good enough is
+[13:18] the answer.
+[13:23] Yeah.
+[13:23] AUDIENCE: Even if he commits--
+[13:25] PROFESSOR: Huh?
+[13:25] AUDIENCE: Even if he commits
+[13:25] to doing it, [INAUDIBLE]?
+[13:31] PROFESSOR: Well, he can--
+[13:31] what do you mean he commits?
+[13:34] So you're saying let's
+[13:34] change the scheme kind of
+[13:37] and have him add commitments?
+[13:40] AUDIENCE: Well, I guess
+[13:40] it might be different.
+[13:44] PROFESSOR: I guess the issue
+[13:44] is-- look, when he's cheating,
+[13:47] we don't know whether--
+[13:48] he gives you x1 up
+[13:48] to xk and a proof pi.
+[13:51] Now, he cheats if one of
+[13:51] them is not in the language.
+[13:54] That's when he cheats.
+[13:55] It's hard to know whether one
+[13:55] of them is in the language
+[13:59] or not in the language.
+[14:00] And the concern is he can say i.
+[14:02] He can say whatever he wants.
+[14:03] He's going to cheat.
+[14:04] So nothing he says we believe.
+[14:07] And the concern
+[14:07] is that maybe when
+[14:10] we switch the CRS
+[14:10] to depend on i, also
+[14:13] the xi becomes in the language.
+[14:16] And then what do you do?
+[14:17] And now you can say you can't
+[14:17] tell the difference, because xi
+[14:19] in the language and outside the
+[14:19] language, they look the same.
+[14:22] So that's why guessing is, in
+[14:22] some sense, not good enough.
+[14:27] It's not helpful.
+[14:30] So this is-- any
+[14:30] other questions?
+[14:35] So this is one ingredient
+[14:35] that we're going
+[14:36] to use to construct our SNARG.
+[14:38] The other ingredient is a
+[14:38] somewhere extractable hash,
+[14:44] or SSB hash.
+[14:46] So let me write it out.
+[14:47] I'm going to write it here,
+[14:47] so we'll keep it on the board.
+[14:51] So let me just recall
+[14:51] the definition.
+[14:54] Somewhere extractable
+[14:54] hash family
+[14:59] consists of many
+[14:59] several PPT algorithms.
+[15:04] Let me start writing.
+[15:05] So the first one is gen. So
+[15:05] now we're constructing a hash.
+[15:12] So gen takes a
+[15:12] security parameter,
+[15:16] the length, how many
+[15:16] bits we're going to hash.
+[15:18] So let's say n bits
+[15:18] we're going to hash.
+[15:21] And how many-- so let's
+[15:21] say in the location i,
+[15:24] this is going to be i and n.
+[15:26] This is where we're
+[15:26] going to be binding on,
+[15:28] or where we want to
+[15:28] be extractable on.
+[15:30] And it outputs a hash
+[15:30] key and a trapdoor.
+[15:37] This trapdoor is
+[15:37] going to be-- we're
+[15:40] going to use it to
+[15:40] extract from the hash
+[15:42] the i-th location
+[15:42] of what we hashed.
+[15:46] So there's a hash
+[15:46] key and a trapdoor.
+[15:48] I know when Zhengzhong taught
+[15:48] it, then he just said, hash key,
+[15:50] and he put kind of the
+[15:50] trapdoor at the end.
+[15:52] So I'm going to write
+[15:52] it with a trapdoor.
+[15:55] So gen outputs a hash
+[15:55] key and a trapdoor.
+[15:58] And then you have
+[15:58] eval algorithm.
+[16:01] It just takes the hash key,
+[16:01] an input x and 0, 1 to the n,
+[16:09] and then outputs a hash value v.
+[16:13] And then you have
+[16:13] open, where you
+[16:17] take a hash key, the
+[16:17] x, and some index j
+[16:22] that you want to open to.
+[16:25] And it outputs an
+[16:25] opening rho or rho J.
+[16:29] And this should be in 0, 1 to
+[16:29] the lambda, or poly lambda.
+[16:35] Similarly here, this
+[16:35] should be small--
+[16:37] 0, 1 to the lambda
+[16:37] or poly lambda.
+[16:45] And then there's
+[16:45] ver that verifies.
+[16:48] So ver takes a
+[16:48] hash key, a value.
+[16:52] And now let's say
+[16:52] you want to say,
+[16:54] I'm going to open location j.
+[16:57] Here's my b that opens.
+[16:59] And here's the opening.
+[17:02] And he checks.
+[17:02] Is it a valid opening or not?
+[17:04] So it outputs 0 or 1.
+[17:12] And finally, so it consists
+[17:12] of five PPT algorithms.
+[17:19] So first, you generate a
+[17:19] hash key with a trapdoor.
+[17:23] Then there's an eval algorithm
+[17:23] that given an n-bit string
+[17:27] outputs the hash value v--
+[17:29] short, succinct.
+[17:31] Then there's open
+[17:31] that you can open,
+[17:34] given that you can generate an
+[17:34] opening for a specific index j.
+[17:40] So you generate row j,
+[17:40] which is an opening,
+[17:43] and anybody can verify
+[17:43] the opening using
+[17:47] only the succinct hash value.
+[17:49] So given a hash key, the
+[17:49] succinct hash value, the index,
+[17:53] the bit, you can
+[17:53] verify the opening.
+[17:55] And finally, that's
+[17:55] the extract algorithm.
+[18:01] And it takes the trapdoor and
+[18:01] the value, and it outputs a bit.
+[18:08] And this bit should be xi.
+[18:14] So let me say, the properties--
+[18:19] so the first property
+[18:19] is completeness.
+[18:26] That's kind of usually the
+[18:26] straightforward property, which,
+[18:34] essentially, says, look,
+[18:34] if everybody's honest,
+[18:36] you get what you expect,
+[18:36] which means, one,
+[18:39] the verifier would
+[18:39] accept the opening,
+[18:41] and b, the extract will
+[18:41] output the i-th bit.
+[18:45] So it says that
+[18:45] the probability--
+[18:49] so for every x, for every
+[18:49] lambda, for every n, which
+[18:56] is at most 2 to the
+[18:56] lambda, we always
+[18:57] restrict the length of what
+[18:57] we're hashing to be at most 2
+[19:02] to the lambda, and
+[19:02] for every i, we
+[19:09] say that the probability
+[19:09] that an open--
+[19:19] sorry-- that ver a hash
+[19:19] key generated from gen,
+[19:25] which is the eval, for every j.
+[19:34] j rho generated by open.
+[19:39] It always outputs 1.
+[19:41] It outputs 1, probability 1.
+[19:42] And extract-- I'll
+[19:42] just denote by--
+[19:47] extract, let me denote by just
+[19:47] x for simplicity, given trapdoor
+[19:52] and the output xi.
+[19:56] And this holds with
+[19:56] probability 1, where
+[19:58] the probability is over what?
+[20:00] Hash key and trapdoor are
+[20:00] in gen. So essentially--
+[20:07] I won't write it.
+[20:07] But the hash key is
+[20:07] generated by this.
+[20:11] v is generated by this eval.
+[20:13] Rho-- or I'll call rho j--
+[20:16] is generated by open.
+[20:19] And this just says if
+[20:19] everything was done correctly,
+[20:23] the var always accepts,
+[20:23] and the extract indeed
+[20:27] will extract the correct bit.
+[20:29] So this is just if everybody
+[20:29] follows the protocol,
+[20:32] everything should
+[20:32] be as you expect.
+[20:36] The soundness or binding,
+[20:36] or the statistical binding,
+[20:44] I should say, somewhere-- or
+[20:44] I can call the FSB somewhere
+[20:48] statistically binding condition
+[20:48] says that on location--
+[20:55] Oh, before I go to FSB,
+[20:55] there's another property,
+[20:59] which is index hiding.
+[21:04] Index hiding means that the
+[21:04] hash key hides the index.
+[21:10] If you see just hash key,
+[21:10] you have no idea what i is.
+[21:15] So it just says that
+[21:15] for every i and j,
+[21:19] if you look at hash
+[21:19] key generated by--
+[21:23] I don't know-- call it i,
+[21:23] or hash key generated by j,
+[21:30] they're indistinguishable.
+[21:32] This is just a notation to say
+[21:32] hash key generated where here I
+[21:37] have i.
+[21:38] And this is just
+[21:38] a notation saying
+[21:40] this is a hash key generated
+[21:40] by giving j to gen. So the hash
+[21:47] key hides the index for any i
+[21:47] and j, the hash key generated
+[21:53] with i, the hash key generated
+[21:53] with j, they look the same.
+[21:57] So that's the index hiding.
+[21:59] And finally is the
+[21:59] binding condition.
+[22:03] And the binding
+[22:03] condition says that--
+[22:07] so the SSB, the Somewhere
+[22:07] Statistical Binding,
+[22:10] says that for the location i,
+[22:10] that we're binding on, even
+[22:19] an all powerful adversary
+[22:19] that is given hash key cannot
+[22:25] generate v and two different
+[22:25] openings to location i,
+[22:31] an opening to 0, an
+[22:31] opening to 1 on location i.
+[22:36] So on location i, you're
+[22:36] really [INAUDIBLE]
+[22:39] theoretically bounded.
+[22:41] So again, even in an all
+[22:41] powerful adversary that is given
+[22:45] the hash key with respect to i,
+[22:45] a location i cannot open both
+[22:52] to 0 and to 1, except with
+[22:52] negligible probability.
+[22:57] So I hope to put everything on
+[22:57] that, but I'll add one here.
+[23:03] So I'll put here the
+[23:03] binding condition,
+[23:05] so the SSB binding, the
+[23:05] somewhere statistically binding
+[23:11] says that for every all
+[23:11] powerful adversary a,
+[23:19] the probability that a and hash
+[23:19] key, where hash key is generated
+[23:28] from gen 1 lambda n
+[23:28] and i, the probability
+[23:34] that he outputs any value
+[23:34] v and rho 0 and rho 1 such
+[23:45] that they would accept
+[23:45] both, such that for every b,
+[23:48] both 0 and 1 there on hash
+[23:48] key vi b rho b outputs 1,
+[24:00] this is negligible.
+[24:04] So on index i, the
+[24:04] one that we're--
+[24:10] the hash came from that we're
+[24:10] binding on, he cannot open
+[24:14] to both 0 and open to 1 in
+[24:14] an accepting way with accept
+[24:20] negligible probability.
+[24:21] Yeah.
+[24:21] AUDIENCE: Does v have to
+[24:21] be generated from eval
+[24:23] here or maybe [INAUDIBLE]?
+[24:23] PROFESSOR: No, no.
+[24:24] Good, good.
+[24:25] Great question.
+[24:26] v is malicious.
+[24:28] There is no-- a can
+[24:28] be-- so the adversary,
+[24:32] he's not following
+[24:32] any guidelines.
+[24:34] He's completely malicious.
+[24:36] He generates v according
+[24:36] to his own will,
+[24:38] generating rho 0, rho
+[24:38] 1 however he wants.
+[24:42] And he's all powerful.
+[24:44] He still cannot generate two
+[24:44] accepting openings for location
+[24:50] i.
+[24:52] Yeah.
+[24:52] AUDIENCE: I'm just going
+[24:52] to follow-up on that.
+[24:55] That's the only reason that
+[24:55] we don't get this for free
+[24:57] from extraction.
+[24:58] PROFESSOR: Exactly.
+[24:59] Good, good, good, very good.
+[25:00] So let me just repeat
+[25:00] what [INAUDIBLE] said.
+[25:04] Look, in extraction, we
+[25:04] said that we're binding,
+[25:07] completely binding, because
+[25:07] guess what-- from v,
+[25:09] we can actually--
+[25:11] we can actually
+[25:11] learn the bit xi.
+[25:15] So xi is sitting there.
+[25:17] So yeah, if you're honest
+[25:17] xi is sitting there.
+[25:21] But if you're malicious, you
+[25:21] can do whatever you want.
+[25:24] And maybe for a malicious
+[25:24] v, maybe there's
+[25:27] no-- you can't extract
+[25:27] anything from it.
+[25:31] Yeah.
+[25:32] AUDIENCE: Is it the same
+[25:32] as saying the probability
+[25:34] there exists v [INAUDIBLE]?
+[25:38] PROFESSOR: Right.
+[25:39] Good, good, good, very good.
+[25:40] Yes, yes, yes.
+[25:41] This is the same as saying
+[25:41] that there exists a v rho
+[25:47] 0 for any hash--
+[25:49] for almost all hash
+[25:49] keys, the probability
+[25:52] that there exists
+[25:52] v rho 0 rho 1 is 0.
+[25:57] So they don't exist.
+[25:58] For almost all hash keys, this
+[25:58] triplet that satisfies this
+[26:03] does not exist.
+[26:04] Yes.
+[26:05] Yeah.
+[26:06] Very good.
+[26:08] Any other questions?
+[26:11] So the plan for today is to show
+[26:11] how to use these two building
+[26:15] blocks to get a SNARG.
+[26:18] But before I do that, I
+[26:18] want to say a few more--
+[26:22] first, I want to give you time
+[26:22] to digest and to ask questions.
+[26:25] Also, I want to say
+[26:25] a few more things
+[26:27] about these two primitives.
+[26:31] Any questions before I--
+[26:34] OK.
+[26:35] So one thing I
+[26:35] want to mention is
+[26:38] even though the binding
+[26:38] condition was only an i,
+[26:42] I said only on this
+[26:42] specific i, I promise you,
+[26:47] you can't open two
+[26:47] different ways.
+[26:48] What about the other i?
+[26:49] What about j?
+[26:51] j can address to open
+[26:51] two different ways?
+[26:57] And the answer is no.
+[26:58] Actually, he can't.
+[26:59] And we don't need to
+[26:59] state that explicitly.
+[27:02] From the FSB and
+[27:02] the index hiding,
+[27:06] I want to argue already we
+[27:06] can conclude that a poly size
+[27:11] adversary cannot open a poly
+[27:11] size-- not all powerful,
+[27:15] but a poly size adversary
+[27:15] cannot generate v any index j,
+[27:22] and two openings that
+[27:22] will be accepted,
+[27:25] except non-zero probability.
+[27:28] So in other words, I'm
+[27:28] saying binding holds--
+[27:31] this local binding
+[27:31] holds for every j.
+[27:34] Not against all powerful,
+[27:34] but for any PPT or poly size
+[27:39] A, we get this binding
+[27:39] condition for every j.
+[27:45] Why?
+[27:50] AUDIENCE: Is it because of the
+[27:50] index hiding property where you
+[27:53] cannot distinguish [INAUDIBLE]
+[27:53] index is higher or something
+[27:56] else then?
+[27:56] PROFESSOR: Precisely.
+[27:57] So the reason is this A, he
+[27:57] doesn't know if hash key came
+[28:01] from index i or index j.
+[28:03] They're indistinguishable.
+[28:05] So now if he can
+[28:05] generate it for index j,
+[28:09] then he should be able to
+[28:09] generate it also for index--
+[28:12] so let's replace
+[28:12] this with index j.
+[28:14] He can't distinguish.
+[28:15] So he'll follow the same
+[28:15] j again at some point.
+[28:17] And there'll be a contradiction.
+[28:19] So because he has no
+[28:19] idea what's sitting here,
+[28:22] the fact that he cannot
+[28:22] do it for that index i,
+[28:25] even information theoretically
+[28:25] means he can't do it for any
+[28:28] other index.
+[28:29] Yeah.
+[28:30] AUDIENCE: So this index had
+[28:30] to get really [INAUDIBLE].
+[28:32] PROFESSOR: No, this
+[28:32] is [INAUDIBLE].
+[28:33] It's computational, actually.
+[28:34] AUDIENCE: [INAUDIBLE]
+[28:35] PROFESSOR: Oh, good, good, good.
+[28:37] So the corollary is,
+[28:37] for any poly size,
+[28:44] the corollary says
+[28:44] that only any poly size
+[28:47] A, the probability
+[28:47] that A on hash key,
+[28:52] let's say from i, same hash key,
+[28:52] outputs v or v, j rho 0 and rho
+[28:59] 1, such that the same
+[28:59] thing here holds.
+[29:04] Namely, for every b
+[29:04] he generates accepting
+[29:06] answers for both 0
+[29:06] and 1 is negligible.
+[29:12] Because if there
+[29:12] exists some j that he
+[29:15] does that for
+[29:15] non-negligible probability,
+[29:18] then let's replace hk with
+[29:18] hash key generating that's
+[29:23] binding on this, that's actually
+[29:23] statistically binding on this j.
+[29:26] A can't distinguish.
+[29:28] So we'll still do
+[29:28] this for that j
+[29:30] with some non-negligible
+[29:30] probability.
+[29:32] And that he cannot do with
+[29:32] that information theoretically.
+[29:35] So that's why we get, like--
+[29:37] because index hiding,
+[29:37] actually, just
+[29:40] getting statistically binding
+[29:40] on one of them is good enough.
+[29:43] It will imply computational
+[29:43] binding on all the rest.
+[29:48] Another thing I
+[29:48] want to mention--
+[29:50] and this we'll use, actually,
+[29:50] in our construction today--
+[29:53] I said that the hash is
+[29:53] binding on one location, on xi.
+[29:59] We can get it binding, actually,
+[29:59] on l locations, not just one.
+[30:03] How do I get it
+[30:03] binding on l locations?
+[30:07] I'm going to just generate
+[30:07] hk1, hk2, up to hkl,
+[30:11] where the first l is
+[30:11] binding, and the first--
+[30:13] I'm just going to
+[30:13] generate l hashes.
+[30:17] I'm going to ask the-- generate
+[30:17] the eval on all these hashes.
+[30:21] So the hash value now
+[30:21] is going to be v1 up
+[30:23] to vl, where the
+[30:23] honest eval is going
+[30:27] to take the x you
+[30:27] want to hash and do
+[30:30] eval hk1 of x, eval hk2 of x.
+[30:34] So just hash the same
+[30:34] x with all l keys.
+[30:39] So now the hash value
+[30:39] grows by a factor of l.
+[30:43] And then when you open a
+[30:43] certain bit, a certain location,
+[30:47] you'll generate
+[30:47] all the openings.
+[30:49] So just do the same
+[30:49] thing kind of l times,
+[30:52] just repeat it l times.
+[30:54] And now what do
+[30:54] we have from that?
+[30:56] If you-- by repeating l
+[30:56] times, so let me write it.
+[31:09] Let me erase the corollary.
+[31:11] So I'll have room.
+[31:15] So note, remark, by
+[31:15] repeating l times,
+[31:33] we get a somewhere
+[31:33] extractable hash that's
+[31:38] extractable on l locations.
+[31:49] And moreover, another property
+[31:49] that we're going to need--
+[31:53] even if I, let's say, gave
+[31:53] you the trapdoor corresponding
+[31:58] to some of the l-- not all
+[31:58] the l locations-- let's
+[32:01] say I give you trapdoor 1,
+[32:01] trapdoor 2, and trapdoor 3,
+[32:04] still, what's the
+[32:04] location hidden in hk4?
+[32:10] You have no idea what it is.
+[32:11] So even if I reveal
+[32:11] some of the trapdoors,
+[32:15] the other indices remain hidden.
+[32:19] And we're going to
+[32:19] use this property.
+[32:22] So again, if we repeat l times,
+[32:22] we're binding on l locations.
+[32:29] But even if I dest--
+[32:30] I kind of reveal the
+[32:30] trapdoor corresponding to--
+[32:34] I don't know-- a location to
+[32:34] a couple locations, the rest
+[32:37] of the-- so of course, if
+[32:37] I give you the trapdoor,
+[32:39] then all bets are off.
+[32:41] You learn everything.
+[32:42] You learn the i.
+[32:43] You learn everything.
+[32:44] And the trapdoor
+[32:44] or trapdoors are
+[32:46] such that once I give you the
+[32:46] trapdoor, you learn the index.
+[32:49] You learn everything.
+[32:50] But the other indices that do
+[32:50] not correspond to the trapdoors
+[32:57] that I gave are still
+[32:57] completely hidden,
+[32:59] because I did them
+[32:59] completely independent.
+[33:03] And this is
+[33:03] something we're going
+[33:04] to use when we're going
+[33:04] to construct our SNARGs.
+[33:09] So that's one thing
+[33:09] we're going to use.
+[33:12] I want to mention a little--
+[33:14] I want to talk a little
+[33:14] bit about the construction,
+[33:16] because I think maybe in
+[33:16] Zhengzhong lecture last time,
+[33:20] this was missed a little,
+[33:20] because he said it,
+[33:22] I think, a little too fast.
+[33:24] So I want to say a few words
+[33:24] about the construction.
+[33:27] But before I talk
+[33:27] about the construction,
+[33:29] I want to say one more
+[33:29] property about the BARGs
+[33:32] that we're going to also use.
+[33:33] So what we're going
+[33:33] to use about the BARG,
+[33:35] so we said that
+[33:35] these gen P and V
+[33:39] are polynomial time algorithm,
+[33:39] probabilistic polynomial time
+[33:42] algorithms.
+[33:43] In particular, V, I want to talk
+[33:43] about V. V is a polynomial time
+[33:46] algorithm.
+[33:47] But V's input is really large.
+[33:49] It has x1 up to xk.
+[33:50] So polynomial time means it
+[33:50] runs at least in time poly k.
+[33:54] It needs to read its input.
+[33:57] However, it turns out
+[33:57] that the BARGs we have--
+[34:00] this is what Zhengzhong called
+[34:00] a BARG for index languages--
+[34:04] if there exists a
+[34:04] succinct description
+[34:07] of these x1 up to
+[34:07] xk, the verifier
+[34:10] only needs to run in time that
+[34:10] depends on the description.
+[34:14] In other words, we can replace--
+[34:17] so if-- I didn't bring my--
+[34:24] I forgot to bring
+[34:24] my colorful chalk.
+[34:28] Sorry.
+[34:29] But at least you have cookies.
+[34:30] I mean, what would you prefer,
+[34:30] colorful chalks or cookies?
+[34:33] So if you can
+[34:33] generate these x1 up
+[34:38] to xk, if there's kind of
+[34:38] a succinct description,
+[34:43] then the verify runs
+[34:43] in polynomial time
+[34:45] in the description.
+[34:47] So if, let's say, there
+[34:47] exists some machine M
+[34:53] such that for
+[34:53] every i, xi is just
+[35:02] kind of the Turing
+[35:02] machine on input i.
+[35:07] So this kind of machine, you
+[35:07] should think this algorithm,
+[35:11] you should think it has kind of
+[35:11] a succinct description of all
+[35:13] the x1 up to xk.
+[35:15] And you give him i.
+[35:17] It always gives you the xi.
+[35:18] If this is the case, then V the
+[35:18] runtime, or I say time of V,
+[35:32] it grows with the size
+[35:32] of m as opposed to k.
+[35:39] So it grows with m and
+[35:39] does not grow with k.
+[35:49] So of course, if you
+[35:49] give him x1 up to xk,
+[35:51] he needs to read his input.
+[35:52] His runtime grows with k.
+[35:53] But if you can generate
+[35:53] in a succinct way,
+[35:56] then he doesn't
+[35:56] need to grow with k.
+[36:00] So you should-- another
+[36:00] way to think about it,
+[36:03] you can think of
+[36:03] xi as m comma i.
+[36:09] And the instance just says
+[36:09] if you run m on i, xi,
+[36:13] then xi is in the language.
+[36:15] And that's why it's called
+[36:15] index language, because it's
+[36:17] like there's an index.
+[36:18] Yeah.
+[36:19] AUDIENCE: So this means that
+[36:19] there's still a log k dependence
+[36:21] in V's runtime, right?
+[36:22] PROFESSOR: Yeah, yeah, yeah.
+[36:22] There is a log k
+[36:22] dependence, 100%.
+[36:24] Sorry.
+[36:24] Yeah, yeah.
+[36:25] It just means-- yeah, exactly.
+[36:27] That runs in time log k.
+[36:29] Actually, yeah, you have
+[36:29] i here, which is log k.
+[36:32] So there is a log k dependence.
+[36:33] Yeah.
+[36:34] AUDIENCE: [INAUDIBLE] the CRS
+[36:34] is sublinear in k as well.
+[36:38] Is that true?
+[36:39] PROFESSOR: The length of
+[36:39] the CRS in general, you
+[36:41] want it to be sublinear in k.
+[36:43] In the SNARG construction,
+[36:43] it's poly log k.
+[36:48] Yes.
+[36:48] But when we'll
+[36:48] talk about SNARGs--
+[36:51] so in the BARG construction,
+[36:51] we have the CRS.
+[36:58] Most of our construction in
+[36:58] the CRS is of size poly log k.
+[37:02] The one under LWE
+[37:02] that Zhengzhong showed
+[37:04] is of size poly log k.
+[37:08] AUDIENCE: So I know
+[37:08] that if we have
+[37:10] a BARG that satisfies
+[37:10] these properties
+[37:12] and is a more tractable
+[37:12] hash function,
+[37:14] I guess you can always kind of
+[37:14] add the property that you want
+[37:19] here of being able to extract
+[37:19] the witness from the BARG group
+[37:21] itself.
+[37:22] Is there a world--
+[37:22] like, do we have
+[37:24] any BARGs without
+[37:24] the assumptions
+[37:26] that we need for somewhere
+[37:26] extractable hash functions?
+[37:29] PROFESSOR: You're
+[37:29] asking, is there
+[37:30] a BARG for which we don't
+[37:30] know how to extract.
+[37:34] AUDIENCE: Yes.
+[37:35] PROFESSOR: Is that
+[37:35] what you're asking?
+[37:36] OK, OK.
+[37:37] So let me-- you're
+[37:37] asking a great question.
+[37:39] Let me kind of--
+[37:42] so when we said--
+[37:45] the soundness condition just
+[37:45] says that a cheating prover
+[37:50] cannot cheat--
+[37:53] cannot generate x1 up
+[37:53] to xk, that one of them,
+[37:55] the i-th is not in the
+[37:55] language, and yet convince.
+[37:58] Oftentime, also in our SNARG,
+[37:58] in our SNARG construction,
+[38:02] we want something stronger.
+[38:04] What we want is that I can
+[38:04] actually extract a witness
+[38:08] from this cheating prover.
+[38:11] So I want to say
+[38:11] this cheating prover,
+[38:14] I can't extract
+[38:14] all the witnesses.
+[38:16] But for some i, I can generate
+[38:16] a CRS that looks like--
+[38:23] just standard CRS-- but I can
+[38:23] change the distribution of a CRS
+[38:28] to be such that using some
+[38:28] trapdoor about the CRS,
+[38:31] I can actually extract from
+[38:31] P star a witness for xi.
+[38:36] And once I extract a
+[38:36] witness, of course,
+[38:38] it has to be in
+[38:38] the language, xi.
+[38:39] I argue not only
+[38:39] it's in the language.
+[38:41] I can even find-- get
+[38:41] a witness from him.
+[38:44] So that's called
+[38:44] somewhere-- this
+[38:45] is a somewhere extractable BARG.
+[38:48] Now, what Ali was saying is
+[38:48] that the BARG that Zhengzhong
+[38:53] showed you last time had the
+[38:53] somewhere extractable property.
+[38:57] It was extractable.
+[38:58] Actually, let me
+[38:58] tell you, we also
+[39:00] will need BARGs that are
+[39:00] somewhere extractable.
+[39:02] I didn't write that here.
+[39:04] Why didn't I write it here?
+[39:05] And this is where the n--
+[39:06] AUDIENCE: [INAUDIBLE]
+[39:06] PROFESSOR: Exactly.
+[39:07] The answer is any BARG, we can
+[39:07] make it somewhere extractable
+[39:12] by just adding a hash.
+[39:14] So we can kind of--
+[39:16] we don't need to
+[39:16] worry about somewhere
+[39:18] extractability of a BARG,
+[39:18] because what we can always do
+[39:22] is add--
+[39:24] put a hash of all the witnesses.
+[39:27] If you have a somewhere
+[39:27] extractable hash,
+[39:28] if you have a somewhere
+[39:28] extractable hash,
+[39:30] you can tell the verifier--
+[39:32] put a somewhere extractable
+[39:32] hash of all your witnesses.
+[39:36] So take witness 1, witness 2,
+[39:36] witness 3, up to witness k,
+[39:39] hash them, and in the
+[39:39] analysis, just jumping ahead,
+[39:43] we're going to be extractable on
+[39:43] all the locations corresponding
+[39:46] to witness i.
+[39:47] And now we're
+[39:47] going to tell him--
+[39:49] we're going to say,
+[39:49] give me a BARG.
+[39:51] The BARG is not for the
+[39:51] original language l.
+[39:55] The BARG says-- the BARG that
+[39:55] xi is in the language now
+[40:00] says there is an opening
+[40:00] for the hash value
+[40:04] that [INAUDIBLE] the
+[40:04] locations correspond to wi.
+[40:06] If you opened, you would
+[40:06] get a valid witness.
+[40:09] BARG that language.
+[40:11] So instead of BARGing
+[40:11] the original language l,
+[40:13] BARG a little bit kind
+[40:13] of upgraded language
+[40:17] that, again, says there's
+[40:17] a-- so the verifier
+[40:20] will give you a hash
+[40:20] of all the witnesses.
+[40:23] And it will prove--
+[40:24] for every i, he won't prove
+[40:24] just excising the language.
+[40:28] He's going to prove for every
+[40:28] i, I have openings corresponding
+[40:33] to witness i.
+[40:35] So the eight openings are valid.
+[40:37] And BWI is in the language l.
+[40:40] That's the BARG he's
+[40:40] going to give you.
+[40:42] And now the fact that
+[40:42] you're in the language
+[40:46] means that it must be that
+[40:46] if you take the trapdoor
+[40:50] and look into it, it
+[40:50] must be by soundness.
+[40:54] It must be.
+[40:55] That's what's sitting there,
+[40:55] because you're binding.
+[40:57] If you're going to be
+[40:57] binding on that part,
+[40:59] that's what's sitting there.
+[41:00] It must be the correct witness.
+[41:02] So that's kind of
+[41:02] why, actually, we
+[41:07] don't need to construct
+[41:07] BARGs with extractability.
+[41:11] We can always attach a somewhere
+[41:11] extractable hash to them.
+[41:14] AUDIENCE: Yeah.
+[41:15] I was actually wondering
+[41:15] something about assumptions,.
+[41:17] Do we have any constructions
+[41:17] of BARGs from assumptions
+[41:20] weaker than those needed
+[41:20] to construct a somewhere
+[41:22] extractable hash?
+[41:23] PROFESSOR: I see.
+[41:23] AUDIENCE: Which would then
+[41:23] make it, I guess, interesting.
+[41:25] PROFESSOR: I see
+[41:25] what you're saying.
+[41:26] I see.
+[41:27] AUDIENCE: I don't [INAUDIBLE].
+[41:28] PROFESSOR: Yeah,
+[41:28] I don't think so.
+[41:31] AUDIENCE: [INAUDIBLE]
+[41:31] probably shouldn't.
+[41:36] PROFESSOR: Yeah.
+[41:37] I don't know how
+[41:37] to construct a BARG
+[41:38] from an assumption for which
+[41:38] I don't know how to construct
+[41:41] a somewhere extractable hash.
+[41:42] Yeah.
+[41:44] OK.
+[41:45] Any other questions?
+[41:51] So I want to get to the
+[41:51] construction of the SNARG.
+[41:55] But before I do so,
+[41:55] I do want to spend
+[41:58] a little more time on the
+[41:58] somewhere extractable hash
+[42:00] and say a little bit about
+[42:00] the way we construct it,
+[42:03] because I just want to make
+[42:03] sure that you didn't miss
+[42:11] a part from last
+[42:11] lecture that I think
+[42:13] was a bit said too succinctly.
+[42:16] So the high level idea of
+[42:16] how you construct a somewhere
+[42:19] extractable hash is using
+[42:19] fully homomorphic encryption.
+[42:25] So I don't want to get into--
+[42:27] I don't want to recall
+[42:27] too much the definition,
+[42:29] but I'll give you a high level.
+[42:31] So the basic idea,
+[42:31] which doesn't work--
+[42:34] let me first tell you the
+[42:34] idea that doesn't work,
+[42:36] because that's very natural.
+[42:37] And I think maybe that's what
+[42:37] you got from last lecture.
+[42:40] So the basic idea that doesn't
+[42:40] work is to say that gen--
+[42:52] well, just the output,
+[42:52] encryption, so we'll
+[42:58] give you a public key
+[42:58] and encryption of i
+[43:03] with this public key.
+[43:08] And the trapdoor, that's
+[43:08] going to be the hash key.
+[43:12] And the trapdoor is going
+[43:12] to be the secret key.
+[43:17] So just the hash key is going to
+[43:17] be an encryption of the index.
+[43:21] Now, I want x1 up to xn.
+[43:28] Let me assume for
+[43:28] simplicity that N--
+[43:30] suppose N is a power of 2.
+[43:38] Otherwise, you know, pad.
+[43:41] So let's say big
+[43:41] N is a power of 2.
+[43:42] So it's some 2 to the small n.
+[43:44] Now, here's what
+[43:44] I'm going to do.
+[43:46] Let me-- so when I
+[43:46] say encryption of i,
+[43:49] let's think of it as
+[43:49] bit by bit encryption.
+[43:51] So it's encryption of i1
+[43:51] up to encryption of in.
+[44:01] And now the idea is--
+[44:07] what we'll do is for each pair--
+[44:13] so I'm going to do
+[44:13] kind of a Merkle hash.
+[44:15] And for each pair
+[44:15] I'm going to encrypt,
+[44:18] so I'm going to do this Merkle
+[44:18] hash, where for each node
+[44:22] I'm going to associate
+[44:22] a ciphertext.
+[44:24] And the output is going to be
+[44:24] the ciphertext of the root.
+[44:27] That's my hash value.
+[44:28] The hash value is going to
+[44:28] be a ciphertext of the root.
+[44:30] And this ciphertext
+[44:30] can be a ciphertext.
+[44:32] It's an re-encryption of xi.
+[44:36] How do I associate?
+[44:37] So of course, I can
+[44:37] compute encryption of xi.
+[44:39] This is a homomorphic
+[44:39] encryption.
+[44:40] Given x and encryption of
+[44:40] i, I can do computation
+[44:44] under the hood.
+[44:45] So I can compute
+[44:45] encryption of x sub i.
+[44:48] So because this is a fully
+[44:48] homomorphic encryption,
+[44:52] given x and
+[44:52] encryption of i, I can
+[44:58] compute encryption of x sub i.
+[45:02] Of course, there's public keys.
+[45:04] I'm omitting them for
+[45:04] succinctness of notation.
+[45:07] This is because I can
+[45:07] compute under the hood.
+[45:11] The value of the route is
+[45:11] going to be encryption of xi.
+[45:15] But what kind of encryption?
+[45:17] It's not any-- so let me
+[45:17] tell you exactly how we
+[45:19] compute this encryption.
+[45:21] So the idea would be--
+[45:25] and not only that,
+[45:25] how do I open?
+[45:27] I want to do a local opening.
+[45:29] So the way I'm going
+[45:29] to do it is as follows.
+[45:32] For each pair, I'm going to
+[45:32] encrypt only one of them.
+[45:35] I'm going to either put
+[45:35] here encryption of x1
+[45:38] or encryption of x2.
+[45:39] Which one?
+[45:40] Depending on i1.
+[45:41] So let's start with i1.
+[45:43] If i1 is 0, I'm going
+[45:43] to-- so I'm going to,
+[45:47] let's say, choose x1.
+[45:49] If i1 is 1, I'm
+[45:49] going to choose x2.
+[45:51] I'm going to choose the
+[45:51] even-odd, so that the output
+[45:54] will be the correct one.
+[45:55] So I'm going to--
+[45:58] the i1, depending
+[45:58] on encryption of i1,
+[46:01] that's going to tell me
+[46:01] which one to put here.
+[46:03] 0, I put on the left, like
+[46:03] the left children, or 1,
+[46:08] I put the right children.
+[46:10] And then I do the
+[46:10] exact same thing.
+[46:12] Given these, whether I
+[46:12] choose the left or right
+[46:15] depends on the encryption of i2.
+[46:17] If i2 is 0, I choose the left.
+[46:19] If i2 is 1, I choose the
+[46:19] right, and so on and so forth.
+[46:23] That's the idea.
+[46:25] AUDIENCE: Is this like an OT?
+[46:28] PROFESSOR: It's like an OT.
+[46:29] It's really like an OT.
+[46:30] Exactly, exactly.
+[46:31] I didn't define what OT is,
+[46:31] but it's exactly like an OT.
+[46:36] This does not work.
+[46:41] It almost works, but
+[46:41] it does not work.
+[46:44] So let me tell you why it
+[46:44] seems like it should work.
+[46:47] And then I just want to
+[46:47] mention the subtlety here.
+[46:55] So the reason-- so first, how do
+[46:55] you generate the local opening?
+[47:00] Well, you check-- so if you
+[47:00] want to open xi, I'll tell you,
+[47:04] give me x1 and x2 so I can
+[47:04] check that this is correct.
+[47:08] And then give me the
+[47:08] hash in ciphertext here.
+[47:11] And I can check that
+[47:11] this is correct,
+[47:14] because each ciphertext
+[47:14] is some FHE valuation that
+[47:20] depends on the two children
+[47:20] and the hash key, which
+[47:25] is encryption.
+[47:26] So in layer J, it depends
+[47:26] on the two children
+[47:32] and encryption of ij.
+[47:35] Each time the node--
+[47:39] the ciphertext
+[47:39] corresponding to some node
+[47:43] is a deterministic function of
+[47:43] the ciphertext corresponding
+[47:48] to the children, and the hash
+[47:48] key corresponding to that level.
+[47:52] So encryption of, let's
+[47:52] say, ij, because, remember,
+[47:57] if I'm, let's say, in level
+[47:57] 2, I have here a ciphertext.
+[48:01] I have a 1 in ciphertext 2.
+[48:03] Then I do-- the way I compute
+[48:03] the parent ciphertext is just
+[48:12] a homomorphic
+[48:12] evaluation that takes--
+[48:16] if i2 is 0, it
+[48:16] takes ciphertext 2.
+[48:22] If i2 is 1, it takes--
+[48:25] I'm sorry.
+[48:26] So if it's a 1, otherwise,
+[48:26] it takes ciphertext 2.
+[48:28] So this is really just a
+[48:28] deterministic homomorphic
+[48:30] evaluation.
+[48:32] And so that's how I open.
+[48:33] I just open all the
+[48:33] relevant ciphertext
+[48:35] and the verifier will check that
+[48:35] the homomorphic evaluation was
+[48:39] done correctly.
+[48:40] So you can local opening--
+[48:42] you can do local opening,
+[48:42] but it's not binding.
+[48:44] Or I don't know how to
+[48:44] prove that it's binding
+[48:47] is the problem.
+[48:49] And probably, you
+[48:49] can find a weird FHE
+[48:51] for which it's not binding.
+[48:52] I don't know-- maybe for natural
+[48:52] constructions, it is binding.
+[48:55] I don't know.
+[48:56] I don't know how to prove it.
+[48:57] But there's a
+[48:57] problem with binding.
+[48:59] And the problem with binding is
+[48:59] that a cheating-- so it seems
+[49:03] like it should be
+[49:03] binding because, look,
+[49:05] here it's sitting
+[49:05] encryption of xi.
+[49:08] But the thing is the
+[49:08] reason why it's not
+[49:11] binding is because a
+[49:11] malicious adversary,
+[49:18] he may give ciphertexts
+[49:18] that are garbage--
+[49:21] are completely garbage.
+[49:23] They don't actually-- they're
+[49:23] not legal ciphertexts.
+[49:26] And if he gives ciphertexts
+[49:26] that are garbage,
+[49:29] I don't know why would
+[49:29] there be binding.
+[49:32] So I mean, maybe
+[49:32] extract doesn't work.
+[49:36] Here's me.
+[49:37] I'm a malicious person.
+[49:39] i-- nothing-- no, you
+[49:39] can't extract anything.
+[49:42] I just want to ruin the binding.
+[49:43] My whole goal is to--
+[49:47] kind of ruin binding here.
+[49:49] I'm going to give you v that
+[49:49] doesn't encrypt anything.
+[49:52] It's a junk v. And I'm going to
+[49:52] open it in two different ways.
+[49:56] Maybe I can generate a v.
+[49:56] Like I call it ciphertext,
+[50:02] but it's just a bunch of
+[50:02] bits that have no meaning--
+[50:05] cannot be decrypted at all.
+[50:06] And maybe I can somehow
+[50:06] generate valid openings.
+[50:10] And we don't know how to
+[50:10] argue that you cannot do that.
+[50:14] So in order to
+[50:14] actually get soundness,
+[50:17] I need to make sure that
+[50:17] the things are well-formed,
+[50:21] that these are actually
+[50:21] valid ciphertexts,
+[50:23] or what I open to is
+[50:23] a valid ciphertext.
+[50:27] And the way we get
+[50:27] this is by making
+[50:32] this a little more cumbersome.
+[50:35] So the way we get
+[50:35] this is we actually
+[50:38] don't use one public key.
+[50:40] We use small and public keys.
+[50:42] So for each layer, we'll
+[50:42] use a different public key.
+[50:46] And what we encrypt--
+[50:49] so what we do is we have public
+[50:49] key j for j goes from 1 to n.
+[50:58] So we have n public keys.
+[51:00] And with public key
+[51:00] j, we encrypt ij.
+[51:07] But also, so when i has i1
+[51:07] up to in, we encrypt ij.
+[51:13] But we also encrypt skj minus 1.
+[51:18] I want to have the decryption.
+[51:21] It's important to me to
+[51:21] have the decryption key.
+[51:25] Now, so the important bit is
+[51:25] the homomorphic evaluation
+[51:31] I'm doing here, I need
+[51:31] to know the secret key,
+[51:34] because I'm not
+[51:34] just going to say--
+[51:37] before I said, what's going
+[51:37] on underneath under the hood?
+[51:41] I'm saying, look, I have i1.
+[51:43] I have two ciphertexts.
+[51:44] Give me one of them.
+[51:45] No, no, no, no.
+[51:46] What I want to do is to say
+[51:46] the following under the hood.
+[51:50] Decrypt this.
+[51:57] And give me only
+[51:57] the relevant one.
+[51:59] So that even if this
+[51:59] does not decrypt--
+[52:04] so here's the point.
+[52:05] Let's say I want to open to x2.
+[52:10] He gives me x1.
+[52:11] These are valid.
+[52:12] So this is valid.
+[52:14] Good.
+[52:15] But now, ciphertext 2 can
+[52:15] be completely not valid.
+[52:20] Because when he opens, he gives
+[52:20] me ciphertext 1 with these two.
+[52:24] So I know this was
+[52:24] valid, because this
+[52:26] is a different computation.
+[52:27] And then I give
+[52:27] him ciphertext 2.
+[52:29] And I do this evaluation.
+[52:31] And then he gives me--
+[52:31] so the sibling ciphertext
+[52:34] that he gives me,
+[52:34] they may not be valid.
+[52:38] I want to ensure, even
+[52:38] if they're not valid,
+[52:41] even if they're not valid,
+[52:41] this is going to be valid.
+[52:45] The openings are going to be
+[52:45] valid, kind of on the path,
+[52:50] things are going to be valid,
+[52:50] even though the siblings that
+[52:53] are given in order to just kind
+[52:53] do the-- verify the opening,
+[52:57] even if they're not
+[52:57] valid, the opening path
+[53:00] will be kind of
+[53:00] valid ciphertext.
+[53:03] So why are they
+[53:03] going to be valid?
+[53:05] Because the way that--
+[53:05] what is-- so now,
+[53:09] what is the
+[53:09] deterministic computation
+[53:11] that's happening here?
+[53:12] Or the evaluation, the
+[53:12] evaluated ciphertext?
+[53:16] The way we do the
+[53:16] evaluation is the following.
+[53:18] I decrypt this,
+[53:18] and I decrypt this.
+[53:21] And then I take the
+[53:21] decrypted value.
+[53:26] And I encrypt it with
+[53:26] the next public key.
+[53:30] So the point is, even
+[53:30] if this didn't decrypt--
+[53:33] maybe this didn't decrypt--
+[53:35] I don't care.
+[53:38] And this is still
+[53:38] going to be valid.
+[53:42] So the point is, even if
+[53:42] the sibling ciphertexts
+[53:47] that are given only for
+[53:47] verifying the opening,
+[53:50] even if these sibling
+[53:50] ciphertexts are malformed,
+[53:55] if you give me the opening
+[53:55] and the entire path,
+[53:58] I get the guarantee that on
+[53:58] the path, not on the siblings,
+[54:01] on the path, things
+[54:01] are well formed.
+[54:03] And I mean well-formed
+[54:03] ciphertext.
+[54:05] These are ciphertext
+[54:05] that decrypt correctly.
+[54:08] And that's what I need
+[54:08] for the soundness.
+[54:11] So it's important to
+[54:11] do the decryption.
+[54:13] This is really crucial.
+[54:15] AUDIENCE: Are you
+[54:15] doing it on each node?
+[54:16] I didn't fully follow.
+[54:18] PROFESSOR: Again, what
+[54:18] am I doing on each node?
+[54:20] Good, good, good.
+[54:20] So here's what I'm
+[54:20] doing on each node.
+[54:22] The evaluation function takes
+[54:22] kind of ij secret key j minus 1
+[54:28] and two ciphertexts,
+[54:28] ciphertext 0 and ciphertext 1.
+[54:32] And what it does is
+[54:32] the following-- decrypt
+[54:35] ciphertext 0, so it decrypts
+[54:35] with SKJ minus 1 ciphertext 0--
+[54:42] ciphertext b for every b.
+[54:44] It gets some bit--
+[54:46] I don't know-- an alpha B.
+[54:50] And then it outputs one of them.
+[54:56] I know alpha, b star, alpha ij.
+[55:02] So it gets two bits, and
+[55:02] he chooses one of them,
+[55:06] which one depending
+[55:06] on the ij you want.
+[55:08] So what you-- the point
+[55:08] is what you will get
+[55:11] is really an encryption.
+[55:13] So the point is, let's say if--
+[55:15] AUDIENCE: You're doing
+[55:15] it homomorphically.
+[55:17] PROFESSOR: I do
+[55:17] it under the hood.
+[55:18] This is a computation that
+[55:18] is done under the hood.
+[55:20] Yes.
+[55:21] So this is going to
+[55:21] be encrypted in a box.
+[55:24] But what I'm going to do
+[55:24] under the box is to say--
+[55:28] so these, I have-- so sorry.
+[55:30] These two are-- ij and
+[55:30] skj minus 1 are in a box.
+[55:35] And the computation that
+[55:35] I'm doing inside the box
+[55:38] is I'm saying, I
+[55:38] have these in a box.
+[55:40] I have these in the clear.
+[55:42] Inside the box, what
+[55:42] I do is the following.
+[55:44] I say, I have the secret
+[55:44] key j minus 1 and these two
+[55:47] ciphertexts.
+[55:48] Let me decrypt both of them.
+[55:50] I'm going to get two
+[55:50] bits, alpha 0 and alpha 1.
+[55:53] Now, maybe one of
+[55:53] them is bad, so bad.
+[55:55] So maybe one of them
+[55:55] doesn't decrypt.
+[55:58] So the one that doesn't
+[55:58] decrypt output bad.
+[56:02] And then the output
+[56:02] will be the relevant one
+[56:05] that, according if it's 0,
+[56:05] I'm going to output alpha 0.
+[56:09] If it's 1, I'm going
+[56:09] to output alpha 1.
+[56:11] And now what I can argue
+[56:11] is on the path itself,
+[56:15] everything has to
+[56:15] be well-formed.
+[56:17] So I'm actually going to
+[56:17] get the correct ciphertext.
+[56:22] And I can argue
+[56:22] that by induction.
+[56:26] And here, of course,
+[56:26] this is well-formed,
+[56:27] because this is just a
+[56:27] deterministic computation that's
+[56:30] done locally.
+[56:31] Now, the point is--
+[56:33] so let's say, like,
+[56:33] I want to output--
+[56:36] I want to-- I'm binding on x1.
+[56:38] x1 is what I want to open.
+[56:40] So this must be well-formed.
+[56:42] And now the point is, even
+[56:42] if this is not well-formed,
+[56:47] what will I do under the hood?
+[56:48] I'm going to open
+[56:48] this and open this.
+[56:50] This is going to be
+[56:50] the correct value.
+[56:51] This is not going to be maybe
+[56:51] the correct-- this may be bad.
+[56:54] But this is the one I choose.
+[56:56] And then I encrypt it.
+[56:57] So I have it here.
+[56:59] And then, again,
+[56:59] this may be bad.
+[57:01] I'm going to decrypt it.
+[57:02] It may be bad, but this
+[57:02] is going to be good,
+[57:04] and this is the one I choose.
+[57:06] So one can argue
+[57:06] kind of by induction
+[57:09] that this is going to
+[57:09] be encryption of x1.
+[57:10] This is going to be encryption
+[57:10] of blah blah blah. everyone
+[57:13] encryption of x1 until the end.
+[57:14] So there's no way you can
+[57:14] open two different roads.
+[57:16] You have to open x1.
+[57:18] AUDIENCE: And the
+[57:18] verifier is also
+[57:19] going to do the same
+[57:19] computation to check?
+[57:21] PROFESSOR: Exactly!
+[57:22] The verifier does the exact
+[57:22] same computation to check.
+[57:24] Yes.
+[57:28] Yeah.
+[57:29] AUDIENCE: [INAUDIBLE] can
+[57:29] only open the [INAUDIBLE]
+[57:31] that you generated, right?
+[57:33] This is not opening a general i.
+[57:35] PROFESSOR: Good.
+[57:35] So this-- exactly.
+[57:36] This shows that the specific--
+[57:40] so this-- this shows that the
+[57:40] specific i that's encrypted
+[57:52] here--
+[57:53] so there's one-- the hash
+[57:53] key is binding on one i,
+[57:57] on a specific i.
+[57:59] The i on which you're
+[57:59] binding, you can only
+[58:04] open in one way statistically.
+[58:07] And then by the index hiding,
+[58:07] it means that you can--
+[58:11] for any j, you can only open
+[58:11] one-way computationally,
+[58:13] because you can't distinguish.
+[58:16] Yeah.
+[58:17] AUDIENCE: Can you avoid
+[58:17] this chain of keys
+[58:18] if you are happy to just
+[58:18] encrypt the secret key
+[58:20] at the same [INAUDIBLE]?
+[58:21] PROFESSOR: Good,
+[58:21] very good, good.
+[58:22] Yes.
+[58:25] You can avoid using
+[58:25] many public keys.
+[58:27] You can just use one public key.
+[58:30] Encrypt the secret
+[58:30] key, and rely on what's
+[58:33] called circular security.
+[58:34] That's another
+[58:34] option, if you wish.
+[58:36] Sorry it doesn't want to do it.
+[58:39] But yes, exactly.
+[58:41] Exactly.
+[58:42] Yeah.
+[58:44] AUDIENCE: You can get
+[58:44] collision resistance?
+[58:47] PROFESSOR: OK.
+[58:48] So yeah, So you're asking,
+[58:48] will you get a collision--
+[58:51] like collision resistance?
+[58:52] And the answer is yes, because
+[58:52] for this specific i that you--
+[58:58] for the specific i that kind of
+[58:58] you encrypted in the hash key,
+[59:04] you get a binding statistically.
+[59:08] There's no way you can
+[59:08] open two different ways.
+[59:14] AUDIENCE: What you
+[59:14] have at [INAUDIBLE]
+[59:15] is just the encryption
+[59:15] of that index, right?
+[59:18] PROFESSOR: Right.
+[59:19] So you're asking
+[59:19] about a different j?
+[59:21] Oh, sorry.
+[59:22] AUDIENCE: No, that you have two
+[59:22] x's that have the same index.
+[59:28] They have the same
+[59:28] [INAUDIBLE], the index,
+[59:31] but the rest are different.
+[59:33] Will you get a different output
+[59:33] of the hash if you take those
+[59:37] two different x's?
+[59:38] PROFESSOR: Good, good, good.
+[59:39] So if you take two
+[59:39] different x's for which,
+[59:42] let's say, they
+[59:42] have the same x1.
+[59:45] And let's say the hash key
+[59:45] is binding on location 1,
+[59:50] the value you would get if
+[59:50] you hash them honestly will
+[59:54] be actually very different.
+[59:56] But because you use
+[59:56] different x's, but so you'll
+[59:59] get different values.
+[60:00] But if you decrypt, these values
+[60:00] correspond to a ciphertext.
+[60:04] As values, they're going
+[60:04] to look very different.
+[60:07] But if you decrypt, you will
+[60:07] get the same bit, which is x1.
+[60:11] Yeah.
+[60:12] Good.
+[60:14] So anyway, if you didn't
+[60:14] follow the exact construction,
+[60:18] it doesn't really matter.
+[60:19] I just wanted to make sure that
+[60:19] it was clear that you really
+[60:25] need to do this decryption.
+[60:27] Yeah.
+[60:27] AUDIENCE: The reason you
+[60:27] don't need circular security
+[60:30] as it is for this FHE is that
+[60:30] each of these computations
+[60:33] is simple enough that you
+[60:33] don't need to bootstrap.
+[60:37] Is that--
+[60:37] PROFESSOR: The reason?
+[60:38] The reason I don't need
+[60:38] a circular security
+[60:43] is I'm never encrypting a
+[60:43] secret key under its public key.
+[60:52] So sorry.
+[60:53] AUDIENCE: I think he was asking
+[60:53] why is it FHE that you're using,
+[60:55] not [INAUDIBLE] unbounded.
+[60:58] PROFESSOR: Oh!
+[60:58] Oh!
+[60:59] OK.
+[61:00] You're saying-- OK.
+[61:01] Sorry, sorry.
+[61:02] You're asking me-- OK, got it.
+[61:04] You're saying, while in general,
+[61:04] if we want arbitrary FHE,
+[61:08] we need to assume circular
+[61:08] secure LW inside it, kind of.
+[61:11] And you're asking, do
+[61:11] we not need to assume--
+[61:13] you're kind of going into the--
+[61:15] you're saying, do we
+[61:15] actually need fully, fully,
+[61:17] fully homomorphic encryption?
+[61:18] Because if we do,
+[61:18] then, actually, we
+[61:20] need to rely on a circular
+[61:20] security assumption inside, too.
+[61:23] The answer is we
+[61:23] because the computation
+[61:25] is very specific and
+[61:25] very small depth,
+[61:28] you don't need to-- there's no--
+[61:28] you don't need full, full FHE.
+[61:31] You need FHE for very
+[61:31] bounded depth computations.
+[61:35] Yeah.
+[61:37] Great.
+[61:37] Thank you.
+[61:39] Any other questions?
+[61:43] So let's SNARG.
+[61:46] Well, let me just make sure I
+[61:46] covered everything I wanted to.
+[61:51] AUDIENCE: After three
+[61:51] months, we SNARG.
+[61:53] PROFESSOR: We SNARG.
+[61:55] The last kind of
+[61:55] two hours in class,
+[61:57] last, we're going to SNARG.
+[62:03] So now the SNARG
+[62:03] is really simple.
+[62:05] It's like as simple as one
+[62:05] can-- like, essentially,
+[62:08] you can do it.
+[62:09] Done, we're done.
+[62:10] So how do we--
+[62:13] we can go home.
+[62:21] Anybody want a cookie
+[62:21] before we SNARG?
+[62:24] I feel like these grandmothers
+[62:24] that kind of constantly
+[62:27] feed you.
+[62:29] So here's the idea.
+[62:30] The idea is very simple.
+[62:31] Take any-- so SNARG.
+[62:42] So let me first say kind
+[62:42] of the high level idea.
+[62:45] The high level idea
+[62:45] is the following.
+[62:47] Here is what the prover will do.
+[62:49] So the prover wants to convince
+[62:49] that x is in the language.
+[62:53] There's some
+[62:53] verification circuit.
+[62:54] So you have x.
+[62:56] Let's start with-- let's
+[62:56] take x in the language.
+[63:00] There is some-- for any x--
+[63:02] it doesn't matter-- for any x,
+[63:02] you have a circuit, C sub x.
+[63:09] And C sub x takes a
+[63:09] witness and outputs 0 or 1,
+[63:13] like it's a
+[63:13] verification circuit.
+[63:15] You can also think
+[63:15] of it, if you want,
+[63:17] C as taking x and a
+[63:17] witness, and outputs
+[63:22] 0 if it's not a valid witness
+[63:22] and 1 if it's a valid witness.
+[63:26] If it's a deterministic
+[63:26] computation, there's no witness.
+[63:28] You just take x,
+[63:28] and output 0 or 1.
+[63:30] It does the computation.
+[63:32] So when I talk about
+[63:32] SNARG here, you
+[63:34] can think of a SNARG
+[63:34] of non-deterministic
+[63:36] and a SNARG of a
+[63:36] deterministic-- any language l.
+[63:38] I don't even want
+[63:38] to go too specific.
+[63:40] But I have a
+[63:40] language l, you know
+[63:43] what does it mean a language?
+[63:45] Well, there's some circuit.
+[63:46] It takes the instance,
+[63:46] maybe with a witness.
+[63:49] And the circuit kind
+[63:49] of does some checks
+[63:52] to decide if it's
+[63:52] valid or not valid.
+[63:55] Now, I want to convince
+[63:55] you I have an x.
+[63:59] I want to give you a SNARG
+[63:59] that this C, an x outputs 1.
+[64:04] Either that there is a
+[64:04] witness that outputs 1,
+[64:06] or maybe it's deterministic.
+[64:08] So just C of x outputs 1.
+[64:10] Here's what I'm going to do.
+[64:12] What I'm going to do,
+[64:12] I'm going to compute
+[64:14] all the wires of this circuit.
+[64:16] I'm Include all
+[64:16] the wires, and I'm
+[64:18] going to give you a
+[64:18] hash of all the wires.
+[64:21] Now, there's a lot of wires.
+[64:22] So it's going to be
+[64:22] a shrinking hash.
+[64:25] I'm going to actually use a
+[64:25] somewhere extractable hash.
+[64:29] So let's say we
+[64:29] agreed on a hash key
+[64:32] for a somewhere
+[64:32] extractable hash.
+[64:34] I, the prover, I'm going
+[64:34] to compute all the wires
+[64:37] of this verification circuit.
+[64:40] And I'm going to give
+[64:40] you the hash, the hash
+[64:42] of the values of all the wires.
+[64:47] The hash, what are you
+[64:47] going to do with that?
+[64:49] So the other thing I'm
+[64:49] going to give you is I'm
+[64:51] going to give you
+[64:51] a BARG, a proof.
+[64:54] A BARG of what?
+[64:56] The BARG I'm going to give
+[64:56] you is that every gate here
+[65:00] is satisfied.
+[65:01] So I committed to all the wires.
+[65:03] I can commit to anything.
+[65:05] I mean, I had all the wires.
+[65:07] Now, I'm going to prove to you
+[65:07] that for any gate, if you look
+[65:10] at the two input wires to
+[65:10] the gate and the output
+[65:15] wire of the gate,
+[65:15] they satisfy the gate.
+[65:18] So for all-- every
+[65:18] gate in the circuit,
+[65:23] I'm going to prove to you that
+[65:23] there exists an opening for this
+[65:29] wire and an opening for
+[65:29] this wire and for this wire,
+[65:31] so that these
+[65:31] openings are valid,
+[65:34] and that the values
+[65:34] that I open accept the--
+[65:39] kind of respect the gate.
+[65:42] And I'm going to prove
+[65:42] to you that the output--
+[65:46] so I said that I
+[65:46] hashed all the wires.
+[65:50] I'm going to argue I'm going
+[65:50] to open the output wire.
+[65:52] So you see?
+[65:53] And end output is 1.
+[65:55] So again, what am I going to do?
+[65:56] I want to convince you
+[65:56] that the output here is 1.
+[66:00] I'm going to hash
+[66:00] all the wires--
+[66:03] the value of all the
+[66:03] wires in the circuit.
+[66:06] I'm going to prove that every
+[66:06] gate is kind of satisfied.
+[66:10] I have an opening that kind of
+[66:10] respects each and every gate.
+[66:13] And the output wire is 1.
+[66:17] That's my SNARG.
+[66:18] Yeah.
+[66:19] AUDIENCE: How is this
+[66:19] different from GKR?
+[66:22] PROFESSOR: OK.
+[66:22] How is this different from GKR?
+[66:25] OK, so GKR is very
+[66:25] different in many ways.
+[66:30] First of all, it's
+[66:30] interactive protocol.
+[66:33] Now, you can apply Fiat-Shamir
+[66:33] to it, but, essentially, in GKR,
+[66:38] you take the circuit.
+[66:40] You compute all the
+[66:40] wires in the circuit.
+[66:42] But actually, I don't BARG--
+[66:45] say, look, all the
+[66:45] wires are satisfied.
+[66:47] Instead, I'm going to-- kind
+[66:47] of we're doing an interactive
+[66:49] process, saying, I'm going to--
+[66:51] I argue the output wire is 1.
+[66:53] And then we do a
+[66:53] little sum checker,
+[66:55] some interactive process to
+[66:55] reduce checking that value,
+[66:58] to checking a value
+[66:58] in one layer below.
+[67:01] And then we do an
+[67:01] interactive process
+[67:03] to say, OK, if that
+[67:03] was false, then
+[67:07] the layer below needs to be
+[67:07] false until we reach the leaves.
+[67:11] And then you can
+[67:11] apply Fiat-Shamir
+[67:12] to that to make it a SNARG.
+[67:16] Here, we're doing
+[67:16] something very differently.
+[67:17] We're starting with a BARG.
+[67:19] Now, it's true that the
+[67:19] construction you saw for BARG
+[67:21] uses Fiat-Shamir also,
+[67:21] but some constructions
+[67:24] don't use Fiat-Shamir,
+[67:24] actually, for BARGs.
+[67:26] There are various
+[67:26] constructions of BARGs.
+[67:27] You saw one of them,
+[67:27] but there are others.
+[67:30] So we take any BARG.
+[67:33] And there's no interaction here.
+[67:35] Besides, maybe they're
+[67:35] inside the BARG,
+[67:36] but maybe the BARG doesn't have
+[67:36] any Fiat-Shamir or anything
+[67:39] to it.
+[67:39] And we're saying just hash
+[67:39] all the wires of the circuit
+[67:43] and prove that
+[67:43] everything is consistent.
+[67:45] That's it.
+[67:47] That's really what we're doing.
+[67:50] So let me write this down.
+[67:52] So it will be--
+[67:53] so my ingredients that
+[67:53] I have for my SNARG is--
+[67:59] so ingredients, maybe
+[67:59] I'll write it here.
+[68:05] So my ingredients is a BARG,
+[68:05] and some are extractable hash.
+[68:17] These are my ingredients.
+[68:19] And I'm going to
+[68:19] show you my SNARG.
+[68:21] So a SNARG has three algorithms.
+[68:25] We have a gen algorithm.
+[68:31] And here is what my gen
+[68:31] algorithm is going to do.
+[68:34] It's going to-- let's say the
+[68:34] gen also has an input length.
+[68:41] We don't need it.
+[68:44] Here's what it's going to--
+[68:45] OK, let's say it
+[68:45] has an input length.
+[68:48] So this says, you're
+[68:48] going to prove
+[68:51] to me statements of length--
+[68:51] that the input x is of length n.
+[68:55] So here's what
+[68:55] we're going to do.
+[68:57] The first thing we
+[68:57] do is we're going
+[68:59] to generate a hash key
+[68:59] for gen of the somewhere
+[69:13] extractable hash.
+[69:15] So generate a hash
+[69:15] key corresponding
+[69:16] to the somewhere
+[69:16] extractable hash.
+[69:18] This is going to be
+[69:18] a security parameter.
+[69:21] n is going to be--
+[69:24] this is going to be the number
+[69:24] of wires in the circuit C.
+[69:31] This is the circuit that takes x
+[69:31] of length n, possibly a witness,
+[69:35] and outputs 0 or 1.
+[69:38] So this is going to be
+[69:38] the number of wires.
+[69:41] And take any i.
+[69:42] I don't know,
+[69:42] whatever. i equals 1.
+[69:44] Take any i in between 1 to n.
+[69:46] It doesn't matter.
+[69:47] Choose it arbitrarily,
+[69:47] your favorite number.
+[69:51] So that's first thing.
+[69:52] And then you also generate
+[69:52] a CRS for the BARG.
+[69:56] So you generate
+[69:56] a CRS for a BARG.
+[70:05] This is for the BARG.
+[70:07] And this will be with input 1--
+[70:10] with the script 1 to the lambda.
+[70:12] K, the number of statements
+[70:12] is like the number
+[70:15] of gates in the circuit.
+[70:16] So K is going to be the
+[70:16] number of gates in C,
+[70:23] because we're going
+[70:23] to-- remember,
+[70:25] we're going to say-- we're going
+[70:25] to prove that for every gate,
+[70:27] it's satisfied.
+[70:29] So usually, K and
+[70:29] N are very similar.
+[70:31] It's like essentially
+[70:31] the same number.
+[70:32] But let me just
+[70:32] be clear that this
+[70:35] is-- we're going to have
+[70:35] the number of gates.
+[70:37] And the length n there--
+[70:40] let me call it n prime.
+[70:42] We'll see what it is.
+[70:44] We'll see what this n
+[70:44] prime is in a minute.
+[70:46] So we're going to BARG
+[70:46] statements not of length n,
+[70:52] but of a different
+[70:52] length, n prime.
+[70:54] We're going to see what that is.
+[70:55] But the output is just a--
+[71:01] It was going to be
+[71:01] called the CRS BARG.
+[71:03] So you output CRS, which is
+[71:03] equal to hash key and CRS BARG.
+[71:16] So that's how you generate.
+[71:18] So the key generation,
+[71:18] the CRS has a CRS
+[71:21] for the BARG and a hash key.
+[71:24] Now, we're going to--
+[71:28] what does the prover do?
+[71:30] So the prover gets as input x.
+[71:33] Maybe a witness, if it's an NP.
+[71:36] Maybe there is no witness.
+[71:38] Let me say, generally,
+[71:38] with a witness.
+[71:41] But actually, the BARB we're
+[71:41] going to construct today
+[71:43] is going to be for
+[71:43] deterministic languages.
+[71:45] But let me write it also,
+[71:45] because I'm going to show you
+[71:48] a general framework.
+[71:50] So P is going to get a CRS,
+[71:50] an x, and maybe a witness
+[71:57] if it's an NP.
+[71:59] And it needs to
+[71:59] generate a SNARG.
+[72:01] So what does it do?
+[72:04] Compute all the
+[72:04] wires in the circuit.
+[72:09] So x is fixed.
+[72:10] Let's think of x as, like,
+[72:10] that's not part of the wires
+[72:12] because it's fixed.
+[72:13] But let's compute all
+[72:13] the w1 up to wn, which
+[72:20] is the wires of the circuit.
+[72:22] You can think of the first
+[72:22] n as the actual witness.
+[72:26] Let's say if you have a
+[72:26] witness and it's of length m,
+[72:29] w1 wm is the witness, but
+[72:29] then the rest are the wires.
+[72:33] So I'm thinking the
+[72:33] wires include the witness
+[72:35] and everything above.
+[72:36] And if there is no witness, then
+[72:36] it doesn't include a witness.
+[72:39] So I compute.
+[72:41] These are all the
+[72:41] wires in C, except x,
+[72:51] except the input
+[72:51] wires corresponding--
+[72:52] the input wires
+[72:52] corresponding to x,
+[72:54] because that's-- kind
+[72:54] of we know what it is.
+[72:56] The verifier knows it.
+[72:58] So you compute all the wires.
+[73:00] And then you compute
+[73:00] the hash of--
+[73:05] you compute z, which is a hash,
+[73:05] the eval with hash key of w1 up
+[73:12] to wn.
+[73:14] So you hash all
+[73:14] these wires together.
+[73:16] So the verifier
+[73:16] computed all the wires
+[73:18] of the circuit,
+[73:18] hashed all the wires.
+[73:25] Actually, let me just say--
+[73:27] sorry.
+[73:32] When you generate a key,
+[73:32] I said use a somewhere
+[73:36] extractable hash.
+[73:37] Yes, exactly.
+[73:38] But you don't need to
+[73:38] just use one index.
+[73:41] So let's use it with
+[73:41] a few index, il.
+[73:46] Now you can ask, what is l?
+[73:49] We'll see.
+[73:49] You can think of it as--
+[73:51] a few l's, you can
+[73:51] think of polylog l.
+[73:54] The bigger the l is,
+[73:54] the less succinct
+[73:56] the SNARG is going to be.
+[73:58] So the SNARG is going to
+[73:58] grow with l because the hash
+[74:03] key grows with L.
+[74:03] It's like L hash keys,
+[74:05] essentially, because
+[74:05] we're repeating.
+[74:07] So here I'm going to be
+[74:07] binding on l locations.
+[74:13] The hash value grows with
+[74:13] l, because you're computing,
+[74:17] essentially, l hash values.
+[74:19] So the bigger l is, in
+[74:19] some sense, the more secure
+[74:24] we're going to get.
+[74:25] We'll see.
+[74:26] But the more non-succinct
+[74:26] it's going to be.
+[74:28] So l now is going
+[74:28] to be a parameter.
+[74:31] And when we talk
+[74:31] about the analysis,
+[74:32] we'll see which l we want.
+[74:34] Yeah.
+[74:34] AUDIENCE: Is there any hope for
+[74:34] getting a sublinear dependence
+[74:37] on l, like, any
+[74:37] other construction
+[74:38] instead of the direct
+[74:38] product construction?
+[74:40] PROFESSOR: So in
+[74:40] V, there's no way
+[74:44] to get sublinear in l,
+[74:44] because you need to extract.
+[74:47] It's like there-- it
+[74:47] must have information.
+[74:50] So in v, there's no way to have.
+[74:53] In the hash key,
+[74:53] on the other hand--
+[74:59] OK.
+[75:00] If the i, i1 up to il,
+[75:00] can be shrunk somehow,
+[75:05] if there is a succinct
+[75:05] description of i1 to il--
+[75:08] for example, in the
+[75:08] case of a witness,
+[75:11] I want to be extractable
+[75:11] on witness i.
+[75:14] These are consecutive
+[75:14] locations, so I
+[75:16] don't need to write location
+[75:16] i, i plus 1, i plus 2.
+[75:19] You can just say
+[75:19] i, and go from i10.
+[75:21] There's a very
+[75:21] succinct description.
+[75:22] In the case where
+[75:22] there's a description,
+[75:25] you can hope to get
+[75:25] the hash key smaller.
+[75:29] And we do know how to
+[75:29] get the hash key smaller.
+[75:31] But in general, for the v value,
+[75:31] there's no way-- information,
+[75:36] theoretically.
+[75:37] Great question.
+[75:43] So you compute the hash
+[75:43] value of all the wires,
+[75:45] and then you add a BARG.
+[75:46] So the last thing you do
+[75:46] is you compute the P BARG.
+[75:54] You take the BARG prover.
+[75:57] And here's our BARG prover.
+[75:59] You give it CRS of BARG.
+[76:05] And you have x's and witnesses.
+[76:07] Now, what are the x's
+[76:07] and the witnesses?
+[76:10] I want to use--
+[76:11] I want to argue I'm
+[76:11] going to generate
+[76:13] a bunch of x's and witnesses
+[76:13] and generate a proof.
+[76:16] So what is it that I'm--
+[76:18] so I'm going to give you x1
+[76:18] star xk star and w1 star.
+[76:25] I'll tell you what
+[76:25] these are in a second--
+[76:26] wk star.
+[76:28] So this is going to be pi.
+[76:29] This is going to
+[76:29] be compute pi BARG.
+[76:39] So you BARG k statements.
+[76:41] But what are these statements?
+[76:43] So let me just tell you
+[76:43] what these and these are.
+[76:48] So x star j is--
+[76:56] essentially, it's going
+[76:56] to be hash key value nj.
+[77:05] That's x.
+[77:07] So what I'm going to prove,
+[77:07] that for each gate j,
+[77:14] I have an opening to the
+[77:14] input wires of the gate
+[77:18] and the upper wire
+[77:18] of the gate with--
+[77:20] I have an opening with respect
+[77:20] to v that satisfies the gate.
+[77:25] So the xj is going to be--
+[77:25] well, I have the hash key.
+[77:29] I have the hash
+[77:29] value and gate j.
+[77:33] And the witness for gate
+[77:33] j is going to be opening.
+[77:40] So I'm going to have a
+[77:40] bit, like a left child,
+[77:45] right child, output child--
+[77:50] not child-- output, the parent.
+[77:53] So left child, right child,
+[77:53] and parent of the gate opening,
+[77:58] rho of left child, rho of
+[77:58] right child, rho of the output.
+[78:06] That's going to be a witness.
+[78:08] And it's a valid witness.
+[78:10] If B0 rho 0 are valid opening
+[78:10] of the left child of kj.
+[78:20] b1 rho 1 are a valid opening
+[78:20] of the right child of kj.
+[78:27] b out and rho out
+[78:27] are valid openings
+[78:30] of the output wire of kj.
+[78:32] And these satisfy the gate.
+[78:36] So if it's an AND gate,
+[78:36] this and this is this.
+[78:42] That's what-- that's going to--
+[78:42] so a valid witness is a six
+[78:47] tuple like this that all
+[78:47] these openings are accepted,
+[78:52] and these bits satisfy the gate.
+[78:55] And our valid opening with
+[78:55] respect to which wires,
+[78:58] the wires that I've
+[78:58] defined by the gate.
+[79:00] So think of it, we
+[79:00] have this circuit C.
+[79:04] The gates are kind of numbered.
+[79:07] And for any gates j, we know
+[79:07] there's-- we know the number
+[79:10] of the input and output wire,
+[79:10] because this is uniform.
+[79:14] Everything of the
+[79:14] circuit is uniform.
+[79:15] So for every gate J,
+[79:15] it corresponds to--
+[79:19] I know i, wire i,
+[79:19] wire j, and wire k.
+[79:24] And so these openings
+[79:24] should be with respect
+[79:26] to wire i, wire j, and wire k.
+[79:28] AUDIENCE: Do you use the same
+[79:28] hash key for all of them?
+[79:31] PROFESSOR: Same hash
+[79:31] key for all of them.
+[79:32] Yeah, because I
+[79:32] used one hash key.
+[79:34] I mean, one hash key that's
+[79:34] binding on l locations.
+[79:37] But I'm now I'm thinking just
+[79:37] one hash key that's binding.
+[79:41] How I construct it, we'll
+[79:41] abstract that for now.
+[79:45] But yeah, I have one hash key
+[79:45] that's binding on l locations.
+[79:48] I hash all the
+[79:48] values of the values
+[79:51] of all the wires with respect
+[79:51] to this specific hash key.
+[79:54] And then I add a
+[79:54] BARG for any gate j
+[79:58] that I have an opening for
+[79:58] the input, the two input
+[80:02] children, the output wire of
+[80:02] gate j that satisfy the gate.
+[80:10] Yeah.
+[80:11] AUDIENCE: So the only
+[80:11] difference between the xj
+[80:13] is the index j itself.
+[80:14] So it's like, what are the
+[80:14] index [INAUDIBLE] things?
+[80:16] PROFESSOR: Yeah, yeah, yeah.
+[80:18] Good, good, good.
+[80:18] So you're saying,
+[80:18] where's j here?
+[80:20] Where's j?
+[80:22] You're saying--
+[80:23] AUDIENCE: No.
+[80:23] More like x, j star, and xj--
+[80:26] PROFESSOR: The only
+[80:26] difference is j.
+[80:28] So this is an index
+[80:28] kind of language.
+[80:30] This note, this is kind of--
+[80:32] it's the x1 and
+[80:32] x1 star, x2 star,
+[80:35] are the same hash key.
+[80:35] vk1, 2, 3, 4 up to k.
+[80:39] So it's kind of
+[80:39] an index language.
+[80:41] We're going to get
+[80:41] back to it when--
+[80:43] because we want the efficiency
+[80:43] of v. So we'll talk about that.
+[80:46] But yes.
+[80:50] Any question about
+[80:50] the prover here?
+[80:56] So now the verifier, what
+[80:56] the verifier does is--
+[81:03] so now let's write the
+[81:03] verifier somewhere.
+[81:06] Oh, that's sad.
+[81:07] I wanted to keep this.
+[81:11] If you don't mind, we'll
+[81:11] write the verifier here.
+[81:17] So what does the verifier do?
+[81:19] V takes as input a CRS, which
+[81:19] is a hash key and CRS BARG.
+[81:29] That's the CRS.
+[81:31] And it takes an
+[81:31] instant X and a proof.
+[81:35] What is the proof?
+[81:37] A proof is a value and a
+[81:37] BARG, a hash value and a BARG.
+[81:47] So the verifier, he gets the
+[81:47] CRS, which is of this form.
+[81:51] He gets an input x.
+[81:54] And he gets a SNARG.
+[81:55] A SNARG is-- oh, did
+[81:55] I say what it outputs?
+[81:58] Sorry.
+[81:59] Compute, output.
+[82:05] v in pi BARG.
+[82:13] So now he takes the SNARG,
+[82:13] which is a hash and a BARG.
+[82:24] And it just outputs
+[82:24] 1, an output.
+[82:32] The output of v BARG,
+[82:32] he accepts if and only
+[82:35] if the BARG is accepting.
+[82:38] What do we mean the BARG-- v
+[82:38] BARG takes CRS BARG and x1 star
+[82:47] up to xk star, which are
+[82:47] essentially an index language
+[82:51] corresponding to hk, v, and j.
+[83:02] So it accepts if and only
+[83:02] if the BARG is accepted.
+[83:11] That's the SNARG.
+[83:21] One thing I-- so
+[83:21] again, you generate a--
+[83:25] again, what is the SNARG?
+[83:27] In the CRS generation,
+[83:27] you generate a hash key
+[83:30] for the somewhere
+[83:30] extractable hash,
+[83:32] and you generate a
+[83:32] CRS for the BARG.
+[83:34] The prover computes the
+[83:34] values of all the wires
+[83:38] in the circuits, hashes it
+[83:38] using the hash key to generate
+[83:42] a value, a hash value
+[83:42] V, and then he proves--
+[83:45] it gives a BARG that all
+[83:45] the gates are satisfied.
+[83:49] Namely, for every gate
+[83:49] he has an opening valid
+[83:52] that's satisfied--
+[83:52] that respects the gate.
+[83:54] And the output gate is 1.
+[83:56] That's another thing.
+[83:57] He also proves that--
+[83:57] the BARG also proves
+[83:59] that the output gate is 1.
+[84:00] So for the output gate, you
+[84:00] prove it respects, namely--
+[84:03] you prove it's 1.
+[84:07] Good.
+[84:08] So that's-- and
+[84:08] how do you verify?
+[84:09] You just verify the BARG.
+[84:12] Now, here's one
+[84:12] important thing to note.
+[84:15] This v BARG takes as input
+[84:15] the BARG of length k.
+[84:20] k is like the number of
+[84:20] wires in the circuit.
+[84:22] We do not want the
+[84:22] verifier to run in time k.
+[84:26] That would be the
+[84:26] size of the circuit.
+[84:28] No, we want the verifier
+[84:28] to be very efficient.
+[84:32] But that's OK,
+[84:32] because he actually
+[84:34] doesn't need to run in time k,
+[84:34] because, actually, it's what's
+[84:38] called an index language.
+[84:40] Namely, x1 up to xk
+[84:40] star, essentially,
+[84:45] it's like an index on hash k
+[84:45] and v. So you can generate them.
+[84:51] You can express them
+[84:51] very succinctly.
+[84:56] You can express them by hash
+[84:56] key V, and all the index
+[85:01] between 1 and k.
+[85:02] That's it.
+[85:03] So because they have a
+[85:03] succinct representation,
+[85:06] the runtime of the verifier
+[85:06] only grows with hash key nv,
+[85:09] polynomial with hash key nv.
+[85:10] He does not need to grow with k.
+[85:13] That's kind of the efficiency
+[85:13] property of index languages.
+[85:18] And that's very important.
+[85:19] Without it, we can't
+[85:19] use it for the SNARG.
+[85:23] So in terms of efficiency, if
+[85:23] the BARG has good efficiency,
+[85:27] let's say the dependence
+[85:27] is polylog on k,
+[85:30] then the v is going to
+[85:30] be-- so what is the--
+[85:37] the SNARG grows with v
+[85:37] and with a BARG proof.
+[85:41] The BARG proof is very--
+[85:42] it grows
+[85:42] polylogarithmically with k.
+[85:45] It's like poly log
+[85:45] the circuit size.
+[85:47] It's very efficient.
+[85:49] v grows with the number of
+[85:49] indices we're binding on.
+[85:54] So it grows with l.
+[85:57] We'll try to minimize l.
+[85:58] We ideally want l
+[85:58] to be polylog k.
+[86:02] So that's what we want.
+[86:03] We'll see what we get.
+[86:05] But ideally, this
+[86:05] should be polylog k.
+[86:07] And the runtime of the verifier,
+[86:07] because it's an index language,
+[86:11] is also going to be
+[86:11] polylog k, assuming a--
+[86:16] sorry-- and he needs to--
+[86:22] he does run in time
+[86:22] x, because he also
+[86:24] needs to check this pi BARG is
+[86:24] pi BARG comma of x, because when
+[86:31] you check the validity that
+[86:31] each gate is satisfied,
+[86:36] the gates in layer
+[86:36] 1 depend on x.
+[86:40] So the gates in layer 1, the
+[86:40] input wires are x, xi, xj.
+[86:46] So the BARG needs to know x.
+[86:47] The verifier, of
+[86:47] course, needs to know x.
+[86:49] But that's it.
+[86:50] So he doesn't need
+[86:50] to run in time--
+[86:52] linear in x.
+[86:53] But the BARG itself
+[86:53] is very short.
+[86:55] So this log is very short.
+[86:57] The verifier, of course,
+[86:57] needs to run time x.
+[86:59] It needs to read the
+[86:59] input, but that's it.
+[87:05] So any questions?
+[87:09] So let's take a break, a
+[87:09] cookie break, a fun break.
+[87:14] And let's start,
+[87:14] again, like 10 minutes,
+[87:16] and then we'll talk about
+[87:16] the analysis and when--
+[87:18] but this is all--
+[87:18] but that's done.
+[87:19] We're done with
+[87:19] the construction.
+[87:20] This is your SNARG.
+[87:21] We built up to it.
+[87:23] Here it is.
+[87:23] And then we'll analyze
+[87:23] it after the break.
