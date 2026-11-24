@@ -1,5 +1,5 @@
 ---
-course: Stanford EE274 Data Compression: Theory and Applications（2023 秋）
+course: Stanford EE274 Data Compression  Theory and Applications（2023 秋）
 episode: 8
 lecture: Lecture 8
 date: 2023-10-23
